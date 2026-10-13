@@ -69,6 +69,9 @@ def _validate(data: dict[str, Any]) -> Document:
     try:
         return Document.model_validate(data)
     except ValidationError as err:
+        if any(e["type"] == "recursion_loop" for e in err.errors()):
+            # pydantic-core's own nesting guard (lower on some platforms, e.g. Windows): not a cyclic reference
+            raise UniwireError([_t("validation.too_deep_validator")]) from None
         issues = _format_validation_error(err)
         declared = data.get("uniwire")
         if _newer_minor(declared) and any(e["type"] == "extra_forbidden" for e in err.errors()):

@@ -39,6 +39,7 @@ EN: dict[str, str] = {
     "validation.enclosure_unknown_parent": "enclosure {id!r}: unknown parent enclosure {parent!r}",
     "validation.invalid_json": "invalid JSON: {error}",
     "validation.too_deep": "document nested too deeply (more than {max} levels of objects and lists)",
+    "validation.too_deep_validator": "document nested too deeply for the validator on this platform (power tree too deep)",
     "validation.newer_minor": "the document declares format {declared}, newer than the format {supported} "
                               "supported by this version of uniwire: upgrade uniwire to read the fields it does not know",
     "units.unreadable": "unreadable quantity: {value!r}",
@@ -230,6 +231,7 @@ FR: dict[str, str] = {
     "validation.enclosure_unknown_parent": "enveloppe {id!r} : enveloppe parente inconnue {parent!r}",
     "validation.invalid_json": "JSON invalide : {error}",
     "validation.too_deep": "document trop profondément imbriqué (plus de {max} niveaux d'objets et de listes)",
+    "validation.too_deep_validator": "document trop profondément imbriqué pour le validateur sur cette plateforme (arbre trop profond)",
     "validation.newer_minor": "le document déclare le format {declared}, plus récent que le format {supported} "
                               "pris en charge par cette version d'uniwire : mettez uniwire à jour pour lire les champs "
                               "qu'il ne connaît pas",
