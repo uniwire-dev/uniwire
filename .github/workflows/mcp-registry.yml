@@ -1,0 +1,42 @@
+name: MCP registry
+
+# Publishes server.json (the hosted endpoint https://mcp.uniwire.sh/mcp) to the official MCP registry as
+# io.github.uniwire-dev/uniwire, on release tags and on demand. GitHub OIDC: no secret involved.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  publish:
+    name: Publish server.json
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set the version from the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          jq --arg v "${GITHUB_REF_NAME#v}" '.version = $v' server.json > server.tmp && mv server.tmp server.json
+      - name: Install mcp-publisher (pinned, checksum verified)
+        env:
+          VERSION: "1.8.1"
+          SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+        run: |
+          curl -fsSL -o mcp-publisher.tar.gz \
+            "https://github.com/modelcontextprotocol/registry/releases/download/v${VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
+          tar xzf mcp-publisher.tar.gz mcp-publisher
+      - name: Validate
+        run: ./mcp-publisher validate
+      - name: Log in (GitHub OIDC)
+        run: ./mcp-publisher login github-oidc
+      - name: Publish
+        run: ./mcp-publisher publish

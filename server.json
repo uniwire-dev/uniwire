@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.uniwire-dev/uniwire",
+  "title": "uniwire",
+  "description": "Electrical single-line and multi-line diagrams: build, check (NF C 15-100, IEC 60364), draw, PDF.",
+  "repository": {
+    "url": "https://github.com/uniwire-dev/uniwire",
+    "source": "github"
+  },
+  "websiteUrl": "https://uniwire.sh/docs/assistants/",
+  "version": "0.1.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.uniwire.sh/mcp"
+    }
+  ]
+}
