@@ -1,0 +1,53 @@
+# uniwire
+
+> uniwire ("electrical diagrams, as code") is an open standard JSON format (`*.uniwire.json`, format 1.0.0) to describe electrical installations (drawn as single-line and multi-line diagrams), with a reference Python library (`pip install uniwire`, Apache-2.0) that validates documents, checks them against rule profiles (NF C 15-100, IEC 60364, PLC), produces bills of materials and draws SVG / PDF sheets. A document is a power tree (sources -> devices -> loads, each node in its parent's `children`) plus `links` for everything outside the tree. Layout is automatic.
+
+For assistants: the reference card of the format (generated from the model) follows this file at https://uniwire.sh/llms.txt, so one read gives you everything needed. Locally, `uniwire card` prints the same card.
+
+## How to produce a document
+
+Use the first way that works for you:
+
+1. **The library** (installed, or installable with `pip install uniwire`; pure Python, needs only `pydantic`, plus `reportlab` for PDF): build the document, then run `uniwire check FILE`; `uniwire link FILE` prints the link below. Use `uniwire describe FILE` to read a document with its stable ids and `uniwire patch FILE OPS.json` to edit it by id.
+2. **uniwire MCP tools**, if they are connected to you (server `uniwire-mcp`, extra `uniwire[mcp]`): get_reference_card, validate, check, describe, apply_patch, render, bom. Their results carry `viewer_url`: that is the link to give.
+3. **Otherwise, write the JSON yourself** following the reference card: one JSON document, valid JSON, no comments, values in the forms the card gives (`"poles": "1P+N"`, `"cores": "3G"`, quantities as plain numbers). Re-read the card's common mistakes before answering.
+
+Never say a document passed uniwire checks unless the library or the MCP tools actually returned that result. When you report check results, say once, in one sentence, that they are automatic checks of the document, not a conformity certificate, and that a qualified electrician must verify the installation; do not repeat it. In every case, give the user the link below.
+
+## Show the user the drawing (no install)
+
+The link opens the document in the web editor: drawing (single-line and multi-line), rule findings, PDF and SVG downloads. If you can run Python, build it like this (no network needed; the document stays in the part after `#` and is sent nowhere):
+
+```python
+import base64, json, zlib
+text = json.dumps(document, indent=1, ensure_ascii=False)   # document: the uniwire JSON as a dict
+c = zlib.compressobj(9, zlib.DEFLATED, -15)                   # raw deflate
+link = "https://uniwire.sh/viewer/#doc=" + base64.urlsafe_b64encode(c.compress(text.encode()) + c.flush()).decode().rstrip("=")
+```
+
+When the user asks for a PDF, add `&download=pdf` at the end of the link: the editor then also downloads the PDF drawn by uniwire (do not draw a PDF yourself). Write the full link directly in your reply as a clickable Markdown link, e.g. `[Open the drawing](https://uniwire.sh/viewer/#doc=...)`: never put it in a file or behind a download. Without Python, ask the user to paste the JSON into https://uniwire.sh/viewer/.
+
+## Check and draw
+
+- [Web editor](https://uniwire.sh/viewer/): paste a document to validate, check and draw it in the browser; or open `https://uniwire.sh/viewer/#doc=<base64url of the raw-deflated JSON>` to show a document directly (recipe above)
+- [Hosted MCP server](https://mcp.uniwire.sh/mcp): streamable HTTP endpoint with the validate, check, render and export tools
+
+## Docs
+
+- [In your assistant](https://uniwire.sh/docs/assistants/): hosted MCP server setup for ChatGPT, Claude, Cursor, VS Code; example requests
+- [LLM tools](https://uniwire.sh/docs/llm/): reference card, describe, patch, MCP server setup, evaluations
+- [Specification](https://uniwire.sh/docs/SPEC/): the format, normative
+- [Python API and CLI](https://uniwire.sh/docs/api/)
+- [Code-first API](https://uniwire.sh/docs/build/): build documents in Python
+- [Rules](https://uniwire.sh/docs/rules/): rule profiles and their sources
+
+## Reference
+
+- [JSON Schema](https://uniwire.sh/schema/v1/uniwire.schema.json): draft 2020-12
+- [Type registry](https://github.com/uniwire-dev/uniwire/blob/main/src/uniwire/registry/core.json): node types, categories, IEC 81346 letters, CIM / IFC mappings
+- [Examples](https://uniwire.sh/viewer/examples/index.json): 52 documents, each at `https://uniwire.sh/viewer/examples/<file>` (dwellings, commercial, industrial, PV, EV, UPS, MV/LV substations, PLCs)
+
+## Optional
+
+- [Evaluation tasks](https://github.com/uniwire-dev/uniwire/tree/main/evals/llm): 15 tasks that score model-written documents, with a runner that makes no network calls
+- [Changelog](https://github.com/uniwire-dev/uniwire/blob/main/CHANGELOG.md)

@@ -1,0 +1,281 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Aile hospitalière : tableau du bloc opératoire avec IT médical", "project": "EX-22",
+    "client": "Exemple : centre hospitalier, aile B", "author": "uniwire examples", "lang": "fr",
+    "notes": [
+      "Montre : îlots IT médical (transformateur d'isolement + CPI avec surveillance de charge et de température), schéma local IT sous un réseau TN-S, liaison équipotentielle, report d'alarme (liens measure / data / earth)",
+      "Groupe 2 (IEC 60364-7-710 / NF C 15-211) : pas de DDR sur les circuits IT médical ; premier défaut signalé, non coupé",
+      "Circuits du groupe 1 (salle de réveil, prises générales) : DDR 30 mA type A",
+      "Tableau alimenté depuis le TGBT secouru (normal / groupe), voir schéma EX-22-001"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "ik3_kA": 10,
+    "standard": "IEC 60364-7-710 / NF C 15-211"
+  },
+  "templates": {
+    "IT2P": {
+      "type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "2P",
+      "product": {"manufacturer": "Hager", "range": "MCN 2P"}
+    },
+    "DD": {
+      "type": "rcbo", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "1P+N", "idn_mA": 30, "rcd_type": "A",
+      "product": {"manufacturer": "Hager", "range": "ADC"}
+    }
+  },
+  "sources": [
+    {
+      "id": "AR", "type": "offpage", "label": "Depuis TGBT secouru -Q14", "target": "EX-22-001 folio 3",
+      "children": [
+        {
+          "id": "TDB", "type": "board", "ref": "TD-BLOC", "label": "Tableau bloc opératoire", "kind": "distribution",
+          "in_A": 100, "ik_kA": 10, "ip": "IP31", "location": "Local technique bloc",
+          "cable": {
+            "cores": "5G", "section_mm2": 35, "length_m": 60, "designation": "U1000 R2V", "material": "Cu",
+            "insulation": "XLPE", "install": "E"
+          },
+          "children": [
+            {
+              "id": "Q0", "type": "switch_disconnector", "ref": "-Q0", "label": "Interrupteur général", "in_A": 100,
+              "poles": "4P", "lockable": true,
+              "children": [
+                {"id": "MET", "type": "earth_bar", "ref": "-PE", "kind": "equipotential", "label": "Équipotentialité"},
+                {
+                  "id": "S1_QT", "type": "breaker", "ref": "-Q10", "in_A": 32, "curve": "D", "icn_kA": 10,
+                  "poles": "2P", "label": "Primaire TI salle 1",
+                  "cable": {
+                    "cores": "3G", "section_mm2": 6, "length_m": 6, "designation": "U1000 R2V", "material": "Cu",
+                    "insulation": "XLPE", "install": "B1"
+                  },
+                  "product": {"manufacturer": "Hager", "range": "NDN"},
+                  "children": [
+                    {
+                      "id": "S1_T", "type": "transformer", "ref": "-T1", "kind": "isolation",
+                      "label": "Transfo. d'isolement médical", "sn_kVA": 6.3, "u1_V": 230, "u2_V": 230,
+                      "insulation": "dry", "un_V": 230,
+                      "product": {
+                        "manufacturer": "Bender", "range": "ES710",
+                        "description": "Transformateur d'isolement médical 6,3 kVA (IEC 61558-2-15)"
+                      },
+                      "children": [
+                        {
+                          "id": "S1_IT", "type": "board", "ref": "TD-IT1", "label": "IT médical, salle d'opération 1",
+                          "kind": "sub", "earthing": "IT", "system": "2P", "in_A": 32, "ip": "IP41",
+                          "location": "Bloc op., salle 1",
+                          "children": [
+                            {
+                              "id": "S1_B", "type": "busbar", "ref": "-W1", "label": "Jeu de barres IT", "in_A": 32,
+                              "earthing": "IT",
+                              "children": [
+                                {
+                                  "type": "breaker", "ref": "-Q11", "use": "IT2P",
+                                  "cable": {
+                                    "cores": "3G", "section_mm2": 2.5, "length_m": 12, "designation": "U1000 R2V",
+                                    "material": "Cu", "insulation": "XLPE", "install": "B1"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "socket", "label": "Bras plafonnier anesthésie", "points": 6,
+                                      "room": "Salle 1"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q12", "use": "IT2P",
+                                  "cable": {
+                                    "cores": "3G", "section_mm2": 2.5, "length_m": 12, "designation": "U1000 R2V",
+                                    "material": "Cu", "insulation": "XLPE", "install": "B1"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "socket", "label": "Bras plafonnier chirurgie", "points": 6,
+                                      "room": "Salle 1"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q13", "use": "IT2P", "in_A": 10,
+                                  "cable": {
+                                    "cores": "3G", "section_mm2": 1.5, "length_m": 10, "designation": "U1000 R2V",
+                                    "material": "Cu", "insulation": "XLPE", "install": "B1"
+                                  },
+                                  "children": [{"type": "load", "label": "Table d'opération", "symbol_text": "TAB", "p_kW": 1.2}]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q14", "use": "IT2P", "in_A": 10,
+                                  "cable": {
+                                    "cores": "3G", "section_mm2": 1.5, "length_m": 10, "designation": "U1000 R2V",
+                                    "material": "Cu", "insulation": "XLPE", "install": "B1"
+                                  },
+                                  "children": [{"type": "lighting", "label": "Scialytique", "points": 2, "p_kW": 0.4}]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q15", "use": "IT2P",
+                                  "cable": {
+                                    "cores": "3G", "section_mm2": 2.5, "length_m": 14, "designation": "U1000 R2V",
+                                    "material": "Cu", "insulation": "XLPE", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Prises murales (côté pieds)", "points": 4}]
+                                },
+                                {"type": "spare", "ref": "-Q16", "in_A": 16, "poles": "2P", "label": "Réserve"},
+                                {
+                                  "id": "S1_CPI", "type": "insulation_monitor", "ref": "-B11", "label": "CPI médical",
+                                  "range": "Rf ≥ 50 kΩ",
+                                  "product": {
+                                    "manufacturer": "Bender", "range": "ISOMETER iso-M / ATICS",
+                                    "description": "CPI médical IEC 61557-8"
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "S2_QT", "type": "breaker", "ref": "-Q20", "in_A": 32, "curve": "D", "icn_kA": 10,
+                  "poles": "2P", "label": "Primaire TI salle 2",
+                  "cable": {
+                    "cores": "3G", "section_mm2": 6, "length_m": 6, "designation": "U1000 R2V", "material": "Cu",
+                    "insulation": "XLPE", "install": "B1"
+                  },
+                  "product": {"manufacturer": "Hager", "range": "NDN"},
+                  "children": [
+                    {
+                      "id": "S2_T", "type": "transformer", "ref": "-T2", "kind": "isolation",
+                      "label": "Transfo. d'isolement médical", "sn_kVA": 6.3, "u1_V": 230, "u2_V": 230,
+                      "insulation": "dry", "un_V": 230,
+                      "product": {
+                        "manufacturer": "Bender", "range": "ES710",
+                        "description": "Transformateur d'isolement médical 6,3 kVA (IEC 61558-2-15)"
+                      },
+                      "children": [
+                        {
+                          "id": "S2_IT", "type": "board", "ref": "TD-IT2", "label": "IT médical, salle d'opération 2",
+                          "kind": "sub", "earthing": "IT", "system": "2P", "in_A": 32, "ip": "IP41",
+                          "location": "Bloc op., salle 2",
+                          "children": [
+                            {
+                              "id": "S2_B", "type": "busbar", "ref": "-W2", "label": "Jeu de barres IT", "in_A": 32,
+                              "earthing": "IT",
+                              "children": [
+                                {
+                                  "type": "breaker", "ref": "-Q21", "use": "IT2P",
+                                  "cable": {
+                                    "cores": "3G", "section_mm2": 2.5, "length_m": 12, "designation": "U1000 R2V",
+                                    "material": "Cu", "insulation": "XLPE", "install": "B1"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "socket", "label": "Bras plafonnier anesthésie", "points": 6,
+                                      "room": "Salle 2"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q22", "use": "IT2P",
+                                  "cable": {
+                                    "cores": "3G", "section_mm2": 2.5, "length_m": 12, "designation": "U1000 R2V",
+                                    "material": "Cu", "insulation": "XLPE", "install": "B1"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "socket", "label": "Bras plafonnier chirurgie", "points": 6,
+                                      "room": "Salle 2"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q23", "use": "IT2P", "in_A": 10,
+                                  "cable": {
+                                    "cores": "3G", "section_mm2": 1.5, "length_m": 10, "designation": "U1000 R2V",
+                                    "material": "Cu", "insulation": "XLPE", "install": "B1"
+                                  },
+                                  "children": [{"type": "load", "label": "Table d'opération", "symbol_text": "TAB", "p_kW": 1.2}]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q24", "use": "IT2P", "in_A": 10,
+                                  "cable": {
+                                    "cores": "3G", "section_mm2": 1.5, "length_m": 10, "designation": "U1000 R2V",
+                                    "material": "Cu", "insulation": "XLPE", "install": "B1"
+                                  },
+                                  "children": [{"type": "lighting", "label": "Scialytique", "points": 2, "p_kW": 0.4}]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q25", "use": "IT2P",
+                                  "cable": {
+                                    "cores": "3G", "section_mm2": 2.5, "length_m": 14, "designation": "U1000 R2V",
+                                    "material": "Cu", "insulation": "XLPE", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Prises murales (côté pieds)", "points": 4}]
+                                },
+                                {"type": "spare", "ref": "-Q26", "in_A": 16, "poles": "2P", "label": "Réserve"},
+                                {
+                                  "id": "S2_CPI", "type": "insulation_monitor", "ref": "-B21", "label": "CPI médical",
+                                  "range": "Rf ≥ 50 kΩ",
+                                  "product": {
+                                    "manufacturer": "Bender", "range": "ISOMETER iso-M / ATICS",
+                                    "description": "CPI médical IEC 61557-8"
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "QR", "type": "rcbo", "ref": "-Q31", "use": "DD",
+                  "cable": {
+                    "cores": "3G", "section_mm2": 2.5, "length_m": 25, "designation": "U1000 R2V", "material": "Cu",
+                    "insulation": "XLPE", "install": "B1"
+                  },
+                  "children": [{"type": "socket", "label": "Salle de réveil (groupe 1)", "points": 8}]
+                },
+                {
+                  "type": "rcbo", "ref": "-Q32", "use": "DD", "in_A": 10,
+                  "cable": {
+                    "cores": "3G", "section_mm2": 1.5, "length_m": 25, "designation": "U1000 R2V", "material": "Cu",
+                    "insulation": "XLPE", "install": "B1"
+                  },
+                  "children": [{"type": "lighting", "label": "Éclairage salle de réveil", "points": 8, "p_kW": 0.4}]
+                },
+                {
+                  "type": "breaker", "ref": "-Q33", "in_A": 32, "curve": "C", "icn_kA": 10, "poles": "4P",
+                  "cable": {
+                    "cores": "5G", "section_mm2": 6, "length_m": 40, "designation": "U1000 R2V", "material": "Cu",
+                    "insulation": "XLPE", "install": "E"
+                  },
+                  "children": [{"type": "ventilation", "label": "CTA bloc (flux laminaire)", "p_kW": 15, "priority": "essential"}]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "id": "MRA", "type": "controller", "ref": "-P1", "label": "Report d'alarme", "location": "Poste infirmier",
+      "function": "tableau de report d'alarme", "symbol_text": "ALM"
+    }
+  ],
+  "links": [
+    {"kind": "data", "from": "S2_CPI", "to": "MRA", "protocol": "RS-485", "label": "bus salles 1+2"},
+    {"kind": "earth", "from": "S1_IT", "to": "MET", "label": "PE / équipot."},
+    {"kind": "earth", "from": "S2_IT", "to": "MET", "label": "PE / équipot."}
+  ],
+  "views": [
+    {
+      "id": "sld", "title": "Bloc opératoire : schéma unifilaire", "paper": "A3",
+      "cartouche": ["label", "ref", "protection", "poles", "idn_mA", "cable", "length_m", "points"]
+    }
+  ]
+}

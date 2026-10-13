@@ -1,0 +1,350 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Hotel (120 rooms): main LV board and kitchen distribution board", "project": "EX-20",
+    "client": "Example Hotel", "author": "uniwire examples", "lang": "en",
+    "notes": [
+      "Demonstrates: kitchen emergency-stop contactor on the cooking line, gas/extraction interlock link, VFD fans, busway riser with off-page references, two views (detailed A3 + A4 overview without annotations)",
+      "Kitchen E-stop (-S0) drops -KM0 only: refrigeration, extraction and make-up air stay energised",
+      "Gas solenoid valve can open only when the canopy extract fan runs (airflow switch on -TA23 → -KM25)"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50,
+    "supply": "Utility MV/LV substation, 630 kVA dedicated", "ik3_kA": 18, "planned_kVA": 520, "standard": "IEC 60364"
+  },
+  "templates": {
+    "K3": {
+      "type": "breaker", "curve": "C", "icn_kA": 15, "poles": "3P+N",
+      "product": {"manufacturer": "ABB", "range": "S800C"}
+    },
+    "K1": {
+      "type": "breaker", "curve": "C", "icn_kA": 10, "poles": "1P+N",
+      "product": {"manufacturer": "ABB", "range": "S200"}
+    },
+    "R1": {
+      "type": "rcbo", "in_A": 16, "curve": "C", "icn_kA": 10, "poles": "1P+N", "idn_mA": 30, "rcd_type": "A",
+      "product": {"manufacturer": "ABB", "range": "DS201"}
+    },
+    "MC": {
+      "type": "breaker", "icu_kA": 36, "poles": "4P", "trip_unit": "Ekip Dip LSI",
+      "product": {"manufacturer": "ABB", "range": "Tmax XT"}
+    }
+  },
+  "sources": [
+    {
+      "id": "TR", "type": "transformer", "ref": "-T1", "label": "Utility transformer", "sn_kVA": 630, "u1_V": 20000,
+      "u2_V": 410, "ucc_pct": 4, "coupling": "Dyn11", "insulation": "oil", "external": true,
+      "children": [
+        {
+          "id": "MSB", "type": "board", "ref": "MSB", "label": "Hotel main LV board", "kind": "main", "in_A": 1000,
+          "ik_kA": 18, "form": "4b", "ip": "IP31", "location": "Basement LV room",
+          "children": [
+            {
+              "id": "Q0", "type": "breaker", "ref": "-Q0", "label": "Main ACB", "in_A": 1000, "ir_A": 920,
+              "icu_kA": 42, "poles": "4P", "trip_unit": "Ekip Touch LSIG", "mounting": "withdrawable",
+              "aux": ["MX", "OF", "SD"],
+              "product": {"manufacturer": "ABB", "range": "Emax 2 E1.2", "description": "ACB 4P 1000 A withdrawable"},
+              "cable": {
+                "cores": "4x(3x1x240)+PE", "section_mm2": 240, "parallel": 3, "material": "Cu", "length_m": 8,
+                "insulation": "XLPE", "install": "F", "designation": "single-core XLPE"
+              },
+              "children": [
+                {
+                  "type": "spd", "ref": "-F0", "spd_type": "1+2", "imax_kA": 50, "poles": "3P+N",
+                  "product": {"manufacturer": "ABB", "range": "OVR T1+2"}
+                },
+                {
+                  "id": "Q1", "type": "breaker", "ref": "-Q1", "use": "MC", "in_A": 400, "ir_A": 380,
+                  "label": "Guest-room riser",
+                  "children": [
+                    {
+                      "id": "BW", "type": "busbar", "ref": "-WB1", "kind": "busway", "in_A": 400, "material": "Al",
+                      "label": "Rising busway 400 A",
+                      "children": [
+                        {"type": "offpage", "label": "Floor DB L1", "target": "EX-20 sheet L1"},
+                        {"type": "offpage", "label": "Floor DB L2", "target": "EX-20 sheet L2"},
+                        {"type": "offpage", "label": "Floor DB L3", "target": "EX-20 sheet L3"},
+                        {"type": "offpage", "label": "Floor DB L4", "target": "EX-20 sheet L4"},
+                        {"type": "offpage", "label": "Floor DB L5", "target": "EX-20 sheet L5"}
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Q2", "type": "breaker", "ref": "-Q2", "use": "MC", "in_A": 250, "ir_A": 225,
+                  "cable": {
+                    "cores": "5G", "section_mm2": 95, "length_m": 30, "designation": "XLPE/SWA/LSZH", "material": "Cu",
+                    "insulation": "XLPE", "install": "E"
+                  },
+                  "children": [
+                    {
+                      "id": "KDB", "type": "board", "ref": "DB-K", "label": "Main kitchen", "kind": "distribution",
+                      "in_A": 250, "ik_kA": 15, "ip": "IP54", "form": "2a", "own_sheet": true,
+                      "location": "Kitchen plant corridor",
+                      "children": [
+                        {
+                          "id": "K_Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 250, "poles": "4P",
+                          "label": "Kitchen isolator", "lockable": true,
+                          "product": {"manufacturer": "ABB", "range": "OT", "description": "Switch-disconnector 4P 250 A"},
+                          "children": [
+                            {
+                              "id": "K_KM0", "type": "contactor", "ref": "-KM0", "in_A": 185, "poles": "4P",
+                              "coil_V": 230, "function": "power", "label": "Cooking line (E-stop)",
+                              "product": {"manufacturer": "ABB", "range": "AF"},
+                              "children": [
+                                {
+                                  "type": "breaker", "ref": "-Q11", "use": "K3", "in_A": 32,
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 6, "length_m": 12, "designation": "XLPE/SWA/LSZH",
+                                    "material": "Cu", "insulation": "XLPE", "install": "C"
+                                  },
+                                  "children": [{"type": "cooking", "label": "Combi oven 1 (10 GN)", "p_kW": 18.9, "kind": "oven"}]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q12", "use": "K3", "in_A": 32,
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 6, "length_m": 12, "designation": "XLPE/SWA/LSZH",
+                                    "material": "Cu", "insulation": "XLPE", "install": "C"
+                                  },
+                                  "children": [{"type": "cooking", "label": "Combi oven 2 (10 GN)", "p_kW": 18.9, "kind": "oven"}]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q13", "use": "K3", "in_A": 40,
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 10, "length_m": 12, "designation": "XLPE/SWA/LSZH",
+                                    "material": "Cu", "insulation": "XLPE", "install": "C"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "cooking", "label": "Induction range 4 zones", "p_kW": 20,
+                                      "kind": "range"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q14", "use": "K3", "in_A": 32,
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 6, "length_m": 12, "designation": "XLPE/SWA/LSZH",
+                                    "material": "Cu", "insulation": "XLPE", "install": "C"
+                                  },
+                                  "children": [{"type": "cooking", "label": "Twin-tank fryer", "p_kW": 18, "kind": "other"}]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q15", "use": "K3", "in_A": 25,
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 4, "length_m": 12, "designation": "XLPE/SWA/LSZH",
+                                    "material": "Cu", "insulation": "XLPE", "install": "C"
+                                  },
+                                  "children": [{"type": "cooking", "label": "Tilting bratt pan", "p_kW": 15, "kind": "other"}]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q16", "use": "K3", "in_A": 50,
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 16, "length_m": 12, "designation": "XLPE/SWA/LSZH",
+                                    "material": "Cu", "insulation": "XLPE", "install": "C"
+                                  },
+                                  "children": [{"type": "appliance", "label": "Conveyor dishwasher", "p_kW": 28}]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q21", "use": "K3", "in_A": 16,
+                              "cable": {
+                                "cores": "5G", "section_mm2": 2.5, "length_m": 25, "designation": "XLPE/SWA/LSZH",
+                                "material": "Cu", "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "type": "appliance", "kind": "fridge", "label": "Cold room +3 °C", "p_kW": 3.2,
+                                  "priority": "essential"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q22", "use": "K3", "in_A": 20,
+                              "cable": {
+                                "cores": "5G", "section_mm2": 2.5, "length_m": 25, "designation": "XLPE/SWA/LSZH",
+                                "material": "Cu", "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "type": "appliance", "kind": "freezer", "label": "Cold room −20 °C", "p_kW": 4.8,
+                                  "priority": "essential"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "K_Q23", "type": "breaker", "ref": "-Q23", "use": "K3", "in_A": 20, "poles": "3P",
+                              "cable": {
+                                "cores": "4G", "section_mm2": 2.5, "length_m": 30, "designation": "XLPE/SWA/LSZH",
+                                "material": "Cu", "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "id": "K_VFD1", "type": "motor_starter", "ref": "-TA23", "method": "vfd",
+                                  "p_kW": 5.5, "in_A": 13,
+                                  "product": {"manufacturer": "ABB", "range": "ACH580", "description": "HVAC drive 5.5 kW"},
+                                  "children": [
+                                    {
+                                      "type": "motor", "ref": "-M23", "label": "Canopy extract fan", "p_kW": 5.5,
+                                      "phases": 3,
+                                      "cable": {
+                                        "cores": "4G", "section_mm2": 2.5, "length_m": 35,
+                                        "designation": "XLPE/SWA/LSZH", "material": "Cu", "insulation": "XLPE",
+                                        "install": "C"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "K_Q24", "type": "breaker", "ref": "-Q24", "use": "K3", "in_A": 16, "poles": "3P",
+                              "cable": {
+                                "cores": "4G", "section_mm2": 2.5, "length_m": 30, "designation": "XLPE/SWA/LSZH",
+                                "material": "Cu", "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "id": "K_VFD2", "type": "motor_starter", "ref": "-TA24", "method": "vfd", "p_kW": 4,
+                                  "in_A": 9.4,
+                                  "product": {"manufacturer": "ABB", "range": "ACH580", "description": "HVAC drive 4 kW"},
+                                  "children": [
+                                    {
+                                      "type": "motor", "ref": "-M24", "label": "Make-up air fan", "p_kW": 4,
+                                      "phases": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "K_Q25", "type": "breaker", "ref": "-Q25", "use": "K1", "in_A": 6,
+                              "cable": {
+                                "cores": "3G", "section_mm2": 1.5, "length_m": 20, "designation": "XLPE/SWA/LSZH",
+                                "material": "Cu", "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "id": "K_GV", "type": "contactor", "ref": "-KM25", "in_A": 16, "poles": "2P",
+                                  "coil_V": 24, "label": "Gas valve relay",
+                                  "children": [
+                                    {
+                                      "type": "load", "ref": "-YV25", "label": "Gas solenoid valve",
+                                      "symbol_text": "GAS", "p_kW": 0.02
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "rcbo", "ref": "-Q31", "use": "R1", "phase": "L1",
+                              "cable": {
+                                "cores": "3G", "section_mm2": 2.5, "length_m": 20, "designation": "XLPE/SWA/LSZH",
+                                "material": "Cu", "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "type": "socket", "label": "Worktop sockets (prep)", "points": 6,
+                                  "socket_type": "IP44 2P+E 16 A"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "rcbo", "ref": "-Q32", "use": "R1", "phase": "L2",
+                              "cable": {
+                                "cores": "3G", "section_mm2": 2.5, "length_m": 20, "designation": "XLPE/SWA/LSZH",
+                                "material": "Cu", "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "type": "socket", "label": "Worktop sockets (pastry)", "points": 6,
+                                  "socket_type": "IP44 2P+E 16 A"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "rcbo", "ref": "-Q33", "use": "R1", "in_A": 10, "phase": "L3",
+                              "cable": {
+                                "cores": "3G", "section_mm2": 1.5, "length_m": 30, "designation": "XLPE/SWA/LSZH",
+                                "material": "Cu", "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [{"type": "lighting", "label": "Kitchen lighting IP65", "points": 16, "p_kW": 0.7}]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Q3", "type": "breaker", "ref": "-Q3", "use": "MC", "in_A": 160, "ir_A": 125,
+                  "cable": {
+                    "cores": "5G", "section_mm2": 35, "length_m": 35, "designation": "XLPE/SWA/LSZH", "material": "Cu",
+                    "insulation": "XLPE", "install": "E"
+                  },
+                  "children": [{"type": "offpage", "label": "DB-LDY Laundry", "target": "EX-20 sheet LDY"}]
+                },
+                {
+                  "id": "Q4", "type": "breaker", "ref": "-Q4", "use": "MC", "in_A": 250, "ir_A": 250, "poles": "3P",
+                  "cable": {
+                    "cores": "4G", "section_mm2": 95, "length_m": 60, "designation": "XLPE/SWA/LSZH", "material": "Cu",
+                    "insulation": "XLPE", "install": "E"
+                  },
+                  "children": [{"type": "load", "ref": "-E4", "label": "Heat pumps (roof)", "symbol_text": "HP", "p_kW": 140}]
+                },
+                {
+                  "id": "Q5", "type": "breaker", "ref": "-Q5", "use": "MC", "in_A": 63, "poles": "3P",
+                  "cable": {
+                    "cores": "4G", "section_mm2": 16, "length_m": 40, "designation": "XLPE/SWA/LSZH", "material": "Cu",
+                    "insulation": "XLPE", "install": "E"
+                  },
+                  "children": [{"type": "motor", "ref": "-M5", "label": "Lift 1", "p_kW": 13, "phases": 3}]
+                },
+                {
+                  "id": "Q6", "type": "breaker", "ref": "-Q6", "use": "MC", "in_A": 63, "poles": "3P",
+                  "cable": {
+                    "cores": "4G", "section_mm2": 16, "length_m": 42, "designation": "XLPE/SWA/LSZH", "material": "Cu",
+                    "insulation": "XLPE", "install": "E"
+                  },
+                  "children": [{"type": "motor", "ref": "-M6", "label": "Lift 2", "p_kW": 13, "phases": 3}]
+                },
+                {
+                  "id": "Q7", "type": "breaker", "ref": "-Q7", "use": "MC", "in_A": 125, "ir_A": 100,
+                  "cable": {
+                    "cores": "5G", "section_mm2": 35, "length_m": 25, "designation": "XLPE/SWA/LSZH", "material": "Cu",
+                    "insulation": "XLPE", "install": "E"
+                  },
+                  "children": [{"type": "offpage", "label": "DB-G Lobby, bar, restaurant", "target": "EX-20 sheet G"}]
+                },
+                {"type": "spare", "ref": "-Q8", "in_A": 250, "poles": "4P", "label": "Spare (equipped)"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "id": "S0", "type": "controller", "ref": "-S0", "label": "Kitchen E-stop", "function": "emergency stop",
+      "symbol_text": "E-STOP"
+    }
+  ],
+  "links": [
+    {"kind": "control", "from": "S0", "to": "K_KM0", "label": "E-stop"},
+    {"kind": "interlock", "from": "K_VFD1", "to": "K_GV", "label": "airflow proven"}
+  ],
+  "views": [
+    {
+      "id": "sld", "title": "Hotel LV distribution", "paper": "A3",
+      "cartouche": ["label", "ref", "protection", "idn_mA", "cable", "length_m", "p_kW"]
+    },
+    {
+      "id": "overview", "title": "Overview (A4)", "paper": "A4", "orientation": "landscape", "annotations": false,
+      "cartouche": [], "folio_split": "none", "pitch_mm": 12
+    }
+  ]
+}

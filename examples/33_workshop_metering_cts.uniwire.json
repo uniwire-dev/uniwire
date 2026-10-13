@@ -1,0 +1,230 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Machining workshop: energy metering with CTs, power meters and Modbus gateway", "project": "EX-33",
+    "client": "Example Precision Machining", "author": "uniwire examples", "lang": "en",
+    "notes": [
+      "Demonstrates: instrument transformers in the power tree, power meters as auxiliary devices fed by 'measure' links, DIN-rail sub-meters in series, Modbus 'data' links to a gateway; TN-C main distribution (PEN feeders ≥ 10 mm²) with a TN-S sub-board",
+      "CT secondaries: 2.5 mm² Cu, shorting terminal blocks before each meter; RS-485 chain P0-P6 → gateway -A0",
+      "No RCD on TN-C circuits (PEN); 30 mA protection only on the TN-S sub-board"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-C", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "ik3_kA": 15,
+    "supply": "Customer substation 400 kVA (shared site)", "standard": "IEC 60364"
+  },
+  "templates": {
+    "MC": {
+      "type": "breaker", "icu_kA": 36, "poles": "3P", "trip_unit": "TM-D",
+      "product": {"manufacturer": "Schneider Electric", "range": "ComPacT NSXm"}
+    },
+    "SUB": {
+      "type": "meter", "kind": "kWh Modbus", "in_A": 63,
+      "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iEM3000"}
+    }
+  },
+  "sources": [
+    {
+      "id": "IN", "type": "offpage", "label": "From site MSB -Q4 (250 A)", "target": "EX-33 E-001",
+      "children": [
+        {
+          "id": "WDB", "type": "board", "ref": "WDB", "label": "Workshop main board", "kind": "main", "in_A": 250,
+          "ik_kA": 15, "ip": "IP41",
+          "cable": {
+            "cores": "4x", "section_mm2": 120, "length_m": 70, "material": "Cu", "insulation": "XLPE", "install": "E",
+            "pen": true, "conductors": "L1, L2, L3, PEN"
+          },
+          "children": [
+            {
+              "id": "Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 250, "poles": "3P",
+              "label": "Incomer (PEN not switched)",
+              "children": [
+                {
+                  "id": "CT0", "type": "instrument_transformer", "ref": "-T0", "kind": "ct", "ratio": "250/5 A",
+                  "accuracy": "0.5", "burden_VA": 5, "count": 3,
+                  "children": [
+                    {
+                      "id": "QC", "type": "breaker", "ref": "-Q1", "use": "MC", "in_A": 63, "ir_A": 50,
+                      "cable": {
+                        "cores": "4x", "section_mm2": 16, "length_m": 25, "material": "Cu", "insulation": "XLPE",
+                        "install": "E", "pen": true, "conductors": "L1, L2, L3, PEN"
+                      },
+                      "children": [
+                        {
+                          "id": "CT1", "type": "instrument_transformer", "ref": "-T1", "kind": "ct", "ratio": "50/5 A",
+                          "accuracy": "1", "count": 3,
+                          "children": [
+                            {
+                              "type": "load", "ref": "-E1", "label": "CNC turning centre", "symbol_text": "CNC",
+                              "p_kW": 28, "cos_phi": 0.85
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "QK", "type": "breaker", "ref": "-Q2", "use": "MC", "in_A": 40, "ir_A": 32,
+                      "cable": {
+                        "cores": "4G", "section_mm2": 10, "length_m": 15, "material": "Cu", "insulation": "XLPE",
+                        "install": "E"
+                      },
+                      "children": [
+                        {
+                          "id": "PM3", "type": "meter", "ref": "-P2", "use": "SUB",
+                          "children": [
+                            {
+                              "type": "motor_starter", "ref": "-TA2", "method": "vfd", "p_kW": 15, "in_A": 32,
+                              "children": [
+                                {
+                                  "type": "motor", "ref": "-M2", "label": "Screw compressor (VSD)", "p_kW": 15,
+                                  "phases": 3
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q3", "use": "MC", "in_A": 25, "ir_A": 20,
+                      "cable": {
+                        "cores": "4G", "section_mm2": 4, "length_m": 40, "material": "Cu", "insulation": "XLPE",
+                        "install": "E"
+                      },
+                      "children": [
+                        {
+                          "id": "PM4", "type": "meter", "ref": "-P3", "use": "SUB",
+                          "children": [{"type": "motor", "ref": "-M3", "label": "Overhead crane 5 t", "p_kW": 9, "phases": 3}]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q4", "use": "MC", "in_A": 16,
+                      "cable": {
+                        "cores": "4G", "section_mm2": 2.5, "length_m": 20, "material": "Cu", "insulation": "XLPE",
+                        "install": "E"
+                      },
+                      "children": [
+                        {
+                          "type": "motor_starter", "ref": "-QM4", "method": "dol", "in_A": 12, "p_kW": 5.5,
+                          "children": [{"type": "ventilation", "label": "Coolant mist extraction", "p_kW": 5.5}]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "QS", "type": "breaker", "ref": "-Q5", "use": "MC", "in_A": 63, "poles": "3P",
+                      "cable": {
+                        "cores": "4x", "section_mm2": 16, "length_m": 20, "material": "Cu", "insulation": "XLPE",
+                        "install": "E", "pen": true, "conductors": "L1, L2, L3, PEN"
+                      },
+                      "children": [
+                        {
+                          "id": "SDB", "type": "board", "ref": "SDB", "label": "Sub-board (TN-S), sockets & lighting",
+                          "kind": "sub", "earthing": "TN-S", "in_A": 63, "ip": "IP41",
+                          "note": "PEN split into PE + N at the SDB earth bar (TN-C-S); never rejoined downstream",
+                          "children": [
+                            {
+                              "id": "PM6", "type": "meter", "ref": "-P5", "use": "SUB",
+                              "children": [
+                                {
+                                  "type": "rcbo", "ref": "-Q51", "in_A": 32, "curve": "C", "icn_kA": 10,
+                                  "poles": "3P+N", "idn_mA": 30, "rcd_type": "A",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 6, "length_m": 30, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "socket", "label": "Welding outlets 32 A", "points": 3,
+                                      "poles": "3P+N+T", "in_A": 32
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "rcbo", "ref": "-Q52", "in_A": 16, "curve": "C", "icn_kA": 10,
+                                  "poles": "1P+N", "idn_mA": 30, "rcd_type": "A", "phase": "L1",
+                                  "cable": {
+                                    "cores": "3G", "section_mm2": 2.5, "length_m": 35, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [{"type": "socket", "label": "Bench sockets", "points": 10}]
+                                },
+                                {
+                                  "type": "rcbo", "ref": "-Q53", "in_A": 16, "curve": "C", "icn_kA": 10,
+                                  "poles": "3P+N", "idn_mA": 30, "rcd_type": "A",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 2.5, "length_m": 40, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [{"type": "lighting", "label": "High-bay LED (DALI)", "points": 30, "p_kW": 4.2}]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "QM2", "type": "breaker", "ref": "-Q6", "use": "MC", "in_A": 50, "ir_A": 40,
+                      "cable": {
+                        "cores": "4x", "section_mm2": 10, "length_m": 30, "material": "Cu", "insulation": "XLPE",
+                        "install": "E", "pen": true, "conductors": "L1, L2, L3, PEN"
+                      },
+                      "children": [
+                        {
+                          "id": "CT2", "type": "instrument_transformer", "ref": "-T6", "kind": "ct", "ratio": "50/5 A",
+                          "accuracy": "1", "count": 3,
+                          "children": [
+                            {
+                              "type": "load", "ref": "-E6", "label": "5-axis machining centre", "symbol_text": "CNC",
+                              "p_kW": 22, "cos_phi": 0.85
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "id": "PM0", "type": "meter", "ref": "-P0", "kind": "PM cl. 0.5S",
+      "product": {
+        "manufacturer": "Schneider Electric", "range": "PowerLogic PM5000",
+        "description": "Power quality meter, Modbus TCP"
+      }
+    },
+    {
+      "id": "PM1", "type": "meter", "ref": "-P1", "kind": "PM cl. 1",
+      "product": {"manufacturer": "Schneider Electric", "range": "PowerLogic PM2000"}
+    },
+    {
+      "id": "PM2", "type": "meter", "ref": "-P6", "kind": "PM cl. 1",
+      "product": {"manufacturer": "Schneider Electric", "range": "PowerLogic PM2000"}
+    },
+    {
+      "id": "GW", "type": "controller", "ref": "-A0", "label": "Modbus gateway",
+      "function": "Modbus RTU / TCP gateway", "symbol_text": "GW",
+      "product": {"manufacturer": "Schneider Electric", "range": "Link150"}
+    }
+  ],
+  "links": [
+    {"kind": "measure", "from": "CT0", "to": "PM0", "label": "250/5"},
+    {"kind": "measure", "from": "CT1", "to": "PM1", "label": "50/5"},
+    {"kind": "measure", "from": "CT2", "to": "PM2", "label": "50/5"},
+    {"kind": "data", "from": "PM6", "to": "GW", "protocol": "Modbus RTU", "label": "RS-485"}
+  ],
+  "views": [
+    {
+      "id": "sld", "title": "Workshop distribution and metering", "paper": "A3", "pitch_mm": 26,
+      "cartouche": ["label", "ref", "protection", "idn_mA", "cable", "length_m", "p_kW", "cos_phi"]
+    }
+  ]
+}

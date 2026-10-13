@@ -1,0 +1,381 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Warehouse (6 000 m²): dock doors, forklift charging and high-bay lighting trunking", "project": "EX-31",
+    "client": "Example Logistics Warehouse", "author": "uniwire examples", "lang": "en",
+    "notes": [
+      "Demonstrates: TT system with time-delayed 300 mA incomer and 30 mA RCBOs, lighting busbar trunking (busbar kind 'busway') tapped by luminaire groups ('count'), chargers modelled as inverter kind 'charger', repetitive dock / charger boards on their own sheets with circuit codes",
+      "Charger RCBOs type F (HF chargers with frequency-converter input stage)"
+    ]
+  },
+  "installation": {
+    "earthing": "TT", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "supply": "LV service 200 kVA",
+    "subscribed_kVA": 200, "ik3_kA": 12, "earth_resistance_ohm": 18, "standard": "IEC 60364"
+  },
+  "templates": {
+    "DOCK": {
+      "type": "rcbo", "in_A": 16, "curve": "C", "icn_kA": 10, "poles": "3P+N", "idn_mA": 30, "rcd_type": "A",
+      "product": {"manufacturer": "Hager", "range": "ADA 4P"}
+    },
+    "CHG": {
+      "type": "rcbo", "in_A": 16, "curve": "C", "icn_kA": 10, "poles": "3P+N", "idn_mA": 30, "rcd_type": "F",
+      "product": {"manufacturer": "Hager", "range": "ADx 4P type F"}
+    },
+    "MC": {
+      "type": "breaker", "curve": "C", "icn_kA": 15, "poles": "4P",
+      "product": {"manufacturer": "Hager", "range": "HMX"}
+    }
+  },
+  "sources": [
+    {
+      "id": "GRID", "type": "grid", "label": "Utility LV service", "supply": "200 kVA", "un_V": 400, "ik_kA": 12,
+      "children": [
+        {
+          "id": "MDB", "type": "board", "ref": "MDB", "label": "Warehouse main board", "kind": "main", "in_A": 400,
+          "ik_kA": 12, "ip": "IP31",
+          "children": [
+            {
+              "id": "Q0", "type": "breaker", "ref": "-Q0", "label": "Main incomer", "in_A": 320, "ir_A": 300,
+              "icu_kA": 25, "poles": "4P", "trip_unit": "LSI",
+              "product": {"manufacturer": "Hager", "range": "h3+ P400"},
+              "children": [
+                {
+                  "id": "RCD0", "type": "rcd", "ref": "-F0", "label": "Earth-leakage relay + toroid", "in_A": 320,
+                  "idn_mA": 300, "delay": "S", "rcd_type": "A", "poles": "4P",
+                  "children": [
+                    {"type": "spd", "ref": "-F1", "spd_type": "1+2", "imax_kA": 50, "poles": "3P+N"},
+                    {
+                      "type": "breaker", "ref": "-Q1", "use": "MC", "in_A": 80,
+                      "cable": {
+                        "cores": "5G", "section_mm2": 16, "length_m": 70, "material": "Cu", "insulation": "XLPE",
+                        "install": "E"
+                      },
+                      "children": [
+                        {
+                          "id": "DBD", "type": "board", "ref": "DB-DOCK", "label": "Loading docks 1-6",
+                          "kind": "distribution", "in_A": 80, "ip": "IP55", "own_sheet": true,
+                          "location": "Dock wall, column C4",
+                          "children": [
+                            {
+                              "id": "D_Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 80, "poles": "4P",
+                              "label": "Isolator",
+                              "children": [
+                                {
+                                  "type": "rcbo", "ref": "-Q1", "use": "DOCK", "circuit": "D1",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 2.5, "length_m": 11, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "load", "ref": "-A1", "label": "Dock 1: door + leveller panel",
+                                      "symbol_text": "DOCK", "p_kW": 3.0,
+                                      "note": "Sectional door 0.75 kW + hydraulic leveller 2.2 kW, interlocked"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "rcbo", "ref": "-Q2", "use": "DOCK", "circuit": "D2",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 2.5, "length_m": 16, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "load", "ref": "-A2", "label": "Dock 2: door + leveller panel",
+                                      "symbol_text": "DOCK", "p_kW": 3.0,
+                                      "note": "Sectional door 0.75 kW + hydraulic leveller 2.2 kW, interlocked"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "rcbo", "ref": "-Q3", "use": "DOCK", "circuit": "D3",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 2.5, "length_m": 21, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "load", "ref": "-A3", "label": "Dock 3: door + leveller panel",
+                                      "symbol_text": "DOCK", "p_kW": 3.0,
+                                      "note": "Sectional door 0.75 kW + hydraulic leveller 2.2 kW, interlocked"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "rcbo", "ref": "-Q4", "use": "DOCK", "circuit": "D4",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 2.5, "length_m": 26, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "load", "ref": "-A4", "label": "Dock 4: door + leveller panel",
+                                      "symbol_text": "DOCK", "p_kW": 3.0,
+                                      "note": "Sectional door 0.75 kW + hydraulic leveller 2.2 kW, interlocked"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "rcbo", "ref": "-Q5", "use": "DOCK", "circuit": "D5",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 2.5, "length_m": 31, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "load", "ref": "-A5", "label": "Dock 5: door + leveller panel",
+                                      "symbol_text": "DOCK", "p_kW": 3.0,
+                                      "note": "Sectional door 0.75 kW + hydraulic leveller 2.2 kW, interlocked"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "rcbo", "ref": "-Q6", "use": "DOCK", "circuit": "D6",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 2.5, "length_m": 36, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "load", "ref": "-A6", "label": "Dock 6: door + leveller panel",
+                                      "symbol_text": "DOCK", "p_kW": 3.0,
+                                      "note": "Sectional door 0.75 kW + hydraulic leveller 2.2 kW, interlocked"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "rcbo", "ref": "-Q7", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "1P+N",
+                                  "idn_mA": 30, "rcd_type": "A",
+                                  "cable": {
+                                    "cores": "3G", "section_mm2": 2.5, "length_m": 40, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [{"type": "socket", "label": "Dock sockets IP44", "points": 6}]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q2", "use": "MC", "in_A": 63,
+                      "cable": {
+                        "cores": "5G", "section_mm2": 16, "length_m": 55, "material": "Cu", "insulation": "XLPE",
+                        "install": "E"
+                      },
+                      "children": [
+                        {
+                          "id": "DBC", "type": "board", "ref": "DB-CHG", "label": "Forklift charging area",
+                          "kind": "distribution", "in_A": 63, "ip": "IP54", "own_sheet": true,
+                          "location": "Charging bay (ventilated)",
+                          "children": [
+                            {
+                              "id": "C_Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 63, "poles": "4P",
+                              "children": [
+                                {
+                                  "type": "rcbo", "ref": "-Q1", "use": "CHG", "circuit": "C1",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 2.5, "length_m": 7, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "inverter", "kind": "charger", "ref": "-G1", "label": "Charger 1",
+                                      "p_kVA": 6.5, "p_kW": 6, "note": "Li-ion 48 V forklift battery",
+                                      "product": {"manufacturer": "Example", "range": "HF charger 48 V / 100 A"}
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "rcbo", "ref": "-Q2", "use": "CHG", "circuit": "C2",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 2.5, "length_m": 10, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "inverter", "kind": "charger", "ref": "-G2", "label": "Charger 2",
+                                      "p_kVA": 6.5, "p_kW": 6, "note": "Li-ion 48 V forklift battery",
+                                      "product": {"manufacturer": "Example", "range": "HF charger 48 V / 100 A"}
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "rcbo", "ref": "-Q3", "use": "CHG", "circuit": "C3",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 2.5, "length_m": 13, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "inverter", "kind": "charger", "ref": "-G3", "label": "Charger 3",
+                                      "p_kVA": 6.5, "p_kW": 6, "note": "Li-ion 48 V forklift battery",
+                                      "product": {"manufacturer": "Example", "range": "HF charger 48 V / 100 A"}
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "rcbo", "ref": "-Q4", "use": "CHG", "circuit": "C4",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 2.5, "length_m": 16, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "inverter", "kind": "charger", "ref": "-G4", "label": "Charger 4",
+                                      "p_kVA": 6.5, "p_kW": 6, "note": "Li-ion 48 V forklift battery",
+                                      "product": {"manufacturer": "Example", "range": "HF charger 48 V / 100 A"}
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "rcbo", "ref": "-Q5", "use": "CHG", "circuit": "C5",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 2.5, "length_m": 19, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "inverter", "kind": "charger", "ref": "-G5", "label": "Charger 5",
+                                      "p_kVA": 6.5, "p_kW": 6, "note": "Li-ion 48 V forklift battery",
+                                      "product": {"manufacturer": "Example", "range": "HF charger 48 V / 100 A"}
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "rcbo", "ref": "-Q6", "use": "CHG", "circuit": "C6",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 2.5, "length_m": 22, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "inverter", "kind": "charger", "ref": "-G6", "label": "Charger 6",
+                                      "p_kVA": 6.5, "p_kW": 6, "note": "Li-ion 48 V forklift battery",
+                                      "product": {"manufacturer": "Example", "range": "HF charger 48 V / 100 A"}
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q7", "in_A": 10, "curve": "C", "icn_kA": 6,
+                                  "poles": "3P+N",
+                                  "cable": {
+                                    "cores": "5G", "section_mm2": 1.5, "length_m": 15, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [{"type": "ventilation", "label": "Charging-area extract fan", "p_kW": 0.75}]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "QL1", "type": "breaker", "ref": "-Q3", "use": "MC", "in_A": 25,
+                      "cable": {
+                        "cores": "5G", "section_mm2": 4, "length_m": 30, "material": "Cu", "insulation": "XLPE",
+                        "install": "E"
+                      },
+                      "children": [
+                        {
+                          "id": "KL1", "type": "contactor", "ref": "-KM3", "in_A": 25, "poles": "4P", "coil_V": 230,
+                          "function": "lighting",
+                          "children": [
+                            {
+                              "id": "BW1", "type": "busbar", "ref": "-WL1", "kind": "busway", "in_A": 25,
+                              "label": "Lighting trunking aisles 1-6",
+                              "product": {"manufacturer": "Schneider Electric", "range": "Canalis KBA 25 A"},
+                              "children": [
+                                {
+                                  "type": "lighting", "label": "High-bay LED aisles 1-3", "count": 24, "points": 24,
+                                  "p_kW": 3.6, "phase": "L1L2L3"
+                                },
+                                {
+                                  "type": "lighting", "label": "High-bay LED aisles 4-6", "count": 24, "points": 24,
+                                  "p_kW": 3.6, "phase": "L1L2L3"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "QL2", "type": "breaker", "ref": "-Q4", "use": "MC", "in_A": 25,
+                      "cable": {
+                        "cores": "5G", "section_mm2": 4, "length_m": 45, "material": "Cu", "insulation": "XLPE",
+                        "install": "E"
+                      },
+                      "children": [
+                        {
+                          "id": "KL2", "type": "contactor", "ref": "-KM4", "in_A": 25, "poles": "4P", "coil_V": 230,
+                          "function": "lighting",
+                          "children": [
+                            {
+                              "id": "BW2", "type": "busbar", "ref": "-WL2", "kind": "busway", "in_A": 25,
+                              "label": "Lighting trunking aisles 7-12",
+                              "product": {"manufacturer": "Schneider Electric", "range": "Canalis KBA 25 A"},
+                              "children": [
+                                {
+                                  "type": "lighting", "label": "High-bay LED aisles 7-9", "count": 24, "points": 24,
+                                  "p_kW": 3.6, "phase": "L1L2L3"
+                                },
+                                {
+                                  "type": "lighting", "label": "High-bay LED aisles 10-12", "count": 24, "points": 24,
+                                  "p_kW": 3.6, "phase": "L1L2L3"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q5", "use": "MC", "in_A": 32, "poles": "3P",
+                      "cable": {
+                        "cores": "4G", "section_mm2": 6, "length_m": 90, "material": "Cu", "insulation": "XLPE",
+                        "install": "E"
+                      },
+                      "children": [
+                        {
+                          "type": "motor", "ref": "-M5", "label": "Rapid-roll fire shutter + smoke vents", "p_kW": 4,
+                          "phases": 3, "priority": "safety"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q6", "use": "MC", "in_A": 63,
+                      "cable": {
+                        "cores": "5G", "section_mm2": 16, "length_m": 25, "material": "Cu", "insulation": "XLPE",
+                        "install": "E"
+                      },
+                      "children": [{"type": "offpage", "label": "DB-OFF Offices & welfare", "target": "EX-31 sheet 4"}]
+                    },
+                    {"type": "spare", "ref": "-Q7", "in_A": 63, "poles": "4P", "label": "Spare (rooftop PV)"}
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "id": "LC", "type": "controller", "ref": "-A3", "label": "Lighting controller", "function": "DALI + presence",
+      "symbol_text": "DALI"
+    }
+  ],
+  "links": [{"kind": "control", "from": "LC", "to": "KL2"}, {"kind": "control", "from": "LC", "to": "KL1"}],
+  "views": [
+    {
+      "id": "sld", "title": "Warehouse LV distribution", "paper": "A3",
+      "cartouche": ["circuit", "label", "ref", "protection", "idn_mA", "rcd_type", "cable", "length_m", "p_kW"]
+    }
+  ]
+}

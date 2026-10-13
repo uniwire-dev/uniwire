@@ -1,0 +1,589 @@
+{
+ "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+ "uniwire": "1.0.0",
+ "profiles": [
+  "iec60364"
+ ],
+ "meta": {
+  "title": "Battery storage container 250 kW / 500 kWh with 380 V DC microgrid",
+  "project": "EX-41",
+  "client": "Example business park",
+  "author": "uniwire examples",
+  
+  "lang": "en",
+  "notes": [
+   "Demonstrates: BESS container with AC panel, bidirectional PCS, unearthed (IT) 768 V DC bus with insulation monitor, rack fuse-switches, DC/DC converter feeding a 380 V DC microgrid (DC EV charger, DC lighting, IT racks), auxiliaries panel with HVAC and fire suppression, EMS data links",
+   "4 racks x 125 kWh LFP, 768 V nominal (672-864 V); 0.5C → 81 A per rack, aR 160 A fuses; PCS DC input 2x(1x185) per pole",
+   "DC microgrid 380 V: unearthed, mid-point monitored by the PCS IMD; 2-pole DC breakers"
+  ]
+ },
+ "installation": {
+  "earthing": "TN-S",
+  "system": "3P+N",
+  "un_V": 400,
+  "uln_V": 230,
+  "f_Hz": 50,
+  "ik3_kA": 25,
+  "standard": "IEC 60364 / IEC 62933"
+ },
+ "templates": {
+  "RACKF": {
+   "type": "fuse_switch",
+   "in_A": 160,
+   "fuse_A": 160,
+   "fuse_class": "aR",
+   "size": "NH1 DC",
+   "poles": "2P",
+   "ue_V": 1000
+  },
+  "RACK": {
+   "type": "battery",
+   "capacity_kWh": 125,
+   "un_V": 768,
+   "technology": "LFP"
+  },
+  "DCB": {
+   "type": "breaker",
+   "poles": "2P",
+   "ue_V": 500,
+   "icu_kA": 10
+  }
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "label": "Site LV switchboard",
+   "supply": "400 V from site MSB",
+   "children": [
+    {
+     "type": "breaker",
+     "ref": "-Q5",
+     "label": "BESS feeder (site MSB)",
+     "in_A": 630,
+     "ir_A": 450,
+     "poles": "4P",
+     "icu_kA": 36,
+     "external": true,
+     "cable": {
+      "cores": "4x",
+      "section_mm2": 240,
+      "parallel": 2,
+      "material": "Al",
+      "insulation": "XLPE",
+      "install": "D-duct",
+      "length_m": 60
+     },
+     "children": [
+      {
+       "type": "board",
+       "id": "ACP",
+       "ref": "ACP",
+       "label": "Container AC panel",
+       "kind": "distribution",
+       "in_A": 630,
+       "ik_kA": 25,
+       "children": [
+        {
+         "type": "switch_disconnector",
+         "ref": "-Q0",
+         "label": "Incomer",
+         "in_A": 630,
+         "poles": "4P",
+         "lockable": true,
+         "children": [
+          {
+           "type": "breaker",
+           "id": "QPCS",
+           "ref": "-Q1",
+           "label": "PCS",
+           "in_A": 400,
+           "ir_A": 400,
+           "poles": "3P",
+           "icu_kA": 36,
+           "aux": [
+            "MX",
+            "OF"
+           ],
+           "cable": {
+            "cores": "3x",
+            "section_mm2": 240,
+            "material": "Cu",
+            "insulation": "XLPE",
+            "install": "E",
+            "length_m": 5
+           },
+           "children": [
+            {
+             "type": "inverter",
+             "id": "PCS",
+             "ref": "-T1",
+             "label": "Bidirectional PCS",
+             "kind": "battery",
+             "p_kVA": 250,
+             "un_V": 400,
+             "protection": "EN 50549-1",
+             "children": [
+              {
+               "type": "board",
+               "id": "DCP",
+               "ref": "DCP",
+               "label": "DC panel 768 V",
+               "kind": "dc_box",
+               "system": "DC",
+               "earthing": "IT",
+               "in_A": 400,
+               "un_V": 1000,
+               "cable": {
+                "cores": "2x",
+                "section_mm2": 185,
+                "parallel": 2,
+                "material": "Cu",
+                "insulation": "XLPE",
+                "length_m": 5
+               },
+               "children": [
+                {
+                 "type": "switch_disconnector",
+                 "id": "QDC",
+                 "ref": "-Q2",
+                 "label": "DC main switch",
+                 "in_A": 400,
+                 "poles": "2P",
+                 "dc": true,
+                 "ue_V": 1000,
+                 "children": [
+                  {
+                   "type": "spd",
+                   "ref": "-F0",
+                   "spd_type": "2",
+                   "dc": true,
+                   "uc_V": 1000,
+                   "imax_kA": 40
+                  },
+                  {
+                   "type": "fuse_switch",
+                   "ref": "-F1",
+                   "use": "RACKF",
+                   "label": "Rack 1",
+                   "cable": {
+                    "cores": "2x",
+                    "section_mm2": 70,
+                    "material": "Cu",
+                    "insulation": "XLPE",
+                    "length_m": 4
+                   },
+                   "children": [
+                    {
+                     "type": "battery",
+                     "id": "BAT1",
+                     "ref": "-G1",
+                     "use": "RACK",
+                     "label": "Battery rack 1"
+                    }
+                   ]
+                  },
+                  {
+                   "type": "fuse_switch",
+                   "ref": "-F2",
+                   "use": "RACKF",
+                   "label": "Rack 2",
+                   "cable": {
+                    "cores": "2x",
+                    "section_mm2": 70,
+                    "material": "Cu",
+                    "insulation": "XLPE",
+                    "length_m": 4
+                   },
+                   "children": [
+                    {
+                     "type": "battery",
+                     "id": "BAT2",
+                     "ref": "-G2",
+                     "use": "RACK",
+                     "label": "Battery rack 2"
+                    }
+                   ]
+                  },
+                  {
+                   "type": "fuse_switch",
+                   "ref": "-F3",
+                   "use": "RACKF",
+                   "label": "Rack 3",
+                   "cable": {
+                    "cores": "2x",
+                    "section_mm2": 70,
+                    "material": "Cu",
+                    "insulation": "XLPE",
+                    "length_m": 4
+                   },
+                   "children": [
+                    {
+                     "type": "battery",
+                     "id": "BAT3",
+                     "ref": "-G3",
+                     "use": "RACK",
+                     "label": "Battery rack 3"
+                    }
+                   ]
+                  },
+                  {
+                   "type": "fuse_switch",
+                   "ref": "-F4",
+                   "use": "RACKF",
+                   "label": "Rack 4",
+                   "cable": {
+                    "cores": "2x",
+                    "section_mm2": 70,
+                    "material": "Cu",
+                    "insulation": "XLPE",
+                    "length_m": 4
+                   },
+                   "children": [
+                    {
+                     "type": "battery",
+                     "id": "BAT4",
+                     "ref": "-G4",
+                     "use": "RACK",
+                     "label": "Battery rack 4"
+                    }
+                   ]
+                  },
+                  {
+                   "type": "fuse_switch",
+                   "ref": "-F5",
+                   "label": "DC/DC converter",
+                   "in_A": 100,
+                   "fuse_A": 80,
+                   "fuse_class": "aR",
+                   "poles": "2P",
+                   "ue_V": 1000,
+                   "children": [
+                    {
+                     "type": "dc_converter",
+                     "id": "DCDC",
+                     "ref": "-T2",
+                     "label": "DC/DC 768/380 V",
+                     "kind": "dcdc",
+                     "p_kVA": 50,
+                     "in_A": 130,
+                     "children": [
+                      {
+                       "type": "board",
+                       "id": "DCMG",
+                       "ref": "DCMG",
+                       "label": "380 V DC microgrid",
+                       "kind": "distribution",
+                       "system": "DC",
+                       "earthing": "IT",
+                       "un_V": 380,
+                       "in_A": 160,
+                       "cable": {
+                        "cores": "2x",
+                        "section_mm2": 50,
+                        "material": "Cu",
+                        "insulation": "XLPE",
+                        "install": "E",
+                        "length_m": 30
+                       },
+                       "children": [
+                        {
+                         "type": "breaker",
+                         "ref": "-Q31",
+                         "use": "DCB",
+                         "in_A": 80,
+                         "label": "DC fast charger",
+                         "cable": {
+                          "cores": "2x",
+                          "section_mm2": 25,
+                          "material": "Cu",
+                          "insulation": "XLPE",
+                          "install": "C",
+                          "length_m": 20
+                         },
+                         "children": [
+                          {
+                           "type": "ev_charger",
+                           "label": "DC charger 25 kW",
+                           "mode": "4",
+                           "p_kW": 25
+                          }
+                         ]
+                        },
+                        {
+                         "type": "breaker",
+                         "ref": "-Q32",
+                         "use": "DCB",
+                         "in_A": 50,
+                         "label": "IT racks",
+                         "cable": {
+                          "cores": "2x",
+                          "section_mm2": 16,
+                          "material": "Cu",
+                          "insulation": "XLPE",
+                          "install": "C",
+                          "length_m": 15
+                         },
+                         "children": [
+                          {
+                           "type": "load",
+                           "label": "Server racks 380 VDC",
+                           "symbol_text": "IT",
+                           "p_kW": 15
+                          }
+                         ]
+                        },
+                        {
+                         "type": "breaker",
+                         "ref": "-Q33",
+                         "use": "DCB",
+                         "in_A": 16,
+                         "label": "DC lighting",
+                         "cable": {
+                          "cores": "2x",
+                          "section_mm2": 4,
+                          "material": "Cu",
+                          "insulation": "XLPE",
+                          "install": "C",
+                          "length_m": 60
+                         },
+                         "children": [
+                          {
+                           "type": "lighting",
+                           "label": "Car park LED",
+                           "points": 20,
+                           "p_kW": 2
+                          }
+                         ]
+                        },
+                        {
+                         "type": "spare",
+                         "ref": "-Q34",
+                         "in_A": 50,
+                         "poles": "2P"
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "-Q3",
+           "label": "Auxiliaries",
+           "in_A": 63,
+           "curve": "C",
+           "poles": "4P",
+           "icn_kA": 25,
+           "cable": {
+            "cores": "5G",
+            "section_mm2": 16,
+            "material": "Cu",
+            "insulation": "XLPE",
+            "install": "C",
+            "length_m": 3
+           },
+           "children": [
+            {
+             "type": "board",
+             "id": "AUX",
+             "ref": "AUX",
+             "label": "Auxiliaries panel",
+             "kind": "sub",
+             "in_A": 63,
+             "children": [
+              {
+               "type": "breaker",
+               "ref": "-Q11",
+               "label": "HVAC unit 1",
+               "in_A": 20,
+               "curve": "C",
+               "poles": "4P",
+               "icn_kA": 10,
+               "cable": {
+                "cores": "5G",
+                "section_mm2": 4,
+                "material": "Cu",
+                "insulation": "PVC",
+                "install": "B1",
+                "length_m": 8
+               },
+               "children": [
+                {
+                 "type": "motor",
+                 "label": "HVAC 1",
+                 "p_kW": 7.5,
+                 "phases": 3
+                }
+               ]
+              },
+              {
+               "type": "breaker",
+               "ref": "-Q12",
+               "label": "HVAC unit 2",
+               "in_A": 20,
+               "curve": "C",
+               "poles": "4P",
+               "icn_kA": 10,
+               "cable": {
+                "cores": "5G",
+                "section_mm2": 4,
+                "material": "Cu",
+                "insulation": "PVC",
+                "install": "B1",
+                "length_m": 10
+               },
+               "children": [
+                {
+                 "type": "motor",
+                 "label": "HVAC 2",
+                 "p_kW": 7.5,
+                 "phases": 3
+                }
+               ]
+              },
+              {
+               "type": "breaker",
+               "ref": "-Q13",
+               "label": "Fire suppression",
+               "in_A": 6,
+               "curve": "C",
+               "poles": "1P+N",
+               "icn_kA": 10,
+               "phase": "L1",
+               "priority": "safety",
+               "cable": {
+                "cores": "3G",
+                "section_mm2": 1.5,
+                "length_m": 6
+               },
+               "children": [
+                {
+                 "type": "load",
+                 "label": "Fire panel (aerosol)",
+                 "symbol_text": "FIRE"
+                }
+               ]
+              },
+              {
+               "type": "breaker",
+               "ref": "-Q14",
+               "label": "EMS / BMS",
+               "in_A": 10,
+               "curve": "C",
+               "poles": "1P+N",
+               "icn_kA": 10,
+               "phase": "L2",
+               "cable": {
+                "cores": "3G",
+                "section_mm2": 1.5,
+                "length_m": 3
+               },
+               "children": [
+                {
+                 "type": "ups",
+                 "ref": "-U1",
+                 "sn_kVA": 1,
+                 "autonomy_min": 30,
+                 "children": [
+                  {
+                   "type": "controller",
+                   "id": "EMS",
+                   "ref": "-A1",
+                   "label": "EMS",
+                   "function": "energy management system",
+                   "symbol_text": "EMS"
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "type": "rcbo",
+               "ref": "-Q15",
+               "label": "Lighting & sockets",
+               "in_A": 16,
+               "curve": "C",
+               "idn_mA": 30,
+               "rcd_type": "A",
+               "poles": "1P+N",
+               "icn_kA": 10,
+               "phase": "L3",
+               "cable": {
+                "cores": "3G",
+                "section_mm2": 2.5,
+                "length_m": 10
+               },
+               "children": [
+                {
+                 "type": "socket",
+                 "label": "Service sockets",
+                 "points": 3
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "devices": [
+  {
+   "type": "insulation_monitor",
+   "id": "IMD",
+   "ref": "-P2",
+   "label": "IMD DC 1000 V",
+   "range": "1 kΩ-10 MΩ"
+  }
+ ],
+ "links": [
+  {
+   "kind": "measure",
+   "from": "IMD",
+   "to": "QDC"
+  },
+  {
+   "kind": "data",
+   "from": "EMS",
+   "to": "PCS",
+   "protocol": "Modbus TCP"
+  },
+  {
+   "kind": "data",
+   "from": "EMS",
+   "to": "DCDC",
+   "protocol": "CAN"
+  }
+ ],
+ "views": [
+  {
+   "id": "sld",
+   "paper": "A3",
+   "cartouche": [
+    "label",
+    "ref",
+    "protection",
+    "poles",
+    "cable",
+    "length_m",
+    "p_kW"
+   ]
+  }
+ ]
+}

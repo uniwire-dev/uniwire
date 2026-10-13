@@ -1,0 +1,470 @@
+{
+ "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+ "uniwire": "1.0.0",
+ "profiles": [
+  "iec60364"
+ ],
+ "meta": {
+  "title": "EV charging hub: 8 x 22 kW with dynamic load management",
+  "project": "EX-40",
+  "client": "Example retail car park",
+  "author": "uniwire examples",
+  
+  "lang": "en",
+  "notes": [
+   "Demonstrates: IEC 60364-7-722 charging point protection: bays 1-4 individual type B RCD + MCB, bays 5-8 type A RCBO with RDC-DD 6 mA DC detection in the station; load management controller reading the incomer meter (data links) and capping the hub at 160 A",
+   "Installed 8 x 22 kW = 176 kW; dynamic limit 110 kW (160 A) set in the load manager → incomer Ir 160 A, feeder 4x95 mm² Al",
+   "Bays 5-8 cabled in buried ducts (D-duct), bays 1-4 on cable tray (C)"
+  ]
+ },
+ "installation": {
+  "earthing": "TN-S",
+  "system": "3P+N",
+  "un_V": 400,
+  "uln_V": 230,
+  "f_Hz": 50,
+  "supply": "LV 400 V, 110 kVA",
+  "subscribed_kVA": 110,
+  "ik3_kA": 15,
+  "standard": "IEC 60364"
+ },
+ "templates": {
+  "RCDB": {
+   "type": "rcd",
+   "in_A": 40,
+   "idn_mA": 30,
+   "rcd_type": "B",
+   "poles": "4P",
+   "product": {
+    "manufacturer": "Hager",
+    "range": "CDB type B",
+    "description": "RCCB 4P 40 A 30 mA type B"
+   }
+  },
+  "MCB40": {
+   "type": "breaker",
+   "in_A": 40,
+   "curve": "C",
+   "poles": "4P",
+   "icn_kA": 10
+  },
+  "RCBOA": {
+   "type": "rcbo",
+   "in_A": 40,
+   "curve": "C",
+   "idn_mA": 30,
+   "rcd_type": "A",
+   "poles": "4P",
+   "icn_kA": 10
+  },
+  "EVSE": {
+   "type": "ev_charger",
+   "mode": "3",
+   "p_kW": 22,
+   "un_V": 400,
+   "product": {
+    "range": "AC wallbox 22 kW",
+    "description": "Mode 3 charging station, Type 2 socket, OCPP 1.6J"
+   }
+  }
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "label": "LV utility supply",
+   "supply": "400 V 3P+N",
+   "ik_kA": 15,
+   "children": [
+    {
+     "type": "meter",
+     "ref": "-P0",
+     "label": "Utility meter",
+     "kind": "CT 200/5 A",
+     "children": [
+      {
+       "type": "board",
+       "id": "EVDB",
+       "ref": "EVDB",
+       "label": "EV hub switchboard",
+       "kind": "main",
+       "in_A": 250,
+       "ik_kA": 15,
+       "ip": "IP55",
+       "cable": {
+        "designation": "NAYY",
+        "cores": "4x",
+        "section_mm2": 95,
+        "material": "Al",
+        "length_m": 25,
+        "install": "D-duct",
+        "insulation": "PVC"
+       },
+       "children": [
+        {
+         "type": "breaker",
+         "id": "Q0",
+         "ref": "-Q0",
+         "label": "Incomer",
+         "in_A": 250,
+         "ir_A": 160,
+         "poles": "4P",
+         "icu_kA": 25,
+         "product": {
+          "manufacturer": "Schneider Electric",
+          "range": "ComPacT NSX250F",
+          "description": "MCCB 4P 250 A, Micrologic 2.2 set to 160 A"
+         },
+         "children": [
+          {
+           "type": "meter",
+           "id": "PM1",
+           "ref": "-P1",
+           "label": "Hub energy meter",
+           "kind": "MID CT meter",
+           "children": [
+            {
+             "type": "breaker",
+             "ref": "-F1",
+             "label": "SPD",
+             "in_A": 25,
+             "curve": "C",
+             "poles": "4P",
+             "icn_kA": 15,
+             "children": [
+              {
+               "type": "spd",
+               "ref": "-F11",
+               "spd_type": "2",
+               "imax_kA": 40,
+               "up_kV": 1.5,
+               "poles": "3P+N"
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "ref": "-Q01",
+             "label": "Load manager",
+             "in_A": 2,
+             "curve": "C",
+             "poles": "1P+N",
+             "icn_kA": 10,
+             "phase": "L1",
+             "children": [
+              {
+               "type": "power_supply",
+               "ref": "-T01",
+               "u1_V": 230,
+               "u2_V": 24,
+               "output": "DC",
+               "in_A": 2.5,
+               "children": [
+                {
+                 "type": "controller",
+                 "id": "LMS",
+                 "ref": "-A1",
+                 "label": "Load manager",
+                 "function": "dynamic load management",
+                 "symbol_text": "LMS"
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "type": "rcd",
+             "ref": "-Q10",
+             "use": "RCDB",
+             "children": [
+              {
+               "type": "breaker",
+               "ref": "-Q11",
+               "use": "MCB40",
+               "cable": {
+                "designation": "XLPE",
+                "cores": "5G",
+                "section_mm2": 10,
+                "material": "Cu",
+                "insulation": "XLPE",
+                "install": "C",
+                "length_m": 12
+               },
+               "children": [
+                {
+                 "type": "ev_charger",
+                 "id": "EV1",
+                 "ref": "-E1",
+                 "use": "EVSE",
+                 "label": "Bay 1"
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "type": "rcd",
+             "ref": "-Q20",
+             "use": "RCDB",
+             "children": [
+              {
+               "type": "breaker",
+               "ref": "-Q21",
+               "use": "MCB40",
+               "cable": {
+                "designation": "XLPE",
+                "cores": "5G",
+                "section_mm2": 10,
+                "material": "Cu",
+                "insulation": "XLPE",
+                "install": "C",
+                "length_m": 15
+               },
+               "children": [
+                {
+                 "type": "ev_charger",
+                 "id": "EV2",
+                 "ref": "-E2",
+                 "use": "EVSE",
+                 "label": "Bay 2"
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "type": "rcd",
+             "ref": "-Q30",
+             "use": "RCDB",
+             "children": [
+              {
+               "type": "breaker",
+               "ref": "-Q31",
+               "use": "MCB40",
+               "cable": {
+                "designation": "XLPE",
+                "cores": "5G",
+                "section_mm2": 10,
+                "material": "Cu",
+                "insulation": "XLPE",
+                "install": "C",
+                "length_m": 18
+               },
+               "children": [
+                {
+                 "type": "ev_charger",
+                 "id": "EV3",
+                 "ref": "-E3",
+                 "use": "EVSE",
+                 "label": "Bay 3"
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "type": "rcd",
+             "ref": "-Q40",
+             "use": "RCDB",
+             "children": [
+              {
+               "type": "breaker",
+               "ref": "-Q41",
+               "use": "MCB40",
+               "cable": {
+                "designation": "XLPE",
+                "cores": "5G",
+                "section_mm2": 10,
+                "material": "Cu",
+                "insulation": "XLPE",
+                "install": "C",
+                "length_m": 21
+               },
+               "children": [
+                {
+                 "type": "ev_charger",
+                 "id": "EV4",
+                 "ref": "-E4",
+                 "use": "EVSE",
+                 "label": "Bay 4"
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "type": "rcbo",
+             "ref": "-Q50",
+             "use": "RCBOA",
+             "cable": {
+              "designation": "XLPE",
+              "cores": "5G",
+              "section_mm2": 10,
+              "material": "Cu",
+              "insulation": "XLPE",
+              "install": "D-duct",
+              "length_m": 26
+             },
+             "children": [
+              {
+               "type": "ev_charger",
+               "id": "EV5",
+               "ref": "-E5",
+               "use": "EVSE",
+               "label": "Bay 5",
+               "note": "RDC-DD 6 mA DC (IEC 62955) integrated in the charging station"
+              }
+             ]
+            },
+            {
+             "type": "rcbo",
+             "ref": "-Q60",
+             "use": "RCBOA",
+             "cable": {
+              "designation": "XLPE",
+              "cores": "5G",
+              "section_mm2": 10,
+              "material": "Cu",
+              "insulation": "XLPE",
+              "install": "D-duct",
+              "length_m": 30
+             },
+             "children": [
+              {
+               "type": "ev_charger",
+               "id": "EV6",
+               "ref": "-E6",
+               "use": "EVSE",
+               "label": "Bay 6",
+               "note": "RDC-DD 6 mA DC (IEC 62955) integrated in the charging station"
+              }
+             ]
+            },
+            {
+             "type": "rcbo",
+             "ref": "-Q70",
+             "use": "RCBOA",
+             "cable": {
+              "designation": "XLPE",
+              "cores": "5G",
+              "section_mm2": 10,
+              "material": "Cu",
+              "insulation": "XLPE",
+              "install": "D-duct",
+              "length_m": 34
+             },
+             "children": [
+              {
+               "type": "ev_charger",
+               "id": "EV7",
+               "ref": "-E7",
+               "use": "EVSE",
+               "label": "Bay 7",
+               "note": "RDC-DD 6 mA DC (IEC 62955) integrated in the charging station"
+              }
+             ]
+            },
+            {
+             "type": "rcbo",
+             "ref": "-Q80",
+             "use": "RCBOA",
+             "cable": {
+              "designation": "XLPE",
+              "cores": "5G",
+              "section_mm2": 10,
+              "material": "Cu",
+              "insulation": "XLPE",
+              "install": "D-duct",
+              "length_m": 38
+             },
+             "children": [
+              {
+               "type": "ev_charger",
+               "id": "EV8",
+               "ref": "-E8",
+               "use": "EVSE",
+               "label": "Bay 8",
+               "note": "RDC-DD 6 mA DC (IEC 62955) integrated in the charging station"
+              }
+             ]
+            },
+            {
+             "type": "rcbo",
+             "ref": "-Q90",
+             "label": "Canopy lighting",
+             "in_A": 10,
+             "curve": "C",
+             "idn_mA": 30,
+             "rcd_type": "A",
+             "poles": "1P+N",
+             "icn_kA": 10,
+             "phase": "L2",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 2.5,
+              "length_m": 40
+             },
+             "children": [
+              {
+               "type": "lighting",
+               "label": "Canopy LED",
+               "points": 12,
+               "p_kW": 0.6
+              }
+             ]
+            },
+            {
+             "type": "spare",
+             "ref": "-Q99",
+             "in_A": 40,
+             "poles": "4P",
+             "label": "Future bays 9-10"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "links": [
+  {
+   "kind": "data",
+   "from": "LMS",
+   "to": "PM1",
+   "protocol": "Modbus RTU"
+  },
+  {
+   "kind": "data",
+   "from": "LMS",
+   "to": "EV1",
+   "protocol": "OCPP"
+  },
+  {
+   "kind": "data",
+   "from": "LMS",
+   "to": "EV8",
+   "protocol": "OCPP"
+  }
+ ],
+ "views": [
+  {
+   "id": "sld",
+   "paper": "A3",
+   "cartouche": [
+    "label",
+    "ref",
+    "protection",
+    "idn_mA",
+    "rcd_type",
+    "cable",
+    "length_m",
+    "install",
+    "p_kW"
+   ]
+  }
+ ]
+}

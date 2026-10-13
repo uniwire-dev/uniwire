@@ -1,0 +1,216 @@
+{
+ "uniwire": "1.0.0",
+ "profiles": [
+  "iec60364"
+ ],
+ "meta": {
+  "title": "Clinic: standby generator and ATS",
+  "lang": "en"
+ },
+ "installation": {
+  "earthing": "TN-S",
+  "system": "3P+N",
+  "un_V": 400,
+  "uln_V": 230
+ },
+ "templates": {
+  "C4P": {
+   "type": "breaker",
+   "curve": "C",
+   "poles": "4P",
+   "icn_kA": 10
+  },
+  "C1P": {
+   "type": "breaker",
+   "curve": "C",
+   "poles": "1P+N",
+   "icn_kA": 10
+  }
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "id": "GRID",
+   "label": "Utility LV supply",
+   "children": [
+    {
+     "type": "board",
+     "id": "MSB",
+     "ref": "MSB",
+     "label": "Main switchboard",
+     "kind": "main",
+     "children": [
+      {
+       "type": "breaker",
+       "id": "Q0",
+       "ref": "-Q0",
+       "label": "Incomer",
+       "in_A": 250,
+       "poles": "4P",
+       "icu_kA": 25,
+       "children": [
+        {
+         "type": "breaker",
+         "id": "Q1",
+         "ref": "-Q1",
+         "use": "C4P",
+         "in_A": 40,
+         "label": "Non-essential: HVAC",
+         "cable": {
+          "cores": "5G",
+          "section_mm2": 10,
+          "length_m": 30
+         },
+         "children": [
+          {
+           "type": "load",
+           "id": "HVAC",
+           "label": "HVAC",
+           "p_kW": 20,
+           "priority": "non_essential"
+          }
+         ]
+        },
+        {
+         "type": "breaker",
+         "id": "QN",
+         "ref": "-QN",
+         "label": "Normal supply to ATS",
+         "in_A": 160,
+         "poles": "4P",
+         "icu_kA": 25,
+         "cable": {
+          "cores": "5G",
+          "section_mm2": 70,
+          "length_m": 10
+         },
+         "children": [
+          {
+           "type": "transfer_switch",
+           "id": "ATS",
+           "ref": "-QA",
+           "label": "ATS",
+           "in_A": 160,
+           "poles": "4P",
+           "mode": "automatic",
+           "interlock": "both",
+           "children": [
+            {
+             "type": "board",
+             "id": "EDB",
+             "ref": "EDB",
+             "label": "Essential services board",
+             "kind": "distribution",
+             "children": [
+              {
+               "type": "breaker",
+               "id": "Q11",
+               "ref": "-Q11",
+               "use": "C1P",
+               "in_A": 16,
+               "phase": "L1",
+               "cable": {
+                "cores": "3G",
+                "section_mm2": 1.5,
+                "length_m": 25
+               },
+               "children": [
+                {
+                 "type": "lighting",
+                 "id": "LGT",
+                 "label": "Lighting",
+                 "points": 20,
+                 "priority": "essential"
+                }
+               ]
+              },
+              {
+               "type": "breaker",
+               "id": "Q12",
+               "ref": "-Q12",
+               "use": "C1P",
+               "in_A": 20,
+               "phase": "L2",
+               "cable": {
+                "cores": "3G",
+                "section_mm2": 2.5,
+                "length_m": 20
+               },
+               "children": [
+                {
+                 "type": "appliance",
+                 "id": "FRG",
+                 "kind": "fridge",
+                 "label": "Vaccine fridges",
+                 "priority": "essential"
+                }
+               ]
+              },
+              {
+               "type": "breaker",
+               "id": "Q13",
+               "ref": "-Q13",
+               "use": "C1P",
+               "in_A": 20,
+               "phase": "L3",
+               "cable": {
+                "cores": "3G",
+                "section_mm2": 2.5,
+                "length_m": 15
+               },
+               "children": [
+                {
+                 "type": "load",
+                 "id": "IT",
+                 "label": "IT and phones",
+                 "symbol_text": "IT",
+                 "priority": "essential"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "generator",
+   "id": "GEN",
+   "ref": "-G1",
+   "label": "Standby genset",
+   "sn_kVA": 100,
+   "fuel": "diesel",
+   "children": [
+    {
+     "type": "breaker",
+     "id": "QG",
+     "ref": "-QG",
+     "label": "Generator breaker",
+     "in_A": 160,
+     "poles": "4P",
+     "icu_kA": 25,
+     "cable": {
+      "cores": "5G",
+      "section_mm2": 70,
+      "length_m": 25
+     }
+    }
+   ]
+  }
+ ],
+ "links": [
+  {
+   "kind": "transfer",
+   "from": "QG",
+   "to": "ATS",
+   "label": "standby"
+  }
+ ]
+}

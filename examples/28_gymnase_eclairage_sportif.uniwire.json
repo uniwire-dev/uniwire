@@ -1,0 +1,235 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["nfc15100"],
+  "meta": {
+    "title": "Gymnase : tableau éclairage sportif par niveaux et commande par automate LOGO!", "project": "EX-28",
+    "client": "Exemple : salle multisports communale", "author": "uniwire examples", 
+    "lang": "fr",
+    "notes": [
+      "Montre : éclairage sportif en 3 niveaux (entraînement 200 lx, compétition 500 lx, maintenance) par contacteurs pilotés voie par voie par un automate LOGO! 8 (ports 'slot.voie'), télérupteurs des vestiaires, contacteur heures creuses du ballon d'eau chaude",
+      "Niveau 1 = KM1+KM2 ; niveau 2 = + KM3+KM4 ; niveau 3 = + KM5 (rangées équilibrées sur L1/L2/L3)",
+      "Projecteurs 600 W, 2 par phase et par circuit : 5,2 A par phase"
+    ]
+  },
+  "installation": {
+    "earthing": "TT", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "ik3_kA": 6, "earth_resistance_ohm": 35,
+    "standard": "NF C 15-100"
+  },
+  "templates": {
+    "D16T": {
+      "type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "3P+N",
+      "product": {"manufacturer": "Legrand", "range": "DX³ 6000"}
+    },
+    "D10": {
+      "type": "breaker", "in_A": 10, "curve": "C", "icn_kA": 6, "poles": "1P+N",
+      "product": {"manufacturer": "Legrand", "range": "DX³ 6000"}
+    },
+    "D20": {
+      "type": "breaker", "in_A": 20, "curve": "C", "icn_kA": 6, "poles": "1P+N",
+      "product": {"manufacturer": "Legrand", "range": "DX³ 6000"}
+    },
+    "KM": {
+      "type": "contactor", "in_A": 25, "poles": "4P", "coil_V": 230, "function": "lighting", "manual": true,
+      "product": {"manufacturer": "Legrand", "range": "CX³ contacteur 4P 25 A"}
+    }
+  },
+  "sources": [
+    {
+      "id": "ARR", "type": "offpage", "label": "Depuis TGBT -Q3", "target": "EX-28 folio 1",
+      "children": [
+        {
+          "id": "TDG", "type": "board", "ref": "TD-GYM", "label": "Tableau gymnase", "kind": "distribution",
+          "in_A": 100, "ip": "IP31 IK07", "location": "Local technique gymnase",
+          "cable": {"designation": "U1000 R2V", "cores": "5G", "section_mm2": 25, "length_m": 45, "material": "Cu"},
+          "children": [
+            {
+              "id": "QG", "type": "rcd", "ref": "-Q0", "label": "Interrupteur différentiel de tête", "in_A": 100,
+              "idn_mA": 300, "rcd_type": "A", "delay": "S", "poles": "4P",
+              "product": {"manufacturer": "Legrand", "range": "DX³-ID 4P 100 A 300 mA S"},
+              "children": [
+                {"type": "spd", "ref": "-F0", "spd_type": "2", "imax_kA": 40, "poles": "3P+N"},
+                {
+                  "id": "QA", "type": "breaker", "ref": "-Q20", "use": "D10", "in_A": 2, "label": "Automate",
+                  "children": [
+                    {
+                      "id": "LOGO", "type": "plc", "ref": "-A1", "label": "Commande éclairage", "role": "controller",
+                      "family": "LOGO! 8", "un_V": 230,
+                      "product": {
+                        "manufacturer": "Siemens", "part_number": "6ED1052-1FB08-0BA1", "range": "LOGO! 8",
+                        "description": "LOGO! 230RCE, 8 DI / 4 DQ relais"
+                      },
+                      "onboard": [
+                        {
+                          "slot": 0, "kind": "relay_out", "channels": 4, "rating_A": 10,
+                          "channel_labels": {"1": "KM1", "2": "KM2", "3": "KM3", "4": "KM4"}
+                        }
+                      ],
+                      "modules": [
+                        {
+                          "slot": 1, "kind": "mixed_io", "part_number": "6ED1055-1FB00-0BA2", "channels": 8,
+                          "label": "DM8 230R", "channel_labels": {"5": "KM5", "6": "KM15 (HC)"}
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "breaker", "ref": "-Q1", "use": "D16T",
+                  "cable": {"designation": "U1000 R2V", "cores": "5G", "section_mm2": 2.5, "length_m": 36, "material": "Cu"},
+                  "children": [
+                    {
+                      "id": "KM1", "type": "contactor", "ref": "-KM1", "use": "KM", "label": "Niveau 1",
+                      "children": [
+                        {
+                          "type": "lighting", "label": "Projecteurs LED rangée 1", "points": 6, "p_kW": 3.6,
+                          "room": "Aire de jeu"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "breaker", "ref": "-Q2", "use": "D16T",
+                  "cable": {"designation": "U1000 R2V", "cores": "5G", "section_mm2": 2.5, "length_m": 42, "material": "Cu"},
+                  "children": [
+                    {
+                      "id": "KM2", "type": "contactor", "ref": "-KM2", "use": "KM", "label": "Niveau 1",
+                      "children": [
+                        {
+                          "type": "lighting", "label": "Projecteurs LED rangée 2", "points": 6, "p_kW": 3.6,
+                          "room": "Aire de jeu"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "breaker", "ref": "-Q3", "use": "D16T",
+                  "cable": {"designation": "U1000 R2V", "cores": "5G", "section_mm2": 2.5, "length_m": 48, "material": "Cu"},
+                  "children": [
+                    {
+                      "id": "KM3", "type": "contactor", "ref": "-KM3", "use": "KM", "label": "Niveau 2",
+                      "children": [
+                        {
+                          "type": "lighting", "label": "Projecteurs LED rangée 3", "points": 6, "p_kW": 3.6,
+                          "room": "Aire de jeu"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "breaker", "ref": "-Q4", "use": "D16T",
+                  "cable": {"designation": "U1000 R2V", "cores": "5G", "section_mm2": 2.5, "length_m": 54, "material": "Cu"},
+                  "children": [
+                    {
+                      "id": "KM4", "type": "contactor", "ref": "-KM4", "use": "KM", "label": "Niveau 2",
+                      "children": [
+                        {
+                          "type": "lighting", "label": "Projecteurs LED rangée 4", "points": 6, "p_kW": 3.6,
+                          "room": "Aire de jeu"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "breaker", "ref": "-Q5", "use": "D16T",
+                  "cable": {"designation": "U1000 R2V", "cores": "5G", "section_mm2": 2.5, "length_m": 60, "material": "Cu"},
+                  "children": [
+                    {
+                      "id": "KM5", "type": "contactor", "ref": "-KM5", "use": "KM", "label": "Niveau 3",
+                      "children": [
+                        {
+                          "type": "lighting", "label": "Projecteurs LED rangée 5", "points": 6, "p_kW": 3.6,
+                          "room": "Aire de jeu"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "breaker", "ref": "-Q15", "use": "D16T", "in_A": 20,
+                  "cable": {"designation": "U1000 R2V", "cores": "5G", "section_mm2": 2.5, "length_m": 12, "material": "Cu"},
+                  "children": [
+                    {
+                      "id": "KHC", "type": "contactor", "ref": "-KM15", "in_A": 25, "poles": "4P", "coil_V": 230,
+                      "function": "HC", "manual": true,
+                      "children": [{"type": "water_heater", "label": "Ballon ECS douches 500 L", "volume_L": 500, "p_kW": 9}]
+                    }
+                  ]
+                },
+                {
+                  "id": "ID1", "type": "rcd", "ref": "-F1", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "2P",
+                  "label": "Vestiaires",
+                  "children": [
+                    {
+                      "type": "breaker", "ref": "-Q11", "use": "D10",
+                      "cable": {
+                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 25,
+                        "material": "Cu"
+                      },
+                      "children": [
+                        {
+                          "id": "TL1", "type": "impulse_relay", "ref": "-KL11", "in_A": 16, "coil_V": 230,
+                          "children": [{"type": "lighting", "label": "Vestiaire 1 + douches", "points": 8, "p_kW": 0.3}]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q12", "use": "D10",
+                      "cable": {
+                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 30,
+                        "material": "Cu"
+                      },
+                      "children": [
+                        {
+                          "id": "TL2", "type": "impulse_relay", "ref": "-KL12", "in_A": 16, "coil_V": 230,
+                          "children": [{"type": "lighting", "label": "Vestiaire 2 + douches", "points": 8, "p_kW": 0.3}]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q13", "use": "D20",
+                      "cable": {
+                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 25,
+                        "material": "Cu"
+                      },
+                      "children": [{"type": "socket", "label": "Prises vestiaires / sèche-mains", "points": 6}]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q14", "use": "D20",
+                      "cable": {
+                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 20,
+                        "material": "Cu"
+                      },
+                      "children": [{"type": "socket", "label": "Prises aire de jeu (table de marque)", "points": 4}]
+                    }
+                  ]
+                },
+                {
+                  "type": "spare", "ref": "-Q21", "in_A": 16, "poles": "3P+N",
+                  "label": "Réserve (tableau d'affichage)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "links": [
+    {"kind": "control", "from": "LOGO", "from_port": "0.1", "to": "KM1", "label": "N1"},
+    {"kind": "control", "from": "LOGO", "from_port": "0.2", "to": "KM2", "label": "N1"},
+    {"kind": "control", "from": "LOGO", "from_port": "0.3", "to": "KM3", "label": "N2"},
+    {"kind": "control", "from": "LOGO", "from_port": "0.4", "to": "KM4", "label": "N2"},
+    {"kind": "control", "from": "LOGO", "from_port": "1.5", "to": "KM5", "label": "N3"},
+    {"kind": "control", "from": "LOGO", "from_port": "1.6", "to": "KHC", "label": "HC"}
+  ],
+  "views": [
+    {
+      "id": "sld", "title": "TD gymnase", "paper": "A3",
+      "cartouche": ["label", "ref", "protection", "idn_mA", "cable", "length_m", "points", "p_kW"]
+    }
+  ]
+}

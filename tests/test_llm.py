@@ -1,0 +1,326 @@
+"""LLM helpers: reference card, describe, id-based patches, flat form, tool functions, CLI."""
+
+import base64
+import json
+import os
+
+import pytest
+
+import uniwire
+from uniwire.cli import main
+from uniwire.llm import PatchError, card, describe, flatten, materialize_ids, patch, tools, unflatten, viewer_link
+from uniwire.llm.card import EXAMPLE_HOUSE, EXAMPLE_STANDBY, NAMED_ENUMS, approx_tokens, type_info
+from uniwire.llm.link import MAX_LINK_CHARS, document_from_link
+from uniwire.model import NODE_TYPES
+
+from .conftest import ROOT
+
+EXAMPLES = sorted((ROOT / "examples").glob("*.uniwire.json"))
+STUDIO = ROOT / "examples" / "01_studio_apartment.uniwire.json"
+
+
+def _studio() -> dict:
+    return json.loads(STUDIO.read_text("utf-8"))
+
+
+# ------------------------------------------------------------------ card
+
+
+@pytest.mark.parametrize("lang", ["en", "fr"])
+def test_card_size_bounds(lang):
+    compact, full = card(lang, "compact"), card(lang, "full")
+    assert approx_tokens(compact) <= 3500, approx_tokens(compact)
+    assert approx_tokens(full) <= 12000, approx_tokens(full)
+    assert len(full) > len(compact)
+
+
+def test_card_is_generated_from_the_model():
+    text = card()
+    for t in NODE_TYPES:  # every node type is listed
+        assert f"`{t}`" in text
+    for name in NAMED_ENUMS:
+        assert f"- {name}:" in text
+    assert uniwire.FORMAT_VERSION in text
+    assert "idn_mA" in text and "section_mm2" in text and "rcd_type(RcdType)" in text
+    assert "children" in text and "`ref`" in text and "`use" in text  # pitfalls / principles
+    full = card(level="full")
+    assert "Sensitivity IΔn" in full  # field description from the model
+    assert "cartouche values" in full
+
+
+def test_card_french():
+    text = card("fr")
+    assert "Fiche de référence" in text and "Pièges courants" in text
+    assert "Disjoncteur" in text or "disjoncteur" in text  # registry labels in French
+
+
+def test_card_examples_are_valid_and_clean():
+    for ex in (EXAMPLE_HOUSE, EXAMPLE_STANDBY):
+        doc = uniwire.load(json.loads(json.dumps(ex)))
+        assert not [f for f in uniwire.check(doc) if f.level == "error"]
+    assert '"uniwire":"1.0.0"' in card()
+
+
+def test_type_info():
+    info = type_info("breaker")
+    assert info["category"] == "protection"
+    assert info["fields"]["curve"]["enum"] == ["B", "C", "D", "K", "Z", "MA"]
+    assert info["fields"]["in_A"]["group"] == "protective"
+    assert info["fields"]["ref"]["group"] == "common"
+    with pytest.raises(KeyError):
+        type_info("nope")
+
+
+# ------------------------------------------------------------------ describe
+
+
+@pytest.mark.parametrize("path", EXAMPLES, ids=lambda p: p.name[:2])
+def test_describe_examples(path):
+    doc = uniwire.load(path)
+    text = describe(doc)
+    assert text == describe(path)  # deterministic, same from a path or a Document
+    ids = [n.id for n, _, _ in uniwire.resolve.iter_nodes(doc)]
+    for nid in ids:  # every node id appears
+        assert f"- {nid}" in text or f" {nid} " in text or f"- {nid} " in text
+    assert "## Findings" in text
+
+
+def test_describe_content():
+    text = describe(STUDIO)
+    assert "Installation: earthing=TT system=1P+N" in text
+    assert "- Q11 [-Q11] breaker (use C10) in_A=10" in text
+    assert "| cable 3G1.5mm2" in text
+    assert "control CPT -> KM1" in text
+    assert "TD [TD]" in text and "Findings: no findings" in text
+    assert "Arbre" in describe(STUDIO, "fr")
+
+
+# ------------------------------------------------------------------ patch
+
+
+def test_patch_all_ops():
+    d = _studio()
+    before = json.dumps(d, sort_keys=True)
+    out = patch(d, [
+        {"op": "set", "id": "Q11", "path": "in_A", "value": 16},
+        {"op": "set", "id": "Q11", "path": "cable.length_m", "value": 12},
+        {"op": "set", "path": "installation.earthing", "value": "TN-S"},
+        {"op": "add", "parent": "F1", "node": {"type": "breaker", "id": "Q15", "in_A": 20,
+                                               "children": [{"type": "socket", "id": "S9"}]}},
+        {"op": "move", "id": "Q15", "parent": "F2", "index": 0},
+        {"op": "rename", "id": "KM1", "new_id": "KM_HC"},
+        {"op": "remove", "id": "Q13"},
+        {"op": "link", "link": {"kind": "measure", "from": "CPT", "to": "Q15"}},
+        {"op": "unlink", "from": "CPT", "to": "Q15"},
+        {"op": "set", "id": "Q12", "path": "label", "value": None},
+    ])
+    assert json.dumps(d, sort_keys=True) == before  # input untouched
+    doc = uniwire.load(out)
+    idx = uniwire.resolve.build_index(doc)
+    assert idx.nodes["Q11"].in_A == 16 and idx.nodes["Q11"].cable.length_m == 12
+    assert doc.installation.earthing == "TN-S"
+    assert idx.parent["Q15"] == "F2" and idx.parent["S9"] == "Q15"
+    assert "Q13" not in idx.nodes and "KM_HC" in idx.nodes
+    assert [(l.kind, l.from_, l.to) for l in doc.links] == [("control", "CPT", "KM_HC")]
+    # ids generated by load are materialized and keep the templates
+    assert out["sources"][0]["id"] == "grid"
+    assert any(n.get("use") == "C10" for n in _iter_raw(out))
+
+
+def _iter_raw(d):
+    stack = list(d["sources"])
+    while stack:
+        n = stack.pop()
+        yield n
+        stack.extend(n.get("children", []))
+
+
+def test_patch_remove_drops_links():
+    out = patch(_studio(), [{"op": "remove", "id": "Q24"}])  # KM1 (link target) is below Q24
+    assert out["links"] == []
+
+
+@pytest.mark.parametrize("ops, op_index, fragment", [
+    ([{"op": "set", "id": "nope", "path": "in_A", "value": 1}], 0, "unknown id"),
+    ([{"op": "set", "id": "Q11", "path": "in_A", "value": 1}, {"op": "remove", "id": "zz"}], 1, "unknown id"),
+    ([{"op": "move", "id": "F1", "parent": "Q11"}], 0, "under itself"),
+    ([{"op": "add", "parent": "F1", "node": {"type": "breakr"}}], 0, "unknown node type"),
+    ([{"op": "add", "parent": "F1", "node": {"type": "breaker", "id": "Q12"}}], 0, "already in use"),
+    ([{"op": "link", "link": {"kind": "control", "from": "CPT", "to": "XX"}}], 0, "unknown node id"),
+    ([{"op": "unlink", "kind": "tie"}], 0, "no matching link"),
+    ([{"op": "set", "id": "Q11", "path": "children", "value": []}], 0, "add"),
+    ([{"op": "frobnicate"}], 0, "unknown op"),
+])
+def test_patch_op_errors(ops, op_index, fragment):
+    with pytest.raises(PatchError) as e:
+        patch(_studio(), ops)
+    err = e.value.errors[0]
+    assert err["op"] == op_index and fragment in err["error"]
+
+
+def test_patch_validation_error_names_node_and_field():
+    with pytest.raises(PatchError) as e:
+        patch(_studio(), [{"op": "set", "id": "Q11", "path": "curve", "value": "X"}])
+    err = e.value.errors[0]
+    assert err["op"] is None
+    assert err["error"].startswith("node 'Q11' (breaker), field 'curve'")
+    with pytest.raises(PatchError) as e:
+        patch(_studio(), [{"op": "set", "id": "Q11", "path": "cable.section", "value": 2}])
+    assert "field 'cable.section'" in e.value.errors[0]["error"]
+
+
+def test_patch_can_fix_an_invalid_document():
+    d = _studio()
+    d["sources"][0]["children"][0]["id"] = "CPT"
+    d["links"][0]["to"] = "KM9"  # dangling link: invalid
+    with pytest.raises(uniwire.UniwireError):
+        uniwire.load(json.loads(json.dumps(d)))
+    out = patch(d, [{"op": "unlink", "to": "KM9"}])
+    uniwire.load(out)
+
+
+@pytest.mark.parametrize("path", EXAMPLES[::5], ids=lambda p: p.name[:2])
+def test_flatten_roundtrip(path):
+    d = json.loads(path.read_text("utf-8"))
+    rows = flatten(d)
+    assert all("children" not in r and "parent" in r for r in rows)
+    back = unflatten(rows, d)
+    assert uniwire.dump(uniwire.load(back)) == uniwire.dump(uniwire.load(materialize_ids(d)))
+
+
+def test_unflatten_errors():
+    with pytest.raises(PatchError):
+        unflatten([{"type": "grid"}])
+    with pytest.raises(PatchError):
+        unflatten([{"type": "grid", "id": "g"}, {"type": "breaker", "id": "q", "parent": "zz"}])
+
+
+# ------------------------------------------------------------------ tool functions (MCP back end)
+
+
+def test_tools_document_forms():
+    d = _studio()
+    for form in (d, json.dumps(d), str(STUDIO)):
+        assert tools.validate(form)["valid"]
+    bad = dict(d, sources=[{"type": "grid", "children": [{"type": "breaker", "in_A": "x"}]}])
+    res = tools.validate(bad)
+    assert not res["valid"] and res["issues"]
+    with pytest.raises(tools.ToolError):
+        tools.describe(bad)
+    with pytest.raises(tools.ToolError):
+        tools.validate("/no/such/file.json")
+
+
+def test_tools_check_patch_render_bom():
+    res = tools.check(str(STUDIO))
+    assert res["valid"] and res["summary"]["error"] == 0
+    assert "not a conformity certificate" in res["scope"].lower() and "electrician" in res["scope"]
+    res = tools.check({"profiles": ["nfc15100"], "sources": [{"type": "grid", "children": [
+        {"type": "breaker", "id": "Q1", "in_A": 32, "cable": {"section_mm2": 1.5}, "children": [{"type": "socket"}]}]}]})
+    assert any(f["rule"] == "nfc15100.section" and f["node"] == "Q1" for f in res["findings"])
+    ok = tools.apply_patch(str(STUDIO), [{"op": "set", "id": "Q11", "path": "in_A", "value": 16}])
+    assert ok["ok"] and tools.validate(ok["document"])["valid"]
+    ko = tools.apply_patch(str(STUDIO), json.dumps([{"op": "remove", "id": "zz"}]))
+    assert not ko["ok"] and ko["errors"][0]["op"] == 0
+    r = tools.render(str(STUDIO))
+    assert r["sheets"] >= 1 and r["svg"][0].lstrip().startswith("<")
+    r1 = tools.render(str(STUDIO), sheet=1)
+    assert r1["svg"] == r["svg"][0]
+    ml = tools.render(str(STUDIO), kind="multi-line")
+    assert ml["sheets"] >= 1
+    with pytest.raises(tools.ToolError):
+        tools.render(str(STUDIO), format="png")
+    rows = tools.bom(ROOT / "examples" / "43_logo_lighting_pumps.uniwire.json")
+    assert rows and {"manufacturer", "part_number", "quantity"} <= set(rows[0])
+    norm = tools.normalize(str(STUDIO))
+    assert norm["sources"][0]["id"] == "grid"
+
+
+def test_viewer_link_roundtrip():
+    d = _studio()
+    link = viewer_link(d)
+    assert link.startswith("https://uniwire.sh/viewer/#doc=") and "=" not in link.partition("#doc=")[2]
+    assert json.loads(document_from_link(link)) == d
+    text = STUDIO.read_text("utf-8")
+    assert document_from_link(viewer_link(text)) == text  # JSON text is kept as written
+    assert viewer_link(d, base="http://localhost:8000/").startswith("http://localhost:8000/#doc=")
+    pdf = viewer_link(d, pdf=True)
+    assert pdf == link + "&download=pdf" and json.loads(document_from_link(pdf)) == d
+    with pytest.raises(ValueError):
+        document_from_link("https://uniwire.sh/viewer/")
+
+
+def test_tools_viewer_url():
+    d = _studio()
+    for res in (tools.validate(d), tools.check(d), tools.render(d, sheet=1), tools.viewer_link(d),
+                tools.apply_patch(d, [{"op": "set", "id": "Q11", "path": "in_A", "value": 16}])):
+        assert json.loads(document_from_link(res["viewer_url"]))["sources"]
+        assert res["pdf_url"] == res["viewer_url"] + "&download=pdf"
+    bad = dict(d, sources=[{"type": "grid", "children": [{"type": "breaker", "in_A": "x"}]}])
+    assert "viewer_url" in tools.validate(bad)  # the editor shows the issues too
+    big = dict(d, meta={"title": "x", "notes": [os.urandom(40_000).hex()]})
+    assert "viewer_url" not in tools.check(big) and "error" in tools.viewer_link(big)
+    assert MAX_LINK_CHARS >= 30_000
+
+
+def test_cli_link(capsys):
+    assert main(["link", str(STUDIO)]) == 0
+    out = capsys.readouterr().out.strip()
+    assert document_from_link(out) == STUDIO.read_text("utf-8")
+    assert main(["link", "--pdf", str(STUDIO)]) == 0
+    assert capsys.readouterr().out.strip() == out + "&download=pdf"
+
+
+def test_tools_render_pdf(tmp_path):
+    pytest.importorskip("reportlab")
+    r = tools.render(str(STUDIO), format="pdf", path=str(tmp_path / "x.pdf"))
+    assert (tmp_path / "x.pdf").read_bytes()[:4] == b"%PDF"
+    r = tools.render(str(STUDIO), format="pdf")
+    assert base64.b64decode(r["pdf_base64"])[:4] == b"%PDF" and r["viewer_url"]
+
+
+def test_tools_reference_and_examples():
+    assert "uniwire" in tools.get_reference_card()
+    with pytest.raises(tools.ToolError):
+        tools.get_reference_card("huge")
+    assert {t["type"] for t in tools.list_types("load")} >= {"socket", "lighting"}
+    with pytest.raises(tools.ToolError):
+        tools.list_types("nope")
+    with pytest.raises(tools.ToolError):
+        tools.type_info("nope")
+    ex = tools.list_examples()
+    assert len(ex) == len(EXAMPLES) and ex[0]["name"].startswith("01_")
+    assert tools.get_example("02")["installation"]["earthing"] == "TT"
+    assert tools.get_example("01_studio_apartment") == _studio()
+    with pytest.raises(tools.ToolError):
+        tools.get_example("999")
+    assert tools.schema()["$id"].endswith("uniwire.schema.json")
+
+
+# ------------------------------------------------------------------ CLI
+
+
+def test_cli_card(capsys):
+    assert main(["card"]) == 0
+    assert "reference card" in capsys.readouterr().out
+    assert main(["card", "--full", "--lang", "fr"]) == 0
+    assert "Fiche de référence" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("name", ["01_studio_apartment", "27_standby_generator_ats_load_shedding",
+                                  "43_logo_lighting_pumps"])
+def test_cli_describe(name, capsys):
+    assert main(["describe", str(ROOT / "examples" / f"{name}.uniwire.json")]) == 0
+    assert "## Tree" in capsys.readouterr().out
+
+
+def test_cli_patch(tmp_path, capsys):
+    ops = tmp_path / "ops.json"
+    ops.write_text(json.dumps([{"op": "set", "id": "Q11", "path": "in_A", "value": 16}]))
+    out = tmp_path / "out.json"
+    assert main(["patch", str(STUDIO), str(ops), "-o", str(out)]) == 0
+    assert uniwire.resolve.build_index(uniwire.load(out)).nodes["Q11"].in_A == 16
+    ops.write_text(json.dumps([{"op": "remove", "id": "nope"}]))
+    assert main(["patch", str(STUDIO), str(ops)]) == 2
+    err = capsys.readouterr().err
+    assert "#0" in err and "unknown id 'nope'" in err

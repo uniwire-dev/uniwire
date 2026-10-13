@@ -1,0 +1,64 @@
+{
+ "id": "02_fr_studio_minimal",
+ "request": "Smallest NF C 15-100 studio board: TT, 1P+N 230 V, 6 kVA. Two 40 A 30 mA RCDs (one type A). Circuits: lighting on 16 A / 1.5 mm², sockets on 20 A / 2.5 mm², hob on 32 A / 6 mm², washing machine on 20 A / 2.5 mm².",
+ "expect": [
+  {
+   "check": "profile",
+   "value": "nfc15100"
+  },
+  {
+   "check": "installation",
+   "fields": {
+    "earthing": "TT"
+   }
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "rcd",
+    "idn_mA": 30
+   },
+   "min": 2
+  },
+  {
+   "check": "under",
+   "ancestor": {
+    "type": "breaker",
+    "in_A": 32,
+    "cable.section_mm2": 6
+   },
+   "descendant": {
+    "type": "cooking"
+   }
+  },
+  {
+   "check": "under",
+   "ancestor": {
+    "type": "breaker",
+    "in_A": {
+     "max": 16
+    }
+   },
+   "descendant": {
+    "type": "lighting"
+   }
+  },
+  {
+   "check": "under",
+   "ancestor": {
+    "type": "rcd",
+    "rcd_type": "A"
+   },
+   "descendant": {
+    "type": "appliance",
+    "kind": "washing_machine"
+   }
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ]
+}

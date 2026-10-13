@@ -1,0 +1,533 @@
+{
+ "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+ "uniwire": "1.0.0",
+ "meta": {
+  "title": "Example House: hybrid inverter, battery and protected loads panel (120/240 V)",
+  "project": "EX-39",
+  "client": "Example House",
+  "author": "uniwire examples",
+  
+  "lang": "en",
+  "notes": [
+   "Demonstrates: North American split-phase 120/240 V 60 Hz service, DC-coupled hybrid inverter with PV (module-level rapid shutdown) and battery, protected (backup) loads subpanel fed from the inverter backup port, AWG sizes and raceways, GFCI/AFCI breakers, service CTs (measure link)",
+   "Hybrid inverter 11.4 kW: 47.5 A continuous x 1.25 = 59.4 A → 60 A 2-pole backfeed breaker, #6 AWG Cu THHN; 200 A busbar / 200 A main: 120 % rule allows 40 A of backfeed, so the main breaker is derated to 175 A",
+   "Rapid shutdown per module (MLPE); PV disconnect integrated in the inverter"
+  ]
+ },
+ "installation": {
+  "earthing": "TN-C-S",
+  "system": "split-phase",
+  "un_V": 240,
+  "uln_V": 120,
+  "f_Hz": 60,
+  "supply": "Utility overhead service 200 A",
+  "ik3_kA": 10,
+  "standard": "NEC 2023 (informative)"
+ },
+ "templates": {
+  "B15": {
+   "type": "breaker",
+   "in_A": 15,
+   "poles": "1P",
+   "icu_kA": 10
+  },
+  "B20": {
+   "type": "breaker",
+   "in_A": 20,
+   "poles": "1P",
+   "icu_kA": 10
+  },
+  "GFCI": {
+   "type": "rcbo",
+   "idn_mA": 5,
+   "rcd_type": "A",
+   "poles": "1P",
+   "icu_kA": 10,
+   "product": {
+    "description": "Dual-function AFCI/GFCI breaker"
+   }
+  }
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "label": "Utility service",
+   "supply": "120/240 V 1Φ 3W",
+   "children": [
+    {
+     "type": "meter",
+     "id": "MTR",
+     "ref": "M1",
+     "label": "Utility revenue meter",
+     "kind": "Net meter",
+     "bidirectional": true,
+     "cable": {
+      "designation": "THHN",
+      "size_awg": "#3/0",
+      "section_mm2": 85,
+      "material": "Cu",
+      "raceway": "2\" PVC"
+     },
+     "children": [
+      {
+       "type": "board",
+       "id": "MP",
+       "ref": "MP",
+       "label": "Main panel 200 A",
+       "kind": "panelboard",
+       "in_A": 200,
+       "system": "split-phase",
+       "ways": 40,
+       "children": [
+        {
+         "type": "breaker",
+         "ref": "MB",
+         "label": "Main breaker",
+         "in_A": 175,
+         "poles": "2P",
+         "icu_kA": 22,
+         "note": "Derated from 200 A for the 120 % busbar rule",
+         "children": [
+          {
+           "type": "breaker",
+           "id": "BINV",
+           "ref": "CB1",
+           "label": "Hybrid inverter grid port",
+           "in_A": 60,
+           "poles": "2P",
+           "icu_kA": 22,
+           "circuit": "1/3",
+           "cable": {
+            "designation": "THHN",
+            "size_awg": "#6",
+            "section_mm2": 13.3,
+            "material": "Cu",
+            "raceway": "1\" EMT",
+            "length_m": 4
+           },
+           "children": [
+            {
+             "type": "board",
+             "id": "INVB",
+             "ref": "=INV",
+             "label": "Hybrid inverter system",
+             "kind": "enclosure",
+             "children": [
+              {
+               "type": "inverter",
+               "id": "INV",
+               "ref": "INV1",
+               "label": "Hybrid inverter",
+               "kind": "hybrid",
+               "p_kVA": 11.4,
+               "mppt": 2,
+               "un_V": 240,
+               "protection": "UL 1741 SB / IEEE 1547-2018",
+               "children": [
+                {
+                 "type": "dc_converter",
+                 "ref": "RSD",
+                 "label": "MLPE x24",
+                 "kind": "optimizer",
+                 "count": 24,
+                 "cable": {
+                  "designation": "PV wire",
+                  "size_awg": "#10",
+                  "section_mm2": 5.26,
+                  "material": "Cu",
+                  "raceway": "3/4\" EMT",
+                  "length_m": 18
+                 },
+                 "children": [
+                  {
+                   "type": "pv_array",
+                   "ref": "PV1",
+                   "label": "Roof array",
+                   "modules": 24,
+                   "module_W": 400,
+                   "strings": 2,
+                   "p_kW": 9.6,
+                   "voc_V": 450
+                  }
+                 ]
+                },
+                {
+                 "type": "switch_disconnector",
+                 "ref": "DS2",
+                 "label": "Battery disconnect",
+                 "in_A": 60,
+                 "poles": "2P",
+                 "dc": true,
+                 "cable": {
+                  "designation": "THHN",
+                  "size_awg": "#6",
+                  "section_mm2": 13.3,
+                  "material": "Cu",
+                  "length_m": 3
+                 },
+                 "children": [
+                  {
+                   "type": "battery",
+                   "ref": "BAT1",
+                   "label": "Battery 13.5 kWh",
+                   "capacity_kWh": 13.5,
+                   "technology": "LFP",
+                   "un_V": 400
+                  }
+                 ]
+                },
+                {
+                 "type": "breaker",
+                 "ref": "CB2",
+                 "label": "Backup output",
+                 "in_A": 50,
+                 "poles": "2P",
+                 "icu_kA": 10,
+                 "cable": {
+                  "designation": "THHN",
+                  "size_awg": "#6",
+                  "section_mm2": 13.3,
+                  "material": "Cu",
+                  "raceway": "1\" EMT",
+                  "length_m": 3
+                 },
+                 "children": [
+                  {
+                   "type": "board",
+                   "id": "PLP",
+                   "ref": "PLP",
+                   "label": "Protected loads panel",
+                   "kind": "panelboard",
+                   "in_A": 100,
+                   "system": "split-phase",
+                   "children": [
+                    {
+                     "type": "breaker",
+                     "ref": "1",
+                     "use": "B20",
+                     "label": "Refrigerator",
+                     "phase": "L1",
+                     "cable": {
+                      "designation": "NM-B",
+                      "size_awg": "#12",
+                      "section_mm2": 3.31,
+                      "material": "Cu"
+                     },
+                     "children": [
+                      {
+                       "type": "appliance",
+                       "label": "Refrigerator",
+                       "kind": "fridge"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "3",
+                     "use": "GFCI",
+                     "in_A": 20,
+                     "label": "Kitchen receptacles",
+                     "phase": "L2",
+                     "cable": {
+                      "designation": "NM-B",
+                      "size_awg": "#12",
+                      "section_mm2": 3.31,
+                      "material": "Cu"
+                     },
+                     "children": [
+                      {
+                       "type": "socket",
+                       "label": "Kitchen countertop",
+                       "points": 6,
+                       "room": "Kitchen"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "5",
+                     "use": "GFCI",
+                     "in_A": 15,
+                     "label": "Lighting",
+                     "phase": "L1",
+                     "cable": {
+                      "designation": "NM-B",
+                      "size_awg": "#14",
+                      "section_mm2": 2.08,
+                      "material": "Cu"
+                     },
+                     "children": [
+                      {
+                       "type": "lighting",
+                       "label": "Lighting",
+                       "points": 12
+                      }
+                     ]
+                    },
+                    {
+                     "type": "breaker",
+                     "ref": "7",
+                     "use": "B15",
+                     "label": "Furnace blower",
+                     "phase": "L2",
+                     "cable": {
+                      "designation": "NM-B",
+                      "size_awg": "#14",
+                      "section_mm2": 2.08,
+                      "material": "Cu"
+                     },
+                     "children": [
+                      {
+                       "type": "ventilation",
+                       "label": "Furnace blower",
+                       "p_kW": 0.6
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "9",
+                     "use": "GFCI",
+                     "in_A": 15,
+                     "label": "Office / network",
+                     "phase": "L1",
+                     "cable": {
+                      "designation": "NM-B",
+                      "size_awg": "#14",
+                      "section_mm2": 2.08,
+                      "material": "Cu"
+                     },
+                     "children": [
+                      {
+                       "type": "socket",
+                       "label": "Office / router",
+                       "points": 4
+                      }
+                     ]
+                    },
+                    {
+                     "type": "breaker",
+                     "ref": "2/4",
+                     "label": "Well pump",
+                     "in_A": 20,
+                     "poles": "2P",
+                     "icu_kA": 10,
+                     "cable": {
+                      "designation": "UF-B",
+                      "size_awg": "#12",
+                      "section_mm2": 3.31,
+                      "material": "Cu",
+                      "length_m": 40
+                     },
+                     "children": [
+                      {
+                       "type": "motor",
+                       "label": "Well pump 240 V",
+                       "p_kW": 1.1,
+                       "phases": 1
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "CB5",
+           "label": "Heat pump condenser",
+           "in_A": 40,
+           "poles": "2P",
+           "icu_kA": 22,
+           "circuit": "5/7",
+           "cable": {
+            "designation": "THHN",
+            "size_awg": "#8",
+            "section_mm2": 8.37,
+            "material": "Cu",
+            "raceway": "3/4\" EMT"
+           },
+           "children": [
+            {
+             "type": "motor",
+             "label": "Heat pump",
+             "p_kW": 5.3,
+             "phases": 1
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "CB9",
+           "label": "EV charger",
+           "in_A": 50,
+           "poles": "2P",
+           "icu_kA": 22,
+           "circuit": "9/11",
+           "cable": {
+            "designation": "THHN",
+            "size_awg": "#6",
+            "section_mm2": 13.3,
+            "material": "Cu",
+            "raceway": "3/4\" EMT"
+           },
+           "children": [
+            {
+             "type": "ev_charger",
+             "label": "EVSE 40 A",
+             "mode": "3",
+             "p_kW": 9.6
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "CB13",
+           "label": "Range",
+           "in_A": 50,
+           "poles": "2P",
+           "icu_kA": 22,
+           "circuit": "13/15",
+           "cable": {
+            "designation": "NM-B",
+            "size_awg": "#6",
+            "section_mm2": 13.3,
+            "material": "Cu"
+           },
+           "children": [
+            {
+             "type": "cooking",
+             "label": "Electric range",
+             "kind": "range",
+             "p_kW": 11
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "CB17",
+           "label": "Dryer",
+           "in_A": 30,
+           "poles": "2P",
+           "icu_kA": 22,
+           "circuit": "17/19",
+           "cable": {
+            "designation": "NM-B",
+            "size_awg": "#10",
+            "section_mm2": 5.26,
+            "material": "Cu"
+           },
+           "children": [
+            {
+             "type": "appliance",
+             "label": "Clothes dryer",
+             "kind": "dryer",
+             "p_kW": 5.6
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "CB21",
+           "label": "Water heater",
+           "in_A": 30,
+           "poles": "2P",
+           "icu_kA": 22,
+           "circuit": "21/23",
+           "cable": {
+            "designation": "NM-B",
+            "size_awg": "#10",
+            "section_mm2": 5.26,
+            "material": "Cu"
+           },
+           "children": [
+            {
+             "type": "water_heater",
+             "label": "Water heater 50 gal",
+             "volume_L": 190,
+             "p_kW": 4.5
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "CB25",
+           "label": "Surge protector",
+           "in_A": 20,
+           "poles": "2P",
+           "icu_kA": 22,
+           "circuit": "25/27",
+           "children": [
+            {
+             "type": "spd",
+             "ref": "SPD1",
+             "spd_type": "2",
+             "imax_kA": 50,
+             "poles": "2P"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "devices": [
+  {
+   "type": "instrument_transformer",
+   "id": "CT",
+   "ref": "CT1",
+   "label": "Service CTs",
+   "kind": "ct",
+   "ratio": "200 A/333 mV"
+  }
+ ],
+ "links": [
+  {
+   "kind": "measure",
+   "from": "CT",
+   "to": "MTR"
+  },
+  {
+   "kind": "data",
+   "from": "CT",
+   "to": "INV",
+   "label": "CT leads"
+  }
+ ],
+ "views": [
+  {
+   "id": "sld",
+   "paper": "A3",
+   "cartouche": [
+    "circuit",
+    "label",
+    "ref",
+    "protection",
+    "poles",
+    "idn_mA",
+    "cable",
+    "phase",
+    "p_kW"
+   ],
+   "overrides": {
+    "MTR": {
+     "label_offset": [
+      0,
+      6
+     ]
+    }
+   }
+  }
+ ]
+}

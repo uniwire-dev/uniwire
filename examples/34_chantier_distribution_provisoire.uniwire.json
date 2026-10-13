@@ -1,0 +1,316 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["nfc15100"],
+  "meta": {
+    "title": "Chantier de construction : branchement provisoire et distribution de chantier", "project": "EX-34",
+    "client": "Exemple : construction d'un immeuble de 24 logements", "author": "uniwire examples",
+    "lang": "fr",
+    "notes": [
+      "Montre : installation temporaire (NF C 15-100 partie 7-704) en TT, AGCP différentiel sélectif 500 mA, armoire de chantier et coffrets de distribution IP44 IK08 avec DDR 30 mA sur toutes les prises, câbles souples H07RN-F, base vie, grue à tour",
+      "Statut 'temporary' sur la liaison de mise à la terre provisoire ; piquet de terre vérifié chaque semaine",
+      "Seuil 500 mA : R ≤ 50 V / 0,5 A = 100 Ω ; mesuré 28 Ω"
+    ]
+  },
+  "installation": {
+    "earthing": "TT", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "supply": "Tarif Bleu forain 36 kVA",
+    "subscribed_kVA": 36, "ik3_kA": 6, "earth_resistance_ohm": 28, "standard": "NF C 15-100 (7-704)"
+  },
+  "templates": {
+    "D4P": {
+      "type": "breaker", "curve": "C", "icn_kA": 6, "poles": "4P",
+      "product": {"manufacturer": "Legrand", "range": "DX³ 6000"}
+    },
+    "D2P": {
+      "type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "1P+N",
+      "product": {"manufacturer": "Legrand", "range": "DX³ 6000"}
+    }
+  },
+  "sources": [
+    {
+      "id": "RES", "type": "grid", "label": "Réseau Enedis", "supply": "Branchement provisoire forain", "un_V": 400,
+      "children": [
+        {
+          "id": "CPT", "type": "meter", "ref": "-P0", "kind": "Linky tri", "external": true,
+          "children": [
+            {
+              "id": "AGCP", "type": "main_breaker", "ref": "-Q0", "label": "AGCP", "range_A": "30-60", "in_A": 60,
+              "idn_mA": 500, "rcd_type": "A", "selective": true, "poles": "4P", "subscribed_kVA": 36,
+              "children": [
+                {
+                  "id": "APC", "type": "board", "ref": "APC", "label": "Armoire principale de chantier",
+                  "kind": "main", "in_A": 63, "ip": "IP44 IK08", "location": "Entrée chantier, sur dalle béton",
+                  "cable": {"designation": "H07RN-F", "cores": "5G", "section_mm2": 16, "length_m": 8, "material": "Cu"},
+                  "children": [
+                    {
+                      "id": "BAR", "type": "busbar", "ref": "-W0", "label": "Répartiteur 125 A", "in_A": 125,
+                      "children": [
+                        {
+                          "id": "QGR", "type": "breaker", "ref": "-Q1", "use": "D4P", "in_A": 40, "curve": "D",
+                          "cable": {
+                            "designation": "H07RN-F", "cores": "5G", "section_mm2": 10, "length_m": 45,
+                            "material": "Cu"
+                          },
+                          "children": [
+                            {
+                              "id": "IDGR", "type": "rcd", "ref": "-F1", "in_A": 40, "idn_mA": 300, "rcd_type": "A",
+                              "poles": "4P", "label": "Coffret grue",
+                              "children": [
+                                {
+                                  "type": "motor", "ref": "-M1", "label": "Grue à tour 22 kVA", "p_kW": 18,
+                                  "phases": 3
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "breaker", "ref": "-Q2", "use": "D4P", "in_A": 32,
+                          "cable": {
+                            "designation": "H07RN-F", "cores": "5G", "section_mm2": 6, "length_m": 25,
+                            "material": "Cu"
+                          },
+                          "children": [
+                            {
+                              "id": "BV", "type": "board", "ref": "TD-BV", "label": "Base vie (3 modules)",
+                              "kind": "distribution", "in_A": 40, "ip": "IP44",
+                              "children": [
+                                {
+                                  "id": "BV_ID1", "type": "rcd", "ref": "-F1", "in_A": 40, "idn_mA": 30,
+                                  "rcd_type": "A", "poles": "4P",
+                                  "children": [
+                                    {
+                                      "type": "breaker", "ref": "-Q1", "use": "D2P", "in_A": 10, "phase": "L1",
+                                      "cable": {
+                                        "designation": "H07RN-F", "cores": "3G", "section_mm2": 1.5, "length_m": 12,
+                                        "material": "Cu"
+                                      },
+                                      "children": [{"type": "lighting", "label": "Éclairage bungalows", "points": 6, "p_kW": 0.3}]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q2", "use": "D2P", "in_A": 20, "phase": "L2",
+                                      "cable": {
+                                        "designation": "H07RN-F", "cores": "3G", "section_mm2": 2.5, "length_m": 12,
+                                        "material": "Cu"
+                                      },
+                                      "children": [{"type": "socket", "label": "PC réfectoire", "points": 6}]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q3", "use": "D2P", "in_A": 20, "phase": "L3",
+                                      "cable": {
+                                        "designation": "H07RN-F", "cores": "3G", "section_mm2": 2.5, "length_m": 14,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "cooking", "kind": "oven", "label": "Micro-ondes / réchauds",
+                                          "p_kW": 2.5
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q4", "use": "D2P", "in_A": 20, "phase": "L1",
+                                      "cable": {
+                                        "designation": "H07RN-F", "cores": "3G", "section_mm2": 2.5, "length_m": 16,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "water_heater", "label": "Chauffe-eau sanitaires", "volume_L": 100,
+                                          "p_kW": 2.0
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q5", "use": "D2P", "in_A": 16, "phase": "L2",
+                                      "cable": {
+                                        "designation": "H07RN-F", "cores": "3G", "section_mm2": 1.5, "length_m": 12,
+                                        "material": "Cu"
+                                      },
+                                      "children": [{"type": "heating", "label": "Convecteurs vestiaires", "p_kW": 3.0}]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q6", "use": "D2P", "in_A": 16, "phase": "L3",
+                                      "cable": {
+                                        "designation": "H07RN-F", "cores": "3G", "section_mm2": 1.5, "length_m": 14,
+                                        "material": "Cu"
+                                      },
+                                      "children": [{"type": "heating", "label": "Convecteurs bureau / réfectoire", "p_kW": 3.0}]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "breaker", "ref": "-Q3", "use": "D4P", "in_A": 32,
+                          "cable": {
+                            "designation": "H07RN-F", "cores": "5G", "section_mm2": 6, "length_m": 40,
+                            "material": "Cu"
+                          },
+                          "children": [
+                            {
+                              "id": "CD1", "type": "board", "ref": "CD3", "label": "Coffret étage, bâtiment A",
+                              "kind": "distribution", "in_A": 32, "ip": "IP44 IK08",
+                              "location": "Bâtiment A, niveau courant", "own_sheet": false,
+                              "product": {
+                                "manufacturer": "Legrand", "range": "Coffret de chantier",
+                                "description": "Coffret de distribution mobile"
+                              },
+                              "children": [
+                                {
+                                  "id": "CD1_ID", "type": "rcd", "ref": "-F1", "in_A": 40, "idn_mA": 30,
+                                  "rcd_type": "A", "poles": "4P",
+                                  "children": [
+                                    {
+                                      "type": "breaker", "ref": "-Q1", "use": "D4P", "in_A": 16,
+                                      "cable": {
+                                        "designation": "H07RN-F", "cores": "5G", "section_mm2": 2.5, "length_m": 1,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "PC 3P+N+T 16 A", "points": 1, "poles": "3P+N+T",
+                                          "in_A": 16, "socket_type": "IEC 60309 rouge"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q2", "use": "D2P", "phase": "L1",
+                                      "cable": {
+                                        "designation": "H07RN-F", "cores": "3G", "section_mm2": 2.5, "length_m": 1,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "PC 2P+T 16 A", "points": 4,
+                                          "socket_type": "IP44"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q3", "use": "D2P", "phase": "L2",
+                                      "cable": {
+                                        "designation": "H07RN-F", "cores": "3G", "section_mm2": 2.5, "length_m": 1,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "PC 2P+T 16 A", "points": 4,
+                                          "socket_type": "IP44"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "breaker", "ref": "-Q4", "use": "D4P", "in_A": 32,
+                          "cable": {
+                            "designation": "H07RN-F", "cores": "5G", "section_mm2": 6, "length_m": 60,
+                            "material": "Cu"
+                          },
+                          "children": [
+                            {
+                              "id": "CD2", "type": "board", "ref": "CD4",
+                              "label": "Coffret extérieur, aire de stockage", "kind": "distribution", "in_A": 32,
+                              "ip": "IP44 IK08", "location": "Aire de stockage", "own_sheet": false,
+                              "product": {
+                                "manufacturer": "Legrand", "range": "Coffret de chantier",
+                                "description": "Coffret de distribution mobile"
+                              },
+                              "children": [
+                                {
+                                  "id": "CD2_ID", "type": "rcd", "ref": "-F1", "in_A": 40, "idn_mA": 30,
+                                  "rcd_type": "A", "poles": "4P",
+                                  "children": [
+                                    {
+                                      "type": "breaker", "ref": "-Q1", "use": "D4P", "in_A": 16,
+                                      "cable": {
+                                        "designation": "H07RN-F", "cores": "5G", "section_mm2": 2.5, "length_m": 1,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "PC 3P+N+T 16 A", "points": 1, "poles": "3P+N+T",
+                                          "in_A": 16, "socket_type": "IEC 60309 rouge"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q2", "use": "D2P", "phase": "L1",
+                                      "cable": {
+                                        "designation": "H07RN-F", "cores": "3G", "section_mm2": 2.5, "length_m": 1,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "PC 2P+T 16 A", "points": 4,
+                                          "socket_type": "IP44"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q3", "use": "D2P", "phase": "L2",
+                                      "cable": {
+                                        "designation": "H07RN-F", "cores": "3G", "section_mm2": 2.5, "length_m": 1,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "PC 2P+T 16 A", "points": 4,
+                                          "socket_type": "IP44"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "breaker", "ref": "-Q5", "use": "D4P", "in_A": 16,
+                          "cable": {
+                            "designation": "H07RN-F", "cores": "5G", "section_mm2": 2.5, "length_m": 70,
+                            "material": "Cu"
+                          },
+                          "children": [
+                            {
+                              "id": "ID5", "type": "rcd", "ref": "-F5", "in_A": 25, "idn_mA": 30, "rcd_type": "A",
+                              "poles": "4P",
+                              "children": [{"type": "lighting", "label": "Projecteurs LED sur mâts", "points": 6, "p_kW": 1.2}]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {"id": "TER", "type": "earth", "ref": "-E0", "label": "Piquet de terre", "resistance_ohm": 28},
+    {"id": "BTE", "type": "earth_bar", "ref": "-PE", "kind": "main_earth", "label": "Barrette de terre APC"}
+  ],
+  "links": [
+    {
+      "kind": "earth", "from": "BTE", "to": "TER", "status": "temporary",
+      "cable": {"designation": "H07V-K V/J", "section_mm2": 16, "material": "Cu"}
+    }
+  ],
+  "views": [
+    {
+      "id": "sld", "title": "Distribution de chantier", "paper": "A3",
+      "cartouche": ["label", "ref", "protection", "idn_mA", "cable", "length_m", "points", "phase"]
+    }
+  ]
+}

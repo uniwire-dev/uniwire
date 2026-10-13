@@ -1,0 +1,372 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0", "profiles": [],
+  "meta": {
+    "title": "Retail store (US): 480Y/277 V service, 75 kVA step-down to 208Y/120 V", "project": "EX-32",
+    "client": "Example Retail Store", "author": "uniwire examples", "lang": "en",
+    "notes": [
+      "Demonstrates: 60 Hz North-American service, AWG/kcmil conductors (size_awg + raceway), kAIC ratings (icu_kA), ground-fault protection on the 1200 A service main (gf_A), step-down transformer 480Δ-208Y/120 creating a separately derived system, panelboards with odd/even circuit numbers",
+      "Transformer primary 125 A (≤ 125 % of 90 A), secondary 250 A (≤ 125 % of 208 A, next standard size)",
+      "Service main ≥ 1000 A at 480Y/277 V: equipment ground-fault protection required (NEC 230.95)"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-C-S", "system": "3P+N", "un_V": 480, "uln_V": 277, "f_Hz": 60,
+    "supply": "Utility pad-mount 750 kVA, 13.2 kV / 480Y/277 V", "ik3_kA": 18, "standard": "NEC (NFPA 70)"
+  },
+  "templates": {
+    "EDB": {"type": "breaker", "icu_kA": 25, "ue_V": 480, "product": {"manufacturer": "Square D", "range": "EDB / EGB"}},
+    "QO": {"type": "breaker", "icu_kA": 10, "ue_V": 240, "product": {"manufacturer": "Square D", "range": "QO"}},
+    "GFCI": {
+      "type": "rcbo", "in_A": 20, "poles": "1P", "idn_mA": 5, "icu_kA": 10, "ue_V": 120,
+      "product": {"manufacturer": "Square D", "range": "QO GFCI (Class A, 5 mA)"}
+    },
+    "PP": {
+      "type": "breaker", "icu_kA": 35, "ue_V": 480, "poles": "3P",
+      "product": {"manufacturer": "Square D", "range": "PowerPacT J / L"}
+    }
+  },
+  "sources": [
+    {
+      "id": "UT", "type": "transformer", "ref": "-TU", "label": "Utility pad-mount", "sn_kVA": 750, "u1_V": 13200,
+      "u2_V": 480, "ucc_pct": 5.75, "coupling": "Dyn1", "external": true,
+      "children": [
+        {
+          "id": "MSB", "type": "board", "ref": "MSB", "label": "Main switchboard 1200 A", "kind": "switchboard",
+          "in_A": 1200, "un_V": 480, "ik_kA": 18, "location": "Electrical room 102",
+          "cable": {
+            "designation": "THHN/THWN-2", "cores": "3x(4-600 kcmil)+G", "size_awg": "600 kcmil",
+            "conductors": "L1, L2, L3, N, EGC", "material": "Cu", "length_m": 12, "raceway": "4\" PVC underground",
+            "parallel": 3
+          },
+          "children": [
+            {
+              "id": "M", "type": "meter", "ref": "-PM", "kind": "Utility CT metering", "external": true,
+              "children": [
+                {
+                  "id": "QM", "type": "breaker", "ref": "-Q0", "label": "Service main", "in_A": 1200, "frame_A": 1200,
+                  "icu_kA": 35, "poles": "3P", "trip_unit": "Micrologic 6.0 (LSIG)", "gf_A": 1000, "ue_V": 480,
+                  "product": {"manufacturer": "Square D", "range": "PowerPacT R"},
+                  "children": [
+                    {
+                      "type": "spd", "ref": "-F0", "spd_type": "1", "uc_V": 320, "imax_kA": 100, "poles": "3P+N",
+                      "label": "Type 1 SPD (UL 1449)"
+                    },
+                    {
+                      "id": "QH1", "type": "breaker", "ref": "-Q1", "use": "PP", "in_A": 225, "circuit": "MSB-1",
+                      "cable": {
+                        "designation": "THHN/THWN-2", "cores": "4-4/0+G", "size_awg": "4/0",
+                        "conductors": "L1, L2, L3, N, EGC (#3 EGC)", "material": "Cu", "length_m": 6, "raceway": "EMT"
+                      },
+                      "children": [
+                        {
+                          "id": "H1", "type": "board", "ref": "H1",
+                          "label": "Panel H1, 480Y/277 V lighting & mechanical", "kind": "panelboard", "in_A": 225,
+                          "un_V": 480, "uln_V": 277, "ik_kA": 18, "ways": 42, "own_sheet": true,
+                          "location": "Electrical room 102",
+                          "product": {"manufacturer": "Square D", "range": "I-Line / NF panelboard"},
+                          "children": [
+                            {
+                              "id": "H1_M", "type": "breaker", "ref": "-H1M", "use": "EDB", "in_A": 225, "poles": "3P",
+                              "label": "MLO / main 225 A",
+                              "children": [
+                                {
+                                  "type": "breaker", "ref": "-H1.1", "use": "EDB", "in_A": 20, "poles": "1P",
+                                  "circuit": "1",
+                                  "cable": {
+                                    "designation": "THHN/THWN-2", "cores": "2-#12+G", "size_awg": "#12",
+                                    "conductors": "L, N, EGC", "material": "Cu", "length_m": 30, "raceway": "EMT"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "lighting", "label": "Sales floor LED 277 V (A)", "points": 30,
+                                      "p_kW": 2.4
+                                    }
+                                  ],
+                                  "phase": "L1"
+                                },
+                                {
+                                  "type": "breaker", "ref": "-H1.3", "use": "EDB", "in_A": 20, "poles": "1P",
+                                  "circuit": "3",
+                                  "cable": {
+                                    "designation": "THHN/THWN-2", "cores": "2-#12+G", "size_awg": "#12",
+                                    "conductors": "L, N, EGC", "material": "Cu", "length_m": 30, "raceway": "EMT"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "lighting", "label": "Sales floor LED 277 V (B)", "points": 30,
+                                      "p_kW": 2.4
+                                    }
+                                  ],
+                                  "phase": "L2"
+                                },
+                                {
+                                  "type": "breaker", "ref": "-H1.5", "use": "EDB", "in_A": 20, "poles": "1P",
+                                  "circuit": "5",
+                                  "cable": {
+                                    "designation": "THHN/THWN-2", "cores": "2-#12+G", "size_awg": "#12",
+                                    "conductors": "L, N, EGC", "material": "Cu", "length_m": 30, "raceway": "EMT"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "lighting", "label": "Back of house LED 277 V", "points": 22,
+                                      "p_kW": 1.6
+                                    }
+                                  ],
+                                  "phase": "L3"
+                                },
+                                {
+                                  "type": "breaker", "ref": "-H1.7", "use": "EDB", "in_A": 20, "poles": "1P",
+                                  "circuit": "7",
+                                  "cable": {
+                                    "designation": "THHN/THWN-2", "cores": "2-#10+G", "size_awg": "#10",
+                                    "conductors": "L, N, EGC", "material": "Cu", "length_m": 110, "raceway": "EMT"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "lighting", "label": "Parking lot poles 277 V", "points": 10,
+                                      "p_kW": 2.0
+                                    }
+                                  ],
+                                  "phase": "L1"
+                                },
+                                {
+                                  "type": "breaker", "ref": "-H1.9", "use": "EDB", "in_A": 30, "poles": "3P",
+                                  "circuit": "9,11,13",
+                                  "cable": {
+                                    "designation": "THHN/THWN-2", "cores": "4-#10+G", "size_awg": "#10",
+                                    "conductors": "L1, L2, L3, N, EGC", "material": "Cu", "length_m": 40,
+                                    "raceway": "EMT"
+                                  },
+                                  "children": [{"type": "heating", "label": "Electric unit heaters", "p_kW": 15}]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-H1.15", "use": "EDB", "in_A": 40, "poles": "3P",
+                                  "circuit": "15,17,19",
+                                  "cable": {
+                                    "designation": "THHN/THWN-2", "cores": "4-#8+G", "size_awg": "#8",
+                                    "conductors": "L1, L2, L3, N, EGC", "material": "Cu", "length_m": 25,
+                                    "raceway": "EMT"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "water_heater", "label": "Water heater 480 V", "p_kW": 18,
+                                      "volume_L": 300
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-H1.21", "use": "EDB", "in_A": 15, "poles": "3P",
+                                  "circuit": "21,23,25",
+                                  "cable": {
+                                    "designation": "THHN/THWN-2", "cores": "4-#12+G", "size_awg": "#12",
+                                    "conductors": "L1, L2, L3, N, EGC", "material": "Cu", "length_m": 50,
+                                    "raceway": "EMT"
+                                  },
+                                  "children": [{"type": "ventilation", "label": "Exhaust fans EF-1/2", "p_kW": 3}]
+                                },
+                                {"type": "spare", "ref": "-H1.27", "in_A": 20, "poles": "1P", "label": "Spare"}
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q2", "use": "PP", "in_A": 100, "circuit": "MSB-2",
+                      "cable": {
+                        "designation": "THHN/THWN-2", "cores": "3-#3+G", "size_awg": "#3",
+                        "conductors": "L1, L2, L3, EGC", "material": "Cu", "length_m": 35, "raceway": "EMT"
+                      },
+                      "children": [
+                        {
+                          "type": "load", "ref": "-RTU1", "label": "RTU-1 (20 ton)", "symbol_text": "RTU", "p_kW": 52,
+                          "note": "MCA 74 A, MOCP 100 A"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q3", "use": "PP", "in_A": 100, "circuit": "MSB-3",
+                      "cable": {
+                        "designation": "THHN/THWN-2", "cores": "3-#3+G", "size_awg": "#3",
+                        "conductors": "L1, L2, L3, EGC", "material": "Cu", "length_m": 40, "raceway": "EMT"
+                      },
+                      "children": [
+                        {
+                          "type": "load", "ref": "-RTU2", "label": "RTU-2 (20 ton)", "symbol_text": "RTU", "p_kW": 52,
+                          "note": "MCA 74 A, MOCP 100 A"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q4", "use": "PP", "in_A": 60, "circuit": "MSB-4",
+                      "cable": {
+                        "designation": "THHN/THWN-2", "cores": "3-#6+G", "size_awg": "#6",
+                        "conductors": "L1, L2, L3, EGC", "material": "Cu", "length_m": 30, "raceway": "EMT"
+                      },
+                      "children": [
+                        {
+                          "type": "motor", "ref": "-M4", "label": "Freight elevator (hydraulic)", "p_kW": 22,
+                          "phases": 3
+                        }
+                      ]
+                    },
+                    {
+                      "id": "QT1P", "type": "breaker", "ref": "-Q5", "use": "PP", "in_A": 125, "circuit": "MSB-5",
+                      "label": "T1 primary",
+                      "cable": {
+                        "designation": "THHN/THWN-2", "cores": "3-1/0+G", "size_awg": "1/0",
+                        "conductors": "L1, L2, L3, EGC", "material": "Cu", "length_m": 8, "raceway": "EMT"
+                      },
+                      "children": [
+                        {
+                          "id": "T1", "type": "transformer", "ref": "-T1", "label": "Step-down",
+                          "note": "Separately derived system, neutral bonded at T1", "sn_kVA": 75, "u1_V": 480,
+                          "u2_V": 208, "ucc_pct": 4.5, "coupling": "Dyn1", "insulation": "dry",
+                          "product": {"manufacturer": "Square D", "range": "EX ventilated, K-1, 150 °C rise"},
+                          "children": [
+                            {
+                              "id": "QT1S", "type": "breaker", "ref": "-Q6", "use": "PP", "in_A": 250,
+                              "label": "T1 secondary main", "ue_V": 240,
+                              "cable": {
+                                "designation": "THHN/THWN-2", "cores": "4-250 kcmil+G", "size_awg": "250 kcmil",
+                                "conductors": "L1, L2, L3, N, EGC", "material": "Cu", "length_m": 4, "raceway": "EMT"
+                              },
+                              "children": [
+                                {
+                                  "id": "L1", "type": "board", "ref": "L1",
+                                  "label": "Panel L1, 208Y/120 V receptacles", "kind": "panelboard", "in_A": 225,
+                                  "un_V": 208, "uln_V": 120, "ik_kA": 10, "ways": 42, "own_sheet": true,
+                                  "location": "Electrical room 102",
+                                  "product": {"manufacturer": "Square D", "range": "NQ panelboard"},
+                                  "children": [
+                                    {
+                                      "id": "L1_M", "type": "breaker", "ref": "-L1M", "use": "QO", "in_A": 225,
+                                      "poles": "3P", "label": "Main 225 A",
+                                      "children": [
+                                        {
+                                          "type": "breaker", "ref": "-L1.1", "use": "QO", "in_A": 20, "poles": "1P",
+                                          "circuit": "1",
+                                          "cable": {
+                                            "designation": "THHN/THWN-2", "cores": "2-#12+G", "size_awg": "#12",
+                                            "conductors": "L, N, EGC", "material": "Cu", "length_m": 30,
+                                            "raceway": "EMT"
+                                          },
+                                          "children": [{"type": "socket", "label": "Office receptacles", "points": 8}],
+                                          "phase": "L1"
+                                        },
+                                        {
+                                          "type": "breaker", "ref": "-L1.3", "use": "QO", "in_A": 20, "poles": "1P",
+                                          "circuit": "3",
+                                          "cable": {
+                                            "designation": "THHN/THWN-2", "cores": "2-#12+G", "size_awg": "#12",
+                                            "conductors": "L, N, EGC", "material": "Cu", "length_m": 30,
+                                            "raceway": "EMT"
+                                          },
+                                          "children": [{"type": "socket", "label": "Checkout receptacles", "points": 6}],
+                                          "phase": "L2"
+                                        },
+                                        {
+                                          "type": "rcbo", "ref": "-L1.5", "use": "GFCI", "circuit": "5", "phase": "L3",
+                                          "cable": {
+                                            "designation": "THHN/THWN-2", "cores": "2-#12+G", "size_awg": "#12",
+                                            "conductors": "L, N, EGC", "material": "Cu", "length_m": 20,
+                                            "raceway": "EMT"
+                                          },
+                                          "children": [{"type": "socket", "label": "Break room counter (GFCI)", "points": 4}]
+                                        },
+                                        {
+                                          "type": "rcbo", "ref": "-L1.7", "use": "GFCI", "circuit": "7", "phase": "L1",
+                                          "cable": {
+                                            "designation": "THHN/THWN-2", "cores": "2-#12+G", "size_awg": "#12",
+                                            "conductors": "L, N, EGC", "material": "Cu", "length_m": 45,
+                                            "raceway": "EMT"
+                                          },
+                                          "children": [{"type": "socket", "label": "Exterior WP receptacles (GFCI)", "points": 3}]
+                                        },
+                                        {
+                                          "type": "breaker", "ref": "-L1.9", "use": "QO", "in_A": 20, "poles": "1P",
+                                          "circuit": "9",
+                                          "cable": {
+                                            "designation": "THHN/THWN-2", "cores": "2-#12+G", "size_awg": "#12",
+                                            "conductors": "L, N, EGC", "material": "Cu", "length_m": 30,
+                                            "raceway": "EMT"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "appliance", "kind": "fridge",
+                                              "label": "Break room refrigerator", "p_kW": 0.6
+                                            }
+                                          ],
+                                          "phase": "L2"
+                                        },
+                                        {
+                                          "type": "breaker", "ref": "-L1.11", "use": "QO", "in_A": 20, "poles": "1P",
+                                          "circuit": "11",
+                                          "cable": {
+                                            "designation": "THHN/THWN-2", "cores": "2-#12+G", "size_awg": "#12",
+                                            "conductors": "L, N, EGC", "material": "Cu", "length_m": 30,
+                                            "raceway": "EMT"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "load", "label": "IT rack (dedicated)", "symbol_text": "IT",
+                                              "p_kW": 1.5
+                                            }
+                                          ],
+                                          "phase": "L3"
+                                        },
+                                        {
+                                          "type": "breaker", "ref": "-L1.13", "use": "QO", "in_A": 30, "poles": "2P",
+                                          "circuit": "13,15",
+                                          "cable": {
+                                            "designation": "THHN/THWN-2", "cores": "4-#10+G", "size_awg": "#10",
+                                            "conductors": "L1, L2, L3, N, EGC", "material": "Cu", "length_m": 30,
+                                            "raceway": "EMT"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "appliance", "kind": "dryer", "label": "Stock-room dryer 208 V",
+                                              "p_kW": 5
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "spare", "ref": "-L1.17", "in_A": 20, "poles": "1P",
+                                          "label": "Spare"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q7", "use": "PP", "in_A": 200, "circuit": "MSB-7",
+                      "cable": {
+                        "designation": "THHN/THWN-2", "cores": "4-3/0+G", "size_awg": "3/0",
+                        "conductors": "L1, L2, L3, N, EGC", "material": "Cu", "length_m": 60, "raceway": "EMT"
+                      },
+                      "children": [{"type": "offpage", "label": "Panel H2 (future tenant)", "target": "EX-32 E-3"}],
+                      "status": "future"
+                    },
+                    {"type": "spare", "ref": "-Q8", "in_A": 400, "poles": "3P", "frame_A": 400, "label": "Space"}
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "id": "sld", "title": "One-line diagram", "paper": "A3",
+      "cartouche": ["circuit", "label", "ref", "protection", "poles", "cable", "length_m", "p_kW"]
+    }
+  ]
+}

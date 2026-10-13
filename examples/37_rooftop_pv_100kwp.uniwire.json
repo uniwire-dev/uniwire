@@ -1,0 +1,109 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Warehouse rooftop PV plant 100 kWp: LV connection",
+    "project": "EX-37",
+    "client": "Example logistics warehouse",
+    "author": "uniwire examples",
+    
+    "lang": "en",
+    "notes": [
+      "Demonstrates: commercial rooftop PV with 4 x 25 kVA string inverters, PV AC combiner board, central interface protection (EN 50549-1) tripping the coupling breaker shunt (trip link), PV generation meter and bidirectional utility meter, iec60364 Iz checks",
+      "Each inverter: 57 modules 440 Wp in 3 strings of 19 (25.1 kWp, Voc max ≈ 840 V at -10 °C); integrated DC switch and type 2 DC SPD",
+      "Feeder to PV combiner: 4x95 mm² Cu XLPE, 65 m, ΔU ≈ 1.2 % at 145 A"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-C-S",
+    "system": "3P+N",
+    "un_V": 400,
+    "uln_V": 230,
+    "f_Hz": 50,
+    "supply": "LV utility supply 250 kVA",
+    "ik3_kA": 20,
+    "du_max_pct": 3,
+    "standard": "IEC 60364"
+  },
+  "templates": {
+    "INV": {"type": "inverter", "kind": "string", "p_kVA": 25, "mppt": 2, "un_V": 400,
+            "protection": "EN 50549-1 (integrated)",
+            "product": {"range": "25 kVA three-phase string inverter", "description": "3-phase string inverter, 2 MPPT, integrated DC switch, type 2 DC SPD"}},
+    "QINV": {"type": "breaker", "in_A": 50, "curve": "C", "poles": "4P", "icn_kA": 10,
+             "product": {"manufacturer": "ABB", "range": "S200M", "description": "MCB 4P C50 10 kA"}},
+    "ARRAY": {"type": "pv_array", "modules": 57, "module_W": 440, "strings": 3, "p_kW": 25.08, "voc_V": 840, "isc_A": 13.8}
+  },
+  "sources": [
+    {"type": "grid", "label": "Utility LV network", "supply": "LV 400 V", "ik_kA": 20, "system": "3P+N", "children": [
+      {"type": "meter", "id": "PM0", "ref": "-P0", "label": "Utility import/export meter", "kind": "CT", "bidirectional": true,
+       "cable": {"designation": "XLPE/SWA", "cores": "4x", "section_mm2": 185, "material": "Al", "length_m": 15, "pen": true},
+       "children": [
+        {"type": "board", "id": "MSB", "ref": "MSB", "label": "Main switchboard", "kind": "main", "in_A": 400, "ik_kA": 20, "form": "2b", "children": [
+          {"type": "breaker", "id": "Q0", "ref": "-Q0", "label": "Main incomer", "in_A": 400, "ir_A": 360, "poles": "4P", "icu_kA": 36,
+           "trip_unit": "Micrologic 2.3", "product": {"manufacturer": "Schneider Electric", "range": "ComPacT NSX400F"},
+           "children": [
+            {"type": "breaker", "ref": "-F1", "label": "SPD disconnector", "in_A": 32, "curve": "C", "poles": "4P", "icn_kA": 25, "children": [
+              {"type": "spd", "ref": "-F11", "label": "Main SPD", "spd_type": "1+2", "imax_kA": 50, "in_kA": 12.5, "up_kV": 1.5, "poles": "3P+N"}
+            ]},
+            {"type": "breaker", "ref": "-Q1", "label": "Warehouse DB", "in_A": 160, "ir_A": 125, "poles": "4P", "icu_kA": 36,
+             "product": {"manufacturer": "Schneider Electric", "range": "ComPacT NSX160F"}, "status": "existing",
+             "cable": {"cores": "4x", "section_mm2": 50, "material": "Cu", "insulation": "XLPE", "install": "E", "length_m": 40},
+             "children": [{"type": "offpage", "label": "Existing warehouse DB", "target": "Drawing E-102", "status": "existing"}]},
+            {"type": "breaker", "ref": "-Q2", "label": "Offices DB", "in_A": 100, "ir_A": 80, "poles": "4P", "icu_kA": 36,
+             "product": {"manufacturer": "Schneider Electric", "range": "ComPacT NSX100F"}, "status": "existing",
+             "cable": {"cores": "4x", "section_mm2": 25, "material": "Cu", "insulation": "XLPE", "install": "E", "length_m": 30},
+             "children": [{"type": "offpage", "label": "Existing offices DB", "target": "Drawing E-103", "status": "existing"}]},
+            {"type": "breaker", "id": "QPV", "ref": "-Q3", "label": "PV plant", "in_A": 160, "ir_A": 160, "poles": "4P", "icu_kA": 36,
+             "product": {"manufacturer": "Schneider Electric", "range": "ComPacT NSX160F", "description": "MCCB 4P 160 A TM-D"},
+             "cable": {"designation": "XLPE/SWA", "cores": "4x", "section_mm2": 95, "material": "Cu", "insulation": "XLPE",
+                       "install": "E", "length_m": 65, "du_pct": 1.2},
+             "children": [
+              {"type": "board", "id": "ACDB", "ref": "PV-ACDB", "label": "PV AC combiner board", "kind": "ac_box", "in_A": 160, "ip": "IP55", "children": [
+                {"type": "switch_disconnector", "ref": "-Q20", "label": "Isolator", "in_A": 160, "poles": "4P", "lockable": true,
+                 "children": [
+                  {"type": "breaker", "id": "QCPL", "ref": "-Q21", "label": "Coupling breaker", "in_A": 160, "ir_A": 160, "poles": "4P", "icu_kA": 25,
+                   "aux": ["MX", "OF"], "product": {"manufacturer": "Schneider Electric", "range": "ComPacT NSX160B"},
+                   "children": [
+                    {"type": "meter", "id": "PMPV", "ref": "-P1", "label": "PV generation meter", "kind": "CT 200/5 A, class 0.5S", "children": [
+                      {"type": "spd", "ref": "-F21", "spd_type": "2", "imax_kA": 40, "up_kV": 1.5, "poles": "3P+N"},
+                      {"type": "breaker", "ref": "-Q22", "label": "Datalogger", "in_A": 2, "curve": "C", "poles": "1P+N", "icn_kA": 10, "children": [
+                        {"type": "controller", "id": "DL", "ref": "-A1", "label": "Datalogger", "function": "PV plant controller", "symbol_text": "DL"}
+                      ]},
+                      {"type": "breaker", "ref": "-Q23", "use": "QINV",
+                       "cable": {"cores": "5G", "section_mm2": 16, "material": "Cu", "insulation": "XLPE", "install": "C", "length_m": 25},
+                       "children": [{"type": "inverter", "id": "INV1", "ref": "-T1", "use": "INV", "children": [{"type": "pv_array", "ref": "-G1", "use": "ARRAY", "label": "Roof A"}]}]},
+                      {"type": "breaker", "ref": "-Q24", "use": "QINV",
+                       "cable": {"cores": "5G", "section_mm2": 16, "material": "Cu", "insulation": "XLPE", "install": "C", "length_m": 30},
+                       "children": [{"type": "inverter", "ref": "-T2", "use": "INV", "children": [{"type": "pv_array", "ref": "-G2", "use": "ARRAY", "label": "Roof B"}]}]},
+                      {"type": "breaker", "ref": "-Q25", "use": "QINV",
+                       "cable": {"cores": "5G", "section_mm2": 16, "material": "Cu", "insulation": "XLPE", "install": "C", "length_m": 35},
+                       "children": [{"type": "inverter", "ref": "-T3", "use": "INV", "children": [{"type": "pv_array", "ref": "-G3", "use": "ARRAY", "label": "Roof C"}]}]},
+                      {"type": "breaker", "ref": "-Q26", "use": "QINV",
+                       "cable": {"cores": "5G", "section_mm2": 16, "material": "Cu", "insulation": "XLPE", "install": "C", "length_m": 40},
+                       "children": [{"type": "inverter", "ref": "-T4", "use": "INV", "children": [{"type": "pv_array", "ref": "-G4", "use": "ARRAY", "label": "Roof D"}]}]}
+                    ]}
+                  ]}
+                ]}
+              ]}
+            ]},
+            {"type": "spare", "ref": "-Q4", "label": "Spare", "in_A": 100, "poles": "4P"}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "devices": [
+    {"type": "protection_relay", "id": "KF1", "ref": "-KF1", "label": "Interface protection",
+     "functions": ["U<", "U>", "U> 10 min", "f<", "f>", "ROCOF"], "settings": "EN 50549-1"}
+  ],
+  "links": [
+    {"kind": "trip", "from": "KF1", "to": "QCPL", "label": "MX"},
+    {"kind": "data", "from": "DL", "to": "PMPV", "protocol": "Modbus RTU"}
+  ],
+  "views": [
+    {"id": "sld", "paper": "A3", "orientation": "landscape",
+     "cartouche": ["label", "ref", "protection", "poles", "cable", "length_m", "p_kW"],
+     "overrides": {"QCPL": {"label_offset": [0, 4]}}}
+  ]
+}

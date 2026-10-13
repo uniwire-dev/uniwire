@@ -1,0 +1,57 @@
+{
+ "id": "08_office_main_switchboard",
+ "request": "Office building main LV switchboard: 630 kVA transformer 20 kV/410 V Dyn11, TN-S, 1000 A ACB incomer, Ik 25 kA at the busbar, outgoing MCCBs to three floor distribution boards (cables with sections and lengths), HVAC plant 160 A and a spare way.",
+ "expect": [
+  {
+   "check": "count",
+   "match": {
+    "type": "transformer",
+    "sn_kVA": 630
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "breaker",
+    "in_A": {
+     "min": 800
+    }
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "board"
+   },
+   "min": 4
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "breaker",
+    "cable.section_mm2": {
+     "exists": true
+    },
+    "cable.length_m": {
+     "exists": true
+    }
+   },
+   "min": 3
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "spare"
+   },
+   "min": 1
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ]
+}

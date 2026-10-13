@@ -1,0 +1,242 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Plastics factory: motor control centre MCC-2 (extrusion line)", "project": "EX-24",
+    "client": "Example Plastics Plant", "author": "uniwire examples", "lang": "en",
+    "notes": [
+      "Demonstrates: the five classic motor feeders (DOL with MPCB + contactor, reversing, star-delta, VFD, soft starter with bypass) and an S7-1200 PLC with its modules addressed by channel ports",
+      "Motor cables of VFD feeders: screened, 360° EMC glands both ends",
+      "Star-delta compressor: two 4G16 cables (U1-V1-W1 / W2-U2-V2), each sized for the delta current In/√3"
+    ]
+  },
+  "installation": {"earthing": "TN-S", "system": "3P", "un_V": 400, "f_Hz": 50, "ik3_kA": 30, "standard": "IEC 60364 / IEC 61439-2"},
+  "templates": {
+    "MPCB": {"type": "breaker", "icu_kA": 50, "poles": "3P", "product": {"manufacturer": "Siemens", "range": "SIRIUS 3RV2"}},
+    "KM": {"type": "contactor", "coil_V": 24, "poles": "3P", "product": {"manufacturer": "Siemens", "range": "SIRIUS 3RT2"}},
+    "MCCB": {
+      "type": "breaker", "icu_kA": 55, "poles": "3P", "trip_unit": "ETU320 LI",
+      "product": {"manufacturer": "Siemens", "range": "3VA2"}
+    }
+  },
+  "sources": [
+    {
+      "id": "IN", "type": "offpage", "label": "From MSB-1 -Q7 (400 A)", "target": "EX-24 drawing E-010",
+      "children": [
+        {
+          "id": "MCC", "type": "board", "ref": "MCC-2", "label": "Motor control centre, extrusion line",
+          "kind": "mcc", "in_A": 630, "ik_kA": 30, "form": "4b", "ip": "IP42", "location": "Electrical room 2",
+          "cable": {
+            "ref": "W1", "marks": {"L1": "1L1", "L2": "1L2", "L3": "1L3", "PE": "PE"},
+            "cores": "3x", "section_mm2": 185, "length_m": 40, "material": "Cu", "insulation": "XLPE", "install": "C",
+            "pe_section_mm2": 95
+          },
+          "children": [
+            {
+              "id": "Q0", "type": "breaker", "ref": "-Q0", "label": "MCC incomer", "use": "MCCB", "in_A": 400,
+              "ir_A": 340, "trip_unit": "ETU350 LSI", "lockable": true,
+              "children": [
+                {
+                  "id": "Q1", "type": "breaker", "ref": "-Q1", "use": "MPCB", "in_A": 16, "ir_A": 15.5,
+                  "label": "Conveyor MPCB",
+                  "children": [
+                    {
+                      "id": "KM1", "type": "contactor", "ref": "-KM1", "use": "KM", "in_A": 17,
+                      "children": [
+                        {
+                          "type": "motor", "ref": "-M1", "label": "Infeed conveyor (DOL)", "p_kW": 7.5, "in_A": 15.5,
+                          "phases": 3,
+                          "cable": {
+                            "ref": "W11",
+                            "cores": "4G", "section_mm2": 2.5, "length_m": 35, "material": "Cu", "insulation": "XLPE",
+                            "install": "C"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Q2", "type": "breaker", "ref": "-Q2", "use": "MPCB", "in_A": 10, "ir_A": 8.5,
+                  "label": "Hoist MPCB",
+                  "children": [
+                    {
+                      "id": "KM2", "type": "motor_starter", "ref": "-KM2", "method": "reversing", "in_A": 9, "p_kW": 4,
+                      "product": {"manufacturer": "Siemens", "range": "SIRIUS 3RA23 (reversing)"},
+                      "children": [
+                        {
+                          "type": "motor", "ref": "-M2", "label": "Die-change hoist (reversing)", "p_kW": 4,
+                          "in_A": 8.5, "phases": 3,
+                          "cable": {
+                            "ref": "W12",
+                            "cores": "4G", "section_mm2": 1.5, "length_m": 25, "material": "Cu", "insulation": "XLPE",
+                            "install": "C"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Q3", "type": "breaker", "ref": "-Q3", "use": "MCCB", "in_A": 125, "ir_A": 100,
+                  "children": [
+                    {
+                      "id": "KM3", "type": "motor_starter", "ref": "-KM3", "method": "star_delta", "in_A": 84,
+                      "p_kW": 45, "product": {"manufacturer": "Siemens", "range": "SIRIUS 3RA24 (star-delta)"},
+                      "children": [
+                        {
+                          "id": "F3", "type": "thermal_relay", "ref": "-F3", "range_A": "40-50", "setting_A": 48.5,
+                          "note": "In the delta branch: set to In/√3",
+                          "children": [
+                            {
+                              "type": "motor", "ref": "-M3", "label": "Air compressor (Y/Δ)", "p_kW": 45, "in_A": 84,
+                              "phases": 3,
+                              "cable": {
+                                "ref": "W13",
+                                "cores": "4G", "section_mm2": 16, "length_m": 20, "material": "Cu",
+                                "insulation": "XLPE", "install": "C", "parallel": 2
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Q4", "type": "breaker", "ref": "-Q4", "use": "MCCB", "in_A": 80, "ir_A": 70,
+                  "cable": {
+                    "ref": "W24",
+                    "cores": "4G", "section_mm2": 25, "length_m": 6, "material": "Cu", "insulation": "XLPE",
+                    "install": "C"
+                  },
+                  "children": [
+                    {
+                      "id": "VFD4", "type": "motor_starter", "ref": "-TA4", "method": "vfd", "in_A": 60, "p_kW": 30,
+                      "product": {"manufacturer": "Siemens", "range": "SINAMICS G120", "description": "PM240-2 30 kW"},
+                      "children": [
+                        {
+                          "type": "motor", "ref": "-M4", "label": "Extruder main drive (VFD)", "p_kW": 30, "in_A": 56,
+                          "phases": 3,
+                          "cable": {
+                            "ref": "W14",
+                            "cores": "4G", "section_mm2": 25, "length_m": 30, "material": "Cu", "insulation": "XLPE",
+                            "install": "C"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Q5", "type": "breaker", "ref": "-Q5", "use": "MCCB", "in_A": 160, "ir_A": 125,
+                  "children": [
+                    {
+                      "id": "SS5", "type": "motor_starter", "ref": "-TA5", "method": "soft_starter", "in_A": 113,
+                      "p_kW": 55, "product": {"manufacturer": "Siemens", "range": "SIRIUS 3RW55"},
+                      "note": "Integrated bypass contacts",
+                      "children": [
+                        {
+                          "type": "motor", "ref": "-M5", "label": "Cooling water pump (soft start)", "p_kW": 55,
+                          "in_A": 100, "phases": 3,
+                          "cable": {
+                            "ref": "W15",
+                            "cores": "4G", "section_mm2": 50, "length_m": 45, "material": "Cu", "insulation": "XLPE",
+                            "install": "C"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Q6", "type": "breaker", "ref": "-Q6", "use": "MCCB", "in_A": 32, "ir_A": 25,
+                  "children": [
+                    {
+                      "id": "VFD6", "type": "motor_starter", "ref": "-TA6", "method": "vfd", "in_A": 25, "p_kW": 11,
+                      "product": {"manufacturer": "Siemens", "range": "SINAMICS G120X"},
+                      "children": [
+                        {
+                          "type": "motor", "ref": "-M6", "label": "Fume extraction fan (VFD)", "p_kW": 11, "in_A": 21,
+                          "phases": 3,
+                          "cable": {
+                            "ref": "W16",
+                            "cores": "4G", "section_mm2": 4, "length_m": 40, "material": "Cu", "insulation": "XLPE",
+                            "install": "C"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Q7", "type": "breaker", "ref": "-Q7", "in_A": 6, "curve": "C", "icn_kA": 10, "poles": "2P",
+                  "product": {"manufacturer": "Siemens", "range": "5SY"}, "label": "Control supply",
+                  "children": [
+                    {
+                      "id": "PS", "type": "power_supply", "ref": "-T7", "u1_V": 400, "u2_V": 24, "in_A": 10,
+                      "p_W": 240,
+                      "product": {
+                        "manufacturer": "Siemens", "range": "SITOP PSU6200",
+                        "description": "24 V DC 10 A, 2-phase input"
+                      },
+                      "children": [
+                        {
+                          "id": "PLC", "type": "plc", "ref": "-A1", "label": "Line controller", "role": "controller",
+                          "family": "S7-1200", "protocols": ["PROFINET"], "un_V": 24, "ip_address": "192.168.0.10",
+                          "product": {
+                            "manufacturer": "Siemens", "part_number": "6ES7214-1AG40-0XB0", "range": "SIMATIC S7-1200",
+                            "description": "CPU 1214C DC/DC/DC"
+                          },
+                          "onboard": [{"slot": 0, "kind": "mixed_io", "channels": 26, "label": "14 DI / 10 DQ / 2 AI"}],
+                          "modules": [
+                            {
+                              "slot": 1, "kind": "di", "part_number": "6ES7221-1BH32-0XB0", "channels": 16, "un_V": 24,
+                              "channel_labels": {"1": "M1 run", "2": "M2 up", "3": "M2 down", "4": "M3 run", "5": "E-stop OK"}
+                            },
+                            {
+                              "slot": 2, "kind": "relay_out", "part_number": "6ES7222-1HH32-0XB0", "channels": 16,
+                              "rating_A": 2,
+                              "channel_labels": {"1": "KM1", "2": "KM2 up", "3": "KM2 down", "4": "KM3 start"}
+                            },
+                            {
+                              "slot": 3, "kind": "ai", "part_number": "6ES7231-4HD32-0XB0", "channels": 4,
+                              "signal": "4-20 mA", "channel_labels": {"1": "Melt pressure", "2": "Air pressure"}
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "spare", "ref": "-Q8", "in_A": 125, "poles": "3P", "frame_A": 160,
+                  "label": "Spare (2nd extruder, future)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "links": [
+    {"kind": "control", "from": "PLC", "from_port": "2.1", "to": "KM1", "label": "run"},
+    {"kind": "control", "from": "PLC", "from_port": "2.2", "to": "KM2", "label": "up/down"},
+    {"kind": "control", "from": "PLC", "from_port": "2.4", "to": "KM3", "label": "start"},
+    {"kind": "data", "from": "PLC", "to": "VFD4", "protocol": "PROFINET", "label": "PROFINET"},
+    {"kind": "data", "from": "PLC", "to": "SS5", "protocol": "PROFINET"},
+    {"kind": "data", "from": "PLC", "to": "VFD6", "protocol": "PROFINET"}
+  ],
+  "views": [
+    {
+      "id": "sld", "title": "MCC-2 single-line", "paper": "A4", "orientation": "landscape",
+      "cartouche": ["label", "ref", "protection", "cable", "length_m", "p_kW"]
+    },
+    {"id": "ml", "kind": "multi-line", "title": "MCC-2 multi-line power diagram", "paper": "A3", "orientation": "landscape"},
+    {
+      "id": "marks", "kind": "multi-line", "title": "MCC-2 multi-line power diagram: wire marks", "paper": "A3",
+      "orientation": "landscape", "wire_marking": {"scheme": "sequential", "power": "number", "start": 101}
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "lang": "en",
+    "title": "Holiday cottage: standby generator with manual changeover",
+    "project": "EX-10",
+    "client": "Example holiday cottage",
+    "author": "uniwire examples",
+    
+    "notes": [
+      "Demonstrates: second source (portable generator) connected through an inlet to a manual changeover switch I-0-II (transfer link), essential / non-essential split (heating and water heater stay on the grid side only)",
+      "Changeover switch is 2-pole (switches the neutral). In TT, the generator frame is connected to the installation earth electrode; 30 mA RCDs remain downstream of the changeover",
+      "Generator 6 kVA: do not start the well pump and the fridge simultaneously"
+    ]
+  },
+  "installation": {
+    "earthing": "TT", "system": "1P+N", "un_V": 230, "f_Hz": 50,
+    "supply": "Rural overhead LV, 1-phase 63 A", "earth_resistance_ohm": 60, "standard": "IEC 60364-5-55 / 5-56"
+  },
+  "templates": {
+    "B10": {"type": "breaker", "in_A": 10, "curve": "B", "icn_kA": 6, "poles": "1P+N"},
+    "B16": {"type": "breaker", "in_A": 16, "curve": "B", "icn_kA": 6, "poles": "1P+N"},
+    "C16": {"type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "1P+N"}
+  },
+  "sources": [
+    {"type": "grid", "label": "Utility supply", "un_V": 230, "children": [
+      {"type": "meter", "ref": "-P1", "label": "Meter", "in_A": 63, "external": true, "children": [
+        {"type": "rcd", "ref": "-F0", "label": "Main RCD (S)", "in_A": 63, "idn_mA": 300, "rcd_type": "A", "delay": "S", "poles": "2P",
+         "cable": {"designation": "N2XY-J", "cores": "3x", "section_mm2": 16, "material": "Cu", "length_m": 20, "install": "D-duct", "insulation": "XLPE"},
+         "children": [
+          {"type": "board", "ref": "=DB", "label": "Cottage distribution board", "kind": "distribution", "system": "1P+N", "ways": 24, "children": [
+            {"type": "rcd", "ref": "-F1", "label": "RCCB grid-only", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "2P", "children": [
+              {"type": "breaker", "ref": "-F11", "use": "B16", "priority": "non_essential",
+               "cable": {"cores": "3G", "section_mm2": 2.5, "material": "Cu", "install": "C", "insulation": "PVC"},
+               "children": [{"type": "water_heater", "label": "Water heater 80 L", "volume_L": 80, "p_kW": 2, "priority": "non_essential"}]},
+              {"type": "breaker", "ref": "-F12", "use": "B16", "priority": "non_essential",
+               "cable": {"cores": "3G", "section_mm2": 2.5, "material": "Cu", "install": "C", "insulation": "PVC"},
+               "children": [{"type": "heating", "label": "Panel heaters living room", "p_kW": 3, "count": 2, "priority": "non_essential"}]},
+              {"type": "breaker", "ref": "-F13", "use": "B16", "priority": "non_essential",
+               "cable": {"cores": "3G", "section_mm2": 2.5, "material": "Cu", "install": "C", "insulation": "PVC"},
+               "children": [{"type": "heating", "label": "Panel heaters bedrooms", "p_kW": 2.5, "count": 3, "priority": "non_essential"}]}
+            ]},
+            {"type": "transfer_switch", "id": "TS1", "ref": "-Q1", "label": "Changeover I-0-II", "in_A": 40, "poles": "2P",
+             "mode": "manual", "interlock": "mechanical", "children": [
+              {"type": "rcd", "ref": "-F2", "label": "RCCB essential", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "2P", "children": [
+                {"type": "breaker", "ref": "-F21", "use": "B10", "priority": "essential",
+                 "cable": {"cores": "3G", "section_mm2": 1.5, "material": "Cu", "install": "C", "insulation": "PVC"},
+                 "children": [{"type": "lighting", "label": "Lighting", "points": 12}]},
+                {"type": "breaker", "ref": "-F22", "use": "B16", "priority": "essential",
+                 "cable": {"cores": "3G", "section_mm2": 2.5, "material": "Cu", "install": "C", "insulation": "PVC"},
+                 "children": [{"type": "socket", "label": "Sockets living / kitchen", "points": 8}]},
+                {"type": "breaker", "ref": "-F23", "use": "B16", "priority": "essential",
+                 "cable": {"cores": "3G", "section_mm2": 2.5, "material": "Cu", "install": "C", "insulation": "PVC"},
+                 "children": [{"type": "socket", "label": "Sockets bedrooms", "points": 6}]},
+                {"type": "breaker", "ref": "-F24", "use": "B16", "priority": "essential",
+                 "cable": {"cores": "3G", "section_mm2": 2.5, "material": "Cu", "install": "C", "insulation": "PVC"},
+                 "children": [{"type": "appliance", "kind": "fridge", "label": "Fridge-freezer", "p_kW": 0.2}]},
+                {"type": "breaker", "ref": "-F25", "use": "C16", "priority": "essential",
+                 "cable": {"designation": "N2XY-J", "cores": "3x", "section_mm2": 2.5, "material": "Cu", "length_m": 45, "install": "D-duct", "insulation": "XLPE"},
+                 "children": [{"type": "motor", "ref": "-M1", "label": "Borehole pump 0.75 kW", "p_kW": 0.75, "phases": 1, "in_A": 5.5}]},
+                {"type": "breaker", "ref": "-F26", "use": "B10", "priority": "essential",
+                 "cable": {"cores": "3G", "section_mm2": 1.5, "material": "Cu", "install": "C", "insulation": "PVC"},
+                 "children": [{"type": "load", "label": "Pellet stove controls", "symbol_text": "STV", "p_kW": 0.3}]}
+              ]}
+            ]}
+          ]}
+        ]}
+      ]}
+    ]},
+    {"type": "generator", "id": "G1", "ref": "-G1", "label": "Portable generator", "sn_kVA": 6, "p_kW": 5.4, "fuel": "petrol", "un_V": 230, "children": [
+      {"type": "connector", "ref": "-X1", "label": "Generator inlet", "kind": "IEC 60309 32 A 2P+E", "in_A": 32,
+       "cable": {"designation": "H07RN-F", "cores": "3G", "section_mm2": 4, "material": "Cu", "length_m": 15},
+       "children": [
+        {"type": "breaker", "id": "QG", "ref": "-QG", "label": "Generator incomer", "in_A": 32, "curve": "C", "icn_kA": 6, "poles": "2P",
+         "cable": {"designation": "NYM-J", "cores": "3x", "section_mm2": 6, "material": "Cu", "length_m": 5, "install": "C", "insulation": "PVC"}}
+      ]}
+    ]}
+  ],
+  "devices": [
+    {"type": "earth", "id": "E1", "ref": "E1", "label": "Earth electrode", "resistance_ohm": 60}
+  ],
+  "links": [
+    {"kind": "transfer", "from": "QG", "to": "TS1", "label": "Generator"},
+    {"kind": "earth", "from": "G1", "to": "E1", "label": "Frame earth"}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "orientation": "landscape",
+             "cartouche": ["label", "ref", "protection", "idn_mA", "cable", "length_m", "p_kW"]}]
+}

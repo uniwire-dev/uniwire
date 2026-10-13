@@ -1,0 +1,78 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": [],
+  "meta": {
+    "lang": "fr",
+    "title": "Station de pompage : TD process avec automate WAGO PFC200",
+    "project": "EX-51",
+    "client": "Exemple de régie des eaux (station de pompage)",
+    "author": "uniwire examples",
+    
+    "notes": ["Automate WAGO PFC200 + E/S déportées Modbus TCP dans le local de relevage",
+              "Les liens pointillés partent de la voie d'automate qui commande l'appareil ('slot.voie')"]
+  },
+  "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400, "standard": "IEC 60364"},
+  "templates": {
+    "MOT": {"type": "breaker", "curve": "D", "icn_kA": 10, "poles": "3P",
+            "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iC60N"}},
+    "KM": {"type": "contactor", "coil_V": 230, "poles": "3P",
+           "product": {"manufacturer": "Schneider Electric", "range": "TeSys Deca"}}
+  },
+  "sources": [
+    {"type": "grid", "label": "Arrivée TGBT", "un_V": 400, "children": [
+      {"type": "board", "ref": "TD-PR", "label": "Process pompage", "in_A": 63, "system": "3P+N", "children": [
+        {"type": "switch_disconnector", "ref": "-Q0", "in_A": 63, "poles": "4P", "label": "Interrupteur général",
+         "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iSW", "description": "Interrupteur 4P 63 A"},
+         "children": [
+          {"type": "breaker", "ref": "-Q10", "in_A": 2, "curve": "C", "poles": "1P+N", "label": "Alim. 24 V",
+           "children": [
+            {"id": "PS1", "type": "power_supply", "ref": "-T1", "u1_V": 230, "u2_V": 24, "output": "DC", "in_A": 5,
+             "product": {"manufacturer": "WAGO", "range": "Eco", "description": "Alimentation 24 V DC 5 A"},
+             "children": [
+              {"id": "API1", "type": "plc", "ref": "-A1", "label": "Automate pompage", "role": "controller",
+               "family": "PFC200", "protocols": ["Modbus TCP", "Modbus RTU"], "un_V": 24,
+               "product": {"manufacturer": "WAGO", "part_number": "750-8212", "range": "PFC200 G2",
+                           "description": "Contrôleur PFC200 2ETH RS"},
+               "modules": [
+                 {"slot": 1, "kind": "power_feed", "part_number": "750-602", "un_V": 24},
+                 {"slot": 2, "kind": "di", "part_number": "750-430", "channels": 8, "un_V": 24,
+                  "channel_labels": {"1": "Niveau haut", "2": "Niveau bas", "3": "Défaut P1", "4": "Défaut P2"}},
+                 {"slot": 3, "kind": "do", "part_number": "750-530", "channels": 8, "un_V": 24, "rating_A": 0.5},
+                 {"slot": 4, "kind": "relay_out", "part_number": "750-512", "channels": 2, "rating_A": 2,
+                  "channel_labels": {"1": "Pompe 1", "2": "Pompe 2"}},
+                 {"slot": 5, "kind": "power_measurement", "part_number": "750-494", "channels": 3},
+                 {"slot": 6, "kind": "end", "part_number": "750-600"}
+               ]}
+             ]}
+           ]},
+          {"id": "Q21", "type": "breaker", "ref": "-Q21", "use": "MOT", "in_A": 16, "cable": {"cores": "4G", "section_mm2": 2.5, "length_m": 25},
+           "children": [{"id": "KM21", "type": "contactor", "ref": "-KM21", "use": "KM", "in_A": 18,
+                         "children": [{"type": "motor", "ref": "-M21", "label": "Pompe 1", "p_kW": 5.5}]}]},
+          {"id": "Q22", "type": "breaker", "ref": "-Q22", "use": "MOT", "in_A": 16, "cable": {"cores": "4G", "section_mm2": 2.5, "length_m": 25},
+           "children": [{"id": "KM22", "type": "contactor", "ref": "-KM22", "use": "KM", "in_A": 18,
+                         "children": [{"type": "motor", "ref": "-M22", "label": "Pompe 2", "p_kW": 5.5}]}]},
+          {"type": "breaker", "ref": "-Q30", "in_A": 10, "curve": "C", "poles": "1P+N", "label": "Local relevage",
+           "cable": {"cores": "3G", "section_mm2": 1.5, "length_m": 60},
+           "children": [
+            {"id": "RIO1", "type": "plc", "ref": "-A2", "label": "E/S déportées relevage", "role": "coupler",
+             "protocols": ["Modbus TCP"],
+             "product": {"manufacturer": "WAGO", "part_number": "750-362", "description": "Coupleur Modbus TCP"},
+             "modules": [
+               {"slot": 1, "kind": "power_feed", "part_number": "750-602", "un_V": 24},
+               {"slot": 2, "kind": "ai", "part_number": "750-454", "channels": 2, "signal": "4-20 mA",
+                "channel_labels": {"1": "Niveau bâche"}},
+               {"slot": 3, "kind": "end", "part_number": "750-600"}
+             ]}
+           ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "links": [
+    {"kind": "control", "from": "API1", "from_port": "4.1", "to": "KM21", "label": "Pompe 1"},
+    {"kind": "control", "from": "API1", "from_port": "4.2", "to": "KM22", "label": "Pompe 2"},
+    {"kind": "data", "from": "RIO1", "to": "API1", "protocol": "Modbus TCP", "label": "Modbus TCP"}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "cartouche": ["label", "ref", "protection", "cable", "p_kW"]}]
+}

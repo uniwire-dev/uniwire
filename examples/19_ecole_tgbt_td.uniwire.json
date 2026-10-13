@@ -1,0 +1,587 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["nfc15100"],
+  "meta": {
+    "title": "École élémentaire : TGBT et tableaux divisionnaires", "project": "EX-19",
+    "client": "Exemple : groupe scolaire 8 classes", "author": "uniwire examples", "lang": "fr",
+    "notes": [
+      "Montre : schéma TT avec AGCP différentiel 300 mA retardé (sélectivité), TGBT + 3 TD sur folios séparés, modèles (templates), DDR 30 mA par groupe de circuits, éclairage de sécurité par BAES",
+      "Bâtiment recevant du public (ERP type R, 4e catégorie) : circuits de prises protégés par DDR 30 mA type A",
+      "Prise de terre : 22 Ω mesurés ; seuil 300 mA → UL = 6,6 V < 50 V"
+    ]
+  },
+  "installation": {
+    "earthing": "TT", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "supply": "Tarif Jaune (C4)",
+    "subscribed_kVA": 108, "ik3_kA": 10, "earth_resistance_ohm": 22, "standard": "NF C 15-100"
+  },
+  "templates": {
+    "D10": {
+      "type": "breaker", "in_A": 10, "curve": "C", "icn_kA": 6, "poles": "1P+N",
+      "product": {"manufacturer": "Hager", "range": "MJN / MFN"}
+    },
+    "D16": {
+      "type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "1P+N",
+      "product": {"manufacturer": "Hager", "range": "MJN / MFN"}
+    },
+    "D20": {
+      "type": "breaker", "in_A": 20, "curve": "C", "icn_kA": 6, "poles": "1P+N",
+      "product": {"manufacturer": "Hager", "range": "MJN / MFN"}
+    },
+    "ID40A": {
+      "type": "rcd", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "4P",
+      "product": {"manufacturer": "Hager", "range": "CDx / interrupteur différentiel 4P"}
+    },
+    "DEP": {
+      "type": "breaker", "curve": "C", "icn_kA": 10, "poles": "4P",
+      "product": {"manufacturer": "Hager", "range": "NRN / HMC"}
+    }
+  },
+  "sources": [
+    {
+      "id": "RES", "type": "grid", "label": "Réseau Enedis", "supply": "Tarif Jaune 108 kVA", "un_V": 400, "ik_kA": 10,
+      "children": [
+        {
+          "id": "CPT", "type": "meter", "ref": "-P0", "kind": "Compteur C4 (TC 200/5)", "external": true,
+          "cable": {
+            "designation": "AR2V", "cores": "3x150+70", "section_mm2": 150, "neutral_section_mm2": 70,
+            "material": "Al", "length_m": 25
+          },
+          "children": [
+            {
+              "id": "TGBT", "type": "board", "ref": "TGBT", "label": "Tableau général basse tension", "kind": "main",
+              "in_A": 250, "ik_kA": 10, "ip": "IP30", "location": "Local TGBT (rez-de-chaussée)",
+              "children": [
+                {
+                  "id": "AGCP", "type": "main_breaker", "ref": "-Q0", "label": "AGCP", "in_A": 200,
+                  "range_A": "100-200", "idn_mA": 300, "rcd_type": "A", "selective": true, "poles": "4P", "icu_kA": 36,
+                  "lockable": true, "subscribed_kVA": 108,
+                  "product": {
+                    "manufacturer": "Schneider Electric", "range": "ComPacT NSX250F + Vigi MH",
+                    "description": "Disjoncteur 4P 250 A, Micrologic 2.2 réglé à 160 A, bloc Vigi 300 mA retardé"
+                  },
+                  "children": [
+                    {
+                      "id": "PF", "type": "spd", "ref": "-F0", "spd_type": "1+2", "imax_kA": 50, "up_kV": 1.5,
+                      "poles": "3P+N", "label": "Parafoudre de tête"
+                    },
+                    {
+                      "id": "QA", "type": "breaker", "ref": "-Q1", "use": "DEP", "in_A": 63,
+                      "cable": {"designation": "U1000 R2V", "cores": "5G", "section_mm2": 16, "length_m": 18, "material": "Cu"},
+                      "children": [
+                        {
+                          "id": "TDA", "type": "board", "ref": "TD-A", "label": "Bâtiment A, rez-de-chaussée",
+                          "kind": "distribution", "in_A": 63, "system": "3P+N", "ip": "IP30", "own_sheet": true,
+                          "location": "Dégagement RDC",
+                          "product": {
+                            "manufacturer": "Hager", "range": "gamma / vega",
+                            "description": "Coffret 4 rangées 13 modules"
+                          },
+                          "children": [
+                            {
+                              "id": "TDA_Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 63, "poles": "4P",
+                              "label": "Interrupteur général", "lockable": true,
+                              "children": [
+                                {
+                                  "id": "TDA_ID1", "type": "rcd", "ref": "-F1", "use": "ID40A",
+                                  "label": "Prises de courant",
+                                  "children": [
+                                    {
+                                      "id": "TDA_P1", "type": "breaker", "ref": "-Q10", "use": "D20", "phase": "L1",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 15,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "Prises classe 1", "points": 8, "p_kW": 1.0,
+                                          "room": "Classe 1"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDA_P2", "type": "breaker", "ref": "-Q11", "use": "D20", "phase": "L2",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 19,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "Prises classe 2", "points": 8, "p_kW": 1.0,
+                                          "room": "Classe 2"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDA_P3", "type": "breaker", "ref": "-Q12", "use": "D20", "phase": "L3",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 23,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "Prises classe 3", "points": 8, "p_kW": 1.0,
+                                          "room": "Classe 3"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDA_P4", "type": "breaker", "ref": "-Q13", "use": "D20", "phase": "L1",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 27,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "Prises classe 4", "points": 8, "p_kW": 1.0,
+                                          "room": "Classe 4"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDA_TBI", "type": "breaker", "ref": "-Q15", "use": "D16", "phase": "L1",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 30,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "Vidéoprojecteurs / TNI", "points": 4,
+                                          "p_kW": 1.2
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "TDA_ID2", "type": "rcd", "ref": "-F2", "use": "ID40A", "rcd_type": "AC",
+                                  "label": "Éclairage",
+                                  "children": [
+                                    {
+                                      "id": "TDA_E1", "type": "breaker", "ref": "-Q20", "use": "D10", "phase": "L1",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 15,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "Éclairage classe 1", "points": 8, "p_kW": 0.36,
+                                          "room": "Classe 1"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDA_E2", "type": "breaker", "ref": "-Q21", "use": "D10", "phase": "L2",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 19,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "Éclairage classe 2", "points": 8, "p_kW": 0.36,
+                                          "room": "Classe 2"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDA_E3", "type": "breaker", "ref": "-Q22", "use": "D10", "phase": "L3",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 23,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "Éclairage classe 3", "points": 8, "p_kW": 0.36,
+                                          "room": "Classe 3"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDA_E4", "type": "breaker", "ref": "-Q23", "use": "D10", "phase": "L1",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 27,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "Éclairage classe 4", "points": 8, "p_kW": 0.36,
+                                          "room": "Classe 4"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDA_E9", "type": "breaker", "ref": "-Q25", "use": "D10", "phase": "L2",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 35,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "Éclairage circulations", "points": 7,
+                                          "p_kW": 0.2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDA_BA", "type": "breaker", "ref": "-Q26", "use": "D10", "in_A": 2,
+                                      "phase": "L3",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 40,
+                                        "material": "Cu"
+                                      },
+                                      "label": "Éclairage de sécurité",
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "BAES (blocs autonomes)", "points": 8,
+                                          "priority": "safety",
+                                          "note": "Circuit non coupé par la commande d'éclairage normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "QB", "type": "breaker", "ref": "-Q2", "use": "DEP", "in_A": 63,
+                      "cable": {"designation": "U1000 R2V", "cores": "5G", "section_mm2": 16, "length_m": 26, "material": "Cu"},
+                      "children": [
+                        {
+                          "id": "TDB", "type": "board", "ref": "TD-B", "label": "Bâtiment A, étage",
+                          "kind": "distribution", "in_A": 63, "system": "3P+N", "ip": "IP30", "own_sheet": true,
+                          "location": "Dégagement R+1",
+                          "product": {
+                            "manufacturer": "Hager", "range": "gamma / vega",
+                            "description": "Coffret 4 rangées 13 modules"
+                          },
+                          "children": [
+                            {
+                              "id": "TDB_Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 63, "poles": "4P",
+                              "label": "Interrupteur général", "lockable": true,
+                              "children": [
+                                {
+                                  "id": "TDB_ID1", "type": "rcd", "ref": "-F1", "use": "ID40A",
+                                  "label": "Prises de courant",
+                                  "children": [
+                                    {
+                                      "id": "TDB_P5", "type": "breaker", "ref": "-Q10", "use": "D20", "phase": "L1",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 15,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "Prises classe 5", "points": 8, "p_kW": 1.0,
+                                          "room": "Classe 5"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDB_P6", "type": "breaker", "ref": "-Q11", "use": "D20", "phase": "L2",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 19,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "Prises classe 6", "points": 8, "p_kW": 1.0,
+                                          "room": "Classe 6"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDB_P7", "type": "breaker", "ref": "-Q12", "use": "D20", "phase": "L3",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 23,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "Prises classe 7", "points": 8, "p_kW": 1.0,
+                                          "room": "Classe 7"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDB_P8", "type": "breaker", "ref": "-Q13", "use": "D20", "phase": "L1",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 27,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "Prises classe 8", "points": 8, "p_kW": 1.0,
+                                          "room": "Classe 8"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDB_TBI", "type": "breaker", "ref": "-Q15", "use": "D16", "phase": "L1",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 30,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "Vidéoprojecteurs / TNI", "points": 4,
+                                          "p_kW": 1.2
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "TDB_ID2", "type": "rcd", "ref": "-F2", "use": "ID40A", "rcd_type": "AC",
+                                  "label": "Éclairage",
+                                  "children": [
+                                    {
+                                      "id": "TDB_E5", "type": "breaker", "ref": "-Q20", "use": "D10", "phase": "L1",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 15,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "Éclairage classe 5", "points": 8, "p_kW": 0.36,
+                                          "room": "Classe 5"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDB_E6", "type": "breaker", "ref": "-Q21", "use": "D10", "phase": "L2",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 19,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "Éclairage classe 6", "points": 8, "p_kW": 0.36,
+                                          "room": "Classe 6"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDB_E7", "type": "breaker", "ref": "-Q22", "use": "D10", "phase": "L3",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 23,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "Éclairage classe 7", "points": 8, "p_kW": 0.36,
+                                          "room": "Classe 7"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDB_E8", "type": "breaker", "ref": "-Q23", "use": "D10", "phase": "L1",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 27,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "Éclairage classe 8", "points": 8, "p_kW": 0.36,
+                                          "room": "Classe 8"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDB_E9", "type": "breaker", "ref": "-Q25", "use": "D10", "phase": "L2",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 35,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "Éclairage circulations", "points": 7,
+                                          "p_kW": 0.2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TDB_BA", "type": "breaker", "ref": "-Q26", "use": "D10", "in_A": 2,
+                                      "phase": "L3",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 40,
+                                        "material": "Cu"
+                                      },
+                                      "label": "Éclairage de sécurité",
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "BAES (blocs autonomes)", "points": 8,
+                                          "priority": "safety",
+                                          "note": "Circuit non coupé par la commande d'éclairage normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "QC", "type": "breaker", "ref": "-Q3", "use": "DEP", "in_A": 80,
+                      "cable": {"designation": "U1000 R2V", "cores": "5G", "section_mm2": 25, "length_m": 30, "material": "Cu"},
+                      "children": [
+                        {
+                          "id": "TDR", "type": "board", "ref": "TD-R", "label": "Restauration scolaire",
+                          "kind": "distribution", "in_A": 80, "ip": "IP55", "own_sheet": true,
+                          "location": "Office de restauration",
+                          "children": [
+                            {
+                              "id": "TDR_Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 80, "poles": "4P",
+                              "label": "Interrupteur général",
+                              "children": [
+                                {
+                                  "type": "breaker", "ref": "-Q1", "use": "DEP", "in_A": 32,
+                                  "cable": {
+                                    "designation": "U1000 R2V", "cores": "5G", "section_mm2": 6, "length_m": 12,
+                                    "material": "Cu"
+                                  },
+                                  "children": [{"type": "cooking", "kind": "oven", "label": "Four mixte 10 niveaux", "p_kW": 18}]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q2", "use": "DEP", "in_A": 25,
+                                  "cable": {
+                                    "designation": "U1000 R2V", "cores": "5G", "section_mm2": 4, "length_m": 10,
+                                    "material": "Cu"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "appliance", "kind": "dishwasher", "label": "Lave-vaisselle à capot",
+                                      "p_kW": 11
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q3", "use": "DEP", "in_A": 20,
+                                  "cable": {
+                                    "designation": "U1000 R2V", "cores": "5G", "section_mm2": 2.5, "length_m": 14,
+                                    "material": "Cu"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "load", "label": "Armoire de maintien en température",
+                                      "symbol_text": "MT", "p_kW": 6
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q4", "use": "DEP", "in_A": 16, "curve": "D",
+                                  "cable": {
+                                    "designation": "U1000 R2V", "cores": "5G", "section_mm2": 2.5, "length_m": 20,
+                                    "material": "Cu"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "appliance", "kind": "fridge", "label": "Chambre froide positive",
+                                      "p_kW": 2.2, "priority": "essential"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "breaker", "ref": "-Q5", "use": "DEP", "in_A": 10,
+                                  "cable": {
+                                    "designation": "U1000 R2V", "cores": "5G", "section_mm2": 1.5, "length_m": 18,
+                                    "material": "Cu"
+                                  },
+                                  "children": [{"type": "ventilation", "label": "Hotte d'extraction", "p_kW": 1.5}]
+                                },
+                                {
+                                  "id": "TDR_ID", "type": "rcd", "ref": "-F6", "use": "ID40A", "poles": "2P",
+                                  "children": [
+                                    {
+                                      "type": "breaker", "ref": "-Q6", "use": "D20",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 15,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "Prises plan de travail", "points": 6,
+                                          "poles": "2P+T"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q7", "use": "D10",
+                                      "cable": {
+                                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 1.5, "length_m": 20,
+                                        "material": "Cu"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "Éclairage office et réfectoire", "points": 8,
+                                          "p_kW": 0.5
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q4", "use": "DEP", "in_A": 20,
+                      "cable": {
+                        "designation": "U1000 R2V", "cores": "5G", "section_mm2": 2.5, "length_m": 35,
+                        "material": "Cu"
+                      },
+                      "children": [
+                        {
+                          "type": "load", "ref": "-A4", "label": "Chaufferie gaz (TD chaufferie)", "symbol_text": "CH",
+                          "p_kW": 4.5
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spare", "ref": "-Q6", "in_A": 63, "poles": "4P",
+                      "label": "Réserve (extension périscolaire)"
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q5", "use": "D16",
+                      "cable": {
+                        "designation": "U1000 R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 60,
+                        "material": "Cu"
+                      },
+                      "children": [
+                        {
+                          "id": "KM5", "type": "contactor", "ref": "-KM5", "in_A": 20, "poles": "2P", "coil_V": 230,
+                          "function": "lighting",
+                          "children": [{"type": "lighting", "label": "Éclairage cour et préau", "points": 8, "p_kW": 0.6}]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "id": "HOR", "type": "controller", "ref": "-K5", "label": "Crépusculaire", "function": "crépusculaire + horloge",
+      "symbol_text": "LUX"
+    }
+  ],
+  "links": [{"kind": "control", "from": "HOR", "to": "KM5", "label": "commande"}],
+  "views": [
+    {
+      "id": "sld", "title": "Schéma unifilaire TGBT / TD", "paper": "A3",
+      "cartouche": ["label", "ref", "protection", "idn_mA", "rcd_type", "cable", "length_m", "points", "phase"]
+    }
+  ]
+}

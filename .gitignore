@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+uv.lock
+
+# Tools
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.log
+
+# Generated output
+out/
+site/
+viewer/dist/
+viewer/examples/
+viewer/version.json
+viewer/favicon.svg
+viewer/favicon-16.svg
+
+# Secrets
+.env
+.env.*
+
+# Editors and systems
+.DS_Store
+.idea/
+.vscode/

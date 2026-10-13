@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>uniwire Viewer</title>
+<meta name="description" content="Open, edit and render uniwire electrical diagrams (single-line and multi-line) in the browser: validation, rule checks, SVG sheets, bill of materials. Runs locally, nothing is uploaded.">
+<meta name="color-scheme" content="light dark">
+<script>(function(){try{var t=localStorage.getItem("uniwire-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
+
+<link rel="icon" href="favicon-16.svg" type="image/svg+xml" sizes="16x16">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{
+  "imports": {
+    "@codemirror/state": "https://esm.sh/*@codemirror/state@6.5.2",
+    "@codemirror/view": "https://esm.sh/*@codemirror/view@6.36.8",
+    "@codemirror/language": "https://esm.sh/*@codemirror/language@6.11.0",
+    "@codemirror/commands": "https://esm.sh/*@codemirror/commands@6.8.1",
+    "@codemirror/search": "https://esm.sh/*@codemirror/search@6.5.10",
+    "@codemirror/autocomplete": "https://esm.sh/*@codemirror/autocomplete@6.18.6",
+    "@codemirror/lint": "https://esm.sh/*@codemirror/lint@6.8.5",
+    "@codemirror/lang-json": "https://esm.sh/*@codemirror/lang-json@6.0.1",
+    "@lezer/common": "https://esm.sh/*@lezer/common@1.2.3",
+    "@lezer/highlight": "https://esm.sh/*@lezer/highlight@1.2.1",
+    "@lezer/lr": "https://esm.sh/*@lezer/lr@1.4.2",
+    "@lezer/json": "https://esm.sh/*@lezer/json@1.0.3",
+    "style-mod": "https://esm.sh/*style-mod@4.1.2",
+    "w3c-keyname": "https://esm.sh/*w3c-keyname@2.2.8",
+    "crelt": "https://esm.sh/*crelt@1.0.6",
+    "@marijn/find-cluster-break": "https://esm.sh/*@marijn/find-cluster-break@1.0.2"
+  }
+}
+</script>
+<script type="module" src="app.js"></script>
+<script src="theme.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#viewport" data-i18n="pane.drawing">Drawing</a>
+
+<header class="topbar">
+  <a class="brand" href="../" aria-label="uniwire">
+    <svg viewBox="9 0 108.3 32" class="brand-logo" aria-hidden="true" focusable="false"><g fill="none" stroke-linecap="butt"><path d="M16 1.5V30.5" stroke="currentColor" stroke-width="3"/><path d="M10 13.1L22 5.9" class="logo-t1" stroke-width="2.3"/><path d="M10 19.6L22 12.4" stroke="currentColor" stroke-width="2.3"/><path d="M10 26.1L22 18.9" class="logo-t3" stroke-width="2.3"/></g><path d="M36.42 22.75Q35.52 22.75 34.64 22.47Q33.77 22.2 33.05 21.66Q32.34 21.12 31.9 20.32Q31.47 19.53 31.47 18.49V9.5H35.14V18.02Q35.14 18.93 35.73 19.51Q36.32 20.09 37.47 20.09Q38.55 20.09 39.18 19.53Q39.82 18.97 39.82 17.96V9.5H43.45V22.5H40.68L40.26 19.92Q40.03 21.07 39.41 21.68Q38.79 22.29 37.99 22.52Q37.19 22.75 36.42 22.75ZM46.34 22.5V9.5H49.95V11.34Q50.25 10.86 50.74 10.41Q51.22 9.97 51.96 9.68Q52.7 9.39 53.72 9.39Q54.92 9.39 55.95 9.85Q56.99 10.32 57.63 11.32Q58.27 12.32 58.27 13.93V22.5H54.6V14.38Q54.6 13.32 53.97 12.79Q53.34 12.27 52.44 12.27Q51.84 12.27 51.28 12.48Q50.72 12.69 50.36 13.12Q50.01 13.55 50.01 14.18V22.5ZM61.04 22.5V9.5H64.55V22.5ZM61 7.64V4.33H64.57V7.64ZM70.48 22.5 66.27 9.5H69.51L72 17.56H72.09L74.48 9.5H77.11L79.52 17.56H79.62L82.03 9.5H85.35L81.08 22.5H78.15L75.74 14.63L73.31 22.5ZM87.08 22.5V9.5H90.58V22.5ZM87.04 7.64V4.33H90.61V7.64ZM93.5 22.5V9.5H97.03V12.58Q97.35 11.59 97.92 10.84Q98.49 10.09 99.31 9.67Q100.13 9.25 101.16 9.25Q101.33 9.25 101.49 9.27Q101.65 9.29 101.72 9.32V12.82Q101.61 12.77 101.45 12.76Q101.3 12.74 101.17 12.73Q100.09 12.64 99.32 12.79Q98.56 12.94 98.08 13.31Q97.6 13.67 97.39 14.2Q97.17 14.73 97.17 15.38V22.5ZM109.58 22.75Q107.65 22.75 106.18 21.94Q104.72 21.13 103.9 19.65Q103.08 18.16 103.08 16.15Q103.08 14.2 103.83 12.64Q104.58 11.07 105.99 10.16Q107.39 9.25 109.39 9.25Q111.38 9.25 112.72 10.08Q114.07 10.92 114.76 12.41Q115.45 13.9 115.45 15.85V16.84H106.71Q106.71 17.84 107.04 18.57Q107.37 19.31 107.99 19.7Q108.61 20.1 109.49 20.1Q110.44 20.1 111.14 19.7Q111.84 19.29 112.13 18.38H115.44Q115.21 19.76 114.33 20.74Q113.45 21.72 112.2 22.24Q110.94 22.75 109.58 22.75ZM106.71 14.65H112.02Q112.02 13.88 111.72 13.22Q111.43 12.57 110.84 12.19Q110.26 11.81 109.38 11.81Q108.54 11.81 107.94 12.22Q107.34 12.63 107.02 13.28Q106.7 13.94 106.71 14.65Z" fill="currentColor"/></svg>
+    <span class="brand-sub" data-i18n="brand.sub">Viewer</span>
+  </a>
+
+  <div class="toolbar" role="toolbar" aria-label="Document">
+    <label class="visually-hidden" for="examples" data-i18n="toolbar.examples">Examples</label>
+    <select id="examples" class="control examples-select">
+      <option value="" data-i18n="toolbar.examples.choose">Load an example…</option>
+    </select>
+
+    <button type="button" class="control" id="btn-open" data-i18n-title="toolbar.open.title" data-i18n-aria="toolbar.open">
+      <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h6l2 2h8v12H4z"/></svg>
+      <span data-i18n="toolbar.open">Open</span>
+    </button>
+    <input type="file" id="file-input" accept=".json,application/json" hidden>
+
+    <button type="button" class="control" id="btn-share" data-i18n-title="toolbar.share.title" data-i18n-aria="toolbar.share">
+      <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+      <span data-i18n="toolbar.share">Share</span>
+    </button>
+
+    <div class="menu" id="dl-menu">
+      <button type="button" class="control" id="btn-download" data-i18n-aria="toolbar.download" aria-haspopup="menu" aria-expanded="false" aria-controls="dl-list">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></svg>
+        <span data-i18n="toolbar.download">Download</span>
+      </button>
+      <div class="menu-list" id="dl-list" role="menu" hidden>
+        <button type="button" role="menuitem" data-dl="svg" data-i18n="dl.svg">Current sheet (SVG)</button>
+        <button type="button" role="menuitem" data-dl="print" data-i18n="dl.print">All sheets (print / PDF)</button>
+        <button type="button" role="menuitem" data-dl="pdf" data-i18n="dl.pdf">PDF</button>
+        <hr>
+        <button type="button" role="menuitem" data-dl="bom" data-i18n="dl.bom">Bill of materials (CSV)</button>
+        <button type="button" role="menuitem" data-dl="json" data-i18n="dl.json">Normalized JSON</button>
+        <button type="button" role="menuitem" data-dl="source" data-i18n="dl.source">Source JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="topbar-end">
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false" aria-label="Switch to dark mode"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="6.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 3.4a6.6 6.6 0 0 1 0 13.2z" fill="currentColor"/><path d="M10 1v2.4M10 16.6V19" stroke="currentColor" stroke-width="1.6"/></svg></button>
+    <div class="segmented" role="group" data-i18n-aria="toolbar.lang.title" id="ui-lang">
+      <button type="button" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" data-lang="fr" aria-pressed="false">FR</button>
+    </div>
+    <a class="control link" href="../docs/" data-i18n="toolbar.docs">Docs</a>
+  </div>
+</header>
+
+<nav class="mobile-tabs" role="tablist" aria-label="Panes">
+  <button type="button" role="tab" data-pane="editor" aria-selected="false" data-i18n="pane.editor">Editor</button>
+  <button type="button" role="tab" data-pane="drawing" aria-selected="true" data-i18n="pane.drawing">Drawing</button>
+  <button type="button" role="tab" data-pane="issues" aria-selected="false">
+    <span data-i18n="pane.issues">Issues</span> <span class="badge" id="mobile-issues-count" hidden></span>
+  </button>
+</nav>
+
+<main class="workspace" data-pane="drawing">
+  <section class="pane editor-pane" id="pane-editor" aria-labelledby="editor-title">
+    <h2 class="visually-hidden" id="editor-title" data-i18n="pane.editor">Editor</h2>
+    <div id="editor" class="editor-host"></div>
+    <div class="drop-overlay" id="drop-overlay" hidden><span data-i18n="drop.hint">Drop a .uniwire.json file</span></div>
+  </section>
+
+  <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Resize"></div>
+
+  <section class="pane drawing-pane" id="pane-drawing" aria-labelledby="drawing-title">
+    <h2 class="visually-hidden" id="drawing-title" data-i18n="pane.drawing">Drawing</h2>
+    <div class="drawing-toolbar">
+      <button type="button" class="control small" id="nav-back" hidden data-i18n-title="nav.back.title">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+        <span data-i18n="nav.back">Back</span>
+      </button>
+      <div class="sheet-tabs" id="sheet-tabs" role="tablist" aria-label="Sheets"></div>
+      <div class="drawing-controls">
+        <label class="visually-hidden" for="view-select" data-i18n="view.label">View</label>
+        <select id="view-select" class="control small" hidden></select>
+        <label class="visually-hidden" for="color-select" data-i18n="color.label">Colours</label>
+        <select id="color-select" class="control small" hidden data-i18n-title="color.title"></select>
+        <label class="visually-hidden" for="preset-select" data-i18n="preset.label">Conductor colours</label>
+        <select id="preset-select" class="control small" hidden data-i18n-title="preset.title"></select>
+        <div class="segmented small" role="group" data-i18n-aria="view.kind" id="kind-toggle">
+          <button type="button" data-kind="single-line" aria-pressed="true" data-i18n="kind.single-line">Single-line</button>
+          <button type="button" data-kind="multi-line" aria-pressed="false" data-i18n="kind.multi-line">Multi-line</button>
+        </div>
+        <div class="zoom" role="group">
+          <button type="button" class="icon-btn" id="zoom-out" data-i18n-aria="zoom.out" data-i18n-title="zoom.out">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
+          <button type="button" class="icon-btn" id="zoom-fit" data-i18n-aria="zoom.fit" data-i18n-title="zoom.fit">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
+          <button type="button" class="icon-btn" id="zoom-in" data-i18n-aria="zoom.in" data-i18n-title="zoom.in">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="viewport" id="viewport" tabindex="0" aria-label="Drawing">
+      <div class="empty" id="empty" data-i18n="sheets.none">Nothing to display yet.</div>
+      <div class="tip" id="tip" role="tooltip" hidden></div>
+      <div class="stale" id="stale" hidden data-i18n="issues.stale">The drawing shows the last valid version.</div>
+      <div class="loader" id="loader" role="status" aria-live="polite">
+        <div class="loader-card">
+          <img src="favicon.svg" alt="" width="40" height="40">
+          <p class="loader-step" id="loader-step" data-i18n="status.loading">Loading…</p>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="loader-progress">
+            <div class="progress-bar" id="loader-bar"></div>
+          </div>
+          <p class="loader-note" data-i18n="load.note">Runs entirely in your browser: nothing is uploaded.</p>
+          <div class="loader-error" id="loader-error" hidden>
+            <p data-i18n="load.fatal">The viewer could not start.</p>
+            <pre id="loader-error-msg"></pre>
+            <button type="button" class="control primary" onclick="location.reload()" data-i18n="load.retry">Reload</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="issues" id="pane-issues" aria-labelledby="issues-title">
+      <h2 class="visually-hidden" id="issues-title" data-i18n="pane.issues">Issues</h2>
+      <div class="issues-tabs" role="tablist">
+        <button type="button" role="tab" id="tab-errors" aria-controls="list-errors" aria-selected="true">
+          <span data-i18n="issues.errors">Errors</span> <span class="count" id="count-errors">0</span></button>
+        <button type="button" role="tab" id="tab-findings" aria-controls="list-findings" aria-selected="false">
+          <span data-i18n="issues.findings">Rule findings</span> <span class="count" id="count-findings">0</span></button>
+        <button type="button" class="icon-btn issues-toggle" id="issues-toggle" aria-expanded="true" aria-label="Toggle">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+      </div>
+      <ul class="issue-list" id="list-errors" role="tabpanel" aria-labelledby="tab-errors"></ul>
+      <ul class="issue-list" id="list-findings" role="tabpanel" aria-labelledby="tab-findings" hidden></ul>
+    </section>
+  </section>
+</main>
+
+<footer class="statusbar">
+  <span id="status" role="status" aria-live="polite"></span>
+  <span id="powered" class="muted"></span>
+</footer>
+
+<div class="toast" id="toast" role="alert" hidden></div>
+</body>
+</html>

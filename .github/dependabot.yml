@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: pip
+    directories:
+      - /
+      - /packages/uniwire-data-iec81346
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /docker/mcp
+    schedule:
+      interval: weekly

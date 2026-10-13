@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint and schema drift
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      - name: Ruff
+        run: ruff check .
+      - name: Schema is up to date
+        run: |
+          uniwire schema -o "$RUNNER_TEMP/schema.json"
+          python - "$RUNNER_TEMP/schema.json" <<'PY'
+          import json, sys
+          fresh = json.load(open(sys.argv[1], encoding="utf-8"))
+          committed = json.load(open("schema/uniwire.schema.json", encoding="utf-8"))
+          if fresh != committed:
+              sys.exit("schema/uniwire.schema.json is out of date: run `uniwire schema -o schema/uniwire.schema.json`")
+          PY
+
+  test:
+    name: Python ${{ matrix.python }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        include:
+          - { os: macos-latest, python: "3.10" }
+          - { os: macos-latest, python: "3.14" }
+          - { os: windows-latest, python: "3.10" }
+          - { os: windows-latest, python: "3.14" }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]" -e packages/uniwire-data-iec81346
+      - name: Tests
+        run: python -m pytest -q
+      - name: Validate, check and render every example
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          shopt -s nullglob
+          files=(examples/*.uniwire.json)
+          uniwire validate "${files[@]}"
+          for f in "${files[@]}"; do
+            stem="$(basename "$f" .uniwire.json)"
+            uniwire check "$f" || true
+            uniwire render "$f" -o "out/$stem"
+            uniwire render "$f" -f pdf -o "out/$stem.pdf"
+            uniwire bom "$f" -o "out/$stem.bom.csv"
+          done
+
+  docs:
+    name: Documentation and viewer checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install -e . "mkdocs>=1.6,<2" "mkdocs-material>=9.5,<10"
+      - name: MkDocs (strict)
+        run: mkdocs build --strict --site-dir "$RUNNER_TEMP/docs"
+      - name: Viewer build
+        run: |
+          python viewer/build.py --out "$RUNNER_TEMP/viewer"
+          test -f "$RUNNER_TEMP/viewer/index.html" && ls "$RUNNER_TEMP"/viewer/dist/*.whl

@@ -1,0 +1,109 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["nfc15100"],
+  "meta": {
+    "lang": "fr",
+    "title": "Maison T4 : tableau de répartition monophasé",
+    "project": "EX-02",
+    "client": "Exemple de maison individuelle 3 chambres",
+    "author": "uniwire examples",
+    
+    "revisions": [
+      {"index": "A", "author": "uniwire examples", "description": "Première diffusion"},
+      {"index": "B", "author": "uniwire examples", "description": "Ajout parafoudre et circuit garage"}
+    ],
+    "notes": [
+      "Démontre : maison TT monophasée NF C 15-100 complète, avec 3 interrupteurs différentiels 30 mA (1 AC + 2 A), parafoudre type 2 avec disjoncteur de déconnexion, contacteur jour/nuit du chauffe-eau, liaison à la prise de terre (devices[] + lien earth)",
+      "Chauffage par chaudière gaz (alimentation chaudière sur circuit dédié)"
+    ]
+  },
+  "installation": {
+    "earthing": "TT", "system": "1P+N", "un_V": 230, "f_Hz": 50,
+    "supply": "Tarif Bleu", "subscribed_kVA": 9, "earth_resistance_ohm": 35,
+    "surface_m2": 105, "standard": "NF C 15-100"
+  },
+  "templates": {
+    "C2": {"type": "breaker", "in_A": 2, "curve": "C", "icn_kA": 3, "poles": "1P+N"},
+    "C10": {"type": "breaker", "in_A": 10, "curve": "C", "icn_kA": 3, "poles": "1P+N"},
+    "C16": {"type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 3, "poles": "1P+N"},
+    "C20": {"type": "breaker", "in_A": 20, "curve": "C", "icn_kA": 3, "poles": "1P+N"},
+    "C32": {"type": "breaker", "in_A": 32, "curve": "C", "icn_kA": 3, "poles": "1P+N"},
+    "ID40": {"type": "rcd", "in_A": 40, "idn_mA": 30, "poles": "2P",
+             "product": {"manufacturer": "Schneider Electric", "range": "Resi9", "description": "Interrupteur différentiel 2P 40 A 30 mA"}}
+  },
+  "sources": [
+    {"type": "grid", "label": "Réseau public", "supply": "Tarif Bleu", "un_V": 230, "children": [
+      {"type": "meter", "id": "CPT", "ref": "PDL", "label": "Compteur communicant", "kind": "Linky", "in_A": 90, "children": [
+        {"type": "main_breaker", "ref": "-Q0", "label": "AGCP", "range_A": "15-45", "in_A": 45, "idn_mA": 500,
+         "selective": true, "poles": "2P", "subscribed_kVA": 9, "note": "Réglé à 45 A (9 kVA)",
+         "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 16, "material": "Cu", "length_m": 18, "install": "D-duct"},
+         "children": [
+          {"type": "board", "ref": "TD", "label": "Tableau de répartition (GTL)", "ways": 39, "ip": "IP30", "children": [
+            {"type": "rcd", "ref": "-F1", "use": "ID40", "rcd_type": "AC", "label": "ID 1 : pièces de vie", "children": [
+              {"type": "breaker", "ref": "-Q11", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "Éclairage RdC", "points": 7}]},
+              {"type": "breaker", "ref": "-Q12", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "Éclairage étage", "points": 6}]},
+              {"type": "breaker", "ref": "-Q13", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises séjour", "points": 10, "room": "Séjour"}]},
+              {"type": "breaker", "ref": "-Q14", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises chambres 1-2", "points": 9}]},
+              {"type": "breaker", "ref": "-Q15", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "socket", "label": "Prises chambre 3 + bureau", "points": 7}]},
+              {"type": "breaker", "ref": "-Q16", "use": "C2", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "ventilation", "label": "VMC hygro B", "p_kW": 0.03}]},
+              {"type": "breaker", "ref": "-Q17", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "load", "label": "Tableau de communication", "symbol_text": "COM"}]}
+            ]},
+            {"type": "rcd", "ref": "-F2", "use": "ID40", "rcd_type": "A", "label": "ID 2 : cuisine", "children": [
+              {"type": "breaker", "ref": "-Q21", "use": "C32", "cable": {"cores": "3G", "section_mm2": 6},
+               "children": [{"type": "cooking", "kind": "hob", "label": "Plaque induction", "p_kW": 7.2, "room": "Cuisine"}]},
+              {"type": "breaker", "ref": "-Q22", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "cooking", "kind": "oven", "label": "Four", "p_kW": 3.0}]},
+              {"type": "breaker", "ref": "-Q23", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises plan de travail", "points": 6, "room": "Cuisine"}]},
+              {"type": "breaker", "ref": "-Q24", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "appliance", "kind": "dishwasher", "label": "Lave-vaisselle", "p_kW": 2.0}]},
+              {"type": "breaker", "ref": "-Q25", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "appliance", "kind": "freezer", "label": "Congélateur", "p_kW": 0.2}]},
+              {"type": "breaker", "ref": "-Q26", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "load", "label": "Chaudière gaz", "symbol_text": "CH", "p_kW": 0.15}]}
+            ]},
+            {"type": "rcd", "ref": "-F3", "use": "ID40", "rcd_type": "A", "label": "ID 3 : buanderie, extérieur", "children": [
+              {"type": "breaker", "ref": "-Q31", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "appliance", "kind": "washing_machine", "label": "Lave-linge", "p_kW": 2.2}]},
+              {"type": "breaker", "ref": "-Q32", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "appliance", "kind": "dryer", "label": "Sèche-linge", "p_kW": 2.5}]},
+              {"type": "breaker", "ref": "-Q33", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [
+                {"type": "contactor", "id": "KM1", "ref": "-KM1", "function": "HC", "in_A": 20, "poles": "2P", "coil_V": 230, "manual": true,
+                 "children": [{"type": "water_heater", "label": "Chauffe-eau 200 L", "volume_L": 200, "p_kW": 2.4}]}
+              ]},
+              {"type": "breaker", "ref": "-Q34", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "shutter", "label": "Volets roulants", "count": 6, "p_kW": 0.6}]},
+              {"type": "breaker", "ref": "-Q35", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "Éclairage extérieur", "points": 4}]},
+              {"type": "breaker", "ref": "-Q36", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5, "length_m": 22},
+               "children": [{"type": "socket", "label": "Prises garage", "points": 4, "room": "Garage", "status": "new"}]}
+            ]},
+            {"type": "breaker", "ref": "-Q1", "label": "Déconnexion parafoudre", "use": "C20", "children": [
+              {"type": "spd", "id": "SPD1", "ref": "-F0", "label": "Parafoudre", "spd_type": "2", "imax_kA": 20, "in_kA": 5, "up_kV": 1.2,
+               "uc_V": 275, "poles": "1P+N"}
+            ]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "devices": [
+    {"type": "earth", "id": "PT", "ref": "PT", "label": "Prise de terre (boucle fond de fouille)", "resistance_ohm": 35}
+  ],
+  "links": [
+    {"kind": "control", "from": "CPT", "to": "KM1", "label": "Contact HC"},
+    {"kind": "earth", "from": "SPD1", "to": "PT", "label": "PE 10 mm²"}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "orientation": "landscape",
+             "cartouche": ["label", "ref", "protection", "idn_mA", "rcd_type", "cable", "points", "p_kW"]},
+            {"id": "ml", "kind": "multi-line", "paper": "A3", "orientation": "landscape"}]
+}

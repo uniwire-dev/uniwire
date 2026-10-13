@@ -1,0 +1,71 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["nfc15100"],
+  "meta": {
+    "lang": "fr",
+    "title": "Piscine privée : coffret du local technique",
+    "project": "EX-13",
+    "client": "Exemple de piscine enterrée 10 x 4 m",
+    "author": "uniwire examples",
+    
+    "notes": [
+      "Démontre : coffret piscine (NF C 15-100 partie 7-702) alimenté depuis le tableau de la maison : horloge de filtration (lien de commande vers le contacteur), relais thermique de la pompe, transformateur de sécurité TBTS 12 V pour les projecteurs immergés (volume 0), liaison équipotentielle supplémentaire (devices[] + lien earth)",
+      "Transformateur de sécurité placé hors volumes 0, 1 et 2 ; le circuit 12 V n'est pas relié à la terre"
+    ]
+  },
+  "installation": {
+    "earthing": "TT", "system": "1P+N", "un_V": 230, "f_Hz": 50,
+    "earth_resistance_ohm": 30, "standard": "NF C 15-100 (7-702)"
+  },
+  "templates": {
+    "C10": {"type": "breaker", "in_A": 10, "curve": "C", "icn_kA": 4.5, "poles": "1P+N"},
+    "C16": {"type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 4.5, "poles": "1P+N"},
+    "C2":  {"type": "breaker", "in_A": 2, "curve": "C", "icn_kA": 4.5, "poles": "1P+N"}
+  },
+  "sources": [
+    {"type": "grid", "label": "Depuis TD maison", "un_V": 230, "children": [
+      {"type": "breaker", "ref": "-Q41", "label": "Départ piscine (TD maison)", "in_A": 32, "curve": "C", "icn_kA": 4.5, "poles": "1P+N", "external": true,
+       "children": [
+        {"type": "board", "ref": "TD-PISC", "label": "Coffret local technique piscine", "kind": "sub", "ip": "IP55", "ways": 18,
+         "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 6, "material": "Cu", "length_m": 28, "install": "D-duct", "du_pct": 1.9},
+         "children": [
+          {"type": "rcd", "ref": "-F0", "label": "ID équipements", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "2P", "children": [
+            {"type": "breaker", "ref": "-Q1", "use": "C2", "label": "Horloge", "children": [
+              {"type": "controller", "id": "HOR", "ref": "-K1", "label": "Horloge de filtration", "function": "time_switch", "symbol_text": "⏱"}]},
+            {"type": "breaker", "ref": "-Q2", "use": "C10", "label": "Pompe filtration", "cable": {"cores": "3G", "section_mm2": 1.5, "length_m": 3},
+             "children": [{"type": "contactor", "id": "KM2", "ref": "-KM2", "in_A": 16, "poles": "2P", "coil_V": 230, "function": "power", "manual": true, "children": [
+               {"type": "thermal_relay", "ref": "-F2", "range_A": "6-10", "setting_A": 7, "children": [
+                 {"type": "motor", "ref": "-M2", "label": "Pompe de filtration 1 CV", "p_kW": 0.75, "in_A": 6.8, "phases": 1}]}]}]},
+            {"type": "breaker", "ref": "-Q3", "use": "C16", "label": "PAC piscine", "cable": {"cores": "3G", "section_mm2": 2.5, "length_m": 8},
+             "children": [{"type": "load", "label": "Pompe à chaleur piscine 12 kW th.", "symbol_text": "PAC", "p_kW": 2.2}]},
+            {"type": "breaker", "ref": "-Q4", "use": "C10", "label": "Électrolyseur", "cable": {"cores": "3G", "section_mm2": 1.5, "length_m": 3},
+             "children": [{"type": "load", "label": "Électrolyseur au sel", "symbol_text": "ELEC", "p_kW": 0.2}]},
+            {"type": "breaker", "ref": "-Q5", "use": "C10", "label": "Projecteurs", "children": [
+              {"type": "transformer", "ref": "-T5", "label": "Transfo. de sécurité", "kind": "isolation", "sn_kVA": 0.1, "u1_V": 230, "u2_V": 12,
+               "note": "NF EN 61558-2-6, hors volumes", "children": [
+                {"type": "lighting", "label": "Projecteurs LED 12 V (volume 0)", "points": 2, "p_kW": 0.06, "un_V": 12,
+                 "cable": {"designation": "H07RN-F", "cores": "2x", "section_mm2": 6, "material": "Cu", "length_m": 18}}]}]},
+            {"type": "breaker", "ref": "-Q8", "use": "C2", "label": "Hors-gel", "cable": {"cores": "3G", "section_mm2": 1.5},
+             "children": [{"type": "load", "label": "Coffret hors-gel (sonde)", "symbol_text": "HG", "p_kW": 0.01}]}
+          ]},
+          {"type": "rcd", "ref": "-F1", "label": "ID prises / éclairage", "in_A": 25, "idn_mA": 30, "rcd_type": "AC", "poles": "2P", "children": [
+            {"type": "breaker", "ref": "-Q6", "use": "C16", "cable": {"cores": "3G", "section_mm2": 2.5},
+             "children": [{"type": "socket", "label": "Prises local technique (robot)", "points": 2, "socket_type": "2P+T IP55"}]},
+            {"id": "Q7", "type": "breaker", "ref": "-Q7", "use": "C10", "cable": {"cores": "3G", "section_mm2": 1.5},
+             "children": [{"type": "lighting", "label": "Éclairage local + abords", "points": 4}]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "devices": [
+    {"type": "earth_bar", "id": "LES", "ref": "LES", "label": "Liaison équipotentielle piscine", "kind": "equipotential"}
+  ],
+  "links": [
+    {"kind": "control", "from": "HOR", "to": "KM2", "label": "Filtration"},
+    {"kind": "earth", "from": "Q7", "to": "LES", "label": "4 mm² Cu"}
+  ],
+  "views": [{"id": "sld", "paper": "A4", "orientation": "landscape",
+             "cartouche": ["label", "ref", "protection", "idn_mA", "cable", "length_m", "p_kW"]}]
+}

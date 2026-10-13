@@ -1,0 +1,35 @@
+{
+ "id": "09_it_medical_theatre",
+ "request": "Operating theatre medical IT system: 230 V isolation transformer 6.3 kVA (kind isolation), insulation monitoring device, IT board feeding theatre sockets and surgical lighting; the upstream installation is TN-S.",
+ "expect": [
+  {
+   "check": "count",
+   "match": {
+    "type": "transformer",
+    "kind": "isolation"
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "insulation_monitor"
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "board",
+    "earthing": "IT"
+   },
+   "min": 1
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ]
+}

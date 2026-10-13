@@ -1,0 +1,11 @@
+# Build context: the repository root. Only what the wheel needs is sent to the builder.
+*
+!pyproject.toml
+!README.md
+!LICENSE
+!NOTICE
+!CHANGELOG.md
+!src/
+!examples/
+**/__pycache__
+**/*.py[cod]

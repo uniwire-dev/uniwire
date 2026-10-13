@@ -1,0 +1,36 @@
+{
+ "id": "11_two_transformers_bus_tie",
+ "request": "Two 1000 kVA transformers each feeding a half-busbar of the main switchboard through an ACB, with a normally-open bus-tie ACB; trapped-key interlock: at most 2 of the 3 breakers closed.",
+ "expect": [
+  {
+   "check": "count",
+   "match": {
+    "type": "transformer",
+    "sn_kVA": 1000
+   },
+   "min": 2
+  },
+  {
+   "check": "count",
+   "scope": "links",
+   "match": {
+    "kind": "tie"
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "scope": "interlocks",
+   "match": {
+    "keys": 2
+   },
+   "min": 1
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ]
+}

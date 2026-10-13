@@ -1,0 +1,63 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Office building (3 floors): passenger lift supply",
+    "project": "EX-46",
+    "client": "Office building, 3 floors",
+    "author": "uniwire examples",
+    
+    "lang": "en",
+    "notes": [
+      "Demonstrates: small A4 portrait sheet; lift supplies per EN 81-20: lockable main switch for the drive, separate lockable switch for car lighting/ventilation (independent of the main switch), shaft, machine room and pit circuits, rescue UPS for alarm and emergency lowering",
+      "Gearless 8-person lift, 630 kg, 1 m/s: 7.5 kW PM motor on VVVF drive; feeder sized for 1.8 x In starting current",
+      "Rising main from MSB: 5G10 Cu XLPE 55 m, ΔU ≈ 1.4 %"
+    ]
+  },
+  "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "ik3_kA": 10, "standard": "IEC 60364 / EN 81-20"},
+  "templates": {
+    "RC10": {"type": "rcbo", "in_A": 10, "curve": "C", "idn_mA": 30, "rcd_type": "A", "poles": "1P+N", "icn_kA": 10,
+             "product": {"manufacturer": "ABB", "range": "DS201", "description": "RCBO 1P+N C10 30 mA type A"}}
+  },
+  "sources": [
+    {"type": "grid", "label": "Main LV switchboard", "status": "existing", "children": [
+      {"type": "breaker", "ref": "-Q7", "label": "Lift feeder (MSB)", "in_A": 40, "curve": "C", "poles": "4P", "icn_kA": 10, "status": "existing",
+       "cable": {"designation": "XLPE", "cores": "5G", "section_mm2": 10, "material": "Cu", "insulation": "XLPE", "install": "E", "length_m": 55, "du_pct": 1.4},
+       "children": [
+        {"type": "board", "id": "LDB", "ref": "LDB", "label": "Lift machine room board", "kind": "distribution", "in_A": 40, "ip": "IP40", "location": "Machine room", "children": [
+          {"type": "breaker", "ref": "-F1", "label": "SPD", "in_A": 20, "curve": "C", "poles": "4P", "icn_kA": 10, "children": [
+            {"type": "spd", "ref": "-F11", "spd_type": "2", "imax_kA": 20, "up_kV": 1.5, "poles": "3P+N"}]},
+          {"type": "breaker", "ref": "-Q1", "label": "Lift drive", "in_A": 32, "curve": "C", "poles": "3P", "icn_kA": 10,
+           "cable": {"cores": "4G", "section_mm2": 6, "material": "Cu", "insulation": "PVC", "install": "B1", "length_m": 4},
+           "children": [
+            {"type": "switch_disconnector", "ref": "-Q10", "label": "Lift main switch", "in_A": 40, "poles": "3P", "lockable": true, "children": [
+              {"type": "motor_starter", "ref": "-U1", "label": "Lift controller", "method": "vfd", "p_kW": 7.5,
+               "children": [{"type": "motor", "ref": "-M1", "label": "Hoist motor", "p_kW": 7.5, "in_A": 16, "phases": 3}]}]}]},
+          {"type": "rcbo", "ref": "-Q2", "use": "RC10", "label": "Car light & fan", "phase": "L1",
+           "cable": {"cores": "3G", "section_mm2": 1.5, "length_m": 5},
+           "children": [
+            {"type": "switch_disconnector", "ref": "-Q20", "in_A": 16, "poles": "2P", "lockable": true, "children": [
+              {"type": "load", "label": "Car lighting & ventilation", "symbol_text": "CAR", "p_kW": 0.3}]}]},
+          {"type": "rcbo", "ref": "-Q3", "use": "RC10", "label": "Shaft lighting", "phase": "L2",
+           "cable": {"cores": "3G", "section_mm2": 1.5, "length_m": 25},
+           "children": [{"type": "lighting", "label": "Shaft lighting", "points": 8, "p_kW": 0.2}]},
+          {"type": "rcbo", "ref": "-Q4", "use": "RC10", "label": "Machine room lighting", "phase": "L3",
+           "cable": {"cores": "3G", "section_mm2": 1.5, "length_m": 8},
+           "children": [{"type": "lighting", "label": "Room & pit lighting", "points": 3, "p_kW": 0.1}]},
+          {"type": "rcbo", "ref": "-Q5", "use": "RC10", "in_A": 16, "label": "Sockets", "phase": "L1",
+           "cable": {"cores": "3G", "section_mm2": 2.5, "length_m": 25},
+           "children": [{"type": "socket", "label": "Machine room & pit sockets", "points": 3}]},
+          {"type": "breaker", "ref": "-Q6", "label": "Alarm / rescue", "in_A": 6, "curve": "C", "poles": "1P+N", "icn_kA": 10, "phase": "L2",
+           "priority": "safety", "children": [
+            {"type": "ups", "ref": "-U6", "sn_kVA": 1, "autonomy_min": 60, "children": [
+              {"type": "load", "label": "Alarm, intercom, rescue drive", "symbol_text": "ALM", "priority": "safety"}]}]}
+        ]}
+      ]}
+    ]}
+  ],
+  "views": [
+    {"id": "sld", "paper": "A4", "orientation": "portrait",
+     "cartouche": ["label", "ref", "protection", "idn_mA", "cable", "phase", "p_kW"]}
+  ]
+}

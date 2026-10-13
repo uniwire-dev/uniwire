@@ -1,0 +1,446 @@
+{
+ "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+ "uniwire": "1.0.0",
+ "profiles": [
+  "nfc15100"
+ ],
+ "meta": {
+  "title": "Exploitation agricole exemple : armoire de pompage d'irrigation à variateur",
+  "project": "EX-45",
+  "client": "Exploitation agricole exemple",
+  "author": "uniwire examples",
+  
+  "lang": "fr",
+  "notes": [
+   "Démontre : pompe de forage 15 kW sur variateur de vitesse (régulation de pression), surpresseur en démarrage direct, automate S7-1200 avec modules d'E/S (liens control depuis les voies, lien data Modbus TCP vers le variateur), électrovannes de secteurs en 24 V AC",
+   "Câble de forage immergé 4G10 120 m : ΔU ≈ 2,6 % à 29 A ; filtre dv/dt en sortie variateur (longueur > 100 m)",
+   "Régime TT, prise de terre 25 Ω : protections différentielles 300 mA sur les moteurs, 30 mA sur prises et éclairage"
+  ]
+ },
+ "installation": {
+  "earthing": "TT",
+  "system": "3P+N",
+  "un_V": 400,
+  "uln_V": 230,
+  "supply": "Tarif Bleu 36 kVA",
+  "subscribed_kVA": 36,
+  "earth_resistance_ohm": 25,
+  "standard": "NF C 15-100"
+ },
+ "templates": {
+  "C2": {
+   "type": "breaker",
+   "in_A": 2,
+   "curve": "C",
+   "poles": "1P+N",
+   "icn_kA": 6
+  }
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "label": "Réseau public",
+   "supply": "Tarif Bleu 36 kVA",
+   "children": [
+    {
+     "type": "meter",
+     "ref": "-P0",
+     "label": "Compteur",
+     "kind": "Linky triphasé",
+     "children": [
+      {
+       "type": "main_breaker",
+       "ref": "-Q0",
+       "label": "Disjoncteur de branchement",
+       "range_A": "30-60",
+       "in_A": 60,
+       "poles": "4P",
+       "idn_mA": 500,
+       "selective": true,
+       "subscribed_kVA": 36,
+       "cable": {
+        "designation": "U1000R2V",
+        "cores": "4x",
+        "section_mm2": 16,
+        "length_m": 30
+       },
+       "children": [
+        {
+         "type": "board",
+         "id": "AP",
+         "ref": "AP1",
+         "label": "Armoire de pompage",
+         "kind": "enclosure",
+         "ip": "IP55",
+         "in_A": 63,
+         "children": [
+          {
+           "type": "switch_disconnector",
+           "ref": "-Q1",
+           "label": "Interrupteur général",
+           "in_A": 63,
+           "poles": "4P",
+           "lockable": true,
+           "children": [
+            {
+             "type": "breaker",
+             "ref": "-F1",
+             "label": "Parafoudre",
+             "in_A": 20,
+             "curve": "C",
+             "poles": "4P",
+             "icn_kA": 10,
+             "children": [
+              {
+               "type": "spd",
+               "ref": "-F11",
+               "spd_type": "2",
+               "imax_kA": 20,
+               "up_kV": 1.5,
+               "poles": "3P+N"
+              }
+             ]
+            },
+            {
+             "type": "rcd",
+             "ref": "-Q10",
+             "label": "Diff. moteurs",
+             "in_A": 63,
+             "idn_mA": 300,
+             "rcd_type": "B",
+             "poles": "4P",
+             "children": [
+              {
+               "type": "breaker",
+               "ref": "-Q11",
+               "label": "Variateur forage",
+               "in_A": 40,
+               "curve": "C",
+               "poles": "3P",
+               "icn_kA": 10,
+               "children": [
+                {
+                 "type": "motor_starter",
+                 "id": "VAR",
+                 "ref": "-U11",
+                 "label": "Variateur",
+                 "method": "vfd",
+                 "p_kW": 15,
+                 "in_A": 31,
+                 "product": {
+                  "manufacturer": "Schneider Electric",
+                  "range": "Altivar Process ATV630",
+                  "description": "Variateur 15 kW 400 V, filtre dv/dt en sortie"
+                 },
+                 "children": [
+                  {
+                   "type": "motor",
+                   "ref": "-M11",
+                   "label": "Pompe de forage immergée",
+                   "p_kW": 15,
+                   "in_A": 29,
+                   "phases": 3,
+                   "cos_phi": 0.84,
+                   "cable": {
+                    "designation": "Câble immergé H07RN8-F",
+                    "cores": "4G",
+                    "section_mm2": 10,
+                    "length_m": 120,
+                    "du_pct": 2.6
+                   }
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "type": "breaker",
+               "ref": "-Q12",
+               "label": "Surpresseur",
+               "in_A": 14,
+               "ir_A": 11.5,
+               "curve": "MA",
+               "poles": "3P",
+               "icu_kA": 50,
+               "product": {
+                "manufacturer": "Schneider Electric",
+                "range": "TeSys GV2ME16",
+                "description": "Disjoncteur moteur 9-14 A"
+               },
+               "children": [
+                {
+                 "type": "contactor",
+                 "id": "KM12",
+                 "ref": "-KM12",
+                 "in_A": 18,
+                 "poles": "3P",
+                 "coil_V": 24,
+                 "product": {
+                  "manufacturer": "Schneider Electric",
+                  "range": "TeSys Deca",
+                  "description": "Contacteur 18 A, bobine 24 V DC"
+                 },
+                 "children": [
+                  {
+                   "type": "motor",
+                   "ref": "-M12",
+                   "label": "Surpresseur",
+                   "p_kW": 5.5,
+                   "in_A": 11,
+                   "phases": 3,
+                   "cable": {
+                    "designation": "U1000R2V",
+                    "cores": "4G",
+                    "section_mm2": 2.5,
+                    "length_m": 8
+                   }
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "ref": "-Q20",
+             "use": "C2",
+             "label": "Automate",
+             "phase": "L1",
+             "children": [
+              {
+               "type": "rcd",
+               "ref": "-Q21",
+               "in_A": 25,
+               "idn_mA": 30,
+               "rcd_type": "A",
+               "poles": "2P",
+               "children": [
+                {
+                 "type": "power_supply",
+                 "ref": "-T20",
+                 "label": "Alim. 24 V DC",
+                 "u1_V": 230,
+                 "u2_V": 24,
+                 "output": "DC",
+                 "in_A": 2.5,
+                 "product": {
+                  "manufacturer": "Siemens",
+                  "range": "SITOP PSU100C",
+                  "description": "Alimentation 24 V DC 2,5 A"
+                 },
+                 "children": [
+                  {
+                   "type": "plc",
+                   "id": "API",
+                   "ref": "-A1",
+                   "label": "Automate irrigation",
+                   "role": "controller",
+                   "family": "S7-1200",
+                   "protocols": [
+                    "PROFINET",
+                    "Modbus TCP"
+                   ],
+                   "ip_address": "192.168.0.1",
+                   "product": {
+                    "manufacturer": "Siemens",
+                    "part_number": "6ES7214-1AG40-0XB0",
+                    "range": "SIMATIC S7-1200",
+                    "description": "CPU 1214C DC/DC/DC, 14 DI / 10 DQ / 2 AI"
+                   },
+                   "onboard": [
+                    {
+                     "slot": 0,
+                     "kind": "mixed_io",
+                     "channels": 26,
+                     "label": "14 DI / 10 DQ 24 V / 2 AI"
+                    }
+                   ],
+                   "modules": [
+                    {
+                     "slot": 2,
+                     "kind": "relay_out",
+                     "channels": 8,
+                     "rating_A": 2,
+                     "product": {
+                      "manufacturer": "Siemens",
+                      "range": "SM 1222",
+                      "description": "Module 8 sorties relais"
+                     },
+                     "channel_labels": {
+                      "1": "Surpresseur",
+                      "2": "Électrovannes"
+                     }
+                    },
+                    {
+                     "slot": 3,
+                     "kind": "ai",
+                     "channels": 4,
+                     "signal": "4-20 mA",
+                     "product": {
+                      "manufacturer": "Siemens",
+                      "range": "SM 1231",
+                      "description": "Module 4 entrées analogiques"
+                     },
+                     "channel_labels": {
+                      "1": "Pression réseau",
+                      "2": "Niveau forage",
+                      "3": "Débitmètre"
+                     }
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "ref": "-Q30",
+             "label": "Électrovannes",
+             "in_A": 2,
+             "curve": "C",
+             "poles": "1P+N",
+             "icn_kA": 6,
+             "phase": "L2",
+             "children": [
+              {
+               "type": "rcd",
+               "ref": "-Q31",
+               "in_A": 25,
+               "idn_mA": 30,
+               "rcd_type": "A",
+               "poles": "2P",
+               "children": [
+                {
+                 "type": "power_supply",
+                 "id": "T30",
+                 "ref": "-T30",
+                 "label": "Transfo",
+                 "u1_V": 230,
+                 "u2_V": 24,
+                 "output": "AC",
+                 "p_W": 100,
+                 "children": [
+                  {
+                   "type": "load",
+                   "id": "EV",
+                   "ref": "-Y31",
+                   "label": "Électrovannes secteurs",
+                   "symbol_text": "EV",
+                   "count": 6,
+                   "cable": {
+                    "designation": "U1000R2V",
+                    "cores": "7G",
+                    "section_mm2": 1.5,
+                    "length_m": 200
+                   }
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "type": "rcd",
+             "ref": "-Q40",
+             "label": "Local technique",
+             "in_A": 25,
+             "idn_mA": 30,
+             "rcd_type": "A",
+             "poles": "2P",
+             "phase": "L3",
+             "children": [
+              {
+               "type": "breaker",
+               "ref": "-Q41",
+               "in_A": 10,
+               "curve": "C",
+               "poles": "1P+N",
+               "icn_kA": 6,
+               "cable": {
+                "designation": "U1000R2V",
+                "cores": "3G",
+                "section_mm2": 1.5
+               },
+               "children": [
+                {
+                 "type": "lighting",
+                 "label": "Éclairage local",
+                 "points": 3
+                }
+               ]
+              },
+              {
+               "type": "breaker",
+               "ref": "-Q42",
+               "in_A": 16,
+               "curve": "C",
+               "poles": "1P+N",
+               "icn_kA": 6,
+               "cable": {
+                "designation": "U1000R2V",
+                "cores": "3G",
+                "section_mm2": 2.5
+               },
+               "children": [
+                {
+                 "type": "socket",
+                 "label": "Prises local",
+                 "points": 2
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "links": [
+  {
+   "kind": "data",
+   "from": "API",
+   "to": "VAR",
+   "protocol": "Modbus TCP"
+  },
+  {
+   "kind": "control",
+   "from": "API",
+   "from_port": "2.1",
+   "to": "KM12"
+  },
+  {
+   "kind": "control",
+   "from": "API",
+   "from_port": "2.2",
+   "to": "T30"
+  }
+ ],
+ "views": [
+  {
+   "id": "sld",
+   "paper": "A3",
+   "cartouche": [
+    "label",
+    "ref",
+    "protection",
+    "idn_mA",
+    "rcd_type",
+    "cable",
+    "length_m",
+    "p_kW"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,194 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Distribution centre: two 1250 kVA transformers with bus-section coupler and 2-of-3 interlock",
+    "project": "EX-26", "client": "Example Distribution Centre", "author": "uniwire examples", 
+    "lang": "en",
+    "notes": [
+      "Demonstrates: two sources, 'tie' link carrying the bus-section ACB, electrical 'interlock' link and trapped-key interlock: 'locks' + 'interlocks' (key K1, 2 keys for 3 ACBs: transformers never paralleled), normal_state on the coupler",
+      "Normal operation: -QA0 and -QB0 closed, -QT open. Loss of one transformer: shed non-essential loads, close -QT",
+      "Each section rated for the total essential load (≤ 1250 kVA)"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50,
+    "supply": "11 kV customer ring main unit (2 transformer feeders)", "ik3_kA": 30,
+    "standard": "IEC 60364 / IEC 61439-2"
+  },
+  "templates": {
+    "ACB": {
+      "type": "breaker", "in_A": 2000, "ir_A": 1800, "icu_kA": 66, "icw_kA": 50, "poles": "4P", "trip_unit": "LSIG",
+      "mounting": "withdrawable", "aux": ["MX", "XF", "OF", "PF"],
+      "product": {"manufacturer": "Eaton", "range": "Power Defense ACB"}
+    },
+    "MCCB": {
+      "type": "breaker", "icu_kA": 50, "poles": "4P", "trip_unit": "LSI",
+      "product": {"manufacturer": "Eaton", "range": "Power Defense MCCB"}
+    }
+  },
+  "sources": [
+    {
+      "id": "TA", "type": "transformer", "ref": "-TA", "label": "Transformer A", "sn_kVA": 1250, "u1_V": 11000,
+      "u2_V": 415, "ucc_pct": 6, "coupling": "Dyn11", "insulation": "dry",
+      "product": {"manufacturer": "Example", "range": "Cast-resin, AN", "description": "1250 kVA 11/0.415 kV F1 E2 C2"},
+      "children": [
+        {
+          "id": "MSBA", "type": "board", "ref": "MSB-A", "label": "Main switchboard, section A", "kind": "main",
+          "in_A": 2500, "ik_kA": 30, "form": "4b", "ip": "IP42",
+          "cable": {"kind": "busway", "designation": "Transformer busduct 2500 A", "material": "Al", "length_m": 7},
+          "children": [
+            {
+              "id": "QA0", "type": "breaker", "ref": "-QA0", "label": "Incomer A", "use": "ACB", "locks": ["K1"],
+              "children": [
+                {"type": "spd", "ref": "-FA", "spd_type": "1+2", "imax_kA": 50, "poles": "3P+N"},
+                {
+                  "id": "QA1", "type": "breaker", "ref": "-QA1", "use": "MCCB", "in_A": 630, "ir_A": 560,
+                  "cable": {
+                    "cores": "4x", "section_mm2": 185, "length_m": 90, "material": "Cu", "insulation": "XLPE",
+                    "install": "E", "pe_section_mm2": 92.5, "parallel": 2
+                  },
+                  "children": [{"type": "offpage", "label": "DB-SORT Sortation system", "target": "EX-26 sheet 3"}]
+                },
+                {
+                  "id": "QA2", "type": "breaker", "ref": "-QA2", "use": "MCCB", "in_A": 400, "ir_A": 360,
+                  "cable": {
+                    "cores": "4x", "section_mm2": 185, "length_m": 70, "material": "Cu", "insulation": "XLPE",
+                    "install": "E", "pe_section_mm2": 92.5
+                  },
+                  "children": [
+                    {
+                      "type": "load", "ref": "-EA2", "label": "Chiller 1 (cold store)", "symbol_text": "CH",
+                      "p_kW": 210, "priority": "essential"
+                    }
+                  ]
+                },
+                {
+                  "id": "QA3", "type": "breaker", "ref": "-QA3", "use": "MCCB", "in_A": 250, "ir_A": 200,
+                  "cable": {
+                    "cores": "4x", "section_mm2": 95, "length_m": 120, "material": "Cu", "insulation": "XLPE",
+                    "install": "E", "pe_section_mm2": 47.5
+                  },
+                  "children": [{"type": "offpage", "label": "DB-DOCK North docks", "target": "EX-26 sheet 4"}]
+                },
+                {
+                  "id": "QA4", "type": "breaker", "ref": "-QA4", "use": "MCCB", "in_A": 160, "ir_A": 125,
+                  "cable": {
+                    "cores": "4x", "section_mm2": 50, "length_m": 60, "material": "Cu", "insulation": "XLPE",
+                    "install": "E", "pe_section_mm2": 25.0
+                  },
+                  "children": [{"type": "offpage", "label": "DB-OFF Offices", "target": "EX-26 sheet 5"}]
+                },
+                {
+                  "id": "QA5", "type": "breaker", "ref": "-QA5", "use": "MCCB", "in_A": 250, "ir_A": 225,
+                  "cable": {
+                    "cores": "4x", "section_mm2": 95, "length_m": 40, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "priority": "non_essential",
+                  "children": [{"type": "offpage", "label": "DB-CHG Forklift charging", "target": "EX-26 sheet 6"}]
+                },
+                {"type": "spare", "ref": "-QA6", "in_A": 400, "poles": "4P", "label": "Spare"}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "TB", "type": "transformer", "ref": "-TB", "label": "Transformer B", "sn_kVA": 1250, "u1_V": 11000,
+      "u2_V": 415, "ucc_pct": 6, "coupling": "Dyn11", "insulation": "dry",
+      "product": {"manufacturer": "Example", "range": "Cast-resin, AN", "description": "1250 kVA 11/0.415 kV F1 E2 C2"},
+      "children": [
+        {
+          "id": "MSBB", "type": "board", "ref": "MSB-B", "label": "Main switchboard, section B", "kind": "main",
+          "in_A": 2500, "ik_kA": 30, "form": "4b", "ip": "IP42",
+          "cable": {"kind": "busway", "designation": "Transformer busduct 2500 A", "material": "Al", "length_m": 7},
+          "children": [
+            {
+              "id": "QB0", "type": "breaker", "ref": "-QB0", "label": "Incomer B", "use": "ACB", "locks": ["K1"],
+              "children": [
+                {"type": "spd", "ref": "-FB", "spd_type": "1+2", "imax_kA": 50, "poles": "3P+N"},
+                {
+                  "id": "QB1", "type": "breaker", "ref": "-QB1", "use": "MCCB", "in_A": 400, "ir_A": 360,
+                  "cable": {
+                    "cores": "4x", "section_mm2": 185, "length_m": 75, "material": "Cu", "insulation": "XLPE",
+                    "install": "E", "pe_section_mm2": 92.5
+                  },
+                  "children": [
+                    {
+                      "type": "load", "ref": "-EB1", "label": "Chiller 2 (cold store)", "symbol_text": "CH",
+                      "p_kW": 210, "priority": "essential"
+                    }
+                  ]
+                },
+                {
+                  "id": "QB2", "type": "breaker", "ref": "-QB2", "use": "MCCB", "in_A": 400, "ir_A": 320,
+                  "cable": {
+                    "cores": "4x", "section_mm2": 150, "length_m": 110, "material": "Cu", "insulation": "XLPE",
+                    "install": "E", "pe_section_mm2": 75.0
+                  },
+                  "children": [{"type": "offpage", "label": "DB-HVAC Air handling", "target": "EX-26 sheet 7"}]
+                },
+                {
+                  "id": "QB3", "type": "breaker", "ref": "-QB3", "use": "MCCB", "in_A": 250, "ir_A": 200,
+                  "cable": {
+                    "cores": "4x", "section_mm2": 95, "length_m": 130, "material": "Cu", "insulation": "XLPE",
+                    "install": "E", "pe_section_mm2": 47.5
+                  },
+                  "children": [{"type": "offpage", "label": "DB-DOCK South docks", "target": "EX-26 sheet 8"}]
+                },
+                {
+                  "id": "QB4", "type": "breaker", "ref": "-QB4", "use": "MCCB", "in_A": 250, "ir_A": 250,
+                  "cable": {
+                    "cores": "4x", "section_mm2": 120, "length_m": 50, "material": "Cu", "insulation": "XLPE",
+                    "install": "E", "pe_section_mm2": 60.0
+                  },
+                  "children": [
+                    {
+                      "type": "motor", "ref": "-MB4", "label": "Sprinkler pump (fire)", "p_kW": 90,
+                      "note": "Overload: alarm only (fire pump)", "phases": 3, "priority": "safety"
+                    }
+                  ]
+                },
+                {
+                  "id": "QB5", "type": "breaker", "ref": "-QB5", "use": "MCCB", "in_A": 250, "ir_A": 160,
+                  "cable": {
+                    "cores": "4x", "section_mm2": 70, "length_m": 25, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [
+                    {
+                      "type": "load", "ref": "-CB5", "label": "PF correction 200 kvar", "symbol_text": "kvar",
+                      "q_kvar": 200
+                    }
+                  ]
+                },
+                {"type": "spare", "ref": "-QB6", "in_A": 400, "poles": "4P", "label": "Spare"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "id": "TIE", "kind": "tie", "from": "QA0", "to": "QB0", "label": "Bus-section coupler",
+      "device": {
+        "id": "QT", "type": "breaker", "ref": "-QT", "use": "ACB", "label": "Bus coupler", "normal_state": "open",
+        "locks": ["K1"]
+      }
+    },
+    {"kind": "interlock", "from": "QA0", "to": "QB0", "label": "2-of-3"}
+  ],
+  "interlocks": [
+    {"key": "K1", "keys": 2, "kind": "trapped_key", "label": "2 keys for -QA0 / -QB0 / -QT: transformers never paralleled"}
+  ],
+  "views": [
+    {
+      "id": "sld", "title": "MSB-A / MSB-B single-line", "paper": "A3",
+      "cartouche": ["label", "ref", "protection", "cable", "length_m", "p_kW"]
+    }
+  ]
+}

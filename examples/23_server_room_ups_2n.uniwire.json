@@ -1,0 +1,366 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Server room (12 racks): 2N UPS, maintenance bypass, redundant PDUs A/B", "project": "EX-23",
+    "client": "Example Office Campus, IT", "author": "uniwire examples", "lang": "en",
+    "notes": [
+      "Demonstrates: two independent UPS paths (2N), external maintenance bypass switch fed by a 'transfer' link, key interlock recorded with 'locks' and 'interlocks', PDUs (board kind 'pdu'), EPO 'trip' link to the incomer shunt trip",
+      "Each UPS has its own VRLA battery cabinet (2 strings, 9.6 kWh); EPO also stops both UPS via dry contact",
+      "Every rack has dual-corded equipment fed from PDU-A and PDU-B (same rack number)",
+      "Key interlock: maintenance bypass -QA4/-QB4 can be switched only with key KA/KB released by -QA2/-QB2 open"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "ik3_kA": 15,
+    "standard": "IEC 60364 / EN 50600-2-2"
+  },
+  "templates": {
+    "UPSIN": {
+      "type": "breaker", "in_A": 63, "curve": "C", "icn_kA": 15, "poles": "4P",
+      "product": {"manufacturer": "Eaton", "range": "FAZ / PLHT"}
+    },
+    "UPSOUT": {
+      "type": "breaker", "in_A": 63, "curve": "C", "icn_kA": 15, "poles": "4P",
+      "product": {"manufacturer": "Eaton", "range": "FAZ / PLHT"}
+    },
+    "RACK": {
+      "type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 10, "poles": "1P+N",
+      "product": {"manufacturer": "Eaton", "range": "FAZ"}
+    }
+  },
+  "sources": [
+    {
+      "id": "IN", "type": "offpage", "label": "From MSB -Q12 (160 A)", "target": "EX-23 drawing E-001",
+      "children": [
+        {
+          "id": "DBSR", "type": "board", "ref": "DB-SR", "label": "Server room main board", "kind": "distribution",
+          "in_A": 250, "ik_kA": 15, "form": "2b", "ip": "IP31", "location": "Server room UPS area",
+          "cable": {"cores": "5G", "section_mm2": 70, "length_m": 45, "material": "Cu", "insulation": "XLPE", "install": "E"},
+          "children": [
+            {
+              "id": "Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 250, "poles": "4P", "label": "Incomer",
+              "aux": ["MX", "OF"],
+              "children": [
+                {
+                  "id": "QUA", "type": "breaker", "ref": "-QA1", "use": "UPSIN", "label": "UPS-A rectifier input",
+                  "cable": {
+                    "cores": "5G", "section_mm2": 16, "length_m": 12, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [
+                    {
+                      "id": "UPSA", "type": "ups", "ref": "-GA", "label": "UPS A (double conversion)", "sn_kVA": 30,
+                      "autonomy_min": 12, "bypass": true, "un_V": 400,
+                      "product": {
+                        "manufacturer": "Eaton", "range": "93PS",
+                        "description": "UPS 30 kVA / 30 kW, internal static bypass"
+                      },
+                      "children": [
+                        {
+                          "id": "QOA", "type": "breaker", "ref": "-QA2", "use": "UPSOUT", "label": "UPS-A output",
+                          "locks": ["KA"],
+                          "cable": {
+                            "cores": "5G", "section_mm2": 16, "length_m": 15, "material": "Cu", "insulation": "XLPE",
+                            "install": "E"
+                          },
+                          "children": [
+                            {
+                              "id": "TSA", "type": "transfer_switch", "ref": "-QA4", "label": "Maint. bypass switch",
+                              "in_A": 63, "poles": "4P", "mode": "manual", "interlock": "mechanical", "locks": ["KA"],
+                              "children": [
+                                {
+                                  "id": "PDUA", "type": "board", "ref": "PDU-A", "label": "Rack power distribution A",
+                                  "kind": "pdu", "in_A": 63, "ip": "IP20", "location": "Server room, end of row",
+                                  "children": [
+                                    {
+                                      "id": "PDUA_Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 63,
+                                      "poles": "4P",
+                                      "children": [
+                                        {
+                                          "type": "breaker", "ref": "-Q1", "use": "RACK", "phase": "L1",
+                                          "cable": {
+                                            "cores": "3G", "section_mm2": 2.5, "length_m": 10, "material": "Cu",
+                                            "insulation": "XLPE", "install": "E"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "load", "label": "Rack R01, feed A", "symbol_text": "RACK",
+                                              "p_kW": 2.5, "room": "Server room"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "breaker", "ref": "-Q2", "use": "RACK", "phase": "L2",
+                                          "cable": {
+                                            "cores": "3G", "section_mm2": 2.5, "length_m": 12, "material": "Cu",
+                                            "insulation": "XLPE", "install": "E"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "load", "label": "Rack R02, feed A", "symbol_text": "RACK",
+                                              "p_kW": 2.5, "room": "Server room"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "breaker", "ref": "-Q3", "use": "RACK", "phase": "L3",
+                                          "cable": {
+                                            "cores": "3G", "section_mm2": 2.5, "length_m": 14, "material": "Cu",
+                                            "insulation": "XLPE", "install": "E"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "load", "label": "Rack R03, feed A", "symbol_text": "RACK",
+                                              "p_kW": 2.5, "room": "Server room"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "breaker", "ref": "-Q4", "use": "RACK", "phase": "L1",
+                                          "cable": {
+                                            "cores": "3G", "section_mm2": 2.5, "length_m": 16, "material": "Cu",
+                                            "insulation": "XLPE", "install": "E"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "load", "label": "Rack R04, feed A", "symbol_text": "RACK",
+                                              "p_kW": 2.5, "room": "Server room"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "breaker", "ref": "-Q5", "use": "RACK", "phase": "L2",
+                                          "cable": {
+                                            "cores": "3G", "section_mm2": 2.5, "length_m": 18, "material": "Cu",
+                                            "insulation": "XLPE", "install": "E"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "load", "label": "Rack R05, feed A", "symbol_text": "RACK",
+                                              "p_kW": 2.5, "room": "Server room"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "breaker", "ref": "-Q6", "use": "RACK", "phase": "L3",
+                                          "cable": {
+                                            "cores": "3G", "section_mm2": 2.5, "length_m": 20, "material": "Cu",
+                                            "insulation": "XLPE", "install": "E"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "load", "label": "Rack R06, feed A", "symbol_text": "RACK",
+                                              "p_kW": 2.5, "room": "Server room"
+                                            }
+                                          ]
+                                        },
+                                        {"type": "spare", "ref": "-Q7", "in_A": 16, "poles": "1P+N", "label": "Spare"}
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "QBA", "type": "breaker", "ref": "-QA3", "use": "UPSOUT",
+                  "label": "UPS-A maint. bypass supply",
+                  "cable": {
+                    "cores": "5G", "section_mm2": 16, "length_m": 12, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  }
+                },
+                {
+                  "id": "QUB", "type": "breaker", "ref": "-QB1", "use": "UPSIN", "label": "UPS-B rectifier input",
+                  "cable": {
+                    "cores": "5G", "section_mm2": 16, "length_m": 12, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [
+                    {
+                      "id": "UPSB", "type": "ups", "ref": "-GB", "label": "UPS B (double conversion)", "sn_kVA": 30,
+                      "autonomy_min": 12, "bypass": true, "un_V": 400,
+                      "product": {
+                        "manufacturer": "Eaton", "range": "93PS",
+                        "description": "UPS 30 kVA / 30 kW, internal static bypass"
+                      },
+                      "children": [
+                        {
+                          "id": "QOB", "type": "breaker", "ref": "-QB2", "use": "UPSOUT", "label": "UPS-B output",
+                          "locks": ["KB"],
+                          "cable": {
+                            "cores": "5G", "section_mm2": 16, "length_m": 15, "material": "Cu", "insulation": "XLPE",
+                            "install": "E"
+                          },
+                          "children": [
+                            {
+                              "id": "TSB", "type": "transfer_switch", "ref": "-QB4", "label": "Maint. bypass switch",
+                              "in_A": 63, "poles": "4P", "mode": "manual", "interlock": "mechanical", "locks": ["KB"],
+                              "children": [
+                                {
+                                  "id": "PDUB", "type": "board", "ref": "PDU-B", "label": "Rack power distribution B",
+                                  "kind": "pdu", "in_A": 63, "ip": "IP20", "location": "Server room, end of row",
+                                  "children": [
+                                    {
+                                      "id": "PDUB_Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 63,
+                                      "poles": "4P",
+                                      "children": [
+                                        {
+                                          "type": "breaker", "ref": "-Q1", "use": "RACK", "phase": "L1",
+                                          "cable": {
+                                            "cores": "3G", "section_mm2": 2.5, "length_m": 10, "material": "Cu",
+                                            "insulation": "XLPE", "install": "E"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "load", "label": "Rack R01, feed B", "symbol_text": "RACK",
+                                              "p_kW": 2.5, "room": "Server room"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "breaker", "ref": "-Q2", "use": "RACK", "phase": "L2",
+                                          "cable": {
+                                            "cores": "3G", "section_mm2": 2.5, "length_m": 12, "material": "Cu",
+                                            "insulation": "XLPE", "install": "E"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "load", "label": "Rack R02, feed B", "symbol_text": "RACK",
+                                              "p_kW": 2.5, "room": "Server room"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "breaker", "ref": "-Q3", "use": "RACK", "phase": "L3",
+                                          "cable": {
+                                            "cores": "3G", "section_mm2": 2.5, "length_m": 14, "material": "Cu",
+                                            "insulation": "XLPE", "install": "E"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "load", "label": "Rack R03, feed B", "symbol_text": "RACK",
+                                              "p_kW": 2.5, "room": "Server room"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "breaker", "ref": "-Q4", "use": "RACK", "phase": "L1",
+                                          "cable": {
+                                            "cores": "3G", "section_mm2": 2.5, "length_m": 16, "material": "Cu",
+                                            "insulation": "XLPE", "install": "E"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "load", "label": "Rack R04, feed B", "symbol_text": "RACK",
+                                              "p_kW": 2.5, "room": "Server room"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "breaker", "ref": "-Q5", "use": "RACK", "phase": "L2",
+                                          "cable": {
+                                            "cores": "3G", "section_mm2": 2.5, "length_m": 18, "material": "Cu",
+                                            "insulation": "XLPE", "install": "E"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "load", "label": "Rack R05, feed B", "symbol_text": "RACK",
+                                              "p_kW": 2.5, "room": "Server room"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "breaker", "ref": "-Q6", "use": "RACK", "phase": "L3",
+                                          "cable": {
+                                            "cores": "3G", "section_mm2": 2.5, "length_m": 20, "material": "Cu",
+                                            "insulation": "XLPE", "install": "E"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "load", "label": "Rack R06, feed B", "symbol_text": "RACK",
+                                              "p_kW": 2.5, "room": "Server room"
+                                            }
+                                          ]
+                                        },
+                                        {"type": "spare", "ref": "-Q7", "in_A": 16, "poles": "1P+N", "label": "Spare"}
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "QBB", "type": "breaker", "ref": "-QB3", "use": "UPSOUT",
+                  "label": "UPS-B maint. bypass supply",
+                  "cable": {
+                    "cores": "5G", "section_mm2": 16, "length_m": 12, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  }
+                },
+                {
+                  "type": "breaker", "ref": "-Q5", "in_A": 32, "curve": "C", "icn_kA": 15, "poles": "3P",
+                  "cable": {
+                    "cores": "4G", "section_mm2": 6, "length_m": 20, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [{"type": "load", "ref": "-E5", "label": "CRAC unit 1 (in-row)", "symbol_text": "AC", "p_kW": 12}]
+                },
+                {
+                  "type": "breaker", "ref": "-Q6", "in_A": 32, "curve": "C", "icn_kA": 15, "poles": "3P",
+                  "cable": {
+                    "cores": "4G", "section_mm2": 6, "length_m": 25, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [{"type": "load", "ref": "-E6", "label": "CRAC unit 2 (in-row)", "symbol_text": "AC", "p_kW": 12}]
+                },
+                {
+                  "type": "rcbo", "ref": "-Q7", "in_A": 10, "curve": "B", "icn_kA": 10, "poles": "1P+N", "idn_mA": 30,
+                  "rcd_type": "A",
+                  "cable": {
+                    "cores": "3G", "section_mm2": 1.5, "length_m": 20, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [{"type": "lighting", "label": "Server room lighting", "points": 8, "p_kW": 0.3}]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "id": "EPO", "type": "controller", "ref": "-S0", "label": "EPO button", "function": "EPO", "symbol_text": "EPO",
+      "location": "Server room exit"
+    }
+  ],
+  "links": [
+    {"kind": "transfer", "from": "QBA", "to": "TSA", "label": "bypass A"},
+    {"kind": "transfer", "from": "QBB", "to": "TSB", "label": "bypass B"},
+    {"kind": "trip", "from": "EPO", "to": "Q0", "label": "MX"}
+  ],
+  "interlocks": [
+    {"key": "KA", "kind": "trapped_key", "label": "UPS A output -QA2 / maintenance bypass -QA4"},
+    {"key": "KB", "kind": "trapped_key", "label": "UPS B output -QB2 / maintenance bypass -QB4"}
+  ],
+  "views": [
+    {
+      "id": "sld", "title": "Server room power", "paper": "A3",
+      "cartouche": ["label", "ref", "protection", "idn_mA", "cable", "p_kW", "phase"]
+    }
+  ]
+}

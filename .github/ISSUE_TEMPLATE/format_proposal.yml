@@ -1,0 +1,54 @@
+name: Format proposal (UEP)
+description: Propose a change to the uniwire format (a uniwire Enhancement Proposal).
+title: "UEP: "
+labels: [uep]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Changes to the format follow the uniwire Enhancement Proposal process described in
+        CONTRIBUTING.md. Minor versions (1.x) only add optional fields, types or enumeration values;
+        breaking changes wait for the next major version.
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: |
+        Which real installations or drawings need this? What cannot be described today?
+        If possible, attach a small anonymised example (drawing excerpt or description).
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: New or changed fields, types or link kinds, with their units and allowed values.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: JSON example
+      description: A `*.uniwire.json` excerpt using the proposed change.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: mappings
+    attributes:
+      label: Mappings
+      description: Correspondence with CIM, IFC, IEC 61850 SCL or IEC 81346, where relevant.
+  - type: dropdown
+    id: compatibility
+    attributes:
+      label: Compatibility
+      options:
+        - Backward compatible (optional addition, minor version)
+        - Breaking change (next major version, needs a migration)
+    validations:
+      required: true
+  - type: textarea
+    id: rendering
+    attributes:
+      label: Rendering and rules
+      description: How should the change be drawn? Does it need new rule checks?

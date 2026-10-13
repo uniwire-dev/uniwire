@@ -1,0 +1,98 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": [],
+  "meta": {
+    "lang": "en",
+    "title": "Single-family home: 200 A main breaker load center",
+    "project": "EX-05",
+    "client": "Example House (North America)",
+    "author": "uniwire examples",
+    
+    "notes": [
+      "Demonstrates: 120/240 V split-phase 60 Hz service (NEC style) from a pole-mounted transformer, 200 A main, AFCI / dual-function AFCI-GFCI branch breakers (modelled as breaker / rcbo with 5 mA trip), AWG conductor sizes, 2-pole 240 V loads, Type 2 SPD (NEC 230.67)",
+      "Legs: L1 / L2; 240 V loads on L1L2. Grounding electrode system: 2 ground rods + water pipe bond (not drawn)"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-C-S", "system": "split-phase", "un_V": 240, "uln_V": 120, "f_Hz": 60,
+    "supply": "Overhead service drop, 200 A", "ik3_kA": 10, "standard": "NEC 2023 (NFPA 70)"
+  },
+  "templates": {
+    "AFCI15": {"type": "breaker", "in_A": 15, "poles": "1P", "icu_kA": 10, "range": "CAFCI",
+               "product": {"manufacturer": "Eaton", "range": "Type BR", "description": "Combination AFCI branch breaker 1P 15 A"}},
+    "DF20": {"type": "rcbo", "in_A": 20, "poles": "1P", "icu_kA": 10, "idn_mA": 5, "range": "DF",
+             "product": {"manufacturer": "Eaton", "range": "Type BR", "description": "Dual-function AFCI/GFCI branch breaker 1P 20 A"}},
+    "GF20": {"type": "rcbo", "in_A": 20, "poles": "1P", "icu_kA": 10, "idn_mA": 5, "range": "GFCI",
+             "product": {"manufacturer": "Eaton", "range": "Type BR", "description": "GFCI branch breaker 1P 20 A"}},
+    "BR2P": {"type": "breaker", "poles": "2P", "icu_kA": 10,
+             "product": {"manufacturer": "Eaton", "range": "Type BR", "description": "2-pole branch breaker"}}
+  },
+  "sources": [
+    {"type": "transformer", "ref": "T1", "label": "Utility pole transformer", "sn_kVA": 25, "u1_V": 7200, "u2_V": 240,
+     "kind": "power", "insulation": "oil", "external": true, "children": [
+      {"type": "meter", "ref": "M1", "label": "Utility meter", "kind": "Form 2S", "in_A": 200, "external": true,
+       "cable": {"designation": "Triplex service drop", "kind": "overhead", "size_awg": "2/0", "material": "Al", "length_m": 30},
+       "children": [
+        {"type": "board", "ref": "LC1", "label": "Main load center", "kind": "panelboard", "system": "split-phase", "in_A": 200,
+         "ways": 42, "ik_kA": 22,
+         "product": {"manufacturer": "Eaton", "range": "Type BR", "description": "Load center 200 A, 42 spaces, main breaker"},
+         "cable": {"designation": "SER", "size_awg": "4/0", "material": "Al", "length_m": 3, "conductors": "L1, L2, N"},
+         "children": [
+          {"type": "breaker", "ref": "MB", "label": "Main breaker / service disconnect", "in_A": 200, "poles": "2P", "icu_kA": 22, "children": [
+            {"type": "breaker", "ref": "1", "use": "AFCI15", "phase": "L1", "circuit": "1",
+             "cable": {"designation": "NM-B 14/2 w/G", "size_awg": "14", "material": "Cu"},
+             "children": [{"type": "socket", "label": "Bedrooms 1-2 receptacles + lights", "points": 11}]},
+            {"type": "breaker", "ref": "3", "use": "AFCI15", "phase": "L2", "circuit": "3",
+             "cable": {"designation": "NM-B 14/2 w/G", "size_awg": "14", "material": "Cu"},
+             "children": [{"type": "socket", "label": "Primary bedroom receptacles + lights", "points": 9}]},
+            {"type": "breaker", "ref": "5", "use": "AFCI15", "phase": "L1", "circuit": "5",
+             "cable": {"designation": "NM-B 14/2 w/G", "size_awg": "14", "material": "Cu"},
+             "children": [{"type": "lighting", "label": "Living / dining lighting", "points": 12}]},
+            {"type": "rcbo", "ref": "7", "use": "DF20", "phase": "L2", "circuit": "7",
+             "cable": {"designation": "NM-B 12/2 w/G", "size_awg": "12", "material": "Cu"},
+             "children": [{"type": "socket", "label": "Kitchen countertop SABC 1", "points": 4, "room": "Kitchen"}]},
+            {"type": "rcbo", "ref": "9", "use": "DF20", "phase": "L1", "circuit": "9",
+             "cable": {"designation": "NM-B 12/2 w/G", "size_awg": "12", "material": "Cu"},
+             "children": [{"type": "socket", "label": "Kitchen countertop SABC 2", "points": 4, "room": "Kitchen"}]},
+            {"type": "rcbo", "ref": "11", "use": "DF20", "in_A": 15, "phase": "L2", "circuit": "11",
+             "cable": {"designation": "NM-B 14/2 w/G", "size_awg": "14", "material": "Cu"},
+             "children": [{"type": "appliance", "kind": "dishwasher", "label": "Dishwasher", "p_kW": 1.4}]},
+            {"type": "rcbo", "ref": "13", "use": "GF20", "phase": "L1", "circuit": "13",
+             "cable": {"designation": "NM-B 12/2 w/G", "size_awg": "12", "material": "Cu"},
+             "children": [{"type": "socket", "label": "Bathrooms receptacles", "points": 3}]},
+            {"type": "rcbo", "ref": "15", "use": "DF20", "phase": "L2", "circuit": "15",
+             "cable": {"designation": "NM-B 12/2 w/G", "size_awg": "12", "material": "Cu"},
+             "children": [{"type": "appliance", "kind": "washing_machine", "label": "Laundry (washer)", "p_kW": 1.2}]},
+            {"type": "rcbo", "ref": "17", "use": "GF20", "phase": "L1", "circuit": "17",
+             "cable": {"designation": "NM-B 12/2 w/G", "size_awg": "12", "material": "Cu", "length_m": 20},
+             "children": [{"type": "socket", "label": "Garage + exterior receptacles", "points": 6}]},
+            {"type": "breaker", "ref": "2-4", "use": "BR2P", "in_A": 50, "phase": "L1L2", "circuit": "2-4",
+             "cable": {"designation": "NM-B 6/3 w/G", "size_awg": "6", "material": "Cu"},
+             "children": [{"type": "cooking", "kind": "range", "label": "Electric range", "p_kW": 12, "un_V": 240}]},
+            {"type": "rcbo", "ref": "6-8", "in_A": 30, "poles": "2P", "icu_kA": 10, "idn_mA": 5, "range": "GFCI", "phase": "L1L2", "circuit": "6-8",
+             "cable": {"designation": "NM-B 10/3 w/G", "size_awg": "10", "material": "Cu"},
+             "children": [{"type": "appliance", "kind": "dryer", "label": "Clothes dryer", "p_kW": 5.6, "un_V": 240}]},
+            {"type": "breaker", "ref": "10-12", "use": "BR2P", "in_A": 30, "phase": "L1L2", "circuit": "10-12",
+             "cable": {"designation": "NM-B 10/2 w/G", "size_awg": "10", "material": "Cu"},
+             "children": [{"type": "water_heater", "label": "Water heater 50 gal", "volume_L": 190, "p_kW": 4.5, "un_V": 240}]},
+            {"type": "breaker", "ref": "14-16", "use": "BR2P", "in_A": 40, "phase": "L1L2", "circuit": "14-16",
+             "cable": {"designation": "THHN", "size_awg": "8", "raceway": "PVC conduit", "material": "Cu", "length_m": 12},
+             "children": [{"type": "motor", "label": "Heat pump condenser 4 ton", "p_kW": 5.2, "un_V": 240, "phases": 1, "location": "Outdoor"}]},
+            {"type": "breaker", "ref": "18-20", "use": "BR2P", "in_A": 60, "phase": "L1L2", "circuit": "18-20",
+             "cable": {"designation": "NM-B 6/2 w/G", "size_awg": "6", "material": "Cu"},
+             "children": [{"type": "heating", "label": "Air handler + 10 kW heat strip", "p_kW": 10.5, "un_V": 240}]},
+            {"type": "breaker", "ref": "22-24", "use": "BR2P", "in_A": 60, "phase": "L1L2", "circuit": "22-24",
+             "cable": {"designation": "THHN", "size_awg": "6", "raceway": "EMT", "material": "Cu", "length_m": 9},
+             "children": [{"type": "ev_charger", "label": "Level 2 EVSE 48 A", "mode": "3", "p_kW": 11.5, "un_V": 240, "location": "Garage"}]},
+            {"type": "breaker", "ref": "26-28", "use": "BR2P", "in_A": 20, "phase": "L1L2", "circuit": "26-28", "children": [
+              {"type": "spd", "ref": "SPD", "label": "Whole-home surge protector", "spd_type": "2", "imax_kA": 50, "poles": "2P", "uc_V": 150}
+            ]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "orientation": "landscape",
+             "cartouche": ["circuit", "label", "protection", "idn_mA", "poles", "cable_type", "cable", "phase", "p_kW"]}]
+}

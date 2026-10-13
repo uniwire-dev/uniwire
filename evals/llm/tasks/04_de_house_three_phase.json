@@ -1,0 +1,56 @@
+{
+ "id": "04_de_house_three_phase",
+ "request": "German single-family house, TN-C-S, three-phase 3P+N 400/230 V, 63 A main protection. Two 4-pole 40 A 30 mA type A RCDs. Single-phase circuits spread over L1, L2 and L3 (set the phase of each), a 3-phase cooker on 16 A 3P+N, and an 11 kW wallbox.",
+ "expect": [
+  {
+   "check": "installation",
+   "fields": {
+    "system": "3P+N",
+    "un_V": 400
+   }
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "rcd",
+    "idn_mA": 30,
+    "poles": [
+     "4P",
+     "3P+N"
+    ]
+   },
+   "min": 2
+  },
+  {
+   "check": "distinct",
+   "match": {
+    "type": [
+     "breaker",
+     "rcbo"
+    ]
+   },
+   "field": "phase",
+   "min": 3
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "cooking"
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "ev_charger"
+   },
+   "min": 1
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ]
+}

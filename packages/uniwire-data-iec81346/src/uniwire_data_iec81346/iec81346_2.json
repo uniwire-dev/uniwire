@@ -1,0 +1,6431 @@
+{
+ "header": {
+  "title": "IEC 81346-2:2019 component classes (letter codes), as published in the Wikipedia article 'IEC 81346'",
+  "sources": [
+   {
+    "url": "https://en.wikipedia.org/wiki/IEC_81346",
+    "revision": "https://en.wikipedia.org/w/index.php?title=IEC_81346&oldid=1378915541",
+    "revision_timestamp": "2026-10-06T22:11:47Z",
+    "section": "Classifications > Components (table 'IEC 81346-2:2019 components')"
+   },
+   {
+    "url": "https://cci.koncepcebim.gov.cz/?k=5",
+    "note": "Upstream source cited by Wikipedia: Czech CCI classification (Agentura CAS), derived from ISO/IEC 81346. Not reachable when retrieved."
+   }
+  ],
+  "retrieved": "2026-10-11",
+  "licence": {
+   "id": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "attribution": "Data from the Wikipedia article 'IEC 81346' (https://en.wikipedia.org/wiki/IEC_81346), by Wikipedia contributors, licensed CC BY-SA 4.0. Reformatted to JSON by the uniwire project (columns split into code/level/parent, hierarchical description added, one malformed row dropped). This file is distributed under CC BY-SA 4.0."
+  },
+  "notes": [
+   "Titles follow the CCI classification and may differ slightly from the wording of IEC 81346-2:2019 itself.",
+   "No French titles are available from a legitimate free source: 'fr' is null.",
+   "'description' is the class path built from the parent titles (the source table has no definitions).",
+   "Titles are reproduced verbatim, including source typos (e.g. 'Liqiud lamp', 'Angle xwitch')."
+  ],
+  "counts": {
+   "level1": 17,
+   "level2": 166,
+   "level3": 615
+  },
+  "anomalies": [
+   {
+    "raw": [
+     "C",
+     "CC",
+     "CC]",
+     "echargeable battery"
+    ],
+    "reason": "invalid code in the source (probable editing error), entry not included"
+   }
+  ]
+ },
+ "classes": [
+  {
+   "code": "B",
+   "level": 1,
+   "parent": null,
+   "en": "Sensing object",
+   "fr": null,
+   "description": "Sensing object"
+  },
+  {
+   "code": "BA",
+   "level": 2,
+   "parent": "B",
+   "en": "Electric potential sensing object",
+   "fr": null,
+   "description": "Sensing object > Electric potential sensing object"
+  },
+  {
+   "code": "BAA",
+   "level": 3,
+   "parent": "BA",
+   "en": "Voltage transformer",
+   "fr": null,
+   "description": "Sensing object > Electric potential sensing object > Voltage transformer"
+  },
+  {
+   "code": "BAB",
+   "level": 3,
+   "parent": "BA",
+   "en": "Voltage relay",
+   "fr": null,
+   "description": "Sensing object > Electric potential sensing object > Voltage relay"
+  },
+  {
+   "code": "BB",
+   "level": 2,
+   "parent": "B",
+   "en": "Resistivity Sensing Object",
+   "fr": null,
+   "description": "Sensing object > Resistivity Sensing Object"
+  },
+  {
+   "code": "BBA",
+   "level": 3,
+   "parent": "BB",
+   "en": "Electric resistivity sensor",
+   "fr": null,
+   "description": "Sensing object > Resistivity Sensing Object > Electric resistivity sensor"
+  },
+  {
+   "code": "BBB",
+   "level": 3,
+   "parent": "BB",
+   "en": "Electric resistivity detector",
+   "fr": null,
+   "description": "Sensing object > Resistivity Sensing Object > Electric resistivity detector"
+  },
+  {
+   "code": "BBC",
+   "level": 3,
+   "parent": "BB",
+   "en": "Thermal resistivity sensor",
+   "fr": null,
+   "description": "Sensing object > Resistivity Sensing Object > Thermal resistivity sensor"
+  },
+  {
+   "code": "BBD",
+   "level": 3,
+   "parent": "BB",
+   "en": "Thermal resistivity detector",
+   "fr": null,
+   "description": "Sensing object > Resistivity Sensing Object > Thermal resistivity detector"
+  },
+  {
+   "code": "BC",
+   "level": 2,
+   "parent": "B",
+   "en": "Electric current sensing object",
+   "fr": null,
+   "description": "Sensing object > Electric current sensing object"
+  },
+  {
+   "code": "BCA",
+   "level": 3,
+   "parent": "BC",
+   "en": "Current transformer",
+   "fr": null,
+   "description": "Sensing object > Electric current sensing object > Current transformer"
+  },
+  {
+   "code": "BCB",
+   "level": 3,
+   "parent": "BC",
+   "en": "Current relay",
+   "fr": null,
+   "description": "Sensing object > Electric current sensing object > Current relay"
+  },
+  {
+   "code": "BD",
+   "level": 2,
+   "parent": "B",
+   "en": "Density sensing object",
+   "fr": null,
+   "description": "Sensing object > Density sensing object"
+  },
+  {
+   "code": "BDA",
+   "level": 3,
+   "parent": "BD",
+   "en": "Density transmitter",
+   "fr": null,
+   "description": "Sensing object > Density sensing object > Density transmitter"
+  },
+  {
+   "code": "BDB",
+   "level": 3,
+   "parent": "BD",
+   "en": "Density switch",
+   "fr": null,
+   "description": "Sensing object > Density sensing object > Density switch"
+  },
+  {
+   "code": "BE",
+   "level": 2,
+   "parent": "B",
+   "en": "Field sensing object",
+   "fr": null,
+   "description": "Sensing object > Field sensing object"
+  },
+  {
+   "code": "BEA",
+   "level": 3,
+   "parent": "BE",
+   "en": "Electric field detector",
+   "fr": null,
+   "description": "Sensing object > Field sensing object > Electric field detector"
+  },
+  {
+   "code": "BEB",
+   "level": 3,
+   "parent": "BE",
+   "en": "Electric field sensor",
+   "fr": null,
+   "description": "Sensing object > Field sensing object > Electric field sensor"
+  },
+  {
+   "code": "BEC",
+   "level": 3,
+   "parent": "BE",
+   "en": "Magnetic field detector",
+   "fr": null,
+   "description": "Sensing object > Field sensing object > Magnetic field detector"
+  },
+  {
+   "code": "BED",
+   "level": 3,
+   "parent": "BE",
+   "en": "Magnetic field sensor",
+   "fr": null,
+   "description": "Sensing object > Field sensing object > Magnetic field sensor"
+  },
+  {
+   "code": "BF",
+   "level": 2,
+   "parent": "B",
+   "en": "Flow sensing object",
+   "fr": null,
+   "description": "Sensing object > Flow sensing object"
+  },
+  {
+   "code": "BFA",
+   "level": 3,
+   "parent": "BF",
+   "en": "Flow detector",
+   "fr": null,
+   "description": "Sensing object > Flow sensing object > Flow detector"
+  },
+  {
+   "code": "BFB",
+   "level": 3,
+   "parent": "BF",
+   "en": "Flow sensor",
+   "fr": null,
+   "description": "Sensing object > Flow sensing object > Flow sensor"
+  },
+  {
+   "code": "BG",
+   "level": 2,
+   "parent": "B",
+   "en": "Physical dimension sensing object",
+   "fr": null,
+   "description": "Sensing object > Physical dimension sensing object"
+  },
+  {
+   "code": "BGA",
+   "level": 3,
+   "parent": "BG",
+   "en": "Position transmitter",
+   "fr": null,
+   "description": "Sensing object > Physical dimension sensing object > Position transmitter"
+  },
+  {
+   "code": "BGB",
+   "level": 3,
+   "parent": "BG",
+   "en": "Position switch",
+   "fr": null,
+   "description": "Sensing object > Physical dimension sensing object > Position switch"
+  },
+  {
+   "code": "BGC",
+   "level": 3,
+   "parent": "BG",
+   "en": "Distance transmitter",
+   "fr": null,
+   "description": "Sensing object > Physical dimension sensing object > Distance transmitter"
+  },
+  {
+   "code": "BGD",
+   "level": 3,
+   "parent": "BG",
+   "en": "Distance switch",
+   "fr": null,
+   "description": "Sensing object > Physical dimension sensing object > Distance switch"
+  },
+  {
+   "code": "BGE",
+   "level": 3,
+   "parent": "BG",
+   "en": "Angle transmitter",
+   "fr": null,
+   "description": "Sensing object > Physical dimension sensing object > Angle transmitter"
+  },
+  {
+   "code": "BGF",
+   "level": 3,
+   "parent": "BG",
+   "en": "Angle xwitch",
+   "fr": null,
+   "description": "Sensing object > Physical dimension sensing object > Angle xwitch"
+  },
+  {
+   "code": "BGG",
+   "level": 3,
+   "parent": "BG",
+   "en": "Object Scanner",
+   "fr": null,
+   "description": "Sensing object > Physical dimension sensing object > Object Scanner"
+  },
+  {
+   "code": "BH",
+   "level": 2,
+   "parent": "B",
+   "en": "Energy sensing object",
+   "fr": null,
+   "description": "Sensing object > Energy sensing object"
+  },
+  {
+   "code": "BHA",
+   "level": 3,
+   "parent": "BH",
+   "en": "Flow energy meter",
+   "fr": null,
+   "description": "Sensing object > Energy sensing object > Flow energy meter"
+  },
+  {
+   "code": "BHB",
+   "level": 3,
+   "parent": "BH",
+   "en": "Thermal energy meter",
+   "fr": null,
+   "description": "Sensing object > Energy sensing object > Thermal energy meter"
+  },
+  {
+   "code": "BHC",
+   "level": 3,
+   "parent": "BH",
+   "en": "Electric energy meter",
+   "fr": null,
+   "description": "Sensing object > Energy sensing object > Electric energy meter"
+  },
+  {
+   "code": "BJ",
+   "level": 2,
+   "parent": "B",
+   "en": "Power sensing object",
+   "fr": null,
+   "description": "Sensing object > Power sensing object"
+  },
+  {
+   "code": "BJA",
+   "level": 3,
+   "parent": "BJ",
+   "en": "Power meter",
+   "fr": null,
+   "description": "Sensing object > Power sensing object > Power meter"
+  },
+  {
+   "code": "BJB",
+   "level": 3,
+   "parent": "BJ",
+   "en": "Power Limit Switch",
+   "fr": null,
+   "description": "Sensing object > Power sensing object > Power Limit Switch"
+  },
+  {
+   "code": "BK",
+   "level": 2,
+   "parent": "B",
+   "en": "Time sensing object",
+   "fr": null,
+   "description": "Sensing object > Time sensing object"
+  },
+  {
+   "code": "BKA",
+   "level": 3,
+   "parent": "BK",
+   "en": "Time switch",
+   "fr": null,
+   "description": "Sensing object > Time sensing object > Time switch"
+  },
+  {
+   "code": "BKB",
+   "level": 3,
+   "parent": "BK",
+   "en": "Timer sensor",
+   "fr": null,
+   "description": "Sensing object > Time sensing object > Timer sensor"
+  },
+  {
+   "code": "BL",
+   "level": 2,
+   "parent": "B",
+   "en": "Level sensing object",
+   "fr": null,
+   "description": "Sensing object > Level sensing object"
+  },
+  {
+   "code": "BLA",
+   "level": 3,
+   "parent": "BL",
+   "en": "Level transmitter",
+   "fr": null,
+   "description": "Sensing object > Level sensing object > Level transmitter"
+  },
+  {
+   "code": "BLB",
+   "level": 3,
+   "parent": "BL",
+   "en": "Level switch",
+   "fr": null,
+   "description": "Sensing object > Level sensing object > Level switch"
+  },
+  {
+   "code": "BM",
+   "level": 2,
+   "parent": "B",
+   "en": "Humidity sensing object",
+   "fr": null,
+   "description": "Sensing object > Humidity sensing object"
+  },
+  {
+   "code": "BMA",
+   "level": 3,
+   "parent": "BM",
+   "en": "Humidity transmitter",
+   "fr": null,
+   "description": "Sensing object > Humidity sensing object > Humidity transmitter"
+  },
+  {
+   "code": "BMB",
+   "level": 3,
+   "parent": "BM",
+   "en": "Humidity switch",
+   "fr": null,
+   "description": "Sensing object > Humidity sensing object > Humidity switch"
+  },
+  {
+   "code": "BP",
+   "level": 2,
+   "parent": "B",
+   "en": "Pressure sensing object",
+   "fr": null,
+   "description": "Sensing object > Pressure sensing object"
+  },
+  {
+   "code": "BPA",
+   "level": 3,
+   "parent": "BP",
+   "en": "Absolute pressure transmitter",
+   "fr": null,
+   "description": "Sensing object > Pressure sensing object > Absolute pressure transmitter"
+  },
+  {
+   "code": "BPB",
+   "level": 3,
+   "parent": "BP",
+   "en": "Absolute Pressure Switch",
+   "fr": null,
+   "description": "Sensing object > Pressure sensing object > Absolute Pressure Switch"
+  },
+  {
+   "code": "BPC",
+   "level": 3,
+   "parent": "BP",
+   "en": "Differential pressure transmitter",
+   "fr": null,
+   "description": "Sensing object > Pressure sensing object > Differential pressure transmitter"
+  },
+  {
+   "code": "BPD",
+   "level": 3,
+   "parent": "BP",
+   "en": "Differential pressure switch",
+   "fr": null,
+   "description": "Sensing object > Pressure sensing object > Differential pressure switch"
+  },
+  {
+   "code": "BQ",
+   "level": 2,
+   "parent": "B",
+   "en": "Concentration sensing object",
+   "fr": null,
+   "description": "Sensing object > Concentration sensing object"
+  },
+  {
+   "code": "BQA",
+   "level": 3,
+   "parent": "BQ",
+   "en": "Gas sensor",
+   "fr": null,
+   "description": "Sensing object > Concentration sensing object > Gas sensor"
+  },
+  {
+   "code": "BQB",
+   "level": 3,
+   "parent": "BQ",
+   "en": "Gas detector",
+   "fr": null,
+   "description": "Sensing object > Concentration sensing object > Gas detector"
+  },
+  {
+   "code": "BQC",
+   "level": 3,
+   "parent": "BQ",
+   "en": "Liquid sensor",
+   "fr": null,
+   "description": "Sensing object > Concentration sensing object > Liquid sensor"
+  },
+  {
+   "code": "BQD",
+   "level": 3,
+   "parent": "BQ",
+   "en": "Liquid detector",
+   "fr": null,
+   "description": "Sensing object > Concentration sensing object > Liquid detector"
+  },
+  {
+   "code": "BQE",
+   "level": 3,
+   "parent": "BQ",
+   "en": "Solid matter sensor",
+   "fr": null,
+   "description": "Sensing object > Concentration sensing object > Solid matter sensor"
+  },
+  {
+   "code": "BQF",
+   "level": 3,
+   "parent": "BQ",
+   "en": "Solid matter detector",
+   "fr": null,
+   "description": "Sensing object > Concentration sensing object > Solid matter detector"
+  },
+  {
+   "code": "BR",
+   "level": 2,
+   "parent": "B",
+   "en": "Radiation sensing object",
+   "fr": null,
+   "description": "Sensing object > Radiation sensing object"
+  },
+  {
+   "code": "BRA",
+   "level": 3,
+   "parent": "BR",
+   "en": "Light sensor",
+   "fr": null,
+   "description": "Sensing object > Radiation sensing object > Light sensor"
+  },
+  {
+   "code": "BRB",
+   "level": 3,
+   "parent": "BR",
+   "en": "Light detector",
+   "fr": null,
+   "description": "Sensing object > Radiation sensing object > Light detector"
+  },
+  {
+   "code": "BRC",
+   "level": 3,
+   "parent": "BR",
+   "en": "Electromagnetic wave sensor",
+   "fr": null,
+   "description": "Sensing object > Radiation sensing object > Electromagnetic wave sensor"
+  },
+  {
+   "code": "BRD",
+   "level": 3,
+   "parent": "BR",
+   "en": "Electromagnetic wave detector",
+   "fr": null,
+   "description": "Sensing object > Radiation sensing object > Electromagnetic wave detector"
+  },
+  {
+   "code": "BRE",
+   "level": 3,
+   "parent": "BR",
+   "en": "Radiation counter",
+   "fr": null,
+   "description": "Sensing object > Radiation sensing object > Radiation counter"
+  },
+  {
+   "code": "BRF",
+   "level": 3,
+   "parent": "BR",
+   "en": "Radiation detector",
+   "fr": null,
+   "description": "Sensing object > Radiation sensing object > Radiation detector"
+  },
+  {
+   "code": "BS",
+   "level": 2,
+   "parent": "B",
+   "en": "Time-rating object",
+   "fr": null,
+   "description": "Sensing object > Time-rating object"
+  },
+  {
+   "code": "BSA",
+   "level": 3,
+   "parent": "BS",
+   "en": "Cycle rate transmitter",
+   "fr": null,
+   "description": "Sensing object > Time-rating object > Cycle rate transmitter"
+  },
+  {
+   "code": "BSB",
+   "level": 3,
+   "parent": "BS",
+   "en": "Cycle rate detecting switch",
+   "fr": null,
+   "description": "Sensing object > Time-rating object > Cycle rate detecting switch"
+  },
+  {
+   "code": "BSC",
+   "level": 3,
+   "parent": "BS",
+   "en": "Speed sensing transmitter",
+   "fr": null,
+   "description": "Sensing object > Time-rating object > Speed sensing transmitter"
+  },
+  {
+   "code": "BSD",
+   "level": 3,
+   "parent": "BS",
+   "en": "Speed detecting switch",
+   "fr": null,
+   "description": "Sensing object > Time-rating object > Speed detecting switch"
+  },
+  {
+   "code": "BSE",
+   "level": 3,
+   "parent": "BS",
+   "en": "Tachometer",
+   "fr": null,
+   "description": "Sensing object > Time-rating object > Tachometer"
+  },
+  {
+   "code": "BSF",
+   "level": 3,
+   "parent": "BS",
+   "en": "Rotation speed relay",
+   "fr": null,
+   "description": "Sensing object > Time-rating object > Rotation speed relay"
+  },
+  {
+   "code": "BSG",
+   "level": 3,
+   "parent": "BS",
+   "en": "Accelerometer transmitter",
+   "fr": null,
+   "description": "Sensing object > Time-rating object > Accelerometer transmitter"
+  },
+  {
+   "code": "BSH",
+   "level": 3,
+   "parent": "BS",
+   "en": "Accelerometer relay",
+   "fr": null,
+   "description": "Sensing object > Time-rating object > Accelerometer relay"
+  },
+  {
+   "code": "BT",
+   "level": 2,
+   "parent": "B",
+   "en": "Temperature sensing object",
+   "fr": null,
+   "description": "Sensing object > Temperature sensing object"
+  },
+  {
+   "code": "BTA",
+   "level": 3,
+   "parent": "BT",
+   "en": "Temperature transmitter",
+   "fr": null,
+   "description": "Sensing object > Temperature sensing object > Temperature transmitter"
+  },
+  {
+   "code": "BTB",
+   "level": 3,
+   "parent": "BT",
+   "en": "Temperature switch",
+   "fr": null,
+   "description": "Sensing object > Temperature sensing object > Temperature switch"
+  },
+  {
+   "code": "BU",
+   "level": 2,
+   "parent": "B",
+   "en": "Multi-quantity sensing object",
+   "fr": null,
+   "description": "Sensing object > Multi-quantity sensing object"
+  },
+  {
+   "code": "BUA",
+   "level": 3,
+   "parent": "BU",
+   "en": "Multi-sensor",
+   "fr": null,
+   "description": "Sensing object > Multi-quantity sensing object > Multi-sensor"
+  },
+  {
+   "code": "BUB",
+   "level": 3,
+   "parent": "BU",
+   "en": "Multi-detector",
+   "fr": null,
+   "description": "Sensing object > Multi-quantity sensing object > Multi-detector"
+  },
+  {
+   "code": "BW",
+   "level": 2,
+   "parent": "B",
+   "en": "Force sensing object",
+   "fr": null,
+   "description": "Sensing object > Force sensing object"
+  },
+  {
+   "code": "BWA",
+   "level": 3,
+   "parent": "BW",
+   "en": "Weight transmitter",
+   "fr": null,
+   "description": "Sensing object > Force sensing object > Weight transmitter"
+  },
+  {
+   "code": "BWB",
+   "level": 3,
+   "parent": "BW",
+   "en": "Weight detecting switch",
+   "fr": null,
+   "description": "Sensing object > Force sensing object > Weight detecting switch"
+  },
+  {
+   "code": "BWC",
+   "level": 3,
+   "parent": "BW",
+   "en": "Force value transmitter",
+   "fr": null,
+   "description": "Sensing object > Force sensing object > Force value transmitter"
+  },
+  {
+   "code": "BWD",
+   "level": 3,
+   "parent": "BW",
+   "en": "Force detecting switch",
+   "fr": null,
+   "description": "Sensing object > Force sensing object > Force detecting switch"
+  },
+  {
+   "code": "BWE",
+   "level": 3,
+   "parent": "BW",
+   "en": "Torque value transmitter",
+   "fr": null,
+   "description": "Sensing object > Force sensing object > Torque value transmitter"
+  },
+  {
+   "code": "BWF",
+   "level": 3,
+   "parent": "BW",
+   "en": "Torque switch",
+   "fr": null,
+   "description": "Sensing object > Force sensing object > Torque switch"
+  },
+  {
+   "code": "BX",
+   "level": 2,
+   "parent": "B",
+   "en": "Audio-visual sensing object",
+   "fr": null,
+   "description": "Sensing object > Audio-visual sensing object"
+  },
+  {
+   "code": "BXA",
+   "level": 3,
+   "parent": "BX",
+   "en": "Acoustic sensor",
+   "fr": null,
+   "description": "Sensing object > Audio-visual sensing object > Acoustic sensor"
+  },
+  {
+   "code": "BXB",
+   "level": 3,
+   "parent": "BX",
+   "en": "Acoustic detector",
+   "fr": null,
+   "description": "Sensing object > Audio-visual sensing object > Acoustic detector"
+  },
+  {
+   "code": "BXC",
+   "level": 3,
+   "parent": "BX",
+   "en": "Image sensor",
+   "fr": null,
+   "description": "Sensing object > Audio-visual sensing object > Image sensor"
+  },
+  {
+   "code": "BXD",
+   "level": 3,
+   "parent": "BX",
+   "en": "Image detector",
+   "fr": null,
+   "description": "Sensing object > Audio-visual sensing object > Image detector"
+  },
+  {
+   "code": "BY",
+   "level": 2,
+   "parent": "B",
+   "en": "Information sensing object",
+   "fr": null,
+   "description": "Sensing object > Information sensing object"
+  },
+  {
+   "code": "BYA",
+   "level": 3,
+   "parent": "BY",
+   "en": "Chip reader",
+   "fr": null,
+   "description": "Sensing object > Information sensing object > Chip reader"
+  },
+  {
+   "code": "BYB",
+   "level": 3,
+   "parent": "BY",
+   "en": "Electromagnetic reader",
+   "fr": null,
+   "description": "Sensing object > Information sensing object > Electromagnetic reader"
+  },
+  {
+   "code": "BYC",
+   "level": 3,
+   "parent": "BY",
+   "en": "Optical reader",
+   "fr": null,
+   "description": "Sensing object > Information sensing object > Optical reader"
+  },
+  {
+   "code": "BZ",
+   "level": 2,
+   "parent": "B",
+   "en": "Incident sensing object",
+   "fr": null,
+   "description": "Sensing object > Incident sensing object"
+  },
+  {
+   "code": "BZA",
+   "level": 3,
+   "parent": "BZ",
+   "en": "Counter",
+   "fr": null,
+   "description": "Sensing object > Incident sensing object > Counter"
+  },
+  {
+   "code": "BZB",
+   "level": 3,
+   "parent": "BZ",
+   "en": "Threshold detector",
+   "fr": null,
+   "description": "Sensing object > Incident sensing object > Threshold detector"
+  },
+  {
+   "code": "BZC",
+   "level": 3,
+   "parent": "BZ",
+   "en": "Person detector",
+   "fr": null,
+   "description": "Sensing object > Incident sensing object > Person detector"
+  },
+  {
+   "code": "BZD",
+   "level": 3,
+   "parent": "BZ",
+   "en": "Matter detector",
+   "fr": null,
+   "description": "Sensing object > Incident sensing object > Matter detector"
+  },
+  {
+   "code": "C",
+   "level": 1,
+   "parent": null,
+   "en": "Storing object",
+   "fr": null,
+   "description": "Storing object"
+  },
+  {
+   "code": "CA",
+   "level": 2,
+   "parent": "C",
+   "en": "Capacitive storing object",
+   "fr": null,
+   "description": "Storing object > Capacitive storing object"
+  },
+  {
+   "code": "CAA",
+   "level": 3,
+   "parent": "CA",
+   "en": "Capacitor",
+   "fr": null,
+   "description": "Storing object > Capacitive storing object > Capacitor"
+  },
+  {
+   "code": "CB",
+   "level": 2,
+   "parent": "C",
+   "en": "Inductive storing object",
+   "fr": null,
+   "description": "Storing object > Inductive storing object"
+  },
+  {
+   "code": "CBA",
+   "level": 3,
+   "parent": "CB",
+   "en": "Inductor",
+   "fr": null,
+   "description": "Storing object > Inductive storing object > Inductor"
+  },
+  {
+   "code": "CC",
+   "level": 2,
+   "parent": "C",
+   "en": "Electrochemical storing object",
+   "fr": null,
+   "description": "Storing object > Electrochemical storing object"
+  },
+  {
+   "code": "CF",
+   "level": 2,
+   "parent": "C",
+   "en": "Information storing object",
+   "fr": null,
+   "description": "Storing object > Information storing object"
+  },
+  {
+   "code": "CFA",
+   "level": 3,
+   "parent": "CF",
+   "en": "Information storing media",
+   "fr": null,
+   "description": "Storing object > Information storing object > Information storing media"
+  },
+  {
+   "code": "CL",
+   "level": 2,
+   "parent": "C",
+   "en": "Open stationary storing object",
+   "fr": null,
+   "description": "Storing object > Open stationary storing object"
+  },
+  {
+   "code": "CLA",
+   "level": 3,
+   "parent": "CL",
+   "en": "Pool",
+   "fr": null,
+   "description": "Storing object > Open stationary storing object > Pool"
+  },
+  {
+   "code": "CLB",
+   "level": 3,
+   "parent": "CL",
+   "en": "Shelf",
+   "fr": null,
+   "description": "Storing object > Open stationary storing object > Shelf"
+  },
+  {
+   "code": "CLC",
+   "level": 3,
+   "parent": "CL",
+   "en": "Seat",
+   "fr": null,
+   "description": "Storing object > Open stationary storing object > Seat"
+  },
+  {
+   "code": "CM",
+   "level": 2,
+   "parent": "C",
+   "en": "Enclosed stationary storing object",
+   "fr": null,
+   "description": "Storing object > Enclosed stationary storing object"
+  },
+  {
+   "code": "CMA",
+   "level": 3,
+   "parent": "CM",
+   "en": "Tank",
+   "fr": null,
+   "description": "Storing object > Enclosed stationary storing object > Tank"
+  },
+  {
+   "code": "CMB",
+   "level": 3,
+   "parent": "CM",
+   "en": "Box",
+   "fr": null,
+   "description": "Storing object > Enclosed stationary storing object > Box"
+  },
+  {
+   "code": "CN",
+   "level": 2,
+   "parent": "C",
+   "en": "Moveable storing object",
+   "fr": null,
+   "description": "Storing object > Moveable storing object"
+  },
+  {
+   "code": "CNA",
+   "level": 3,
+   "parent": "CN",
+   "en": "Container",
+   "fr": null,
+   "description": "Storing object > Moveable storing object > Container"
+  },
+  {
+   "code": "CNB",
+   "level": 3,
+   "parent": "CN",
+   "en": "Gas cylinder",
+   "fr": null,
+   "description": "Storing object > Moveable storing object > Gas cylinder"
+  },
+  {
+   "code": "CNC",
+   "level": 3,
+   "parent": "CN",
+   "en": "Drum",
+   "fr": null,
+   "description": "Storing object > Moveable storing object > Drum"
+  },
+  {
+   "code": "CP",
+   "level": 2,
+   "parent": "C",
+   "en": "Thermal energy storing object",
+   "fr": null,
+   "description": "Storing object > Thermal energy storing object"
+  },
+  {
+   "code": "CPA",
+   "level": 3,
+   "parent": "CP",
+   "en": "Liquid Tank",
+   "fr": null,
+   "description": "Storing object > Thermal energy storing object > Liquid Tank"
+  },
+  {
+   "code": "CPB",
+   "level": 3,
+   "parent": "CP",
+   "en": "Gas tank",
+   "fr": null,
+   "description": "Storing object > Thermal energy storing object > Gas tank"
+  },
+  {
+   "code": "CPC",
+   "level": 3,
+   "parent": "CP",
+   "en": "Matter tank",
+   "fr": null,
+   "description": "Storing object > Thermal energy storing object > Matter tank"
+  },
+  {
+   "code": "CPD",
+   "level": 3,
+   "parent": "CP",
+   "en": "Crystalline tank",
+   "fr": null,
+   "description": "Storing object > Thermal energy storing object > Crystalline tank"
+  },
+  {
+   "code": "CQ",
+   "level": 2,
+   "parent": "C",
+   "en": "Mechanical energy storing object",
+   "fr": null,
+   "description": "Storing object > Mechanical energy storing object"
+  },
+  {
+   "code": "CQA",
+   "level": 3,
+   "parent": "CQ",
+   "en": "Flywheel",
+   "fr": null,
+   "description": "Storing object > Mechanical energy storing object > Flywheel"
+  },
+  {
+   "code": "CQB",
+   "level": 3,
+   "parent": "CQ",
+   "en": "Spring",
+   "fr": null,
+   "description": "Storing object > Mechanical energy storing object > Spring"
+  },
+  {
+   "code": "CQC",
+   "level": 3,
+   "parent": "CQ",
+   "en": "Counterweight",
+   "fr": null,
+   "description": "Storing object > Mechanical energy storing object > Counterweight"
+  },
+  {
+   "code": "E",
+   "level": 1,
+   "parent": null,
+   "en": "Emitting object",
+   "fr": null,
+   "description": "Emitting object"
+  },
+  {
+   "code": "EA",
+   "level": 2,
+   "parent": "E",
+   "en": "Light object",
+   "fr": null,
+   "description": "Emitting object > Light object"
+  },
+  {
+   "code": "EAA",
+   "level": 3,
+   "parent": "EA",
+   "en": "Electric lamp",
+   "fr": null,
+   "description": "Emitting object > Light object > Electric lamp"
+  },
+  {
+   "code": "EAB",
+   "level": 3,
+   "parent": "EA",
+   "en": "Gas lamp",
+   "fr": null,
+   "description": "Emitting object > Light object > Gas lamp"
+  },
+  {
+   "code": "EAC",
+   "level": 3,
+   "parent": "EA",
+   "en": "Liqiud lamp",
+   "fr": null,
+   "description": "Emitting object > Light object > Liqiud lamp"
+  },
+  {
+   "code": "EB",
+   "level": 2,
+   "parent": "E",
+   "en": "Electric heating object",
+   "fr": null,
+   "description": "Emitting object > Electric heating object"
+  },
+  {
+   "code": "EBA",
+   "level": 3,
+   "parent": "EB",
+   "en": "Electric boiler",
+   "fr": null,
+   "description": "Emitting object > Electric heating object > Electric boiler"
+  },
+  {
+   "code": "EBB",
+   "level": 3,
+   "parent": "EB",
+   "en": "Electric heating surface",
+   "fr": null,
+   "description": "Emitting object > Electric heating object > Electric heating surface"
+  },
+  {
+   "code": "EBC",
+   "level": 3,
+   "parent": "EB",
+   "en": "Heating cable",
+   "fr": null,
+   "description": "Emitting object > Electric heating object > Heating cable"
+  },
+  {
+   "code": "EBD",
+   "level": 3,
+   "parent": "EB",
+   "en": "Electric hot air blower",
+   "fr": null,
+   "description": "Emitting object > Electric heating object > Electric hot air blower"
+  },
+  {
+   "code": "EBE",
+   "level": 3,
+   "parent": "EB",
+   "en": "Arc heating object",
+   "fr": null,
+   "description": "Emitting object > Electric heating object > Arc heating object"
+  },
+  {
+   "code": "EBF",
+   "level": 3,
+   "parent": "EB",
+   "en": "Induction heater",
+   "fr": null,
+   "description": "Emitting object > Electric heating object > Induction heater"
+  },
+  {
+   "code": "EBG",
+   "level": 3,
+   "parent": "EB",
+   "en": "Infrared heater",
+   "fr": null,
+   "description": "Emitting object > Electric heating object > Infrared heater"
+  },
+  {
+   "code": "EBH",
+   "level": 3,
+   "parent": "EB",
+   "en": "Electric oven",
+   "fr": null,
+   "description": "Emitting object > Electric heating object > Electric oven"
+  },
+  {
+   "code": "EC",
+   "level": 2,
+   "parent": "E",
+   "en": "Electric cooling object",
+   "fr": null,
+   "description": "Emitting object > Electric cooling object"
+  },
+  {
+   "code": "ECA",
+   "level": 3,
+   "parent": "EC",
+   "en": "Electric cooling surface",
+   "fr": null,
+   "description": "Emitting object > Electric cooling object > Electric cooling surface"
+  },
+  {
+   "code": "ECB",
+   "level": 3,
+   "parent": "EC",
+   "en": "Electric cold air blower",
+   "fr": null,
+   "description": "Emitting object > Electric cooling object > Electric cold air blower"
+  },
+  {
+   "code": "ECC",
+   "level": 3,
+   "parent": "EC",
+   "en": "Compression chiller",
+   "fr": null,
+   "description": "Emitting object > Electric cooling object > Compression chiller"
+  },
+  {
+   "code": "EE",
+   "level": 2,
+   "parent": "E",
+   "en": "Wireless power object",
+   "fr": null,
+   "description": "Emitting object > Wireless power object"
+  },
+  {
+   "code": "EEA",
+   "level": 3,
+   "parent": "EE",
+   "en": "Inductive power antenna",
+   "fr": null,
+   "description": "Emitting object > Wireless power object > Inductive power antenna"
+  },
+  {
+   "code": "EEB",
+   "level": 3,
+   "parent": "EE",
+   "en": "Magnetron",
+   "fr": null,
+   "description": "Emitting object > Wireless power object > Magnetron"
+  },
+  {
+   "code": "EEC",
+   "level": 3,
+   "parent": "EE",
+   "en": "X-ray source",
+   "fr": null,
+   "description": "Emitting object > Wireless power object > X-ray source"
+  },
+  {
+   "code": "EED",
+   "level": 3,
+   "parent": "EE",
+   "en": "Gamma ray source",
+   "fr": null,
+   "description": "Emitting object > Wireless power object > Gamma ray source"
+  },
+  {
+   "code": "EEE",
+   "level": 3,
+   "parent": "EE",
+   "en": "Capacitive coupler",
+   "fr": null,
+   "description": "Emitting object > Wireless power object > Capacitive coupler"
+  },
+  {
+   "code": "EG",
+   "level": 2,
+   "parent": "E",
+   "en": "Thermal energy transfer object",
+   "fr": null,
+   "description": "Emitting object > Thermal energy transfer object"
+  },
+  {
+   "code": "EGA",
+   "level": 3,
+   "parent": "EG",
+   "en": "Heat pump",
+   "fr": null,
+   "description": "Emitting object > Thermal energy transfer object > Heat pump"
+  },
+  {
+   "code": "EGB",
+   "level": 3,
+   "parent": "EG",
+   "en": "Peltier element",
+   "fr": null,
+   "description": "Emitting object > Thermal energy transfer object > Peltier element"
+  },
+  {
+   "code": "EGC",
+   "level": 3,
+   "parent": "EG",
+   "en": "Heat exchanger",
+   "fr": null,
+   "description": "Emitting object > Thermal energy transfer object > Heat exchanger"
+  },
+  {
+   "code": "EM",
+   "level": 2,
+   "parent": "E",
+   "en": "Combustion heating object",
+   "fr": null,
+   "description": "Emitting object > Combustion heating object"
+  },
+  {
+   "code": "EMA",
+   "level": 3,
+   "parent": "EM",
+   "en": "Stove",
+   "fr": null,
+   "description": "Emitting object > Combustion heating object > Stove"
+  },
+  {
+   "code": "EMB",
+   "level": 3,
+   "parent": "EM",
+   "en": "Combustion boiler",
+   "fr": null,
+   "description": "Emitting object > Combustion heating object > Combustion boiler"
+  },
+  {
+   "code": "EMC",
+   "level": 3,
+   "parent": "EM",
+   "en": "Burner",
+   "fr": null,
+   "description": "Emitting object > Combustion heating object > Burner"
+  },
+  {
+   "code": "EP",
+   "level": 2,
+   "parent": "E",
+   "en": "Thermal heating object",
+   "fr": null,
+   "description": "Emitting object > Thermal heating object"
+  },
+  {
+   "code": "EPA",
+   "level": 3,
+   "parent": "EP",
+   "en": "Heating surface",
+   "fr": null,
+   "description": "Emitting object > Thermal heating object > Heating surface"
+  },
+  {
+   "code": "EPB",
+   "level": 3,
+   "parent": "EP",
+   "en": "Heating tube",
+   "fr": null,
+   "description": "Emitting object > Thermal heating object > Heating tube"
+  },
+  {
+   "code": "EPC",
+   "level": 3,
+   "parent": "EP",
+   "en": "Heating panel",
+   "fr": null,
+   "description": "Emitting object > Thermal heating object > Heating panel"
+  },
+  {
+   "code": "EPD",
+   "level": 3,
+   "parent": "EP",
+   "en": "Hot air blower",
+   "fr": null,
+   "description": "Emitting object > Thermal heating object > Hot air blower"
+  },
+  {
+   "code": "EQ",
+   "level": 2,
+   "parent": "E",
+   "en": "Thermal cooling object",
+   "fr": null,
+   "description": "Emitting object > Thermal cooling object"
+  },
+  {
+   "code": "EQA",
+   "level": 3,
+   "parent": "EQ",
+   "en": "Cooling surface",
+   "fr": null,
+   "description": "Emitting object > Thermal cooling object > Cooling surface"
+  },
+  {
+   "code": "EQB",
+   "level": 3,
+   "parent": "EQ",
+   "en": "Cooling panel",
+   "fr": null,
+   "description": "Emitting object > Thermal cooling object > Cooling panel"
+  },
+  {
+   "code": "EQC",
+   "level": 3,
+   "parent": "EQ",
+   "en": "Chiller",
+   "fr": null,
+   "description": "Emitting object > Thermal cooling object > Chiller"
+  },
+  {
+   "code": "EQD",
+   "level": 3,
+   "parent": "EQ",
+   "en": "Cooler",
+   "fr": null,
+   "description": "Emitting object > Thermal cooling object > Cooler"
+  },
+  {
+   "code": "EQE",
+   "level": 3,
+   "parent": "EQ",
+   "en": "Cooling tube",
+   "fr": null,
+   "description": "Emitting object > Thermal cooling object > Cooling tube"
+  },
+  {
+   "code": "ET",
+   "level": 2,
+   "parent": "E",
+   "en": "Nuclear powered heating object",
+   "fr": null,
+   "description": "Emitting object > Nuclear powered heating object"
+  },
+  {
+   "code": "ETA",
+   "level": 3,
+   "parent": "ET",
+   "en": "Boiling water reactor",
+   "fr": null,
+   "description": "Emitting object > Nuclear powered heating object > Boiling water reactor"
+  },
+  {
+   "code": "ETB",
+   "level": 3,
+   "parent": "ET",
+   "en": "Pressurized water reactor",
+   "fr": null,
+   "description": "Emitting object > Nuclear powered heating object > Pressurized water reactor"
+  },
+  {
+   "code": "ETC",
+   "level": 3,
+   "parent": "ET",
+   "en": "High-temperature gas-cooled reactor",
+   "fr": null,
+   "description": "Emitting object > Nuclear powered heating object > High-temperature gas-cooled reactor"
+  },
+  {
+   "code": "EU",
+   "level": 2,
+   "parent": "E",
+   "en": "Particle emitting object",
+   "fr": null,
+   "description": "Emitting object > Particle emitting object"
+  },
+  {
+   "code": "EUA",
+   "level": 3,
+   "parent": "EU",
+   "en": "Plasma generator",
+   "fr": null,
+   "description": "Emitting object > Particle emitting object > Plasma generator"
+  },
+  {
+   "code": "EUB",
+   "level": 3,
+   "parent": "EU",
+   "en": "Particle generator",
+   "fr": null,
+   "description": "Emitting object > Particle emitting object > Particle generator"
+  },
+  {
+   "code": "EV",
+   "level": 2,
+   "parent": "E",
+   "en": "Acoustic wave emitting object",
+   "fr": null,
+   "description": "Emitting object > Acoustic wave emitting object"
+  },
+  {
+   "code": "EVA",
+   "level": 3,
+   "parent": "EV",
+   "en": "Sonar",
+   "fr": null,
+   "description": "Emitting object > Acoustic wave emitting object > Sonar"
+  },
+  {
+   "code": "EVB",
+   "level": 3,
+   "parent": "EV",
+   "en": "Anti-noise loudspeaker",
+   "fr": null,
+   "description": "Emitting object > Acoustic wave emitting object > Anti-noise loudspeaker"
+  },
+  {
+   "code": "F",
+   "level": 1,
+   "parent": null,
+   "en": "Protecting object",
+   "fr": null,
+   "description": "Protecting object"
+  },
+  {
+   "code": "FA",
+   "level": 2,
+   "parent": "F",
+   "en": "Overvoltage protecting object",
+   "fr": null,
+   "description": "Protecting object > Overvoltage protecting object"
+  },
+  {
+   "code": "FAA",
+   "level": 3,
+   "parent": "FA",
+   "en": "Spark gap surge arrester",
+   "fr": null,
+   "description": "Protecting object > Overvoltage protecting object > Spark gap surge arrester"
+  },
+  {
+   "code": "FAB",
+   "level": 3,
+   "parent": "FA",
+   "en": "Varistor surge arrester",
+   "fr": null,
+   "description": "Protecting object > Overvoltage protecting object > Varistor surge arrester"
+  },
+  {
+   "code": "FAC",
+   "level": 3,
+   "parent": "FA",
+   "en": "Zener diode",
+   "fr": null,
+   "description": "Protecting object > Overvoltage protecting object > Zener diode"
+  },
+  {
+   "code": "FAD",
+   "level": 3,
+   "parent": "FA",
+   "en": "Surge protector",
+   "fr": null,
+   "description": "Protecting object > Overvoltage protecting object > Surge protector"
+  },
+  {
+   "code": "FB",
+   "level": 2,
+   "parent": "F",
+   "en": "Earth fault current protecting object",
+   "fr": null,
+   "description": "Protecting object > Earth fault current protecting object"
+  },
+  {
+   "code": "FBA",
+   "level": 3,
+   "parent": "FB",
+   "en": "Residual current device",
+   "fr": null,
+   "description": "Protecting object > Earth fault current protecting object > Residual current device"
+  },
+  {
+   "code": "FBB",
+   "level": 3,
+   "parent": "FB",
+   "en": "Neutral earthing limiter",
+   "fr": null,
+   "description": "Protecting object > Earth fault current protecting object > Neutral earthing limiter"
+  },
+  {
+   "code": "FC",
+   "level": 2,
+   "parent": "F",
+   "en": "Overcurrent protecting object",
+   "fr": null,
+   "description": "Protecting object > Overcurrent protecting object"
+  },
+  {
+   "code": "FCA",
+   "level": 3,
+   "parent": "FC",
+   "en": "Fuse",
+   "fr": null,
+   "description": "Protecting object > Overcurrent protecting object > Fuse"
+  },
+  {
+   "code": "FCB",
+   "level": 3,
+   "parent": "FC",
+   "en": "Miniature circuit-breaker",
+   "fr": null,
+   "description": "Protecting object > Overcurrent protecting object > Miniature circuit-breaker"
+  },
+  {
+   "code": "FCC",
+   "level": 3,
+   "parent": "FC",
+   "en": "Bimetal",
+   "fr": null,
+   "description": "Protecting object > Overcurrent protecting object > Bimetal"
+  },
+  {
+   "code": "FE",
+   "level": 2,
+   "parent": "F",
+   "en": "Field protecting object",
+   "fr": null,
+   "description": "Protecting object > Field protecting object"
+  },
+  {
+   "code": "FEA",
+   "level": 3,
+   "parent": "FE",
+   "en": "Electric field shield",
+   "fr": null,
+   "description": "Protecting object > Field protecting object > Electric field shield"
+  },
+  {
+   "code": "FEB",
+   "level": 3,
+   "parent": "FE",
+   "en": "Magnetic field shield",
+   "fr": null,
+   "description": "Protecting object > Field protecting object > Magnetic field shield"
+  },
+  {
+   "code": "FEC",
+   "level": 3,
+   "parent": "FE",
+   "en": "Electromagnetic field shield",
+   "fr": null,
+   "description": "Protecting object > Field protecting object > Electromagnetic field shield"
+  },
+  {
+   "code": "FL",
+   "level": 2,
+   "parent": "F",
+   "en": "Pressure protecting object",
+   "fr": null,
+   "description": "Protecting object > Pressure protecting object"
+  },
+  {
+   "code": "FLA",
+   "level": 3,
+   "parent": "FL",
+   "en": "Safety valve",
+   "fr": null,
+   "description": "Protecting object > Pressure protecting object > Safety valve"
+  },
+  {
+   "code": "FLB",
+   "level": 3,
+   "parent": "FL",
+   "en": "Safety damper",
+   "fr": null,
+   "description": "Protecting object > Pressure protecting object > Safety damper"
+  },
+  {
+   "code": "FLC",
+   "level": 3,
+   "parent": "FL",
+   "en": "Vacuum breaker",
+   "fr": null,
+   "description": "Protecting object > Pressure protecting object > Vacuum breaker"
+  },
+  {
+   "code": "FLD",
+   "level": 3,
+   "parent": "FL",
+   "en": "Rupture disc",
+   "fr": null,
+   "description": "Protecting object > Pressure protecting object > Rupture disc"
+  },
+  {
+   "code": "FLE",
+   "level": 3,
+   "parent": "FL",
+   "en": "Expansion tank",
+   "fr": null,
+   "description": "Protecting object > Pressure protecting object > Expansion tank"
+  },
+  {
+   "code": "FM",
+   "level": 2,
+   "parent": "F",
+   "en": "Fire protecting object",
+   "fr": null,
+   "description": "Protecting object > Fire protecting object"
+  },
+  {
+   "code": "FMA",
+   "level": 3,
+   "parent": "FM",
+   "en": "Fire damper",
+   "fr": null,
+   "description": "Protecting object > Fire protecting object > Fire damper"
+  },
+  {
+   "code": "FMB",
+   "level": 3,
+   "parent": "FM",
+   "en": "Flue damper",
+   "fr": null,
+   "description": "Protecting object > Fire protecting object > Flue damper"
+  },
+  {
+   "code": "FMC",
+   "level": 3,
+   "parent": "FM",
+   "en": "Fire-and-flue damper",
+   "fr": null,
+   "description": "Protecting object > Fire protecting object > Fire-and-flue damper"
+  },
+  {
+   "code": "FMD",
+   "level": 3,
+   "parent": "FM",
+   "en": "Fire extinguisher",
+   "fr": null,
+   "description": "Protecting object > Fire protecting object > Fire extinguisher"
+  },
+  {
+   "code": "FME",
+   "level": 3,
+   "parent": "FM",
+   "en": "Fire blind",
+   "fr": null,
+   "description": "Protecting object > Fire protecting object > Fire blind"
+  },
+  {
+   "code": "FMF",
+   "level": 3,
+   "parent": "FM",
+   "en": "Smoke curtain",
+   "fr": null,
+   "description": "Protecting object > Fire protecting object > Smoke curtain"
+  },
+  {
+   "code": "FMG",
+   "level": 3,
+   "parent": "FM",
+   "en": "Smoke closure",
+   "fr": null,
+   "description": "Protecting object > Fire protecting object > Smoke closure"
+  },
+  {
+   "code": "FMH",
+   "level": 3,
+   "parent": "FM",
+   "en": "Fire insulation",
+   "fr": null,
+   "description": "Protecting object > Fire protecting object > Fire insulation"
+  },
+  {
+   "code": "FMJ",
+   "level": 3,
+   "parent": "FM",
+   "en": "Fire retardant coating",
+   "fr": null,
+   "description": "Protecting object > Fire protecting object > Fire retardant coating"
+  },
+  {
+   "code": "FMK",
+   "level": 3,
+   "parent": "FM",
+   "en": "Fire impregnation",
+   "fr": null,
+   "description": "Protecting object > Fire protecting object > Fire impregnation"
+  },
+  {
+   "code": "FN",
+   "level": 2,
+   "parent": "F",
+   "en": "Mechanical force protecting object",
+   "fr": null,
+   "description": "Protecting object > Mechanical force protecting object"
+  },
+  {
+   "code": "FNA",
+   "level": 3,
+   "parent": "FN",
+   "en": "Safety clutch",
+   "fr": null,
+   "description": "Protecting object > Mechanical force protecting object > Safety clutch"
+  },
+  {
+   "code": "FNB",
+   "level": 3,
+   "parent": "FN",
+   "en": "Impact protection",
+   "fr": null,
+   "description": "Protecting object > Mechanical force protecting object > Impact protection"
+  },
+  {
+   "code": "FQ",
+   "level": 2,
+   "parent": "F",
+   "en": "Preventive protecting object",
+   "fr": null,
+   "description": "Protecting object > Preventive protecting object"
+  },
+  {
+   "code": "FQA",
+   "level": 3,
+   "parent": "FQ",
+   "en": "Protective mesh",
+   "fr": null,
+   "description": "Protecting object > Preventive protecting object > Protective mesh"
+  },
+  {
+   "code": "FQB",
+   "level": 3,
+   "parent": "FQ",
+   "en": "Glide protection",
+   "fr": null,
+   "description": "Protecting object > Preventive protecting object > Glide protection"
+  },
+  {
+   "code": "FQC",
+   "level": 3,
+   "parent": "FQ",
+   "en": "Protective rod",
+   "fr": null,
+   "description": "Protecting object > Preventive protecting object > Protective rod"
+  },
+  {
+   "code": "FQD",
+   "level": 3,
+   "parent": "FQ",
+   "en": "Protective rail",
+   "fr": null,
+   "description": "Protecting object > Preventive protecting object > Protective rail"
+  },
+  {
+   "code": "FQE",
+   "level": 3,
+   "parent": "FQ",
+   "en": "Protective fabric",
+   "fr": null,
+   "description": "Protecting object > Preventive protecting object > Protective fabric"
+  },
+  {
+   "code": "FQF",
+   "level": 3,
+   "parent": "FQ",
+   "en": "Glare protection",
+   "fr": null,
+   "description": "Protecting object > Preventive protecting object > Glare protection"
+  },
+  {
+   "code": "FQG",
+   "level": 3,
+   "parent": "FQ",
+   "en": "Splatter protection",
+   "fr": null,
+   "description": "Protecting object > Preventive protecting object > Splatter protection"
+  },
+  {
+   "code": "FQH",
+   "level": 3,
+   "parent": "FQ",
+   "en": "Break protection",
+   "fr": null,
+   "description": "Protecting object > Preventive protecting object > Break protection"
+  },
+  {
+   "code": "FQJ",
+   "level": 3,
+   "parent": "FQ",
+   "en": "Lock hatch cover",
+   "fr": null,
+   "description": "Protecting object > Preventive protecting object > Lock hatch cover"
+  },
+  {
+   "code": "FR",
+   "level": 2,
+   "parent": "F",
+   "en": "Wear protection object",
+   "fr": null,
+   "description": "Protecting object > Wear protection object"
+  },
+  {
+   "code": "FRA",
+   "level": 3,
+   "parent": "FR",
+   "en": "Lubrication object",
+   "fr": null,
+   "description": "Protecting object > Wear protection object > Lubrication object"
+  },
+  {
+   "code": "FRB",
+   "level": 3,
+   "parent": "FR",
+   "en": "Wear pad",
+   "fr": null,
+   "description": "Protecting object > Wear protection object > Wear pad"
+  },
+  {
+   "code": "FS",
+   "level": 2,
+   "parent": "F",
+   "en": "Environment protecting object",
+   "fr": null,
+   "description": "Protecting object > Environment protecting object"
+  },
+  {
+   "code": "FSA",
+   "level": 3,
+   "parent": "FS",
+   "en": "Plaster",
+   "fr": null,
+   "description": "Protecting object > Environment protecting object > Plaster"
+  },
+  {
+   "code": "FSB",
+   "level": 3,
+   "parent": "FS",
+   "en": "Paint",
+   "fr": null,
+   "description": "Protecting object > Environment protecting object > Paint"
+  },
+  {
+   "code": "FSC",
+   "level": 3,
+   "parent": "FS",
+   "en": "Impregnation",
+   "fr": null,
+   "description": "Protecting object > Environment protecting object > Impregnation"
+  },
+  {
+   "code": "FSD",
+   "level": 3,
+   "parent": "FS",
+   "en": "Shelter",
+   "fr": null,
+   "description": "Protecting object > Environment protecting object > Shelter"
+  },
+  {
+   "code": "FSE",
+   "level": 3,
+   "parent": "FS",
+   "en": "Seismic vibration control device",
+   "fr": null,
+   "description": "Protecting object > Environment protecting object > Seismic vibration control device"
+  },
+  {
+   "code": "FSF",
+   "level": 3,
+   "parent": "FS",
+   "en": "Corrosion protection",
+   "fr": null,
+   "description": "Protecting object > Environment protecting object > Corrosion protection"
+  },
+  {
+   "code": "FSG",
+   "level": 3,
+   "parent": "FS",
+   "en": "Protective seal",
+   "fr": null,
+   "description": "Protecting object > Environment protecting object > Protective seal"
+  },
+  {
+   "code": "FSH",
+   "level": 3,
+   "parent": "FS",
+   "en": "Material separating layer",
+   "fr": null,
+   "description": "Protecting object > Environment protecting object > Material separating layer"
+  },
+  {
+   "code": "G",
+   "level": 1,
+   "parent": null,
+   "en": "Generating object",
+   "fr": null,
+   "description": "Generating object"
+  },
+  {
+   "code": "GA",
+   "level": 2,
+   "parent": "G",
+   "en": "Mechanical to electrical energy generating object",
+   "fr": null,
+   "description": "Generating object > Mechanical to electrical energy generating object"
+  },
+  {
+   "code": "GAA",
+   "level": 3,
+   "parent": "GA",
+   "en": "AC generator",
+   "fr": null,
+   "description": "Generating object > Mechanical to electrical energy generating object > AC generator"
+  },
+  {
+   "code": "GAB",
+   "level": 3,
+   "parent": "GA",
+   "en": "DC generator",
+   "fr": null,
+   "description": "Generating object > Mechanical to electrical energy generating object > DC generator"
+  },
+  {
+   "code": "GB",
+   "level": 2,
+   "parent": "G",
+   "en": "Chemical to electrical energy generating object",
+   "fr": null,
+   "description": "Generating object > Chemical to electrical energy generating object"
+  },
+  {
+   "code": "GBA",
+   "level": 3,
+   "parent": "GB",
+   "en": "Electric battery",
+   "fr": null,
+   "description": "Generating object > Chemical to electrical energy generating object > Electric battery"
+  },
+  {
+   "code": "GBB",
+   "level": 3,
+   "parent": "GB",
+   "en": "Fuel cell",
+   "fr": null,
+   "description": "Generating object > Chemical to electrical energy generating object > Fuel cell"
+  },
+  {
+   "code": "GC",
+   "level": 2,
+   "parent": "G",
+   "en": "Solar to electrical energy generating object",
+   "fr": null,
+   "description": "Generating object > Solar to electrical energy generating object"
+  },
+  {
+   "code": "GCA",
+   "level": 3,
+   "parent": "GC",
+   "en": "Crystalline photovoltaic module",
+   "fr": null,
+   "description": "Generating object > Solar to electrical energy generating object > Crystalline photovoltaic module"
+  },
+  {
+   "code": "GCB",
+   "level": 3,
+   "parent": "GC",
+   "en": "Thin film photovoltaic module",
+   "fr": null,
+   "description": "Generating object > Solar to electrical energy generating object > Thin film photovoltaic module"
+  },
+  {
+   "code": "GF",
+   "level": 2,
+   "parent": "G",
+   "en": "Signal generating object",
+   "fr": null,
+   "description": "Generating object > Signal generating object"
+  },
+  {
+   "code": "GFA",
+   "level": 3,
+   "parent": "GF",
+   "en": "Electromagnetical transmitter",
+   "fr": null,
+   "description": "Generating object > Signal generating object > Electromagnetical transmitter"
+  },
+  {
+   "code": "GFB",
+   "level": 3,
+   "parent": "GF",
+   "en": "Signal generator",
+   "fr": null,
+   "description": "Generating object > Signal generating object > Signal generator"
+  },
+  {
+   "code": "GL",
+   "level": 2,
+   "parent": "G",
+   "en": "Continuous transfer object",
+   "fr": null,
+   "description": "Generating object > Continuous transfer object"
+  },
+  {
+   "code": "GLA",
+   "level": 3,
+   "parent": "GL",
+   "en": "Belt conveyer",
+   "fr": null,
+   "description": "Generating object > Continuous transfer object > Belt conveyer"
+  },
+  {
+   "code": "GLB",
+   "level": 3,
+   "parent": "GL",
+   "en": "Chain conveyer",
+   "fr": null,
+   "description": "Generating object > Continuous transfer object > Chain conveyer"
+  },
+  {
+   "code": "GLC",
+   "level": 3,
+   "parent": "GL",
+   "en": "Roller conveyer",
+   "fr": null,
+   "description": "Generating object > Continuous transfer object > Roller conveyer"
+  },
+  {
+   "code": "GLD",
+   "level": 3,
+   "parent": "GL",
+   "en": "Screw conveyer",
+   "fr": null,
+   "description": "Generating object > Continuous transfer object > Screw conveyer"
+  },
+  {
+   "code": "GLE",
+   "level": 3,
+   "parent": "GL",
+   "en": "Escalator",
+   "fr": null,
+   "description": "Generating object > Continuous transfer object > Escalator"
+  },
+  {
+   "code": "GLF",
+   "level": 3,
+   "parent": "GL",
+   "en": "Paternoster",
+   "fr": null,
+   "description": "Generating object > Continuous transfer object > Paternoster"
+  },
+  {
+   "code": "GLG",
+   "level": 3,
+   "parent": "GL",
+   "en": "Vibrating conveyor",
+   "fr": null,
+   "description": "Generating object > Continuous transfer object > Vibrating conveyor"
+  },
+  {
+   "code": "GM",
+   "level": 2,
+   "parent": "G",
+   "en": "Discontinuous transfer object",
+   "fr": null,
+   "description": "Generating object > Discontinuous transfer object"
+  },
+  {
+   "code": "GMA",
+   "level": 3,
+   "parent": "GM",
+   "en": "Wagon",
+   "fr": null,
+   "description": "Generating object > Discontinuous transfer object > Wagon"
+  },
+  {
+   "code": "GMB",
+   "level": 3,
+   "parent": "GM",
+   "en": "Elevator",
+   "fr": null,
+   "description": "Generating object > Discontinuous transfer object > Elevator"
+  },
+  {
+   "code": "GMC",
+   "level": 3,
+   "parent": "GM",
+   "en": "Crane",
+   "fr": null,
+   "description": "Generating object > Discontinuous transfer object > Crane"
+  },
+  {
+   "code": "GMD",
+   "level": 3,
+   "parent": "GM",
+   "en": "Palletizer",
+   "fr": null,
+   "description": "Generating object > Discontinuous transfer object > Palletizer"
+  },
+  {
+   "code": "GME",
+   "level": 3,
+   "parent": "GM",
+   "en": "Turntable",
+   "fr": null,
+   "description": "Generating object > Discontinuous transfer object > Turntable"
+  },
+  {
+   "code": "GMF",
+   "level": 3,
+   "parent": "GM",
+   "en": "Vibrating feeder",
+   "fr": null,
+   "description": "Generating object > Discontinuous transfer object > Vibrating feeder"
+  },
+  {
+   "code": "GP",
+   "level": 2,
+   "parent": "G",
+   "en": "Liquid flow generating object",
+   "fr": null,
+   "description": "Generating object > Liquid flow generating object"
+  },
+  {
+   "code": "GPA",
+   "level": 3,
+   "parent": "GP",
+   "en": "Positive displacement pump",
+   "fr": null,
+   "description": "Generating object > Liquid flow generating object > Positive displacement pump"
+  },
+  {
+   "code": "GPB",
+   "level": 3,
+   "parent": "GP",
+   "en": "Liquid velocity pump",
+   "fr": null,
+   "description": "Generating object > Liquid flow generating object > Liquid velocity pump"
+  },
+  {
+   "code": "GPC",
+   "level": 3,
+   "parent": "GP",
+   "en": "Hydraulic ram pump",
+   "fr": null,
+   "description": "Generating object > Liquid flow generating object > Hydraulic ram pump"
+  },
+  {
+   "code": "GPD",
+   "level": 3,
+   "parent": "GP",
+   "en": "Lubricator",
+   "fr": null,
+   "description": "Generating object > Liquid flow generating object > Lubricator"
+  },
+  {
+   "code": "GQ",
+   "level": 2,
+   "parent": "G",
+   "en": "Gaseous flow generating object",
+   "fr": null,
+   "description": "Generating object > Gaseous flow generating object"
+  },
+  {
+   "code": "GQA",
+   "level": 3,
+   "parent": "GQ",
+   "en": "Gas compressor",
+   "fr": null,
+   "description": "Generating object > Gaseous flow generating object > Gas compressor"
+  },
+  {
+   "code": "GQB",
+   "level": 3,
+   "parent": "GQ",
+   "en": "Mechanical fan",
+   "fr": null,
+   "description": "Generating object > Gaseous flow generating object > Mechanical fan"
+  },
+  {
+   "code": "GQC",
+   "level": 3,
+   "parent": "GQ",
+   "en": "Gas ejector",
+   "fr": null,
+   "description": "Generating object > Gaseous flow generating object > Gas ejector"
+  },
+  {
+   "code": "GR",
+   "level": 2,
+   "parent": "G",
+   "en": "Solar to thermal energy generating object",
+   "fr": null,
+   "description": "Generating object > Solar to thermal energy generating object"
+  },
+  {
+   "code": "GRA",
+   "level": 3,
+   "parent": "GR",
+   "en": "Solar Panel",
+   "fr": null,
+   "description": "Generating object > Solar to thermal energy generating object > Solar Panel"
+  },
+  {
+   "code": "GRB",
+   "level": 3,
+   "parent": "GR",
+   "en": "Solar tower",
+   "fr": null,
+   "description": "Generating object > Solar to thermal energy generating object > Solar tower"
+  },
+  {
+   "code": "H",
+   "level": 1,
+   "parent": null,
+   "en": "Matter processing object",
+   "fr": null,
+   "description": "Matter processing object"
+  },
+  {
+   "code": "HJ",
+   "level": 2,
+   "parent": "H",
+   "en": "Primary forming object",
+   "fr": null,
+   "description": "Matter processing object > Primary forming object"
+  },
+  {
+   "code": "HJA",
+   "level": 3,
+   "parent": "HJ",
+   "en": "Casting tool",
+   "fr": null,
+   "description": "Matter processing object > Primary forming object > Casting tool"
+  },
+  {
+   "code": "HJB",
+   "level": 3,
+   "parent": "HJ",
+   "en": "Press",
+   "fr": null,
+   "description": "Matter processing object > Primary forming object > Press"
+  },
+  {
+   "code": "HK",
+   "level": 2,
+   "parent": "H",
+   "en": "Surface treatment object",
+   "fr": null,
+   "description": "Matter processing object > Surface treatment object"
+  },
+  {
+   "code": "HKA",
+   "level": 3,
+   "parent": "HK",
+   "en": "Surface preparation machine",
+   "fr": null,
+   "description": "Matter processing object > Surface treatment object > Surface preparation machine"
+  },
+  {
+   "code": "HKB",
+   "level": 3,
+   "parent": "HK",
+   "en": "Surface modification machine",
+   "fr": null,
+   "description": "Matter processing object > Surface treatment object > Surface modification machine"
+  },
+  {
+   "code": "HKC",
+   "level": 3,
+   "parent": "HK",
+   "en": "Surface coating machine",
+   "fr": null,
+   "description": "Matter processing object > Surface treatment object > Surface coating machine"
+  },
+  {
+   "code": "HL",
+   "level": 2,
+   "parent": "H",
+   "en": "Assembling object",
+   "fr": null,
+   "description": "Matter processing object > Assembling object"
+  },
+  {
+   "code": "HLA",
+   "level": 3,
+   "parent": "HL",
+   "en": "Assembly robot",
+   "fr": null,
+   "description": "Matter processing object > Assembling object > Assembly robot"
+  },
+  {
+   "code": "HLB",
+   "level": 3,
+   "parent": "HL",
+   "en": "Mechanical joining machine",
+   "fr": null,
+   "description": "Matter processing object > Assembling object > Mechanical joining machine"
+  },
+  {
+   "code": "HLC",
+   "level": 3,
+   "parent": "HL",
+   "en": "Thermal welding machine",
+   "fr": null,
+   "description": "Matter processing object > Assembling object > Thermal welding machine"
+  },
+  {
+   "code": "HLD",
+   "level": 3,
+   "parent": "HL",
+   "en": "Chemical joining machine",
+   "fr": null,
+   "description": "Matter processing object > Assembling object > Chemical joining machine"
+  },
+  {
+   "code": "HM",
+   "level": 2,
+   "parent": "H",
+   "en": "Force separating object",
+   "fr": null,
+   "description": "Matter processing object > Force separating object"
+  },
+  {
+   "code": "HMA",
+   "level": 3,
+   "parent": "HM",
+   "en": "Settling tank",
+   "fr": null,
+   "description": "Matter processing object > Force separating object > Settling tank"
+  },
+  {
+   "code": "HMB",
+   "level": 3,
+   "parent": "HM",
+   "en": "Centrifuge",
+   "fr": null,
+   "description": "Matter processing object > Force separating object > Centrifuge"
+  },
+  {
+   "code": "HMC",
+   "level": 3,
+   "parent": "HM",
+   "en": "Cyclone",
+   "fr": null,
+   "description": "Matter processing object > Force separating object > Cyclone"
+  },
+  {
+   "code": "HP",
+   "level": 2,
+   "parent": "H",
+   "en": "Thermal separating object",
+   "fr": null,
+   "description": "Matter processing object > Thermal separating object"
+  },
+  {
+   "code": "HPA",
+   "level": 3,
+   "parent": "HP",
+   "en": "Dryer",
+   "fr": null,
+   "description": "Matter processing object > Thermal separating object > Dryer"
+  },
+  {
+   "code": "HPB",
+   "level": 3,
+   "parent": "HP",
+   "en": "Distillation column",
+   "fr": null,
+   "description": "Matter processing object > Thermal separating object > Distillation column"
+  },
+  {
+   "code": "HQ",
+   "level": 2,
+   "parent": "H",
+   "en": "Mechanical separating object",
+   "fr": null,
+   "description": "Matter processing object > Mechanical separating object"
+  },
+  {
+   "code": "HQA",
+   "level": 3,
+   "parent": "HQ",
+   "en": "Skimmer",
+   "fr": null,
+   "description": "Matter processing object > Mechanical separating object > Skimmer"
+  },
+  {
+   "code": "HQB",
+   "level": 3,
+   "parent": "HQ",
+   "en": "Separation grate",
+   "fr": null,
+   "description": "Matter processing object > Mechanical separating object > Separation grate"
+  },
+  {
+   "code": "HR",
+   "level": 2,
+   "parent": "H",
+   "en": "Electric or magnetic separating object",
+   "fr": null,
+   "description": "Matter processing object > Electric or magnetic separating object"
+  },
+  {
+   "code": "HRA",
+   "level": 3,
+   "parent": "HR",
+   "en": "Electrostatic separator",
+   "fr": null,
+   "description": "Matter processing object > Electric or magnetic separating object > Electrostatic separator"
+  },
+  {
+   "code": "HRB",
+   "level": 3,
+   "parent": "HR",
+   "en": "Magnetic separator",
+   "fr": null,
+   "description": "Matter processing object > Electric or magnetic separating object > Magnetic separator"
+  },
+  {
+   "code": "HS",
+   "level": 2,
+   "parent": "H",
+   "en": "Chemical separating object",
+   "fr": null,
+   "description": "Matter processing object > Chemical separating object"
+  },
+  {
+   "code": "HSA",
+   "level": 3,
+   "parent": "HS",
+   "en": "Ion exchanger",
+   "fr": null,
+   "description": "Matter processing object > Chemical separating object > Ion exchanger"
+  },
+  {
+   "code": "HSB",
+   "level": 3,
+   "parent": "HS",
+   "en": "Absorber",
+   "fr": null,
+   "description": "Matter processing object > Chemical separating object > Absorber"
+  },
+  {
+   "code": "HSC",
+   "level": 3,
+   "parent": "HS",
+   "en": "Adsorber",
+   "fr": null,
+   "description": "Matter processing object > Chemical separating object > Adsorber"
+  },
+  {
+   "code": "HU",
+   "level": 2,
+   "parent": "H",
+   "en": "Grinding and crushing object",
+   "fr": null,
+   "description": "Matter processing object > Grinding and crushing object"
+  },
+  {
+   "code": "HUA",
+   "level": 3,
+   "parent": "HU",
+   "en": "Cutter",
+   "fr": null,
+   "description": "Matter processing object > Grinding and crushing object > Cutter"
+  },
+  {
+   "code": "HUB",
+   "level": 3,
+   "parent": "HU",
+   "en": "Mill",
+   "fr": null,
+   "description": "Matter processing object > Grinding and crushing object > Mill"
+  },
+  {
+   "code": "HUC",
+   "level": 3,
+   "parent": "HU",
+   "en": "Crusher",
+   "fr": null,
+   "description": "Matter processing object > Grinding and crushing object > Crusher"
+  },
+  {
+   "code": "HV",
+   "level": 2,
+   "parent": "H",
+   "en": "Agglomerating object",
+   "fr": null,
+   "description": "Matter processing object > Agglomerating object"
+  },
+  {
+   "code": "HVA",
+   "level": 3,
+   "parent": "HV",
+   "en": "Pelletizer",
+   "fr": null,
+   "description": "Matter processing object > Agglomerating object > Pelletizer"
+  },
+  {
+   "code": "HVB",
+   "level": 3,
+   "parent": "HV",
+   "en": "Flocculator",
+   "fr": null,
+   "description": "Matter processing object > Agglomerating object > Flocculator"
+  },
+  {
+   "code": "HW",
+   "level": 2,
+   "parent": "H",
+   "en": "Mixing object",
+   "fr": null,
+   "description": "Matter processing object > Mixing object"
+  },
+  {
+   "code": "HWA",
+   "level": 3,
+   "parent": "HW",
+   "en": "Mixer",
+   "fr": null,
+   "description": "Matter processing object > Mixing object > Mixer"
+  },
+  {
+   "code": "HWB",
+   "level": 3,
+   "parent": "HW",
+   "en": "Humidifier",
+   "fr": null,
+   "description": "Matter processing object > Mixing object > Humidifier"
+  },
+  {
+   "code": "HX",
+   "level": 2,
+   "parent": "H",
+   "en": "Reacting object",
+   "fr": null,
+   "description": "Matter processing object > Reacting object"
+  },
+  {
+   "code": "HXA",
+   "level": 3,
+   "parent": "HX",
+   "en": "Chemical reactor",
+   "fr": null,
+   "description": "Matter processing object > Reacting object > Chemical reactor"
+  },
+  {
+   "code": "HXB",
+   "level": 3,
+   "parent": "HX",
+   "en": "Fermenter",
+   "fr": null,
+   "description": "Matter processing object > Reacting object > Fermenter"
+  },
+  {
+   "code": "K",
+   "level": 1,
+   "parent": null,
+   "en": "Information processing object",
+   "fr": null,
+   "description": "Information processing object"
+  },
+  {
+   "code": "KE",
+   "level": 2,
+   "parent": "K",
+   "en": "Electric signal processing object",
+   "fr": null,
+   "description": "Information processing object > Electric signal processing object"
+  },
+  {
+   "code": "KEA",
+   "level": 3,
+   "parent": "KE",
+   "en": "Computer",
+   "fr": null,
+   "description": "Information processing object > Electric signal processing object > Computer"
+  },
+  {
+   "code": "KEB",
+   "level": 3,
+   "parent": "KE",
+   "en": "Control unit",
+   "fr": null,
+   "description": "Information processing object > Electric signal processing object > Control unit"
+  },
+  {
+   "code": "KEC",
+   "level": 3,
+   "parent": "KE",
+   "en": "Communication device",
+   "fr": null,
+   "description": "Information processing object > Electric signal processing object > Communication device"
+  },
+  {
+   "code": "KED",
+   "level": 3,
+   "parent": "KE",
+   "en": "Router",
+   "fr": null,
+   "description": "Information processing object > Electric signal processing object > Router"
+  },
+  {
+   "code": "KEE",
+   "level": 3,
+   "parent": "KE",
+   "en": "Card writer",
+   "fr": null,
+   "description": "Information processing object > Electric signal processing object > Card writer"
+  },
+  {
+   "code": "KF",
+   "level": 2,
+   "parent": "K",
+   "en": "Electric signal relaying object",
+   "fr": null,
+   "description": "Information processing object > Electric signal relaying object"
+  },
+  {
+   "code": "KFA",
+   "level": 3,
+   "parent": "KF",
+   "en": "Relay",
+   "fr": null,
+   "description": "Information processing object > Electric signal relaying object > Relay"
+  },
+  {
+   "code": "KFB",
+   "level": 3,
+   "parent": "KF",
+   "en": "Time relay",
+   "fr": null,
+   "description": "Information processing object > Electric signal relaying object > Time relay"
+  },
+  {
+   "code": "KFC",
+   "level": 3,
+   "parent": "KF",
+   "en": "Repeater",
+   "fr": null,
+   "description": "Information processing object > Electric signal relaying object > Repeater"
+  },
+  {
+   "code": "KFD",
+   "level": 3,
+   "parent": "KF",
+   "en": "Electric network bridge",
+   "fr": null,
+   "description": "Information processing object > Electric signal relaying object > Electric network bridge"
+  },
+  {
+   "code": "KFE",
+   "level": 3,
+   "parent": "KF",
+   "en": "Electric network switch",
+   "fr": null,
+   "description": "Information processing object > Electric signal relaying object > Electric network switch"
+  },
+  {
+   "code": "KG",
+   "level": 2,
+   "parent": "K",
+   "en": "Optical signalling object",
+   "fr": null,
+   "description": "Information processing object > Optical signalling object"
+  },
+  {
+   "code": "KGA",
+   "level": 3,
+   "parent": "KG",
+   "en": "Optical network switch",
+   "fr": null,
+   "description": "Information processing object > Optical signalling object > Optical network switch"
+  },
+  {
+   "code": "KGB",
+   "level": 3,
+   "parent": "KG",
+   "en": "Optical router",
+   "fr": null,
+   "description": "Information processing object > Optical signalling object > Optical router"
+  },
+  {
+   "code": "KGC",
+   "level": 3,
+   "parent": "KG",
+   "en": "Optical repeater",
+   "fr": null,
+   "description": "Information processing object > Optical signalling object > Optical repeater"
+  },
+  {
+   "code": "KH",
+   "level": 2,
+   "parent": "K",
+   "en": "Fluid signalling object",
+   "fr": null,
+   "description": "Information processing object > Fluid signalling object"
+  },
+  {
+   "code": "KHA",
+   "level": 3,
+   "parent": "KH",
+   "en": "Fluid controller",
+   "fr": null,
+   "description": "Information processing object > Fluid signalling object > Fluid controller"
+  },
+  {
+   "code": "KHB",
+   "level": 3,
+   "parent": "KH",
+   "en": "Pilot valve",
+   "fr": null,
+   "description": "Information processing object > Fluid signalling object > Pilot valve"
+  },
+  {
+   "code": "KJ",
+   "level": 2,
+   "parent": "K",
+   "en": "Mechanical signalling object",
+   "fr": null,
+   "description": "Information processing object > Mechanical signalling object"
+  },
+  {
+   "code": "KJA",
+   "level": 3,
+   "parent": "KJ",
+   "en": "Mechanical regulator",
+   "fr": null,
+   "description": "Information processing object > Mechanical signalling object > Mechanical regulator"
+  },
+  {
+   "code": "KJB",
+   "level": 3,
+   "parent": "KJ",
+   "en": "Locking cylinder",
+   "fr": null,
+   "description": "Information processing object > Mechanical signalling object > Locking cylinder"
+  },
+  {
+   "code": "KJC",
+   "level": 3,
+   "parent": "KJ",
+   "en": "Key coded device",
+   "fr": null,
+   "description": "Information processing object > Mechanical signalling object > Key coded device"
+  },
+  {
+   "code": "KZ",
+   "level": 2,
+   "parent": "K",
+   "en": "Multiple kind signalling object",
+   "fr": null,
+   "description": "Information processing object > Multiple kind signalling object"
+  },
+  {
+   "code": "KZA",
+   "level": 3,
+   "parent": "KZ",
+   "en": "Multiple kind switch",
+   "fr": null,
+   "description": "Information processing object > Multiple kind signalling object > Multiple kind switch"
+  },
+  {
+   "code": "M",
+   "level": 1,
+   "parent": null,
+   "en": "Driving object",
+   "fr": null,
+   "description": "Driving object"
+  },
+  {
+   "code": "MA",
+   "level": 2,
+   "parent": "M",
+   "en": "Electromagnetic rotational driving object",
+   "fr": null,
+   "description": "Driving object > Electromagnetic rotational driving object"
+  },
+  {
+   "code": "MAA",
+   "level": 3,
+   "parent": "MA",
+   "en": "Electric motor",
+   "fr": null,
+   "description": "Driving object > Electromagnetic rotational driving object > Electric motor"
+  },
+  {
+   "code": "MAB",
+   "level": 3,
+   "parent": "MA",
+   "en": "Stepper motor",
+   "fr": null,
+   "description": "Driving object > Electromagnetic rotational driving object > Stepper motor"
+  },
+  {
+   "code": "MB",
+   "level": 2,
+   "parent": "M",
+   "en": "Electromagnetic linear driving object",
+   "fr": null,
+   "description": "Driving object > Electromagnetic linear driving object"
+  },
+  {
+   "code": "MBA",
+   "level": 3,
+   "parent": "MB",
+   "en": "Linear motor",
+   "fr": null,
+   "description": "Driving object > Electromagnetic linear driving object > Linear motor"
+  },
+  {
+   "code": "MBB",
+   "level": 3,
+   "parent": "MB",
+   "en": "Electromagnet",
+   "fr": null,
+   "description": "Driving object > Electromagnetic linear driving object > Electromagnet"
+  },
+  {
+   "code": "MC",
+   "level": 2,
+   "parent": "M",
+   "en": "Magnetic force driving object",
+   "fr": null,
+   "description": "Driving object > Magnetic force driving object"
+  },
+  {
+   "code": "MCA",
+   "level": 3,
+   "parent": "MC",
+   "en": "Permanent magnet",
+   "fr": null,
+   "description": "Driving object > Magnetic force driving object > Permanent magnet"
+  },
+  {
+   "code": "MD",
+   "level": 2,
+   "parent": "M",
+   "en": "Piezoelectric driving object",
+   "fr": null,
+   "description": "Driving object > Piezoelectric driving object"
+  },
+  {
+   "code": "MDA",
+   "level": 3,
+   "parent": "MD",
+   "en": "Piezoelectric motor",
+   "fr": null,
+   "description": "Driving object > Piezoelectric driving object > Piezoelectric motor"
+  },
+  {
+   "code": "ML",
+   "level": 2,
+   "parent": "M",
+   "en": "Mechanical energy driving object",
+   "fr": null,
+   "description": "Driving object > Mechanical energy driving object"
+  },
+  {
+   "code": "MLA",
+   "level": 3,
+   "parent": "ML",
+   "en": "Gravity energy drive",
+   "fr": null,
+   "description": "Driving object > Mechanical energy driving object > Gravity energy drive"
+  },
+  {
+   "code": "MLB",
+   "level": 3,
+   "parent": "ML",
+   "en": "Elastic energy drive",
+   "fr": null,
+   "description": "Driving object > Mechanical energy driving object > Elastic energy drive"
+  },
+  {
+   "code": "MLC",
+   "level": 3,
+   "parent": "ML",
+   "en": "Wind turbine",
+   "fr": null,
+   "description": "Driving object > Mechanical energy driving object > Wind turbine"
+  },
+  {
+   "code": "MLD",
+   "level": 3,
+   "parent": "ML",
+   "en": "Water turbine",
+   "fr": null,
+   "description": "Driving object > Mechanical energy driving object > Water turbine"
+  },
+  {
+   "code": "MLE",
+   "level": 3,
+   "parent": "ML",
+   "en": "Gas turbine",
+   "fr": null,
+   "description": "Driving object > Mechanical energy driving object > Gas turbine"
+  },
+  {
+   "code": "MM",
+   "level": 2,
+   "parent": "M",
+   "en": "Fluid powered driving object",
+   "fr": null,
+   "description": "Driving object > Fluid powered driving object"
+  },
+  {
+   "code": "MMA",
+   "level": 3,
+   "parent": "MM",
+   "en": "Hydraulic cylinder",
+   "fr": null,
+   "description": "Driving object > Fluid powered driving object > Hydraulic cylinder"
+  },
+  {
+   "code": "MMB",
+   "level": 3,
+   "parent": "MM",
+   "en": "Pneumatic cylinder",
+   "fr": null,
+   "description": "Driving object > Fluid powered driving object > Pneumatic cylinder"
+  },
+  {
+   "code": "MMC",
+   "level": 3,
+   "parent": "MM",
+   "en": "Hydraulic motor",
+   "fr": null,
+   "description": "Driving object > Fluid powered driving object > Hydraulic motor"
+  },
+  {
+   "code": "MMD",
+   "level": 3,
+   "parent": "MM",
+   "en": "Pneumatic motor",
+   "fr": null,
+   "description": "Driving object > Fluid powered driving object > Pneumatic motor"
+  },
+  {
+   "code": "MS",
+   "level": 2,
+   "parent": "M",
+   "en": "Combustion engine",
+   "fr": null,
+   "description": "Driving object > Combustion engine"
+  },
+  {
+   "code": "MSA",
+   "level": 3,
+   "parent": "MS",
+   "en": "Otto cycle engine",
+   "fr": null,
+   "description": "Driving object > Combustion engine > Otto cycle engine"
+  },
+  {
+   "code": "MSB",
+   "level": 3,
+   "parent": "MS",
+   "en": "Diesel cycle engine",
+   "fr": null,
+   "description": "Driving object > Combustion engine > Diesel cycle engine"
+  },
+  {
+   "code": "MSC",
+   "level": 3,
+   "parent": "MS",
+   "en": "Wankel engine",
+   "fr": null,
+   "description": "Driving object > Combustion engine > Wankel engine"
+  },
+  {
+   "code": "MT",
+   "level": 2,
+   "parent": "M",
+   "en": "Heat engine",
+   "fr": null,
+   "description": "Driving object > Heat engine"
+  },
+  {
+   "code": "MTA",
+   "level": 3,
+   "parent": "MT",
+   "en": "Steam engine",
+   "fr": null,
+   "description": "Driving object > Heat engine > Steam engine"
+  },
+  {
+   "code": "MTB",
+   "level": 3,
+   "parent": "MT",
+   "en": "Stirling Engine",
+   "fr": null,
+   "description": "Driving object > Heat engine > Stirling Engine"
+  },
+  {
+   "code": "N",
+   "level": 1,
+   "parent": null,
+   "en": "Covering object",
+   "fr": null,
+   "description": "Covering object"
+  },
+  {
+   "code": "NA",
+   "level": 2,
+   "parent": "N",
+   "en": "Infilling object",
+   "fr": null,
+   "description": "Covering object > Infilling object"
+  },
+  {
+   "code": "NAA",
+   "level": 3,
+   "parent": "NA",
+   "en": "Pane",
+   "fr": null,
+   "description": "Covering object > Infilling object > Pane"
+  },
+  {
+   "code": "NAB",
+   "level": 3,
+   "parent": "NA",
+   "en": "Panel",
+   "fr": null,
+   "description": "Covering object > Infilling object > Panel"
+  },
+  {
+   "code": "NAC",
+   "level": 3,
+   "parent": "NA",
+   "en": "Grating",
+   "fr": null,
+   "description": "Covering object > Infilling object > Grating"
+  },
+  {
+   "code": "NAD",
+   "level": 3,
+   "parent": "NA",
+   "en": "Sealing joint",
+   "fr": null,
+   "description": "Covering object > Infilling object > Sealing joint"
+  },
+  {
+   "code": "NB",
+   "level": 2,
+   "parent": "N",
+   "en": "Closure object",
+   "fr": null,
+   "description": "Covering object > Closure object"
+  },
+  {
+   "code": "NBA",
+   "level": 3,
+   "parent": "NB",
+   "en": "Door leaf",
+   "fr": null,
+   "description": "Covering object > Closure object > Door leaf"
+  },
+  {
+   "code": "NBB",
+   "level": 3,
+   "parent": "NB",
+   "en": "Leaf of large door",
+   "fr": null,
+   "description": "Covering object > Closure object > Leaf of large door"
+  },
+  {
+   "code": "NBC",
+   "level": 3,
+   "parent": "NB",
+   "en": "Cabinet door",
+   "fr": null,
+   "description": "Covering object > Closure object > Cabinet door"
+  },
+  {
+   "code": "NBD",
+   "level": 3,
+   "parent": "NB",
+   "en": "Gate leaf",
+   "fr": null,
+   "description": "Covering object > Closure object > Gate leaf"
+  },
+  {
+   "code": "NBE",
+   "level": 3,
+   "parent": "NB",
+   "en": "Hatch cover",
+   "fr": null,
+   "description": "Covering object > Closure object > Hatch cover"
+  },
+  {
+   "code": "NC",
+   "level": 2,
+   "parent": "N",
+   "en": "Finishing object",
+   "fr": null,
+   "description": "Covering object > Finishing object"
+  },
+  {
+   "code": "NCA",
+   "level": 3,
+   "parent": "NC",
+   "en": "Paving",
+   "fr": null,
+   "description": "Covering object > Finishing object > Paving"
+  },
+  {
+   "code": "NCB",
+   "level": 3,
+   "parent": "NC",
+   "en": "Wall covering",
+   "fr": null,
+   "description": "Covering object > Finishing object > Wall covering"
+  },
+  {
+   "code": "NCC",
+   "level": 3,
+   "parent": "NC",
+   "en": "Flooring",
+   "fr": null,
+   "description": "Covering object > Finishing object > Flooring"
+  },
+  {
+   "code": "NCD",
+   "level": 3,
+   "parent": "NC",
+   "en": "Ceiling finish",
+   "fr": null,
+   "description": "Covering object > Finishing object > Ceiling finish"
+  },
+  {
+   "code": "NCE",
+   "level": 3,
+   "parent": "NC",
+   "en": "Roofing",
+   "fr": null,
+   "description": "Covering object > Finishing object > Roofing"
+  },
+  {
+   "code": "NCF",
+   "level": 3,
+   "parent": "NC",
+   "en": "Window Sill",
+   "fr": null,
+   "description": "Covering object > Finishing object > Window Sill"
+  },
+  {
+   "code": "NCG",
+   "level": 3,
+   "parent": "NC",
+   "en": "Plant mat",
+   "fr": null,
+   "description": "Covering object > Finishing object > Plant mat"
+  },
+  {
+   "code": "NCH",
+   "level": 3,
+   "parent": "NC",
+   "en": "Surface forming object",
+   "fr": null,
+   "description": "Covering object > Finishing object > Surface forming object"
+  },
+  {
+   "code": "ND",
+   "level": 2,
+   "parent": "N",
+   "en": "Terminating object",
+   "fr": null,
+   "description": "Covering object > Terminating object"
+  },
+  {
+   "code": "NDA",
+   "level": 3,
+   "parent": "ND",
+   "en": "Curb",
+   "fr": null,
+   "description": "Covering object > Terminating object > Curb"
+  },
+  {
+   "code": "NDB",
+   "level": 3,
+   "parent": "ND",
+   "en": "Crown",
+   "fr": null,
+   "description": "Covering object > Terminating object > Crown"
+  },
+  {
+   "code": "NDC",
+   "level": 3,
+   "parent": "ND",
+   "en": "Raised floor edge",
+   "fr": null,
+   "description": "Covering object > Terminating object > Raised floor edge"
+  },
+  {
+   "code": "NDD",
+   "level": 3,
+   "parent": "ND",
+   "en": "Ceiling edge",
+   "fr": null,
+   "description": "Covering object > Terminating object > Ceiling edge"
+  },
+  {
+   "code": "NDE",
+   "level": 3,
+   "parent": "ND",
+   "en": "Fascia",
+   "fr": null,
+   "description": "Covering object > Terminating object > Fascia"
+  },
+  {
+   "code": "NE",
+   "level": 2,
+   "parent": "N",
+   "en": "Hiding object",
+   "fr": null,
+   "description": "Covering object > Hiding object"
+  },
+  {
+   "code": "NEA",
+   "level": 3,
+   "parent": "NE",
+   "en": "Ceiling lining",
+   "fr": null,
+   "description": "Covering object > Hiding object > Ceiling lining"
+  },
+  {
+   "code": "NEB",
+   "level": 3,
+   "parent": "NE",
+   "en": "Skirting board",
+   "fr": null,
+   "description": "Covering object > Hiding object > Skirting board"
+  },
+  {
+   "code": "NEC",
+   "level": 3,
+   "parent": "NE",
+   "en": "Wall corner lining",
+   "fr": null,
+   "description": "Covering object > Hiding object > Wall corner lining"
+  },
+  {
+   "code": "NED",
+   "level": 3,
+   "parent": "NE",
+   "en": "Flashing",
+   "fr": null,
+   "description": "Covering object > Hiding object > Flashing"
+  },
+  {
+   "code": "NEE",
+   "level": 3,
+   "parent": "NE",
+   "en": "Reveal liner",
+   "fr": null,
+   "description": "Covering object > Hiding object > Reveal liner"
+  },
+  {
+   "code": "P",
+   "level": 1,
+   "parent": null,
+   "en": "Presenting object",
+   "fr": null,
+   "description": "Presenting object"
+  },
+  {
+   "code": "PF",
+   "level": 2,
+   "parent": "P",
+   "en": "Visible state indicator",
+   "fr": null,
+   "description": "Presenting object > Visible state indicator"
+  },
+  {
+   "code": "PFA",
+   "level": 3,
+   "parent": "PF",
+   "en": "Signal lamp",
+   "fr": null,
+   "description": "Presenting object > Visible state indicator > Signal lamp"
+  },
+  {
+   "code": "PFB",
+   "level": 3,
+   "parent": "PF",
+   "en": "Semaphore",
+   "fr": null,
+   "description": "Presenting object > Visible state indicator > Semaphore"
+  },
+  {
+   "code": "PG",
+   "level": 2,
+   "parent": "P",
+   "en": "Scalar display",
+   "fr": null,
+   "description": "Presenting object > Scalar display"
+  },
+  {
+   "code": "PGA",
+   "level": 3,
+   "parent": "PG",
+   "en": "Voltmeter",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Voltmeter"
+  },
+  {
+   "code": "PGB",
+   "level": 3,
+   "parent": "PG",
+   "en": "Resistivity indicator",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Resistivity indicator"
+  },
+  {
+   "code": "PGC",
+   "level": 3,
+   "parent": "PG",
+   "en": "Ampere meter",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Ampere meter"
+  },
+  {
+   "code": "PGD",
+   "level": 3,
+   "parent": "PG",
+   "en": "Density indicator",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Density indicator"
+  },
+  {
+   "code": "PGE",
+   "level": 3,
+   "parent": "PG",
+   "en": "Field indicator",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Field indicator"
+  },
+  {
+   "code": "PGF",
+   "level": 3,
+   "parent": "PG",
+   "en": "Flow meter",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Flow meter"
+  },
+  {
+   "code": "PGG",
+   "level": 3,
+   "parent": "PG",
+   "en": "Dimension indicator",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Dimension indicator"
+  },
+  {
+   "code": "PGH",
+   "level": 3,
+   "parent": "PG",
+   "en": "Energy meter",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Energy meter"
+  },
+  {
+   "code": "PGJ",
+   "level": 3,
+   "parent": "PG",
+   "en": "Wattmeter",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Wattmeter"
+  },
+  {
+   "code": "PGK",
+   "level": 3,
+   "parent": "PG",
+   "en": "Clock",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Clock"
+  },
+  {
+   "code": "PGL",
+   "level": 3,
+   "parent": "PG",
+   "en": "Level indicator",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Level indicator"
+  },
+  {
+   "code": "PGM",
+   "level": 3,
+   "parent": "PG",
+   "en": "Humidity indicator",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Humidity indicator"
+  },
+  {
+   "code": "PGP",
+   "level": 3,
+   "parent": "PG",
+   "en": "Pressure indicator",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Pressure indicator"
+  },
+  {
+   "code": "PGQ",
+   "level": 3,
+   "parent": "PG",
+   "en": "Concentration indicator",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Concentration indicator"
+  },
+  {
+   "code": "PGR",
+   "level": 3,
+   "parent": "PG",
+   "en": "Electromagnetic wave indicator",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Electromagnetic wave indicator"
+  },
+  {
+   "code": "PGS",
+   "level": 3,
+   "parent": "PG",
+   "en": "Frequency meter",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Frequency meter"
+  },
+  {
+   "code": "PGT",
+   "level": 3,
+   "parent": "PG",
+   "en": "Temperature indicator",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Temperature indicator"
+  },
+  {
+   "code": "PGV",
+   "level": 3,
+   "parent": "PG",
+   "en": "power factor meter",
+   "fr": null,
+   "description": "Presenting object > Scalar display > power factor meter"
+  },
+  {
+   "code": "PGW",
+   "level": 3,
+   "parent": "PG",
+   "en": "Force indicator",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Force indicator"
+  },
+  {
+   "code": "PGX",
+   "level": 3,
+   "parent": "PG",
+   "en": "Audio spectrometer",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Audio spectrometer"
+  },
+  {
+   "code": "PGZ",
+   "level": 3,
+   "parent": "PG",
+   "en": "Quantity meter",
+   "fr": null,
+   "description": "Presenting object > Scalar display > Quantity meter"
+  },
+  {
+   "code": "PH",
+   "level": 2,
+   "parent": "P",
+   "en": "Graphical display",
+   "fr": null,
+   "description": "Presenting object > Graphical display"
+  },
+  {
+   "code": "PHA",
+   "level": 3,
+   "parent": "PH",
+   "en": "Display",
+   "fr": null,
+   "description": "Presenting object > Graphical display > Display"
+  },
+  {
+   "code": "PHB",
+   "level": 3,
+   "parent": "PH",
+   "en": "Projector",
+   "fr": null,
+   "description": "Presenting object > Graphical display > Projector"
+  },
+  {
+   "code": "PHC",
+   "level": 3,
+   "parent": "PH",
+   "en": "Printer",
+   "fr": null,
+   "description": "Presenting object > Graphical display > Printer"
+  },
+  {
+   "code": "PHD",
+   "level": 3,
+   "parent": "PH",
+   "en": "Marking",
+   "fr": null,
+   "description": "Presenting object > Graphical display > Marking"
+  },
+  {
+   "code": "PHE",
+   "level": 3,
+   "parent": "PH",
+   "en": "Sign",
+   "fr": null,
+   "description": "Presenting object > Graphical display > Sign"
+  },
+  {
+   "code": "PHF",
+   "level": 3,
+   "parent": "PH",
+   "en": "Marking post",
+   "fr": null,
+   "description": "Presenting object > Graphical display > Marking post"
+  },
+  {
+   "code": "PJ",
+   "level": 2,
+   "parent": "P",
+   "en": "Acoustic device",
+   "fr": null,
+   "description": "Presenting object > Acoustic device"
+  },
+  {
+   "code": "PJA",
+   "level": 3,
+   "parent": "PJ",
+   "en": "Loudspeaker",
+   "fr": null,
+   "description": "Presenting object > Acoustic device > Loudspeaker"
+  },
+  {
+   "code": "PJB",
+   "level": 3,
+   "parent": "PJ",
+   "en": "Horn",
+   "fr": null,
+   "description": "Presenting object > Acoustic device > Horn"
+  },
+  {
+   "code": "PJC",
+   "level": 3,
+   "parent": "PJ",
+   "en": "Bell",
+   "fr": null,
+   "description": "Presenting object > Acoustic device > Bell"
+  },
+  {
+   "code": "PK",
+   "level": 2,
+   "parent": "P",
+   "en": "Tactile device",
+   "fr": null,
+   "description": "Presenting object > Tactile device"
+  },
+  {
+   "code": "PKA",
+   "level": 3,
+   "parent": "PK",
+   "en": "Vibrator",
+   "fr": null,
+   "description": "Presenting object > Tactile device > Vibrator"
+  },
+  {
+   "code": "PKB",
+   "level": 3,
+   "parent": "PK",
+   "en": "Braille text sign",
+   "fr": null,
+   "description": "Presenting object > Tactile device > Braille text sign"
+  },
+  {
+   "code": "PKC",
+   "level": 3,
+   "parent": "PK",
+   "en": "Free height warning",
+   "fr": null,
+   "description": "Presenting object > Tactile device > Free height warning"
+  },
+  {
+   "code": "PL",
+   "level": 2,
+   "parent": "P",
+   "en": "Ornamental object",
+   "fr": null,
+   "description": "Presenting object > Ornamental object"
+  },
+  {
+   "code": "PLA",
+   "level": 3,
+   "parent": "PL",
+   "en": "Cornice",
+   "fr": null,
+   "description": "Presenting object > Ornamental object > Cornice"
+  },
+  {
+   "code": "PLB",
+   "level": 3,
+   "parent": "PL",
+   "en": "Figure",
+   "fr": null,
+   "description": "Presenting object > Ornamental object > Figure"
+  },
+  {
+   "code": "PLC",
+   "level": 3,
+   "parent": "PL",
+   "en": "Frieze",
+   "fr": null,
+   "description": "Presenting object > Ornamental object > Frieze"
+  },
+  {
+   "code": "PLD",
+   "level": 3,
+   "parent": "PL",
+   "en": "Picture",
+   "fr": null,
+   "description": "Presenting object > Ornamental object > Picture"
+  },
+  {
+   "code": "PLE",
+   "level": 3,
+   "parent": "PL",
+   "en": "Carpet",
+   "fr": null,
+   "description": "Presenting object > Ornamental object > Carpet"
+  },
+  {
+   "code": "PZ",
+   "level": 2,
+   "parent": "P",
+   "en": "Multiple form presenting object",
+   "fr": null,
+   "description": "Presenting object > Multiple form presenting object"
+  },
+  {
+   "code": "PZA",
+   "level": 3,
+   "parent": "PZ",
+   "en": "Audio-visual alarm",
+   "fr": null,
+   "description": "Presenting object > Multiple form presenting object > Audio-visual alarm"
+  },
+  {
+   "code": "PZB",
+   "level": 3,
+   "parent": "PZ",
+   "en": "Television set",
+   "fr": null,
+   "description": "Presenting object > Multiple form presenting object > Television set"
+  },
+  {
+   "code": "Q",
+   "level": 1,
+   "parent": null,
+   "en": "Controlling object",
+   "fr": null,
+   "description": "Controlling object"
+  },
+  {
+   "code": "QA",
+   "level": 2,
+   "parent": "Q",
+   "en": "Electric controlling object",
+   "fr": null,
+   "description": "Controlling object > Electric controlling object"
+  },
+  {
+   "code": "QAA",
+   "level": 3,
+   "parent": "QA",
+   "en": "Contactor",
+   "fr": null,
+   "description": "Controlling object > Electric controlling object > Contactor"
+  },
+  {
+   "code": "QAB",
+   "level": 3,
+   "parent": "QA",
+   "en": "Circuit breaker",
+   "fr": null,
+   "description": "Controlling object > Electric controlling object > Circuit breaker"
+  },
+  {
+   "code": "QAC",
+   "level": 3,
+   "parent": "QA",
+   "en": "Electronic power switch",
+   "fr": null,
+   "description": "Controlling object > Electric controlling object > Electronic power switch"
+  },
+  {
+   "code": "QB",
+   "level": 2,
+   "parent": "Q",
+   "en": "Electric separating object",
+   "fr": null,
+   "description": "Controlling object > Electric separating object"
+  },
+  {
+   "code": "QBA",
+   "level": 3,
+   "parent": "QB",
+   "en": "Fuseless disconnector",
+   "fr": null,
+   "description": "Controlling object > Electric separating object > Fuseless disconnector"
+  },
+  {
+   "code": "QBB",
+   "level": 3,
+   "parent": "QB",
+   "en": "Fused disconnector",
+   "fr": null,
+   "description": "Controlling object > Electric separating object > Fused disconnector"
+  },
+  {
+   "code": "QC",
+   "level": 2,
+   "parent": "Q",
+   "en": "Electric earthing object",
+   "fr": null,
+   "description": "Controlling object > Electric earthing object"
+  },
+  {
+   "code": "QCA",
+   "level": 3,
+   "parent": "QC",
+   "en": "Earthing switch",
+   "fr": null,
+   "description": "Controlling object > Electric earthing object > Earthing switch"
+  },
+  {
+   "code": "QM",
+   "level": 2,
+   "parent": "Q",
+   "en": "Sealed fluid switching object",
+   "fr": null,
+   "description": "Controlling object > Sealed fluid switching object"
+  },
+  {
+   "code": "QMA",
+   "level": 3,
+   "parent": "QM",
+   "en": "Liquid shutoff valve",
+   "fr": null,
+   "description": "Controlling object > Sealed fluid switching object > Liquid shutoff valve"
+  },
+  {
+   "code": "QMB",
+   "level": 3,
+   "parent": "QM",
+   "en": "Gas shutoff valve",
+   "fr": null,
+   "description": "Controlling object > Sealed fluid switching object > Gas shutoff valve"
+  },
+  {
+   "code": "QN",
+   "level": 2,
+   "parent": "Q",
+   "en": "Sealed fluid varying object",
+   "fr": null,
+   "description": "Controlling object > Sealed fluid varying object"
+  },
+  {
+   "code": "QNA",
+   "level": 3,
+   "parent": "QN",
+   "en": "Liquid control valve",
+   "fr": null,
+   "description": "Controlling object > Sealed fluid varying object > Liquid control valve"
+  },
+  {
+   "code": "QNB",
+   "level": 3,
+   "parent": "QN",
+   "en": "Gas control valve",
+   "fr": null,
+   "description": "Controlling object > Sealed fluid varying object > Gas control valve"
+  },
+  {
+   "code": "QP",
+   "level": 2,
+   "parent": "Q",
+   "en": "Open fluid controlling object",
+   "fr": null,
+   "description": "Controlling object > Open fluid controlling object"
+  },
+  {
+   "code": "QPA",
+   "level": 3,
+   "parent": "QP",
+   "en": "Lock gate",
+   "fr": null,
+   "description": "Controlling object > Open fluid controlling object > Lock gate"
+  },
+  {
+   "code": "QPB",
+   "level": 3,
+   "parent": "QP",
+   "en": "Vortex generator",
+   "fr": null,
+   "description": "Controlling object > Open fluid controlling object > Vortex generator"
+  },
+  {
+   "code": "QPC",
+   "level": 3,
+   "parent": "QP",
+   "en": "Rudder",
+   "fr": null,
+   "description": "Controlling object > Open fluid controlling object > Rudder"
+  },
+  {
+   "code": "QQ",
+   "level": 2,
+   "parent": "Q",
+   "en": "Space access object",
+   "fr": null,
+   "description": "Controlling object > Space access object"
+  },
+  {
+   "code": "QQA",
+   "level": 3,
+   "parent": "QQ",
+   "en": "Window",
+   "fr": null,
+   "description": "Controlling object > Space access object > Window"
+  },
+  {
+   "code": "QQB",
+   "level": 3,
+   "parent": "QQ",
+   "en": "Window unit",
+   "fr": null,
+   "description": "Controlling object > Space access object > Window unit"
+  },
+  {
+   "code": "QQC",
+   "level": 3,
+   "parent": "QQ",
+   "en": "Door",
+   "fr": null,
+   "description": "Controlling object > Space access object > Door"
+  },
+  {
+   "code": "QQD",
+   "level": 3,
+   "parent": "QQ",
+   "en": "Hatch",
+   "fr": null,
+   "description": "Controlling object > Space access object > Hatch"
+  },
+  {
+   "code": "QQE",
+   "level": 3,
+   "parent": "QQ",
+   "en": "Large door",
+   "fr": null,
+   "description": "Controlling object > Space access object > Large door"
+  },
+  {
+   "code": "QQF",
+   "level": 3,
+   "parent": "QQ",
+   "en": "Gate",
+   "fr": null,
+   "description": "Controlling object > Space access object > Gate"
+  },
+  {
+   "code": "QQG",
+   "level": 3,
+   "parent": "QQ",
+   "en": "Rail scotch block",
+   "fr": null,
+   "description": "Controlling object > Space access object > Rail scotch block"
+  },
+  {
+   "code": "QR",
+   "level": 2,
+   "parent": "Q",
+   "en": "Solid substance flow varying object",
+   "fr": null,
+   "description": "Controlling object > Solid substance flow varying object"
+  },
+  {
+   "code": "QRA",
+   "level": 3,
+   "parent": "QR",
+   "en": "Rotary air lock valve",
+   "fr": null,
+   "description": "Controlling object > Solid substance flow varying object > Rotary air lock valve"
+  },
+  {
+   "code": "QRB",
+   "level": 3,
+   "parent": "QR",
+   "en": "Iris valve",
+   "fr": null,
+   "description": "Controlling object > Solid substance flow varying object > Iris valve"
+  },
+  {
+   "code": "QRC",
+   "level": 3,
+   "parent": "QR",
+   "en": "Flap gate valve",
+   "fr": null,
+   "description": "Controlling object > Solid substance flow varying object > Flap gate valve"
+  },
+  {
+   "code": "QS",
+   "level": 2,
+   "parent": "Q",
+   "en": "Mechanical movement controlling object",
+   "fr": null,
+   "description": "Controlling object > Mechanical movement controlling object"
+  },
+  {
+   "code": "QSA",
+   "level": 3,
+   "parent": "QS",
+   "en": "Lock",
+   "fr": null,
+   "description": "Controlling object > Mechanical movement controlling object > Lock"
+  },
+  {
+   "code": "QSB",
+   "level": 3,
+   "parent": "QS",
+   "en": "Track switch",
+   "fr": null,
+   "description": "Controlling object > Mechanical movement controlling object > Track switch"
+  },
+  {
+   "code": "QZ",
+   "level": 2,
+   "parent": "Q",
+   "en": "Multiple measure controlling object",
+   "fr": null,
+   "description": "Controlling object > Multiple measure controlling object"
+  },
+  {
+   "code": "QZA",
+   "level": 3,
+   "parent": "QZ",
+   "en": "Earthing and disconnecting switch",
+   "fr": null,
+   "description": "Controlling object > Multiple measure controlling object > Earthing and disconnecting switch"
+  },
+  {
+   "code": "R",
+   "level": 1,
+   "parent": null,
+   "en": "Restricting object",
+   "fr": null,
+   "description": "Restricting object"
+  },
+  {
+   "code": "RA",
+   "level": 2,
+   "parent": "R",
+   "en": "Electricity restricting object",
+   "fr": null,
+   "description": "Restricting object > Electricity restricting object"
+  },
+  {
+   "code": "RAA",
+   "level": 3,
+   "parent": "RA",
+   "en": "Diode",
+   "fr": null,
+   "description": "Restricting object > Electricity restricting object > Diode"
+  },
+  {
+   "code": "RAB",
+   "level": 3,
+   "parent": "RA",
+   "en": "Reactor",
+   "fr": null,
+   "description": "Restricting object > Electricity restricting object > Reactor"
+  },
+  {
+   "code": "RAC",
+   "level": 3,
+   "parent": "RA",
+   "en": "Resistor",
+   "fr": null,
+   "description": "Restricting object > Electricity restricting object > Resistor"
+  },
+  {
+   "code": "RB",
+   "level": 2,
+   "parent": "R",
+   "en": "Electricity stabilising object",
+   "fr": null,
+   "description": "Restricting object > Electricity stabilising object"
+  },
+  {
+   "code": "RBA",
+   "level": 3,
+   "parent": "RB",
+   "en": "Uninterrupted power supply",
+   "fr": null,
+   "description": "Restricting object > Electricity stabilising object > Uninterrupted power supply"
+  },
+  {
+   "code": "RBB",
+   "level": 3,
+   "parent": "RB",
+   "en": "Power filter",
+   "fr": null,
+   "description": "Restricting object > Electricity stabilising object > Power filter"
+  },
+  {
+   "code": "RBC",
+   "level": 3,
+   "parent": "RB",
+   "en": "Phase compensator",
+   "fr": null,
+   "description": "Restricting object > Electricity stabilising object > Phase compensator"
+  },
+  {
+   "code": "RBD",
+   "level": 3,
+   "parent": "RB",
+   "en": "Power equaliser",
+   "fr": null,
+   "description": "Restricting object > Electricity stabilising object > Power equaliser"
+  },
+  {
+   "code": "RF",
+   "level": 2,
+   "parent": "R",
+   "en": "Signal stabilising object",
+   "fr": null,
+   "description": "Restricting object > Signal stabilising object"
+  },
+  {
+   "code": "RFA",
+   "level": 3,
+   "parent": "RF",
+   "en": "Signal equaliser",
+   "fr": null,
+   "description": "Restricting object > Signal stabilising object > Signal equaliser"
+  },
+  {
+   "code": "RFB",
+   "level": 3,
+   "parent": "RF",
+   "en": "Signal filter",
+   "fr": null,
+   "description": "Restricting object > Signal stabilising object > Signal filter"
+  },
+  {
+   "code": "RL",
+   "level": 2,
+   "parent": "R",
+   "en": "Movement restricting object",
+   "fr": null,
+   "description": "Restricting object > Movement restricting object"
+  },
+  {
+   "code": "RLA",
+   "level": 3,
+   "parent": "RL",
+   "en": "Security chain",
+   "fr": null,
+   "description": "Restricting object > Movement restricting object > Security chain"
+  },
+  {
+   "code": "RLB",
+   "level": 3,
+   "parent": "RL",
+   "en": "Shock absorber",
+   "fr": null,
+   "description": "Restricting object > Movement restricting object > Shock absorber"
+  },
+  {
+   "code": "RLC",
+   "level": 3,
+   "parent": "RL",
+   "en": "Brake",
+   "fr": null,
+   "description": "Restricting object > Movement restricting object > Brake"
+  },
+  {
+   "code": "RLD",
+   "level": 3,
+   "parent": "RL",
+   "en": "Speed bump",
+   "fr": null,
+   "description": "Restricting object > Movement restricting object > Speed bump"
+  },
+  {
+   "code": "RM",
+   "level": 2,
+   "parent": "R",
+   "en": "Return flow restricting object",
+   "fr": null,
+   "description": "Restricting object > Return flow restricting object"
+  },
+  {
+   "code": "RMA",
+   "level": 3,
+   "parent": "RM",
+   "en": "Non-return valve",
+   "fr": null,
+   "description": "Restricting object > Return flow restricting object > Non-return valve"
+  },
+  {
+   "code": "RMB",
+   "level": 3,
+   "parent": "RM",
+   "en": "Check damper",
+   "fr": null,
+   "description": "Restricting object > Return flow restricting object > Check damper"
+  },
+  {
+   "code": "RMC",
+   "level": 3,
+   "parent": "RM",
+   "en": "Flap",
+   "fr": null,
+   "description": "Restricting object > Return flow restricting object > Flap"
+  },
+  {
+   "code": "RMD",
+   "level": 3,
+   "parent": "RM",
+   "en": "Stench trap",
+   "fr": null,
+   "description": "Restricting object > Return flow restricting object > Stench trap"
+  },
+  {
+   "code": "RN",
+   "level": 2,
+   "parent": "R",
+   "en": "Flow restrictor",
+   "fr": null,
+   "description": "Restricting object > Flow restrictor"
+  },
+  {
+   "code": "RNA",
+   "level": 3,
+   "parent": "RN",
+   "en": "Regulating valve",
+   "fr": null,
+   "description": "Restricting object > Flow restrictor > Regulating valve"
+  },
+  {
+   "code": "RNB",
+   "level": 3,
+   "parent": "RN",
+   "en": "Regulating damper",
+   "fr": null,
+   "description": "Restricting object > Flow restrictor > Regulating damper"
+  },
+  {
+   "code": "RNC",
+   "level": 3,
+   "parent": "RN",
+   "en": "Soilds regulating valve",
+   "fr": null,
+   "description": "Restricting object > Flow restrictor > Soilds regulating valve"
+  },
+  {
+   "code": "RND",
+   "level": 3,
+   "parent": "RN",
+   "en": "Diffuser",
+   "fr": null,
+   "description": "Restricting object > Flow restrictor > Diffuser"
+  },
+  {
+   "code": "RQ",
+   "level": 2,
+   "parent": "R",
+   "en": "Local climate stabilising object",
+   "fr": null,
+   "description": "Restricting object > Local climate stabilising object"
+  },
+  {
+   "code": "RQA",
+   "level": 3,
+   "parent": "RQ",
+   "en": "Insulation",
+   "fr": null,
+   "description": "Restricting object > Local climate stabilising object > Insulation"
+  },
+  {
+   "code": "RQB",
+   "level": 3,
+   "parent": "RQ",
+   "en": "Stabilizing layer",
+   "fr": null,
+   "description": "Restricting object > Local climate stabilising object > Stabilizing layer"
+  },
+  {
+   "code": "RQC",
+   "level": 3,
+   "parent": "RQ",
+   "en": "Noise barrier",
+   "fr": null,
+   "description": "Restricting object > Local climate stabilising object > Noise barrier"
+  },
+  {
+   "code": "RQD",
+   "level": 3,
+   "parent": "RQ",
+   "en": "Screen",
+   "fr": null,
+   "description": "Restricting object > Local climate stabilising object > Screen"
+  },
+  {
+   "code": "RQE",
+   "level": 3,
+   "parent": "RQ",
+   "en": "Curtain",
+   "fr": null,
+   "description": "Restricting object > Local climate stabilising object > Curtain"
+  },
+  {
+   "code": "RQF",
+   "level": 3,
+   "parent": "RQ",
+   "en": "Louvered blind",
+   "fr": null,
+   "description": "Restricting object > Local climate stabilising object > Louvered blind"
+  },
+  {
+   "code": "RQG",
+   "level": 3,
+   "parent": "RQ",
+   "en": "Shutter",
+   "fr": null,
+   "description": "Restricting object > Local climate stabilising object > Shutter"
+  },
+  {
+   "code": "RQH",
+   "level": 3,
+   "parent": "RQ",
+   "en": "Weed control fabric",
+   "fr": null,
+   "description": "Restricting object > Local climate stabilising object > Weed control fabric"
+  },
+  {
+   "code": "RQJ",
+   "level": 3,
+   "parent": "RQ",
+   "en": "Screen wall",
+   "fr": null,
+   "description": "Restricting object > Local climate stabilising object > Screen wall"
+  },
+  {
+   "code": "RU",
+   "level": 2,
+   "parent": "R",
+   "en": "Access restricting object",
+   "fr": null,
+   "description": "Restricting object > Access restricting object"
+  },
+  {
+   "code": "RUA",
+   "level": 3,
+   "parent": "RU",
+   "en": "Fence",
+   "fr": null,
+   "description": "Restricting object > Access restricting object > Fence"
+  },
+  {
+   "code": "RUB",
+   "level": 3,
+   "parent": "RU",
+   "en": "Movable barrier",
+   "fr": null,
+   "description": "Restricting object > Access restricting object > Movable barrier"
+  },
+  {
+   "code": "RUC",
+   "level": 3,
+   "parent": "RU",
+   "en": "Turnstile",
+   "fr": null,
+   "description": "Restricting object > Access restricting object > Turnstile"
+  },
+  {
+   "code": "RUD",
+   "level": 3,
+   "parent": "RU",
+   "en": "Bollard",
+   "fr": null,
+   "description": "Restricting object > Access restricting object > Bollard"
+  },
+  {
+   "code": "RUE",
+   "level": 3,
+   "parent": "RU",
+   "en": "Rodent barrier",
+   "fr": null,
+   "description": "Restricting object > Access restricting object > Rodent barrier"
+  },
+  {
+   "code": "RUF",
+   "level": 3,
+   "parent": "RU",
+   "en": "Bird mesh",
+   "fr": null,
+   "description": "Restricting object > Access restricting object > Bird mesh"
+  },
+  {
+   "code": "S",
+   "level": 1,
+   "parent": null,
+   "en": "Human interacting object",
+   "fr": null,
+   "description": "Human interacting object"
+  },
+  {
+   "code": "SF",
+   "level": 2,
+   "parent": "S",
+   "en": "Face interaction object",
+   "fr": null,
+   "description": "Human interacting object > Face interaction object"
+  },
+  {
+   "code": "SFA",
+   "level": 3,
+   "parent": "SF",
+   "en": "Eye focus reader",
+   "fr": null,
+   "description": "Human interacting object > Face interaction object > Eye focus reader"
+  },
+  {
+   "code": "SFB",
+   "level": 3,
+   "parent": "SF",
+   "en": "Face recognition device",
+   "fr": null,
+   "description": "Human interacting object > Face interaction object > Face recognition device"
+  },
+  {
+   "code": "SG",
+   "level": 2,
+   "parent": "S",
+   "en": "Hand interaction device",
+   "fr": null,
+   "description": "Human interacting object > Hand interaction device"
+  },
+  {
+   "code": "SGA",
+   "level": 3,
+   "parent": "SG",
+   "en": "Turn handle",
+   "fr": null,
+   "description": "Human interacting object > Hand interaction device > Turn handle"
+  },
+  {
+   "code": "SGB",
+   "level": 3,
+   "parent": "SG",
+   "en": "Grip handle",
+   "fr": null,
+   "description": "Human interacting object > Hand interaction device > Grip handle"
+  },
+  {
+   "code": "SGC",
+   "level": 3,
+   "parent": "SG",
+   "en": "Push handle",
+   "fr": null,
+   "description": "Human interacting object > Hand interaction device > Push handle"
+  },
+  {
+   "code": "SGD",
+   "level": 3,
+   "parent": "SG",
+   "en": "Lever handle",
+   "fr": null,
+   "description": "Human interacting object > Hand interaction device > Lever handle"
+  },
+  {
+   "code": "SGE",
+   "level": 3,
+   "parent": "SG",
+   "en": "Pull handle",
+   "fr": null,
+   "description": "Human interacting object > Hand interaction device > Pull handle"
+  },
+  {
+   "code": "SGF",
+   "level": 3,
+   "parent": "SG",
+   "en": "Key",
+   "fr": null,
+   "description": "Human interacting object > Hand interaction device > Key"
+  },
+  {
+   "code": "SH",
+   "level": 2,
+   "parent": "S",
+   "en": "Foot interaction device",
+   "fr": null,
+   "description": "Human interacting object > Foot interaction device"
+  },
+  {
+   "code": "SHA",
+   "level": 3,
+   "parent": "SH",
+   "en": "Pedal switch",
+   "fr": null,
+   "description": "Human interacting object > Foot interaction device > Pedal switch"
+  },
+  {
+   "code": "SJ",
+   "level": 2,
+   "parent": "S",
+   "en": "Finger interaction device",
+   "fr": null,
+   "description": "Human interacting object > Finger interaction device"
+  },
+  {
+   "code": "SJA",
+   "level": 3,
+   "parent": "SJ",
+   "en": "Flip switch",
+   "fr": null,
+   "description": "Human interacting object > Finger interaction device > Flip switch"
+  },
+  {
+   "code": "SJB",
+   "level": 3,
+   "parent": "SJ",
+   "en": "Pushbutton",
+   "fr": null,
+   "description": "Human interacting object > Finger interaction device > Pushbutton"
+  },
+  {
+   "code": "SJC",
+   "level": 3,
+   "parent": "SJ",
+   "en": "Touch actuator",
+   "fr": null,
+   "description": "Human interacting object > Finger interaction device > Touch actuator"
+  },
+  {
+   "code": "SJD",
+   "level": 3,
+   "parent": "SJ",
+   "en": "Turning wheel",
+   "fr": null,
+   "description": "Human interacting object > Finger interaction device > Turning wheel"
+  },
+  {
+   "code": "SK",
+   "level": 2,
+   "parent": "S",
+   "en": "Movement interaction device",
+   "fr": null,
+   "description": "Human interacting object > Movement interaction device"
+  },
+  {
+   "code": "SKA",
+   "level": 3,
+   "parent": "SK",
+   "en": "Joystick",
+   "fr": null,
+   "description": "Human interacting object > Movement interaction device > Joystick"
+  },
+  {
+   "code": "SKB",
+   "level": 3,
+   "parent": "SK",
+   "en": "Mouse",
+   "fr": null,
+   "description": "Human interacting object > Movement interaction device > Mouse"
+  },
+  {
+   "code": "SZ",
+   "level": 2,
+   "parent": "S",
+   "en": "Multi-interaction device",
+   "fr": null,
+   "description": "Human interacting object > Multi-interaction device"
+  },
+  {
+   "code": "SZA",
+   "level": 3,
+   "parent": "SZ",
+   "en": "Operating panel",
+   "fr": null,
+   "description": "Human interacting object > Multi-interaction device > Operating panel"
+  },
+  {
+   "code": "T",
+   "level": 1,
+   "parent": null,
+   "en": "Transforming object",
+   "fr": null,
+   "description": "Transforming object"
+  },
+  {
+   "code": "TA",
+   "level": 2,
+   "parent": "T",
+   "en": "Electric energy transforming object",
+   "fr": null,
+   "description": "Transforming object > Electric energy transforming object"
+  },
+  {
+   "code": "TAA",
+   "level": 3,
+   "parent": "TA",
+   "en": "Transformer",
+   "fr": null,
+   "description": "Transforming object > Electric energy transforming object > Transformer"
+  },
+  {
+   "code": "TAB",
+   "level": 3,
+   "parent": "TA",
+   "en": "DC/DC converter",
+   "fr": null,
+   "description": "Transforming object > Electric energy transforming object > DC/DC converter"
+  },
+  {
+   "code": "TAC",
+   "level": 3,
+   "parent": "TA",
+   "en": "Frequency converter",
+   "fr": null,
+   "description": "Transforming object > Electric energy transforming object > Frequency converter"
+  },
+  {
+   "code": "TAD",
+   "level": 3,
+   "parent": "TA",
+   "en": "Phase shifter",
+   "fr": null,
+   "description": "Transforming object > Electric energy transforming object > Phase shifter"
+  },
+  {
+   "code": "TB",
+   "level": 2,
+   "parent": "T",
+   "en": "Electric energy converting object",
+   "fr": null,
+   "description": "Transforming object > Electric energy converting object"
+  },
+  {
+   "code": "TBA",
+   "level": 3,
+   "parent": "TB",
+   "en": "Rectifier",
+   "fr": null,
+   "description": "Transforming object > Electric energy converting object > Rectifier"
+  },
+  {
+   "code": "TBB",
+   "level": 3,
+   "parent": "TB",
+   "en": "Inverter",
+   "fr": null,
+   "description": "Transforming object > Electric energy converting object > Inverter"
+  },
+  {
+   "code": "TBC",
+   "level": 3,
+   "parent": "TB",
+   "en": "Bidirectional converter",
+   "fr": null,
+   "description": "Transforming object > Electric energy converting object > Bidirectional converter"
+  },
+  {
+   "code": "TC",
+   "level": 2,
+   "parent": "T",
+   "en": "Universal power supply",
+   "fr": null,
+   "description": "Transforming object > Universal power supply"
+  },
+  {
+   "code": "TCA",
+   "level": 3,
+   "parent": "TC",
+   "en": "Universal AC power supply",
+   "fr": null,
+   "description": "Transforming object > Universal power supply > Universal AC power supply"
+  },
+  {
+   "code": "TCB",
+   "level": 3,
+   "parent": "TC",
+   "en": "Universal DC power supply",
+   "fr": null,
+   "description": "Transforming object > Universal power supply > Universal DC power supply"
+  },
+  {
+   "code": "TF",
+   "level": 2,
+   "parent": "T",
+   "en": "Signal converting object",
+   "fr": null,
+   "description": "Transforming object > Signal converting object"
+  },
+  {
+   "code": "TFA",
+   "level": 3,
+   "parent": "TF",
+   "en": "Amplifier",
+   "fr": null,
+   "description": "Transforming object > Signal converting object > Amplifier"
+  },
+  {
+   "code": "TFB",
+   "level": 3,
+   "parent": "TF",
+   "en": "Signal antenna",
+   "fr": null,
+   "description": "Transforming object > Signal converting object > Signal antenna"
+  },
+  {
+   "code": "TFC",
+   "level": 3,
+   "parent": "TF",
+   "en": "Signal converter",
+   "fr": null,
+   "description": "Transforming object > Signal converting object > Signal converter"
+  },
+  {
+   "code": "TFD",
+   "level": 3,
+   "parent": "TF",
+   "en": "Optical receiver/transmitter",
+   "fr": null,
+   "description": "Transforming object > Signal converting object > Optical receiver/transmitter"
+  },
+  {
+   "code": "TFE",
+   "level": 3,
+   "parent": "TF",
+   "en": "Telephone",
+   "fr": null,
+   "description": "Transforming object > Signal converting object > Telephone"
+  },
+  {
+   "code": "TL",
+   "level": 2,
+   "parent": "T",
+   "en": "Mechanical energy transforming object",
+   "fr": null,
+   "description": "Transforming object > Mechanical energy transforming object"
+  },
+  {
+   "code": "TLA",
+   "level": 3,
+   "parent": "TL",
+   "en": "Gear",
+   "fr": null,
+   "description": "Transforming object > Mechanical energy transforming object > Gear"
+  },
+  {
+   "code": "TLB",
+   "level": 3,
+   "parent": "TL",
+   "en": "Torque converter",
+   "fr": null,
+   "description": "Transforming object > Mechanical energy transforming object > Torque converter"
+  },
+  {
+   "code": "TLC",
+   "level": 3,
+   "parent": "TL",
+   "en": "Lever",
+   "fr": null,
+   "description": "Transforming object > Mechanical energy transforming object > Lever"
+  },
+  {
+   "code": "TM",
+   "level": 2,
+   "parent": "T",
+   "en": "Mass reduction object",
+   "fr": null,
+   "description": "Transforming object > Mass reduction object"
+  },
+  {
+   "code": "TMA",
+   "level": 3,
+   "parent": "TM",
+   "en": "Drilling machine",
+   "fr": null,
+   "description": "Transforming object > Mass reduction object > Drilling machine"
+  },
+  {
+   "code": "TMB",
+   "level": 3,
+   "parent": "TM",
+   "en": "Thermal cutter",
+   "fr": null,
+   "description": "Transforming object > Mass reduction object > Thermal cutter"
+  },
+  {
+   "code": "TMC",
+   "level": 3,
+   "parent": "TM",
+   "en": "Etching machine",
+   "fr": null,
+   "description": "Transforming object > Mass reduction object > Etching machine"
+  },
+  {
+   "code": "TP",
+   "level": 2,
+   "parent": "T",
+   "en": "Matter reshaping object",
+   "fr": null,
+   "description": "Transforming object > Matter reshaping object"
+  },
+  {
+   "code": "TPA",
+   "level": 3,
+   "parent": "TP",
+   "en": "Forging machine",
+   "fr": null,
+   "description": "Transforming object > Matter reshaping object > Forging machine"
+  },
+  {
+   "code": "TPB",
+   "level": 3,
+   "parent": "TP",
+   "en": "Extruder",
+   "fr": null,
+   "description": "Transforming object > Matter reshaping object > Extruder"
+  },
+  {
+   "code": "TPC",
+   "level": 3,
+   "parent": "TP",
+   "en": "Wire drawing machine",
+   "fr": null,
+   "description": "Transforming object > Matter reshaping object > Wire drawing machine"
+  },
+  {
+   "code": "TPD",
+   "level": 3,
+   "parent": "TP",
+   "en": "Rolling machine",
+   "fr": null,
+   "description": "Transforming object > Matter reshaping object > Rolling machine"
+  },
+  {
+   "code": "TPE",
+   "level": 3,
+   "parent": "TP",
+   "en": "Bending machine",
+   "fr": null,
+   "description": "Transforming object > Matter reshaping object > Bending machine"
+  },
+  {
+   "code": "TPF",
+   "level": 3,
+   "parent": "TP",
+   "en": "Electromagnetic forming machine",
+   "fr": null,
+   "description": "Transforming object > Matter reshaping object > Electromagnetic forming machine"
+  },
+  {
+   "code": "TR",
+   "level": 2,
+   "parent": "T",
+   "en": "Organic plant",
+   "fr": null,
+   "description": "Transforming object > Organic plant"
+  },
+  {
+   "code": "TRA",
+   "level": 3,
+   "parent": "TR",
+   "en": "Tree",
+   "fr": null,
+   "description": "Transforming object > Organic plant > Tree"
+  },
+  {
+   "code": "TRB",
+   "level": 3,
+   "parent": "TR",
+   "en": "Shrub",
+   "fr": null,
+   "description": "Transforming object > Organic plant > Shrub"
+  },
+  {
+   "code": "TRC",
+   "level": 3,
+   "parent": "TR",
+   "en": "Climber",
+   "fr": null,
+   "description": "Transforming object > Organic plant > Climber"
+  },
+  {
+   "code": "TRD",
+   "level": 3,
+   "parent": "TR",
+   "en": "Herb",
+   "fr": null,
+   "description": "Transforming object > Organic plant > Herb"
+  },
+  {
+   "code": "U",
+   "level": 1,
+   "parent": null,
+   "en": "Holding object",
+   "fr": null,
+   "description": "Holding object"
+  },
+  {
+   "code": "UA",
+   "level": 2,
+   "parent": "U",
+   "en": "Positioning object",
+   "fr": null,
+   "description": "Holding object > Positioning object"
+  },
+  {
+   "code": "UAA",
+   "level": 3,
+   "parent": "UA",
+   "en": "Isolator",
+   "fr": null,
+   "description": "Holding object > Positioning object > Isolator"
+  },
+  {
+   "code": "UAB",
+   "level": 3,
+   "parent": "UA",
+   "en": "Cable gland",
+   "fr": null,
+   "description": "Holding object > Positioning object > Cable gland"
+  },
+  {
+   "code": "UAC",
+   "level": 3,
+   "parent": "UA",
+   "en": "Light fixture",
+   "fr": null,
+   "description": "Holding object > Positioning object > Light fixture"
+  },
+  {
+   "code": "UAD",
+   "level": 3,
+   "parent": "UA",
+   "en": "Stair stringer",
+   "fr": null,
+   "description": "Holding object > Positioning object > Stair stringer"
+  },
+  {
+   "code": "UAE",
+   "level": 3,
+   "parent": "UA",
+   "en": "Batten",
+   "fr": null,
+   "description": "Holding object > Positioning object > Batten"
+  },
+  {
+   "code": "UAF",
+   "level": 3,
+   "parent": "UA",
+   "en": "Stake",
+   "fr": null,
+   "description": "Holding object > Positioning object > Stake"
+  },
+  {
+   "code": "UAG",
+   "level": 3,
+   "parent": "UA",
+   "en": "Rail gauge",
+   "fr": null,
+   "description": "Holding object > Positioning object > Rail gauge"
+  },
+  {
+   "code": "UAH",
+   "level": 3,
+   "parent": "UA",
+   "en": "Clamp",
+   "fr": null,
+   "description": "Holding object > Positioning object > Clamp"
+  },
+  {
+   "code": "UAJ",
+   "level": 3,
+   "parent": "UA",
+   "en": "Vehicle stand",
+   "fr": null,
+   "description": "Holding object > Positioning object > Vehicle stand"
+  },
+  {
+   "code": "UB",
+   "level": 2,
+   "parent": "U",
+   "en": "Carrying object",
+   "fr": null,
+   "description": "Holding object > Carrying object"
+  },
+  {
+   "code": "UBA",
+   "level": 3,
+   "parent": "UB",
+   "en": "Cable tray",
+   "fr": null,
+   "description": "Holding object > Carrying object > Cable tray"
+  },
+  {
+   "code": "UBB",
+   "level": 3,
+   "parent": "UB",
+   "en": "Hanger",
+   "fr": null,
+   "description": "Holding object > Carrying object > Hanger"
+  },
+  {
+   "code": "UBC",
+   "level": 3,
+   "parent": "UB",
+   "en": "Tread",
+   "fr": null,
+   "description": "Holding object > Carrying object > Tread"
+  },
+  {
+   "code": "UBD",
+   "level": 3,
+   "parent": "UB",
+   "en": "Mast",
+   "fr": null,
+   "description": "Holding object > Carrying object > Mast"
+  },
+  {
+   "code": "UBE",
+   "level": 3,
+   "parent": "UB",
+   "en": "Table",
+   "fr": null,
+   "description": "Holding object > Carrying object > Table"
+  },
+  {
+   "code": "UBF",
+   "level": 3,
+   "parent": "UB",
+   "en": "Portal",
+   "fr": null,
+   "description": "Holding object > Carrying object > Portal"
+  },
+  {
+   "code": "UC",
+   "level": 2,
+   "parent": "U",
+   "en": "Enclosing object",
+   "fr": null,
+   "description": "Holding object > Enclosing object"
+  },
+  {
+   "code": "UCA",
+   "level": 3,
+   "parent": "UC",
+   "en": "Cubicle",
+   "fr": null,
+   "description": "Holding object > Enclosing object > Cubicle"
+  },
+  {
+   "code": "UCB",
+   "level": 3,
+   "parent": "UC",
+   "en": "Plant soil",
+   "fr": null,
+   "description": "Holding object > Enclosing object > Plant soil"
+  },
+  {
+   "code": "UCC",
+   "level": 3,
+   "parent": "UC",
+   "en": "Cooker hood",
+   "fr": null,
+   "description": "Holding object > Enclosing object > Cooker hood"
+  },
+  {
+   "code": "UL",
+   "level": 2,
+   "parent": "U",
+   "en": "Structural supporting object",
+   "fr": null,
+   "description": "Holding object > Structural supporting object"
+  },
+  {
+   "code": "ULA",
+   "level": 3,
+   "parent": "UL",
+   "en": "Base course",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Base course"
+  },
+  {
+   "code": "ULB",
+   "level": 3,
+   "parent": "UL",
+   "en": "Console",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Console"
+  },
+  {
+   "code": "ULC",
+   "level": 3,
+   "parent": "UL",
+   "en": "Pile",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Pile"
+  },
+  {
+   "code": "ULD",
+   "level": 3,
+   "parent": "UL",
+   "en": "Column",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Column"
+  },
+  {
+   "code": "ULE",
+   "level": 3,
+   "parent": "UL",
+   "en": "Beam",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Beam"
+  },
+  {
+   "code": "ULF",
+   "level": 3,
+   "parent": "UL",
+   "en": "Tension brace",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Tension brace"
+  },
+  {
+   "code": "ULG",
+   "level": 3,
+   "parent": "UL",
+   "en": "Block",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Block"
+  },
+  {
+   "code": "ULH",
+   "level": 3,
+   "parent": "UL",
+   "en": "Arch",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Arch"
+  },
+  {
+   "code": "ULJ",
+   "level": 3,
+   "parent": "UL",
+   "en": "Abutment",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Abutment"
+  },
+  {
+   "code": "ULK",
+   "level": 3,
+   "parent": "UL",
+   "en": "Slab plate",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Slab plate"
+  },
+  {
+   "code": "ULL",
+   "level": 3,
+   "parent": "UL",
+   "en": "Retaining wall plate",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Retaining wall plate"
+  },
+  {
+   "code": "ULM",
+   "level": 3,
+   "parent": "UL",
+   "en": "Wall plate",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Wall plate"
+  },
+  {
+   "code": "ULN",
+   "level": 3,
+   "parent": "UL",
+   "en": "Shell",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Shell"
+  },
+  {
+   "code": "ULP",
+   "level": 3,
+   "parent": "UL",
+   "en": "Continuous arch",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Continuous arch"
+  },
+  {
+   "code": "ULQ",
+   "level": 3,
+   "parent": "UL",
+   "en": "Bearing plate",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Bearing plate"
+  },
+  {
+   "code": "ULR",
+   "level": 3,
+   "parent": "UL",
+   "en": "Catenary",
+   "fr": null,
+   "description": "Holding object > Structural supporting object > Catenary"
+  },
+  {
+   "code": "UM",
+   "level": 2,
+   "parent": "U",
+   "en": "Reinforcing object",
+   "fr": null,
+   "description": "Holding object > Reinforcing object"
+  },
+  {
+   "code": "UMA",
+   "level": 3,
+   "parent": "UM",
+   "en": "Reinforcing rod",
+   "fr": null,
+   "description": "Holding object > Reinforcing object > Reinforcing rod"
+  },
+  {
+   "code": "UMB",
+   "level": 3,
+   "parent": "UM",
+   "en": "Reinforcing mesh",
+   "fr": null,
+   "description": "Holding object > Reinforcing object > Reinforcing mesh"
+  },
+  {
+   "code": "UMC",
+   "level": 3,
+   "parent": "UM",
+   "en": "Reinforcing mass layer",
+   "fr": null,
+   "description": "Holding object > Reinforcing object > Reinforcing mass layer"
+  },
+  {
+   "code": "UMD",
+   "level": 3,
+   "parent": "UM",
+   "en": "Reinforcing matter",
+   "fr": null,
+   "description": "Holding object > Reinforcing object > Reinforcing matter"
+  },
+  {
+   "code": "UME",
+   "level": 3,
+   "parent": "UM",
+   "en": "Security strike plate",
+   "fr": null,
+   "description": "Holding object > Reinforcing object > Security strike plate"
+  },
+  {
+   "code": "UMF",
+   "level": 3,
+   "parent": "UM",
+   "en": "Splice",
+   "fr": null,
+   "description": "Holding object > Reinforcing object > Splice"
+  },
+  {
+   "code": "UMG",
+   "level": 3,
+   "parent": "UM",
+   "en": "Soil vertical drain",
+   "fr": null,
+   "description": "Holding object > Reinforcing object > Soil vertical drain"
+  },
+  {
+   "code": "UMH",
+   "level": 3,
+   "parent": "UM",
+   "en": "Concrete spurting",
+   "fr": null,
+   "description": "Holding object > Reinforcing object > Concrete spurting"
+  },
+  {
+   "code": "UMJ",
+   "level": 3,
+   "parent": "UM",
+   "en": "Concrete lining",
+   "fr": null,
+   "description": "Holding object > Reinforcing object > Concrete lining"
+  },
+  {
+   "code": "UMK",
+   "level": 3,
+   "parent": "UM",
+   "en": "Stiffener",
+   "fr": null,
+   "description": "Holding object > Reinforcing object > Stiffener"
+  },
+  {
+   "code": "UML",
+   "level": 3,
+   "parent": "UM",
+   "en": "Diagonal bonding",
+   "fr": null,
+   "description": "Holding object > Reinforcing object > Diagonal bonding"
+  },
+  {
+   "code": "UMM",
+   "level": 3,
+   "parent": "UM",
+   "en": "Stabilizing cable",
+   "fr": null,
+   "description": "Holding object > Reinforcing object > Stabilizing cable"
+  },
+  {
+   "code": "UMN",
+   "level": 3,
+   "parent": "UM",
+   "en": "Horizontal rail",
+   "fr": null,
+   "description": "Holding object > Reinforcing object > Horizontal rail"
+  },
+  {
+   "code": "UMP",
+   "level": 3,
+   "parent": "UM",
+   "en": "Earth pressure embankment",
+   "fr": null,
+   "description": "Holding object > Reinforcing object > Earth pressure embankment"
+  },
+  {
+   "code": "UN",
+   "level": 2,
+   "parent": "U",
+   "en": "Framing object",
+   "fr": null,
+   "description": "Holding object > Framing object"
+  },
+  {
+   "code": "UNA",
+   "level": 3,
+   "parent": "UN",
+   "en": "Fixed frame",
+   "fr": null,
+   "description": "Holding object > Framing object > Fixed frame"
+  },
+  {
+   "code": "UNB",
+   "level": 3,
+   "parent": "UN",
+   "en": "Threshold",
+   "fr": null,
+   "description": "Holding object > Framing object > Threshold"
+  },
+  {
+   "code": "UNC",
+   "level": 3,
+   "parent": "UN",
+   "en": "Movable frame",
+   "fr": null,
+   "description": "Holding object > Framing object > Movable frame"
+  },
+  {
+   "code": "UND",
+   "level": 3,
+   "parent": "UN",
+   "en": "Glazing bar frame",
+   "fr": null,
+   "description": "Holding object > Framing object > Glazing bar frame"
+  },
+  {
+   "code": "UP",
+   "level": 2,
+   "parent": "U",
+   "en": "Jointing object",
+   "fr": null,
+   "description": "Holding object > Jointing object"
+  },
+  {
+   "code": "UPA",
+   "level": 3,
+   "parent": "UP",
+   "en": "Bearing",
+   "fr": null,
+   "description": "Holding object > Jointing object > Bearing"
+  },
+  {
+   "code": "UPB",
+   "level": 3,
+   "parent": "UP",
+   "en": "Hinge",
+   "fr": null,
+   "description": "Holding object > Jointing object > Hinge"
+  },
+  {
+   "code": "UPC",
+   "level": 3,
+   "parent": "UP",
+   "en": "Chemical joint",
+   "fr": null,
+   "description": "Holding object > Jointing object > Chemical joint"
+  },
+  {
+   "code": "UQ",
+   "level": 2,
+   "parent": "U",
+   "en": "Fastening object",
+   "fr": null,
+   "description": "Holding object > Fastening object"
+  },
+  {
+   "code": "UQA",
+   "level": 3,
+   "parent": "UQ",
+   "en": "Fixed fastening",
+   "fr": null,
+   "description": "Holding object > Fastening object > Fixed fastening"
+  },
+  {
+   "code": "UQB",
+   "level": 3,
+   "parent": "UQ",
+   "en": "Removable fastening",
+   "fr": null,
+   "description": "Holding object > Fastening object > Removable fastening"
+  },
+  {
+   "code": "UQC",
+   "level": 3,
+   "parent": "UQ",
+   "en": "Chemical bond",
+   "fr": null,
+   "description": "Holding object > Fastening object > Chemical bond"
+  },
+  {
+   "code": "UT",
+   "level": 2,
+   "parent": "U",
+   "en": "Levelling object",
+   "fr": null,
+   "description": "Holding object > Levelling object"
+  },
+  {
+   "code": "UTA",
+   "level": 3,
+   "parent": "UT",
+   "en": "Filling",
+   "fr": null,
+   "description": "Holding object > Levelling object > Filling"
+  },
+  {
+   "code": "UTB",
+   "level": 3,
+   "parent": "UT",
+   "en": "Excavation",
+   "fr": null,
+   "description": "Holding object > Levelling object > Excavation"
+  },
+  {
+   "code": "UU",
+   "level": 2,
+   "parent": "U",
+   "en": "Existing ground",
+   "fr": null,
+   "description": "Holding object > Existing ground"
+  },
+  {
+   "code": "UUA",
+   "level": 3,
+   "parent": "UU",
+   "en": "Rock",
+   "fr": null,
+   "description": "Holding object > Existing ground > Rock"
+  },
+  {
+   "code": "UUB",
+   "level": 3,
+   "parent": "UU",
+   "en": "Friction soil",
+   "fr": null,
+   "description": "Holding object > Existing ground > Friction soil"
+  },
+  {
+   "code": "UUC",
+   "level": 3,
+   "parent": "UU",
+   "en": "Cohesive soil",
+   "fr": null,
+   "description": "Holding object > Existing ground > Cohesive soil"
+  },
+  {
+   "code": "UUD",
+   "level": 3,
+   "parent": "UU",
+   "en": "Organic soil",
+   "fr": null,
+   "description": "Holding object > Existing ground > Organic soil"
+  },
+  {
+   "code": "UUE",
+   "level": 3,
+   "parent": "UU",
+   "en": "Filled material",
+   "fr": null,
+   "description": "Holding object > Existing ground > Filled material"
+  },
+  {
+   "code": "W",
+   "level": 1,
+   "parent": null,
+   "en": "Guiding object",
+   "fr": null,
+   "description": "Guiding object"
+  },
+  {
+   "code": "WB",
+   "level": 2,
+   "parent": "W",
+   "en": "High voltage electric energy guiding object",
+   "fr": null,
+   "description": "Guiding object > High voltage electric energy guiding object"
+  },
+  {
+   "code": "WBA",
+   "level": 3,
+   "parent": "WB",
+   "en": "High voltage busbar",
+   "fr": null,
+   "description": "Guiding object > High voltage electric energy guiding object > High voltage busbar"
+  },
+  {
+   "code": "WBB",
+   "level": 3,
+   "parent": "WB",
+   "en": "High voltage cable",
+   "fr": null,
+   "description": "Guiding object > High voltage electric energy guiding object > High voltage cable"
+  },
+  {
+   "code": "WBC",
+   "level": 3,
+   "parent": "WB",
+   "en": "High voltage wire",
+   "fr": null,
+   "description": "Guiding object > High voltage electric energy guiding object > High voltage wire"
+  },
+  {
+   "code": "WBD",
+   "level": 3,
+   "parent": "WB",
+   "en": "High voltage bushing",
+   "fr": null,
+   "description": "Guiding object > High voltage electric energy guiding object > High voltage bushing"
+  },
+  {
+   "code": "WD",
+   "level": 2,
+   "parent": "W",
+   "en": "Low voltage electric energy guiding object",
+   "fr": null,
+   "description": "Guiding object > Low voltage electric energy guiding object"
+  },
+  {
+   "code": "WDA",
+   "level": 3,
+   "parent": "WD",
+   "en": "Low voltage busbar",
+   "fr": null,
+   "description": "Guiding object > Low voltage electric energy guiding object > Low voltage busbar"
+  },
+  {
+   "code": "WDB",
+   "level": 3,
+   "parent": "WD",
+   "en": "Low voltage cable",
+   "fr": null,
+   "description": "Guiding object > Low voltage electric energy guiding object > Low voltage cable"
+  },
+  {
+   "code": "WDC",
+   "level": 3,
+   "parent": "WD",
+   "en": "Low voltage wire",
+   "fr": null,
+   "description": "Guiding object > Low voltage electric energy guiding object > Low voltage wire"
+  },
+  {
+   "code": "WDD",
+   "level": 3,
+   "parent": "WD",
+   "en": "Low voltage bushing",
+   "fr": null,
+   "description": "Guiding object > Low voltage electric energy guiding object > Low voltage bushing"
+  },
+  {
+   "code": "WE",
+   "level": 2,
+   "parent": "W",
+   "en": "Reference potential guiding object",
+   "fr": null,
+   "description": "Guiding object > Reference potential guiding object"
+  },
+  {
+   "code": "WEA",
+   "level": 3,
+   "parent": "WE",
+   "en": "Earthing rail",
+   "fr": null,
+   "description": "Guiding object > Reference potential guiding object > Earthing rail"
+  },
+  {
+   "code": "WEB",
+   "level": 3,
+   "parent": "WE",
+   "en": "Earthing cable",
+   "fr": null,
+   "description": "Guiding object > Reference potential guiding object > Earthing cable"
+  },
+  {
+   "code": "WEC",
+   "level": 3,
+   "parent": "WE",
+   "en": "Equipotential bonding rail",
+   "fr": null,
+   "description": "Guiding object > Reference potential guiding object > Equipotential bonding rail"
+  },
+  {
+   "code": "WED",
+   "level": 3,
+   "parent": "WE",
+   "en": "Equipotential bonding cable",
+   "fr": null,
+   "description": "Guiding object > Reference potential guiding object > Equipotential bonding cable"
+  },
+  {
+   "code": "WG",
+   "level": 2,
+   "parent": "W",
+   "en": "Electric signal guiding object",
+   "fr": null,
+   "description": "Guiding object > Electric signal guiding object"
+  },
+  {
+   "code": "WGA",
+   "level": 3,
+   "parent": "WG",
+   "en": "Control cable",
+   "fr": null,
+   "description": "Guiding object > Electric signal guiding object > Control cable"
+  },
+  {
+   "code": "WGB",
+   "level": 3,
+   "parent": "WG",
+   "en": "Data cable",
+   "fr": null,
+   "description": "Guiding object > Electric signal guiding object > Data cable"
+  },
+  {
+   "code": "WGC",
+   "level": 3,
+   "parent": "WG",
+   "en": "Electric signal bushing",
+   "fr": null,
+   "description": "Guiding object > Electric signal guiding object > Electric signal bushing"
+  },
+  {
+   "code": "WH",
+   "level": 2,
+   "parent": "W",
+   "en": "Light guiding object",
+   "fr": null,
+   "description": "Guiding object > Light guiding object"
+  },
+  {
+   "code": "WHA",
+   "level": 3,
+   "parent": "WH",
+   "en": "Fibre optical cable",
+   "fr": null,
+   "description": "Guiding object > Light guiding object > Fibre optical cable"
+  },
+  {
+   "code": "WHB",
+   "level": 3,
+   "parent": "WH",
+   "en": "Optical light fibre",
+   "fr": null,
+   "description": "Guiding object > Light guiding object > Optical light fibre"
+  },
+  {
+   "code": "WHC",
+   "level": 3,
+   "parent": "WH",
+   "en": "Lens",
+   "fr": null,
+   "description": "Guiding object > Light guiding object > Lens"
+  },
+  {
+   "code": "WHD",
+   "level": 3,
+   "parent": "WH",
+   "en": "Mirror",
+   "fr": null,
+   "description": "Guiding object > Light guiding object > Mirror"
+  },
+  {
+   "code": "WJ",
+   "level": 2,
+   "parent": "W",
+   "en": "Sound guiding object",
+   "fr": null,
+   "description": "Guiding object > Sound guiding object"
+  },
+  {
+   "code": "WJA",
+   "level": 3,
+   "parent": "WJ",
+   "en": "Sound reflector",
+   "fr": null,
+   "description": "Guiding object > Sound guiding object > Sound reflector"
+  },
+  {
+   "code": "WL",
+   "level": 2,
+   "parent": "W",
+   "en": "Solid matter guiding object",
+   "fr": null,
+   "description": "Guiding object > Solid matter guiding object"
+  },
+  {
+   "code": "WLA",
+   "level": 3,
+   "parent": "WL",
+   "en": "Roller table",
+   "fr": null,
+   "description": "Guiding object > Solid matter guiding object > Roller table"
+  },
+  {
+   "code": "WLB",
+   "level": 3,
+   "parent": "WL",
+   "en": "Chute",
+   "fr": null,
+   "description": "Guiding object > Solid matter guiding object > Chute"
+  },
+  {
+   "code": "WM",
+   "level": 2,
+   "parent": "W",
+   "en": "Open enclosure guiding object",
+   "fr": null,
+   "description": "Guiding object > Open enclosure guiding object"
+  },
+  {
+   "code": "WMA",
+   "level": 3,
+   "parent": "WM",
+   "en": "Drainage layer",
+   "fr": null,
+   "description": "Guiding object > Open enclosure guiding object > Drainage layer"
+  },
+  {
+   "code": "WMB",
+   "level": 3,
+   "parent": "WM",
+   "en": "Gutter",
+   "fr": null,
+   "description": "Guiding object > Open enclosure guiding object > Gutter"
+  },
+  {
+   "code": "WMC",
+   "level": 3,
+   "parent": "WM",
+   "en": "Drain liquid flashing",
+   "fr": null,
+   "description": "Guiding object > Open enclosure guiding object > Drain liquid flashing"
+  },
+  {
+   "code": "WMD",
+   "level": 3,
+   "parent": "WM",
+   "en": "Drip nose",
+   "fr": null,
+   "description": "Guiding object > Open enclosure guiding object > Drip nose"
+  },
+  {
+   "code": "WME",
+   "level": 3,
+   "parent": "WM",
+   "en": "Gutter drip",
+   "fr": null,
+   "description": "Guiding object > Open enclosure guiding object > Gutter drip"
+  },
+  {
+   "code": "WMF",
+   "level": 3,
+   "parent": "WM",
+   "en": "Drainpipe",
+   "fr": null,
+   "description": "Guiding object > Open enclosure guiding object > Drainpipe"
+  },
+  {
+   "code": "WMG",
+   "level": 3,
+   "parent": "WM",
+   "en": "Infiltration chamber",
+   "fr": null,
+   "description": "Guiding object > Open enclosure guiding object > Infiltration chamber"
+  },
+  {
+   "code": "WP",
+   "level": 2,
+   "parent": "W",
+   "en": "Closed enclosure guiding object",
+   "fr": null,
+   "description": "Guiding object > Closed enclosure guiding object"
+  },
+  {
+   "code": "WPA",
+   "level": 3,
+   "parent": "WP",
+   "en": "Pipe",
+   "fr": null,
+   "description": "Guiding object > Closed enclosure guiding object > Pipe"
+  },
+  {
+   "code": "WPB",
+   "level": 3,
+   "parent": "WP",
+   "en": "Duct",
+   "fr": null,
+   "description": "Guiding object > Closed enclosure guiding object > Duct"
+  },
+  {
+   "code": "WPC",
+   "level": 3,
+   "parent": "WP",
+   "en": "Hose",
+   "fr": null,
+   "description": "Guiding object > Closed enclosure guiding object > Hose"
+  },
+  {
+   "code": "WQ",
+   "level": 2,
+   "parent": "W",
+   "en": "Mechanical energy guiding object",
+   "fr": null,
+   "description": "Guiding object > Mechanical energy guiding object"
+  },
+  {
+   "code": "WQA",
+   "level": 3,
+   "parent": "WQ",
+   "en": "Drive axle",
+   "fr": null,
+   "description": "Guiding object > Mechanical energy guiding object > Drive axle"
+  },
+  {
+   "code": "WQB",
+   "level": 3,
+   "parent": "WQ",
+   "en": "Drive belt",
+   "fr": null,
+   "description": "Guiding object > Mechanical energy guiding object > Drive belt"
+  },
+  {
+   "code": "WQC",
+   "level": 3,
+   "parent": "WQ",
+   "en": "Drive chain",
+   "fr": null,
+   "description": "Guiding object > Mechanical energy guiding object > Drive chain"
+  },
+  {
+   "code": "WQD",
+   "level": 3,
+   "parent": "WQ",
+   "en": "Drive link",
+   "fr": null,
+   "description": "Guiding object > Mechanical energy guiding object > Drive link"
+  },
+  {
+   "code": "WQE",
+   "level": 3,
+   "parent": "WQ",
+   "en": "Wheel",
+   "fr": null,
+   "description": "Guiding object > Mechanical energy guiding object > Wheel"
+  },
+  {
+   "code": "WQF",
+   "level": 3,
+   "parent": "WQ",
+   "en": "Toothed bar",
+   "fr": null,
+   "description": "Guiding object > Mechanical energy guiding object > Toothed bar"
+  },
+  {
+   "code": "WQG",
+   "level": 3,
+   "parent": "WQ",
+   "en": "Hydraulic hose",
+   "fr": null,
+   "description": "Guiding object > Mechanical energy guiding object > Hydraulic hose"
+  },
+  {
+   "code": "WR",
+   "level": 2,
+   "parent": "W",
+   "en": "Rail object",
+   "fr": null,
+   "description": "Guiding object > Rail object"
+  },
+  {
+   "code": "WRA",
+   "level": 3,
+   "parent": "WR",
+   "en": "Track",
+   "fr": null,
+   "description": "Guiding object > Rail object > Track"
+  },
+  {
+   "code": "WRB",
+   "level": 3,
+   "parent": "WR",
+   "en": "Track crossing",
+   "fr": null,
+   "description": "Guiding object > Rail object > Track crossing"
+  },
+  {
+   "code": "WV",
+   "level": 2,
+   "parent": "W",
+   "en": "Thermal energy guiding object",
+   "fr": null,
+   "description": "Guiding object > Thermal energy guiding object"
+  },
+  {
+   "code": "WVA",
+   "level": 3,
+   "parent": "WV",
+   "en": "Thermal conductor",
+   "fr": null,
+   "description": "Guiding object > Thermal energy guiding object > Thermal conductor"
+  },
+  {
+   "code": "WVB",
+   "level": 3,
+   "parent": "WV",
+   "en": "Thermal paste",
+   "fr": null,
+   "description": "Guiding object > Thermal energy guiding object > Thermal paste"
+  },
+  {
+   "code": "WZ",
+   "level": 2,
+   "parent": "W",
+   "en": "Multiple flow guiding object",
+   "fr": null,
+   "description": "Guiding object > Multiple flow guiding object"
+  },
+  {
+   "code": "WZA",
+   "level": 3,
+   "parent": "WZ",
+   "en": "Umbilical cable",
+   "fr": null,
+   "description": "Guiding object > Multiple flow guiding object > Umbilical cable"
+  },
+  {
+   "code": "X",
+   "level": 1,
+   "parent": null,
+   "en": "Interfacing object",
+   "fr": null,
+   "description": "Interfacing object"
+  },
+  {
+   "code": "XB",
+   "level": 2,
+   "parent": "X",
+   "en": "High voltage connecting object",
+   "fr": null,
+   "description": "Interfacing object > High voltage connecting object"
+  },
+  {
+   "code": "XBA",
+   "level": 3,
+   "parent": "XB",
+   "en": "High voltage terminal",
+   "fr": null,
+   "description": "Interfacing object > High voltage connecting object > High voltage terminal"
+  },
+  {
+   "code": "XBB",
+   "level": 3,
+   "parent": "XB",
+   "en": "High voltage socket",
+   "fr": null,
+   "description": "Interfacing object > High voltage connecting object > High voltage socket"
+  },
+  {
+   "code": "XBC",
+   "level": 3,
+   "parent": "XB",
+   "en": "High voltage terminal box",
+   "fr": null,
+   "description": "Interfacing object > High voltage connecting object > High voltage terminal box"
+  },
+  {
+   "code": "XD",
+   "level": 2,
+   "parent": "X",
+   "en": "Low voltage connecting object",
+   "fr": null,
+   "description": "Interfacing object > Low voltage connecting object"
+  },
+  {
+   "code": "XDA",
+   "level": 3,
+   "parent": "XD",
+   "en": "Electric terminal",
+   "fr": null,
+   "description": "Interfacing object > Low voltage connecting object > Electric terminal"
+  },
+  {
+   "code": "XDB",
+   "level": 3,
+   "parent": "XD",
+   "en": "Low voltage power socket",
+   "fr": null,
+   "description": "Interfacing object > Low voltage connecting object > Low voltage power socket"
+  },
+  {
+   "code": "XDC",
+   "level": 3,
+   "parent": "XD",
+   "en": "Terminal box",
+   "fr": null,
+   "description": "Interfacing object > Low voltage connecting object > Terminal box"
+  },
+  {
+   "code": "XDD",
+   "level": 3,
+   "parent": "XD",
+   "en": "Power outlet",
+   "fr": null,
+   "description": "Interfacing object > Low voltage connecting object > Power outlet"
+  },
+  {
+   "code": "XDE",
+   "level": 3,
+   "parent": "XD",
+   "en": "Power distributer",
+   "fr": null,
+   "description": "Interfacing object > Low voltage connecting object > Power distributer"
+  },
+  {
+   "code": "XE",
+   "level": 2,
+   "parent": "X",
+   "en": "Potential connecting object",
+   "fr": null,
+   "description": "Interfacing object > Potential connecting object"
+  },
+  {
+   "code": "XEA",
+   "level": 3,
+   "parent": "XE",
+   "en": "PE terminal",
+   "fr": null,
+   "description": "Interfacing object > Potential connecting object > PE terminal"
+  },
+  {
+   "code": "XEB",
+   "level": 3,
+   "parent": "XE",
+   "en": "PB terminal",
+   "fr": null,
+   "description": "Interfacing object > Potential connecting object > PB terminal"
+  },
+  {
+   "code": "XEC",
+   "level": 3,
+   "parent": "XE",
+   "en": "FE terminal",
+   "fr": null,
+   "description": "Interfacing object > Potential connecting object > FE terminal"
+  },
+  {
+   "code": "XED",
+   "level": 3,
+   "parent": "XE",
+   "en": "FB terminal",
+   "fr": null,
+   "description": "Interfacing object > Potential connecting object > FB terminal"
+  },
+  {
+   "code": "XEE",
+   "level": 3,
+   "parent": "XE",
+   "en": "Earth electrode",
+   "fr": null,
+   "description": "Interfacing object > Potential connecting object > Earth electrode"
+  },
+  {
+   "code": "XEF",
+   "level": 3,
+   "parent": "XE",
+   "en": "Collector",
+   "fr": null,
+   "description": "Interfacing object > Potential connecting object > Collector"
+  },
+  {
+   "code": "XG",
+   "level": 2,
+   "parent": "X",
+   "en": "Electric signal connecting object",
+   "fr": null,
+   "description": "Interfacing object > Electric signal connecting object"
+  },
+  {
+   "code": "XGA",
+   "level": 3,
+   "parent": "XG",
+   "en": "Signal socket",
+   "fr": null,
+   "description": "Interfacing object > Electric signal connecting object > Signal socket"
+  },
+  {
+   "code": "XGB",
+   "level": 3,
+   "parent": "XG",
+   "en": "Terminal",
+   "fr": null,
+   "description": "Interfacing object > Electric signal connecting object > Terminal"
+  },
+  {
+   "code": "XGC",
+   "level": 3,
+   "parent": "XG",
+   "en": "Patch panel",
+   "fr": null,
+   "description": "Interfacing object > Electric signal connecting object > Patch panel"
+  },
+  {
+   "code": "XGD",
+   "level": 3,
+   "parent": "XG",
+   "en": "Signal distributor",
+   "fr": null,
+   "description": "Interfacing object > Electric signal connecting object > Signal distributor"
+  },
+  {
+   "code": "XH",
+   "level": 2,
+   "parent": "X",
+   "en": "Light connecting object",
+   "fr": null,
+   "description": "Interfacing object > Light connecting object"
+  },
+  {
+   "code": "XHA",
+   "level": 3,
+   "parent": "XH",
+   "en": "Fixed light fibre socket",
+   "fr": null,
+   "description": "Interfacing object > Light connecting object > Fixed light fibre socket"
+  },
+  {
+   "code": "XK",
+   "level": 2,
+   "parent": "X",
+   "en": "Collecting interfacing object",
+   "fr": null,
+   "description": "Interfacing object > Collecting interfacing object"
+  },
+  {
+   "code": "XKA",
+   "level": 3,
+   "parent": "XK",
+   "en": "Sink",
+   "fr": null,
+   "description": "Interfacing object > Collecting interfacing object > Sink"
+  },
+  {
+   "code": "XKB",
+   "level": 3,
+   "parent": "XK",
+   "en": "Toilet",
+   "fr": null,
+   "description": "Interfacing object > Collecting interfacing object > Toilet"
+  },
+  {
+   "code": "XKC",
+   "level": 3,
+   "parent": "XK",
+   "en": "Urinal",
+   "fr": null,
+   "description": "Interfacing object > Collecting interfacing object > Urinal"
+  },
+  {
+   "code": "XKD",
+   "level": 3,
+   "parent": "XK",
+   "en": "Drip cup",
+   "fr": null,
+   "description": "Interfacing object > Collecting interfacing object > Drip cup"
+  },
+  {
+   "code": "XKE",
+   "level": 3,
+   "parent": "XK",
+   "en": "Floor drain",
+   "fr": null,
+   "description": "Interfacing object > Collecting interfacing object > Floor drain"
+  },
+  {
+   "code": "XM",
+   "level": 2,
+   "parent": "X",
+   "en": "Sealed flow connecting object",
+   "fr": null,
+   "description": "Interfacing object > Sealed flow connecting object"
+  },
+  {
+   "code": "XMA",
+   "level": 3,
+   "parent": "XM",
+   "en": "Tube flange",
+   "fr": null,
+   "description": "Interfacing object > Sealed flow connecting object > Tube flange"
+  },
+  {
+   "code": "XMB",
+   "level": 3,
+   "parent": "XM",
+   "en": "Tube fitting",
+   "fr": null,
+   "description": "Interfacing object > Sealed flow connecting object > Tube fitting"
+  },
+  {
+   "code": "XN",
+   "level": 2,
+   "parent": "X",
+   "en": "Non-detachable coupling",
+   "fr": null,
+   "description": "Interfacing object > Non-detachable coupling"
+  },
+  {
+   "code": "XNA",
+   "level": 3,
+   "parent": "XN",
+   "en": "Flange coupler",
+   "fr": null,
+   "description": "Interfacing object > Non-detachable coupling > Flange coupler"
+  },
+  {
+   "code": "XNB",
+   "level": 3,
+   "parent": "XN",
+   "en": "Split-muff coupler",
+   "fr": null,
+   "description": "Interfacing object > Non-detachable coupling > Split-muff coupler"
+  },
+  {
+   "code": "XNC",
+   "level": 3,
+   "parent": "XN",
+   "en": "Hirth coupler",
+   "fr": null,
+   "description": "Interfacing object > Non-detachable coupling > Hirth coupler"
+  },
+  {
+   "code": "XND",
+   "level": 3,
+   "parent": "XN",
+   "en": "Cardan joint",
+   "fr": null,
+   "description": "Interfacing object > Non-detachable coupling > Cardan joint"
+  },
+  {
+   "code": "XNE",
+   "level": 3,
+   "parent": "XN",
+   "en": "Buffer-and-chain coupler",
+   "fr": null,
+   "description": "Interfacing object > Non-detachable coupling > Buffer-and-chain coupler"
+  },
+  {
+   "code": "XNF",
+   "level": 3,
+   "parent": "XN",
+   "en": "Link-and pin coupler",
+   "fr": null,
+   "description": "Interfacing object > Non-detachable coupling > Link-and pin coupler"
+  },
+  {
+   "code": "XP",
+   "level": 2,
+   "parent": "X",
+   "en": "Detachable coupling",
+   "fr": null,
+   "description": "Interfacing object > Detachable coupling"
+  },
+  {
+   "code": "XPA",
+   "level": 3,
+   "parent": "XP",
+   "en": "Friction clutch",
+   "fr": null,
+   "description": "Interfacing object > Detachable coupling > Friction clutch"
+  },
+  {
+   "code": "XPB",
+   "level": 3,
+   "parent": "XP",
+   "en": "Fluid coupling",
+   "fr": null,
+   "description": "Interfacing object > Detachable coupling > Fluid coupling"
+  },
+  {
+   "code": "XPC",
+   "level": 3,
+   "parent": "XP",
+   "en": "Overrunning clutch",
+   "fr": null,
+   "description": "Interfacing object > Detachable coupling > Overrunning clutch"
+  },
+  {
+   "code": "XPD",
+   "level": 3,
+   "parent": "XP",
+   "en": "Magnetic hoist",
+   "fr": null,
+   "description": "Interfacing object > Detachable coupling > Magnetic hoist"
+  },
+  {
+   "code": "XS",
+   "level": 2,
+   "parent": "X",
+   "en": "Level connecting component",
+   "fr": null,
+   "description": "Interfacing object > Level connecting component"
+  },
+  {
+   "code": "XSA",
+   "level": 3,
+   "parent": "XS",
+   "en": "Landing",
+   "fr": null,
+   "description": "Interfacing object > Level connecting component > Landing"
+  },
+  {
+   "code": "XSB",
+   "level": 3,
+   "parent": "XS",
+   "en": "Flight of stairs",
+   "fr": null,
+   "description": "Interfacing object > Level connecting component > Flight of stairs"
+  },
+  {
+   "code": "XSC",
+   "level": 3,
+   "parent": "XS",
+   "en": "Ladder",
+   "fr": null,
+   "description": "Interfacing object > Level connecting component > Ladder"
+  },
+  {
+   "code": "XSD",
+   "level": 3,
+   "parent": "XS",
+   "en": "Ramp",
+   "fr": null,
+   "description": "Interfacing object > Level connecting component > Ramp"
+  },
+  {
+   "code": "XSE",
+   "level": 3,
+   "parent": "XS",
+   "en": "Fireman’s pole",
+   "fr": null,
+   "description": "Interfacing object > Level connecting component > Fireman’s pole"
+  },
+  {
+   "code": "XT",
+   "level": 2,
+   "parent": "X",
+   "en": "Space linking object",
+   "fr": null,
+   "description": "Interfacing object > Space linking object"
+  },
+  {
+   "code": "XTA",
+   "level": 3,
+   "parent": "XT",
+   "en": "Hole",
+   "fr": null,
+   "description": "Interfacing object > Space linking object > Hole"
+  },
+  {
+   "code": "XTB",
+   "level": 3,
+   "parent": "XT",
+   "en": "Box-out",
+   "fr": null,
+   "description": "Interfacing object > Space linking object > Box-out"
+  },
+  {
+   "code": "XZ",
+   "level": 2,
+   "parent": "X",
+   "en": "Multiple flow connector object",
+   "fr": null,
+   "description": "Interfacing object > Multiple flow connector object"
+  },
+  {
+   "code": "XZA",
+   "level": 3,
+   "parent": "XZ",
+   "en": "Multi connector",
+   "fr": null,
+   "description": "Interfacing object > Multiple flow connector object > Multi connector"
+  }
+ ]
+}

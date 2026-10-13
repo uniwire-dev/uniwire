@@ -1,0 +1,57 @@
+name: Docs
+
+# Check-only: builds the documentation (strict) and the web viewer to catch broken builds. Nothing is deployed
+# from this repository.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "viewer/**"
+      - "llms.txt"
+      - "schema/**"
+      - "src/**"
+      - "examples/**"
+      - "pyproject.toml"
+      - "mkdocs.yml"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "CONTRIBUTING.md"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "viewer/**"
+      - "llms.txt"
+      - "schema/**"
+      - "mkdocs.yml"
+      - "CHANGELOG.md"
+      - "CONTRIBUTING.md"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  site:
+    name: Build the documentation and the viewer
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install -e . "mkdocs>=1.6,<2" "mkdocs-material>=9.5,<10"
+      - name: Documentation (strict)
+        run: mkdocs build --strict --site-dir "$RUNNER_TEMP/site/docs"
+      - name: Viewer
+        run: |
+          python viewer/build.py --out "$RUNNER_TEMP/site/viewer"
+          test -f "$RUNNER_TEMP/site/viewer/index.html"
+          ls "$RUNNER_TEMP"/site/viewer/dist/*.whl

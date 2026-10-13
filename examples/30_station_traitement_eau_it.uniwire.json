@@ -1,0 +1,390 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Station de traitement d'eau potable 300 m³/h : poste, TGBT en schéma IT et tableau process",
+    "project": "EX-30", "client": "Exemple : syndicat intercommunal des eaux", "author": "uniwire examples",
+    "lang": "fr",
+    "notes": [
+      "Montre : schéma IT à neutre non distribué (continuité de service), CPI et limiteur de surtension en tête, transformateur de séparation 400/230 V créant un îlot TN-S pour l'éclairage et les prises, variateurs / démarreurs progressifs Altivar et automate Modicon M241 + modules TM3",
+      "Premier défaut d'isolement signalé par le CPI (alarme à la supervision), recherche de défaut sous tension",
+      "Ik3 BT ≈ 400 / (√3 × 0,41 × 0,04) ≈ 14 kA"
+    ]
+  },
+  "installation": {
+    "earthing": "IT", "system": "3P", "un_V": 400, "f_Hz": 50, "supply": "HTA 20 kV, comptage BT",
+    "subscribed_kVA": 300, "ik3_kA": 14, "standard": "NF C 15-100 / NF C 13-100"
+  },
+  "templates": {
+    "NSX": {
+      "type": "breaker", "icu_kA": 25, "poles": "3P", "trip_unit": "Micrologic 2.2",
+      "product": {"manufacturer": "Schneider Electric", "range": "ComPacT NSX F"}
+    },
+    "MCB3": {
+      "type": "breaker", "curve": "C", "icn_kA": 20, "poles": "3P",
+      "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iC60H"}
+    }
+  },
+  "sources": [
+    {
+      "id": "HTA", "type": "grid", "label": "Réseau HTA", "supply": "HTA 20 kV (antenne)", "un_V": 20000,
+      "scc_MVA": 200,
+      "children": [
+        {
+          "id": "QM", "type": "fuse_switch", "ref": "-QM", "label": "Protection transfo.", "fuse_A": 25, "in_A": 200,
+          "fuse_class": "Fusarc CF", "ue_V": 24000, "poles": "3P",
+          "product": {"manufacturer": "Schneider Electric", "range": "SM6-24 QM"},
+          "children": [
+            {
+              "id": "T1", "type": "transformer", "ref": "-T1", "sn_kVA": 400, "u1_V": 20000, "u2_V": 410, "ucc_pct": 4,
+              "coupling": "Dyn11", "insulation": "oil", "note": "Neutre BT isolé de la terre (IT)",
+              "children": [
+                {
+                  "id": "TGBT", "type": "board", "ref": "TGBT", "label": "TGBT", "kind": "main", "in_A": 630,
+                  "ik_kA": 14, "earthing": "IT", "system": "3P", "ip": "IP31",
+                  "cable": {
+                    "cores": "3x", "section_mm2": 240, "length_m": 8, "designation": "U1000 R2V", "material": "Cu",
+                    "insulation": "XLPE", "install": "F", "parallel": 2, "pe_section_mm2": 120
+                  },
+                  "children": [
+                    {
+                      "id": "QG", "type": "breaker", "ref": "-Q0", "label": "Disjoncteur général", "use": "NSX",
+                      "in_A": 630, "ir_A": 580, "icu_kA": 36, "trip_unit": "Micrologic 5.2", "lockable": true,
+                      "product": {"manufacturer": "Schneider Electric", "range": "ComPacT NSX630F"},
+                      "children": [
+                        {
+                          "id": "CPI", "type": "insulation_monitor", "ref": "-F1", "label": "CPI",
+                          "range": "seuils 50 / 10 kΩ",
+                          "product": {"manufacturer": "Schneider Electric", "range": "Vigilohm IM20"}
+                        },
+                        {
+                          "id": "QP", "type": "breaker", "ref": "-Q1", "use": "NSX", "in_A": 400, "ir_A": 360,
+                          "trip_unit": "Micrologic 2.3",
+                          "cable": {
+                            "cores": "3x", "section_mm2": 185, "length_m": 25, "designation": "U1000 R2V",
+                            "material": "Cu", "insulation": "XLPE", "install": "E", "pe_section_mm2": 95
+                          },
+                          "children": [
+                            {
+                              "id": "TDP", "type": "board", "ref": "TD-PROC", "label": "Tableau process (filière eau)",
+                              "kind": "mcc", "in_A": 400, "ik_kA": 14, "form": "3b", "ip": "IP54", "earthing": "IT",
+                              "system": "3P", "own_sheet": true, "location": "Local électrique filière eau",
+                              "children": [
+                                {
+                                  "id": "TDP_Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 400,
+                                  "poles": "3P", "label": "Interrupteur arrivée", "lockable": true,
+                                  "children": [
+                                    {
+                                      "id": "P1", "type": "breaker", "ref": "-Q1", "use": "NSX", "in_A": 100,
+                                      "ir_A": 80,
+                                      "cable": {
+                                        "cores": "4G", "section_mm2": 16, "length_m": 4, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "C"
+                                      },
+                                      "children": [
+                                        {
+                                          "id": "VFD1", "type": "motor_starter", "ref": "-TA1", "method": "vfd",
+                                          "p_kW": 30, "in_A": 59,
+                                          "product": {"manufacturer": "Schneider Electric", "range": "Altivar Process ATV630"},
+                                          "children": [
+                                            {
+                                              "type": "motor", "ref": "-M1", "label": "Pompe eau brute 1", "p_kW": 30,
+                                              "phases": 3,
+                                              "cable": {
+                                                "cores": "4G", "section_mm2": 16, "length_m": 40,
+                                                "designation": "U1000 R2V", "material": "Cu", "insulation": "XLPE",
+                                                "install": "C"
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "P2", "type": "breaker", "ref": "-Q2", "use": "NSX", "in_A": 100,
+                                      "ir_A": 80,
+                                      "cable": {
+                                        "cores": "4G", "section_mm2": 16, "length_m": 4, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "C"
+                                      },
+                                      "children": [
+                                        {
+                                          "id": "VFD2", "type": "motor_starter", "ref": "-TA2", "method": "vfd",
+                                          "p_kW": 30, "in_A": 59,
+                                          "product": {"manufacturer": "Schneider Electric", "range": "Altivar Process ATV630"},
+                                          "children": [
+                                            {
+                                              "type": "motor", "ref": "-M2", "label": "Pompe eau brute 2 (secours)",
+                                              "p_kW": 30, "phases": 3,
+                                              "cable": {
+                                                "cores": "4G", "section_mm2": 16, "length_m": 45,
+                                                "designation": "U1000 R2V", "material": "Cu", "insulation": "XLPE",
+                                                "install": "C"
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "S3", "type": "breaker", "ref": "-Q3", "use": "NSX", "in_A": 100,
+                                      "ir_A": 80,
+                                      "children": [
+                                        {
+                                          "id": "SS3", "type": "motor_starter", "ref": "-TA3",
+                                          "method": "soft_starter", "p_kW": 37, "in_A": 76,
+                                          "product": {
+                                            "manufacturer": "Schneider Electric",
+                                            "range": "Altivar Soft Starter ATS480"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "motor", "ref": "-M3", "label": "Surpresseur d'air lavage 1",
+                                              "p_kW": 37, "phases": 3,
+                                              "cable": {
+                                                "cores": "4G", "section_mm2": 25, "length_m": 20,
+                                                "designation": "U1000 R2V", "material": "Cu", "insulation": "XLPE",
+                                                "install": "C"
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "S4", "type": "breaker", "ref": "-Q4", "use": "NSX", "in_A": 100,
+                                      "ir_A": 80,
+                                      "children": [
+                                        {
+                                          "id": "SS4", "type": "motor_starter", "ref": "-TA4",
+                                          "method": "soft_starter", "p_kW": 37, "in_A": 76,
+                                          "product": {
+                                            "manufacturer": "Schneider Electric",
+                                            "range": "Altivar Soft Starter ATS480"
+                                          },
+                                          "children": [
+                                            {
+                                              "type": "motor", "ref": "-M4", "label": "Surpresseur d'air lavage 2",
+                                              "p_kW": 37, "phases": 3,
+                                              "cable": {
+                                                "cores": "4G", "section_mm2": 25, "length_m": 22,
+                                                "designation": "U1000 R2V", "material": "Cu", "insulation": "XLPE",
+                                                "install": "C"
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "P5", "type": "breaker", "ref": "-Q5", "use": "NSX", "in_A": 63,
+                                      "ir_A": 50,
+                                      "cable": {
+                                        "cores": "4G", "section_mm2": 10, "length_m": 4, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "C"
+                                      },
+                                      "children": [
+                                        {
+                                          "id": "VFD5", "type": "motor_starter", "ref": "-TA5", "method": "vfd",
+                                          "p_kW": 22, "in_A": 46,
+                                          "product": {"manufacturer": "Schneider Electric", "range": "Altivar Process ATV630"},
+                                          "children": [
+                                            {
+                                              "type": "motor", "ref": "-M5",
+                                              "label": "Pompe eau traitée (refoulement)", "p_kW": 22, "phases": 3,
+                                              "cable": {
+                                                "cores": "4G", "section_mm2": 10, "length_m": 30,
+                                                "designation": "U1000 R2V", "material": "Cu", "insulation": "XLPE",
+                                                "install": "C"
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q6", "use": "MCB3", "in_A": 10,
+                                      "cable": {
+                                        "cores": "4G", "section_mm2": 1.5, "length_m": 35, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "C"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "motor", "label": "Pompes doseuses (coagulant, chlore, soude)",
+                                          "count": 3, "p_kW": 1.1, "phases": 3
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q7", "use": "MCB3", "in_A": 16,
+                                      "cable": {
+                                        "cores": "4G", "section_mm2": 2.5, "length_m": 25, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "C"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "load", "ref": "-E7", "label": "Réacteur UV désinfection",
+                                          "symbol_text": "UV", "p_kW": 6
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q8", "use": "MCB3", "in_A": 4, "poles": "2P",
+                                      "label": "Alim. automate",
+                                      "children": [
+                                        {
+                                          "type": "power_supply", "ref": "-T8", "u1_V": 400, "u2_V": 24, "in_A": 5,
+                                          "product": {"manufacturer": "Schneider Electric", "range": "Modicon ABL8"},
+                                          "children": [
+                                            {
+                                              "id": "PLC", "type": "plc", "ref": "-A1", "label": "Automate filière",
+                                              "role": "controller", "family": "M241",
+                                              "protocols": ["Modbus TCP", "CANopen"], "un_V": 24,
+                                              "product": {
+                                                "manufacturer": "Schneider Electric", "part_number": "TM241CEC24R",
+                                                "range": "Modicon M241",
+                                                "description": "Contrôleur 24 E/S, sorties relais, Ethernet + CANopen"
+                                              },
+                                              "onboard": [
+                                                {
+                                                  "slot": 0, "kind": "mixed_io", "channels": 24,
+                                                  "label": "14 E / 10 S relais",
+                                                  "channel_labels": {"1": "Démarrage S3", "2": "Démarrage S4"}
+                                                }
+                                              ],
+                                              "modules": [
+                                                {
+                                                  "slot": 1, "kind": "di", "part_number": "TM3DI16", "channels": 16,
+                                                  "un_V": 24
+                                                },
+                                                {
+                                                  "slot": 2, "kind": "ai", "part_number": "TM3AI4", "channels": 4,
+                                                  "signal": "4-20 mA",
+                                                  "channel_labels": {
+                                                    "1": "Turbidité", "2": "Chlore libre", "3": "Niveau bâche",
+                                                    "4": "Débit"
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "spare", "ref": "-Q9", "in_A": 100, "poles": "3P",
+                                      "label": "Réserve (3e filtre)"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "breaker", "ref": "-Q2", "use": "NSX", "in_A": 100, "ir_A": 80,
+                          "cable": {
+                            "cores": "4G", "section_mm2": 25, "length_m": 60, "designation": "U1000 R2V",
+                            "material": "Cu", "insulation": "XLPE", "install": "C"
+                          },
+                          "children": [{"type": "offpage", "label": "TD Bâtiment d'exploitation (IT)", "target": "EX-30 folio 3"}]
+                        },
+                        {
+                          "type": "breaker", "ref": "-Q3", "use": "MCB3", "in_A": 40,
+                          "cable": {
+                            "cores": "4G", "section_mm2": 10, "length_m": 6, "designation": "U1000 R2V",
+                            "material": "Cu", "insulation": "XLPE", "install": "C"
+                          },
+                          "children": [
+                            {
+                              "id": "T2", "type": "transformer", "ref": "-T2", "kind": "isolation",
+                              "label": "Transfo. de séparation", "sn_kVA": 16, "u1_V": 400, "u2_V": 400,
+                              "coupling": "Dyn11", "insulation": "dry",
+                              "children": [
+                                {
+                                  "id": "TDE", "type": "board", "ref": "TD-ECL",
+                                  "label": "Éclairage / prises (îlot TN-S)", "kind": "sub", "earthing": "TN-S",
+                                  "system": "3P+N", "in_A": 25, "ip": "IP55",
+                                  "children": [
+                                    {
+                                      "type": "rcbo", "ref": "-Q31", "in_A": 16, "curve": "C", "icn_kA": 6,
+                                      "poles": "1P+N", "idn_mA": 30, "rcd_type": "A", "phase": "L1",
+                                      "cable": {
+                                        "cores": "3G", "section_mm2": 2.5, "length_m": 80, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "C"
+                                      },
+                                      "children": [{"type": "lighting", "label": "Éclairage extérieur", "points": 8, "p_kW": 0.6}]
+                                    },
+                                    {
+                                      "type": "rcbo", "ref": "-Q32", "in_A": 10, "curve": "C", "icn_kA": 6,
+                                      "poles": "1P+N", "idn_mA": 30, "rcd_type": "A", "phase": "L2",
+                                      "cable": {
+                                        "cores": "3G", "section_mm2": 1.5, "length_m": 30, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "C"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "Éclairage locaux process", "points": 8,
+                                          "p_kW": 0.5
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rcbo", "ref": "-Q33", "in_A": 16, "curve": "C", "icn_kA": 6,
+                                      "poles": "1P+N", "idn_mA": 30, "rcd_type": "A", "phase": "L3",
+                                      "cable": {
+                                        "cores": "3G", "section_mm2": 2.5, "length_m": 30, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "C"
+                                      },
+                                      "children": [{"type": "socket", "label": "PC 16 A locaux", "points": 6}]
+                                    },
+                                    {
+                                      "type": "rcbo", "ref": "-Q34", "in_A": 16, "curve": "C", "icn_kA": 6,
+                                      "poles": "3P+N", "idn_mA": 30, "rcd_type": "A",
+                                      "cable": {
+                                        "cores": "5G", "section_mm2": 2.5, "length_m": 25, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "C"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "socket", "label": "Prise 3P+N+T 16 A maintenance", "points": 1,
+                                          "poles": "3P+N+T", "in_A": 16
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {"type": "spare", "ref": "-Q4", "in_A": 160, "poles": "3P", "label": "Réserve"}
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "id": "SL", "type": "surge_limiter", "ref": "-F2", "label": "Limiteur neutre-terre",
+      "location": "Borne neutre de -T1", "un_rating_V": 250
+    }
+  ],
+  "links": [
+    {"kind": "control", "from": "PLC", "from_port": "0.1", "to": "SS3"},
+    {"kind": "control", "from": "PLC", "from_port": "0.2", "to": "SS4"},
+    {"kind": "data", "from": "PLC", "to": "VFD1", "protocol": "Modbus TCP"}
+  ],
+  "views": [
+    {
+      "id": "sld", "title": "Station de traitement : schéma unifilaire", "paper": "A3",
+      "cartouche": ["label", "ref", "protection", "cable", "length_m", "p_kW"]
+    }
+  ]
+}

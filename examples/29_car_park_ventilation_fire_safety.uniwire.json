@@ -1,0 +1,270 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Underground car park (3 levels, 420 spaces): ventilation, smoke control and fire-safety supplies",
+    "project": "EX-29", "client": "Example Car Park", "author": "uniwire examples", "lang": "en",
+    "notes": [
+      "Demonstrates: fire-safety supplies taken upstream of the main switch, secondary safety source (genset) on the smoke-control board, fire-resistant cables (cpr_class), priority 'safety', VFDs in fire mode, control links from CO detection and fire alarm",
+      "Fire mode: VFD protections inhibited, fans run at 100 % until destroyed (F300 rated, 2 h)",
+      "Safety circuits: no RCD; breakers chosen for full discrimination with the upstream fire-services breaker -QF"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "ik3_kA": 25,
+    "standard": "IEC 60364-5-56 / EN 12101-3"
+  },
+  "templates": {
+    "SAF": {
+      "type": "breaker", "icu_kA": 36, "poles": "3P", "lockable": true,
+      "product": {"manufacturer": "Eaton", "range": "NZM"}
+    },
+    "MCB": {"type": "breaker", "curve": "C", "icn_kA": 15, "product": {"manufacturer": "Eaton", "range": "FAZ"}}
+  },
+  "sources": [
+    {
+      "id": "GRID", "type": "grid", "label": "Building LV intake", "un_V": 400, "ik_kA": 25,
+      "children": [
+        {
+          "id": "CPB", "type": "board", "ref": "CPB", "label": "Car park main board", "kind": "main", "in_A": 400,
+          "ik_kA": 25, "ip": "IP54",
+          "children": [
+            {
+              "id": "BB", "type": "busbar", "ref": "-WB0", "label": "Incoming busbar (ahead of main switch)",
+              "in_A": 400,
+              "children": [
+                {
+                  "id": "Q0", "type": "switch_disconnector", "ref": "-Q0", "label": "Main switch", "in_A": 400,
+                  "poles": "4P", "lockable": true,
+                  "children": [
+                    {
+                      "type": "breaker", "ref": "-Q11", "use": "MCB", "in_A": 32, "poles": "3P+N",
+                      "cable": {
+                        "cores": "5G", "section_mm2": 6, "length_m": 70, "material": "Cu", "insulation": "XLPE",
+                        "install": "E"
+                      },
+                      "children": [
+                        {
+                          "id": "KCO", "type": "contactor", "ref": "-KM11", "in_A": 32, "poles": "3P", "coil_V": 230,
+                          "label": "CO ventilation stage",
+                          "children": [{"type": "ventilation", "label": "Supply air fans (normal)", "p_kW": 11}]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q12", "use": "MCB", "in_A": 20, "poles": "3P+N",
+                      "cable": {
+                        "cores": "5G", "section_mm2": 2.5, "length_m": 90, "material": "Cu", "insulation": "XLPE",
+                        "install": "E"
+                      },
+                      "children": [{"type": "lighting", "label": "Car park LED lighting (presence)", "points": 160, "p_kW": 4.8}]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q13", "use": "MCB", "in_A": 16, "poles": "3P",
+                      "cable": {
+                        "cores": "4G", "section_mm2": 2.5, "length_m": 30, "material": "Cu", "insulation": "XLPE",
+                        "install": "E"
+                      },
+                      "children": [{"type": "motor", "label": "Entry/exit barriers & shutter", "p_kW": 1.5, "phases": 3}]
+                    },
+                    {
+                      "type": "rcbo", "ref": "-Q14", "in_A": 16, "curve": "C", "icn_kA": 10, "poles": "1P+N",
+                      "idn_mA": 30, "rcd_type": "A",
+                      "cable": {
+                        "cores": "3G", "section_mm2": 2.5, "length_m": 60, "material": "Cu", "insulation": "XLPE",
+                        "install": "E"
+                      },
+                      "children": [{"type": "socket", "label": "Maintenance sockets", "points": 6}]
+                    },
+                    {
+                      "type": "breaker", "ref": "-Q15", "use": "MCB", "in_A": 63, "poles": "3P+N",
+                      "cable": {
+                        "cores": "5G", "section_mm2": 16, "length_m": 50, "material": "Cu", "insulation": "XLPE",
+                        "install": "E"
+                      },
+                      "children": [{"type": "offpage", "label": "DB-EV Level −1 chargers", "target": "EX-29 sheet 2"}]
+                    }
+                  ]
+                },
+                {
+                  "id": "QF", "type": "breaker", "ref": "-QF", "use": "SAF", "in_A": 160, "ir_A": 125,
+                  "label": "FIRE SERVICES: DO NOT SWITCH OFF",
+                  "cable": {
+                    "cores": "4G", "section_mm2": 50, "length_m": 25, "designation": "FP400 / PH120 fire-resistant",
+                    "material": "Cu", "cpr_class": "B2ca-s1a,d1,a1"
+                  },
+                  "priority": "safety",
+                  "children": [
+                    {
+                      "id": "ATS", "type": "transfer_switch", "ref": "-QA", "label": "Safety ATS", "in_A": 160,
+                      "poles": "4P", "mode": "automatic", "interlock": "both",
+                      "children": [
+                        {
+                          "id": "SCB", "type": "board", "ref": "SCB", "label": "Smoke-control board",
+                          "kind": "distribution", "in_A": 160, "ip": "IP54", "priority": "safety",
+                          "location": "Fire-rated plant room (EI 120)",
+                          "children": [
+                            {
+                              "type": "breaker", "ref": "-Q1", "use": "MCB", "in_A": 10, "poles": "1P+N",
+                              "cable": {
+                                "cores": "3G", "section_mm2": 1.5, "length_m": 20,
+                                "designation": "FP400 / PH120 fire-resistant", "material": "Cu",
+                                "cpr_class": "B2ca-s1a,d1,a1"
+                              },
+                              "children": [
+                                {
+                                  "id": "FAP", "type": "load", "ref": "-A1", "label": "Fire alarm panel",
+                                  "symbol_text": "FACP", "p_kW": 0.3, "priority": "safety"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "QS1", "type": "breaker", "ref": "-Q2", "use": "SAF", "in_A": 63, "ir_A": 50,
+                              "cable": {
+                                "cores": "4G", "section_mm2": 16, "length_m": 15,
+                                "designation": "FP400 / PH120 fire-resistant", "material": "Cu",
+                                "cpr_class": "B2ca-s1a,d1,a1"
+                              },
+                              "children": [
+                                {
+                                  "id": "VFD1", "type": "motor_starter", "ref": "-TA2", "method": "vfd", "p_kW": 22,
+                                  "in_A": 45, "label": "Fire mode",
+                                  "product": {"manufacturer": "Eaton", "range": "DG1"},
+                                  "children": [
+                                    {
+                                      "type": "motor", "ref": "-M2", "label": "Main extract fan 1 (F300)", "p_kW": 22,
+                                      "phases": 3, "priority": "safety",
+                                      "cable": {
+                                        "cores": "4G", "section_mm2": 16, "length_m": 60,
+                                        "designation": "FP400 / PH120 fire-resistant", "material": "Cu",
+                                        "cpr_class": "B2ca-s1a,d1,a1"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "QS2", "type": "breaker", "ref": "-Q3", "use": "SAF", "in_A": 63, "ir_A": 50,
+                              "cable": {
+                                "cores": "4G", "section_mm2": 16, "length_m": 15,
+                                "designation": "FP400 / PH120 fire-resistant", "material": "Cu",
+                                "cpr_class": "B2ca-s1a,d1,a1"
+                              },
+                              "children": [
+                                {
+                                  "id": "VFD2", "type": "motor_starter", "ref": "-TA3", "method": "vfd", "p_kW": 22,
+                                  "in_A": 45, "label": "Fire mode",
+                                  "product": {"manufacturer": "Eaton", "range": "DG1"},
+                                  "children": [
+                                    {
+                                      "type": "motor", "ref": "-M3", "label": "Main extract fan 2 (F300)", "p_kW": 22,
+                                      "phases": 3, "priority": "safety",
+                                      "cable": {
+                                        "cores": "4G", "section_mm2": 16, "length_m": 65,
+                                        "designation": "FP400 / PH120 fire-resistant", "material": "Cu",
+                                        "cpr_class": "B2ca-s1a,d1,a1"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "QS3", "type": "breaker", "ref": "-Q4", "use": "MCB", "in_A": 20, "poles": "3P",
+                              "cable": {
+                                "cores": "4G", "section_mm2": 4, "length_m": 80,
+                                "designation": "FP400 / PH120 fire-resistant", "material": "Cu",
+                                "cpr_class": "B2ca-s1a,d1,a1"
+                              },
+                              "children": [
+                                {
+                                  "id": "KJ3", "type": "contactor", "ref": "-KM4", "in_A": 18, "poles": "3P",
+                                  "coil_V": 24,
+                                  "children": [
+                                    {
+                                      "type": "motor", "label": "Jet fans level −1", "count": 4, "p_kW": 6,
+                                      "phases": 3, "priority": "safety"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "QS4", "type": "breaker", "ref": "-Q5", "use": "MCB", "in_A": 20, "poles": "3P",
+                              "cable": {
+                                "cores": "4G", "section_mm2": 4, "length_m": 95,
+                                "designation": "FP400 / PH120 fire-resistant", "material": "Cu",
+                                "cpr_class": "B2ca-s1a,d1,a1"
+                              },
+                              "children": [
+                                {
+                                  "id": "KJ4", "type": "contactor", "ref": "-KM5", "in_A": 18, "poles": "3P",
+                                  "coil_V": 24,
+                                  "children": [
+                                    {
+                                      "type": "motor", "label": "Jet fans level −2/−3", "count": 4, "p_kW": 6,
+                                      "phases": 3, "priority": "safety"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q6", "use": "MCB", "in_A": 16, "poles": "1P+N",
+                              "cable": {
+                                "cores": "3G", "section_mm2": 2.5, "length_m": 40,
+                                "designation": "FP400 / PH120 fire-resistant", "material": "Cu",
+                                "cpr_class": "B2ca-s1a,d1,a1"
+                              },
+                              "children": [
+                                {
+                                  "type": "load", "ref": "-G6", "label": "Central battery (emergency lighting)",
+                                  "symbol_text": "CBS", "p_kW": 2, "priority": "safety"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GEN", "type": "generator", "ref": "-G1", "label": "Life-safety genset", "sn_kVA": 150, "un_V": 400,
+      "fuel": "diesel", "priority": "safety",
+      "children": [
+        {
+          "id": "QG", "type": "breaker", "ref": "-QG", "use": "SAF", "in_A": 250, "ir_A": 200, "poles": "4P",
+          "cable": {
+            "cores": "4G", "section_mm2": 70, "length_m": 30, "designation": "FP400 / PH120 fire-resistant",
+            "material": "Cu", "cpr_class": "B2ca-s1a,d1,a1"
+          }
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "id": "COD", "type": "controller", "ref": "-A20", "label": "CO / NO₂ detection", "function": "gas detection",
+      "symbol_text": "CO"
+    }
+  ],
+  "links": [
+    {"kind": "transfer", "from": "QG", "to": "ATS", "label": "safety source"},
+    {"kind": "control", "from": "COD", "to": "KCO", "label": "CO > 50 ppm"},
+    {"kind": "control", "from": "FAP", "to": "VFD1", "label": "fire"}
+  ],
+  "views": [
+    {
+      "id": "sld", "title": "Car park power and smoke control", "paper": "A3",
+      "cartouche": ["label", "ref", "protection", "cable", "length_m", "p_kW"]
+    }
+  ]
+}

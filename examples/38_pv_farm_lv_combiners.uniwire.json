@@ -1,0 +1,1389 @@
+{
+ "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+ "uniwire": "1.0.0",
+ "profiles": [
+  "iec60364"
+ ],
+ "meta": {
+  "title": "Ground-mounted PV farm 2.5 MWp: LV AC and DC system",
+  "project": "EX-38",
+  "client": "Example solar park",
+  "author": "uniwire examples",
+  
+  "lang": "en",
+  "drawing_number": "EX-38-SLD-01",
+  "notes": [
+   "Demonstrates: large multi-sheet document (one sheet per inverter station via board.own_sheet), 690 V IT system with insulation monitor, 1500 V DC string combiner boxes with gPV string fuses (count), step-up transformer 20 kV, auxiliary isolation transformer to a local TN-S board, templates",
+   "4 central inverters 500 kVA; each fed by 4 combiner boxes of 10 strings x 28 modules 560 Wp (156.8 kWp) → 627 kWp per inverter, DC/AC 1.25",
+   "String fuses gPV 25 A 1500 V (Isc 14 A x 1.56 = 21.8 A); combiner outputs 2x240 mm² Al"
+  ]
+ },
+ "installation": {
+  "earthing": "IT",
+  "system": "3P",
+  "un_V": 690,
+  "f_Hz": 50,
+  "supply": "HV 20 kV export",
+  "planned_kVA": 2000,
+  "ik3_kA": 40,
+  "standard": "IEC 60364"
+ },
+ "templates": {
+  "QINV": {
+   "type": "breaker",
+   "in_A": 630,
+   "ir_A": 500,
+   "poles": "3P",
+   "icu_kA": 50,
+   "ue_V": 690,
+   "trip_unit": "Micrologic 2.3",
+   "aux": [
+    "MX",
+    "OF",
+    "SD"
+   ],
+   "product": {
+    "manufacturer": "Schneider Electric",
+    "range": "ComPacT NSX630 (690 V)"
+   }
+  },
+  "CINV": {
+   "type": "inverter",
+   "kind": "central",
+   "p_kVA": 500,
+   "mppt": 1,
+   "un_V": 690,
+   "protection": "Grid code + EN 50549-2",
+   "product": {
+    "range": "500 kVA central inverter 1500 Vdc"
+   }
+  },
+  "CBSW": {
+   "type": "switch_disconnector",
+   "in_A": 250,
+   "poles": "2P",
+   "dc": true,
+   "ue_V": 1500,
+   "lockable": true
+  },
+  "SPDDC": {
+   "type": "spd",
+   "spd_type": "2",
+   "dc": true,
+   "uc_V": 1500,
+   "imax_kA": 40,
+   "up_kV": 4.5
+  },
+  "STRF": {
+   "type": "fuse",
+   "in_A": 25,
+   "fuse_class": "gPV",
+   "size": "10x85",
+   "ue_V": 1500,
+   "count": 20,
+   "note": "1 fuse per pole and per string"
+  },
+  "STR": {
+   "type": "pv_array",
+   "strings": 10,
+   "modules": 280,
+   "module_W": 560,
+   "p_kW": 156.8,
+   "voc_V": 1390,
+   "isc_A": 14
+  }
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "id": "HV",
+   "label": "HV utility 20 kV",
+   "supply": "20 kV",
+   "scc_MVA": 250,
+   "children": [
+    {
+     "type": "fuse_switch",
+     "ref": "-Q01",
+     "label": "HV transformer protection",
+     "in_A": 200,
+     "fuse_A": 100,
+     "ue_V": 24000,
+     "fuse_class": "HV",
+     "children": [
+      {
+       "type": "transformer",
+       "id": "TR1",
+       "ref": "-T01",
+       "label": "Step-up transformer",
+       "sn_kVA": 2000,
+       "u1_V": 20000,
+       "u2_V": 690,
+       "ucc_pct": 6,
+       "coupling": "Dy11",
+       "insulation": "oil",
+       "children": [
+        {
+         "type": "board",
+         "id": "LVSB",
+         "ref": "LVSB",
+         "label": "LV AC switchboard 690 V",
+         "kind": "switchboard",
+         "in_A": 2000,
+         "ik_kA": 40,
+         "system": "3P",
+         "earthing": "IT",
+         "form": "3b",
+         "cable": {
+          "kind": "bar",
+          "cores": "busbar",
+          "section_mm2": 2000,
+          "material": "Cu",
+          "length_m": 5
+         },
+         "children": [
+          {
+           "type": "breaker",
+           "id": "Q10",
+           "ref": "-Q10",
+           "in_A": 2000,
+           "ir_A": 1800,
+           "poles": "3P",
+           "icu_kA": 50,
+           "icw_kA": 50,
+           "mounting": "withdrawable",
+           "trip_unit": "Micrologic 5.0X",
+           "aux": [
+            "MX",
+            "MN",
+            "OF"
+           ],
+           "product": {
+            "manufacturer": "Schneider Electric",
+            "range": "MasterPacT MTZ2 20H1"
+           },
+           "children": [
+            {
+             "type": "breaker",
+             "ref": "-F10",
+             "label": "SPD",
+             "in_A": 63,
+             "curve": "C",
+             "poles": "3P",
+             "icu_kA": 50,
+             "ue_V": 690,
+             "children": [
+              {
+               "type": "spd",
+               "ref": "-F11",
+               "spd_type": "1+2",
+               "imax_kA": 50,
+               "uc_V": 760,
+               "poles": "3P",
+               "up_kV": 3
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "id": "Q11",
+             "ref": "-Q11",
+             "use": "QINV",
+             "label": "Inverter 1",
+             "cable": {
+              "cores": "3x",
+              "section_mm2": 185,
+              "parallel": 2,
+              "material": "Cu",
+              "insulation": "XLPE",
+              "install": "E",
+              "length_m": 8
+             },
+             "children": [
+              {
+               "type": "board",
+               "id": "PCS1",
+               "ref": "PCS1",
+               "label": "Inverter station 1",
+               "kind": "enclosure",
+               "own_sheet": true,
+               "children": [
+                {
+                 "type": "inverter",
+                 "id": "INV1",
+                 "ref": "-T1",
+                 "use": "CINV",
+                 "label": "Central inverter 1",
+                 "children": [
+                  {
+                   "type": "board",
+                   "id": "CB11",
+                   "ref": "CB1.1",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 120
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 1.1.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "type": "board",
+                   "id": "CB12",
+                   "ref": "CB1.2",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 160
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 1.2.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "type": "board",
+                   "id": "CB13",
+                   "ref": "CB1.3",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 200
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 1.3.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "type": "board",
+                   "id": "CB14",
+                   "ref": "CB1.4",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 240
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 1.4.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "id": "Q12",
+             "ref": "-Q12",
+             "use": "QINV",
+             "label": "Inverter 2",
+             "cable": {
+              "cores": "3x",
+              "section_mm2": 185,
+              "parallel": 2,
+              "material": "Cu",
+              "insulation": "XLPE",
+              "install": "E",
+              "length_m": 8
+             },
+             "children": [
+              {
+               "type": "board",
+               "id": "PCS2",
+               "ref": "PCS2",
+               "label": "Inverter station 2",
+               "kind": "enclosure",
+               "own_sheet": true,
+               "children": [
+                {
+                 "type": "inverter",
+                 "id": "INV2",
+                 "ref": "-T1",
+                 "use": "CINV",
+                 "label": "Central inverter 2",
+                 "children": [
+                  {
+                   "type": "board",
+                   "id": "CB21",
+                   "ref": "CB2.1",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 120
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 2.1.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "type": "board",
+                   "id": "CB22",
+                   "ref": "CB2.2",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 160
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 2.2.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "type": "board",
+                   "id": "CB23",
+                   "ref": "CB2.3",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 200
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 2.3.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "type": "board",
+                   "id": "CB24",
+                   "ref": "CB2.4",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 240
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 2.4.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "id": "Q13",
+             "ref": "-Q13",
+             "use": "QINV",
+             "label": "Inverter 3",
+             "cable": {
+              "cores": "3x",
+              "section_mm2": 185,
+              "parallel": 2,
+              "material": "Cu",
+              "insulation": "XLPE",
+              "install": "E",
+              "length_m": 8
+             },
+             "children": [
+              {
+               "type": "board",
+               "id": "PCS3",
+               "ref": "PCS3",
+               "label": "Inverter station 3",
+               "kind": "enclosure",
+               "own_sheet": true,
+               "children": [
+                {
+                 "type": "inverter",
+                 "id": "INV3",
+                 "ref": "-T1",
+                 "use": "CINV",
+                 "label": "Central inverter 3",
+                 "children": [
+                  {
+                   "type": "board",
+                   "id": "CB31",
+                   "ref": "CB3.1",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 120
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 3.1.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "type": "board",
+                   "id": "CB32",
+                   "ref": "CB3.2",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 160
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 3.2.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "type": "board",
+                   "id": "CB33",
+                   "ref": "CB3.3",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 200
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 3.3.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "type": "board",
+                   "id": "CB34",
+                   "ref": "CB3.4",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 240
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 3.4.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "id": "Q14",
+             "ref": "-Q14",
+             "use": "QINV",
+             "label": "Inverter 4",
+             "cable": {
+              "cores": "3x",
+              "section_mm2": 185,
+              "parallel": 2,
+              "material": "Cu",
+              "insulation": "XLPE",
+              "install": "E",
+              "length_m": 8
+             },
+             "children": [
+              {
+               "type": "board",
+               "id": "PCS4",
+               "ref": "PCS4",
+               "label": "Inverter station 4",
+               "kind": "enclosure",
+               "own_sheet": true,
+               "children": [
+                {
+                 "type": "inverter",
+                 "id": "INV4",
+                 "ref": "-T1",
+                 "use": "CINV",
+                 "label": "Central inverter 4",
+                 "children": [
+                  {
+                   "type": "board",
+                   "id": "CB41",
+                   "ref": "CB4.1",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 120
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 4.1.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "type": "board",
+                   "id": "CB42",
+                   "ref": "CB4.2",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 160
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 4.2.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "type": "board",
+                   "id": "CB43",
+                   "ref": "CB4.3",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 200
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 4.3.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "type": "board",
+                   "id": "CB44",
+                   "ref": "CB4.4",
+                   "label": "String combiner box",
+                   "kind": "dc_box",
+                   "ip": "IP65",
+                   "un_V": 1500,
+                   "cable": {
+                    "designation": "Al DC 1.8 kV",
+                    "cores": "2x",
+                    "section_mm2": 240,
+                    "material": "Al",
+                    "length_m": 240
+                   },
+                   "children": [
+                    {
+                     "type": "switch_disconnector",
+                     "ref": "-Q1",
+                     "use": "CBSW",
+                     "children": [
+                      {
+                       "type": "spd",
+                       "ref": "-F1",
+                       "use": "SPDDC"
+                      },
+                      {
+                       "type": "fuse",
+                       "ref": "-F2",
+                       "use": "STRF",
+                       "children": [
+                        {
+                         "type": "pv_array",
+                         "ref": "-G1",
+                         "use": "STR",
+                         "label": "Strings 4.4.1-10",
+                         "cable": {
+                          "designation": "H1Z2Z2-K",
+                          "cores": "1x",
+                          "section_mm2": 6,
+                          "length_m": 60
+                         }
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "id": "Q15",
+             "ref": "-Q15",
+             "label": "Auxiliaries",
+             "in_A": 100,
+             "ir_A": 63,
+             "poles": "3P",
+             "icu_kA": 50,
+             "ue_V": 690,
+             "cable": {
+              "cores": "3x",
+              "section_mm2": 16,
+              "material": "Cu",
+              "insulation": "XLPE",
+              "install": "C",
+              "length_m": 6
+             },
+             "children": [
+              {
+               "type": "transformer",
+               "ref": "-T15",
+               "label": "Aux. isolation transformer",
+               "kind": "isolation",
+               "sn_kVA": 50,
+               "u1_V": 690,
+               "u2_V": 400,
+               "coupling": "Dyn11",
+               "insulation": "dry",
+               "children": [
+                {
+                 "type": "board",
+                 "id": "AUX",
+                 "ref": "AUX",
+                 "label": "Station auxiliaries 400/230 V",
+                 "kind": "distribution",
+                 "system": "3P+N",
+                 "earthing": "TN-S",
+                 "in_A": 80,
+                 "cable": {
+                  "cores": "5G",
+                  "section_mm2": 25,
+                  "material": "Cu",
+                  "insulation": "XLPE",
+                  "install": "C",
+                  "length_m": 4
+                 },
+                 "children": [
+                  {
+                   "type": "breaker",
+                   "ref": "-Q0",
+                   "label": "Incomer",
+                   "in_A": 80,
+                   "curve": "C",
+                   "poles": "4P",
+                   "icn_kA": 10,
+                   "children": [
+                    {
+                     "type": "breaker",
+                     "ref": "-Q1",
+                     "label": "SCADA cabinet",
+                     "in_A": 16,
+                     "curve": "C",
+                     "poles": "1P+N",
+                     "icn_kA": 10,
+                     "phase": "L1",
+                     "cable": {
+                      "cores": "3G",
+                      "section_mm2": 2.5,
+                      "length_m": 10
+                     },
+                     "children": [
+                      {
+                       "type": "ups",
+                       "ref": "-U1",
+                       "label": "SCADA UPS",
+                       "sn_kVA": 1.5,
+                       "autonomy_min": 60,
+                       "children": [
+                        {
+                         "type": "load",
+                         "id": "SCADA",
+                         "ref": "-A1",
+                         "label": "SCADA / PPC",
+                         "symbol_text": "PPC"
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-Q2",
+                     "label": "CCTV & security",
+                     "in_A": 10,
+                     "curve": "C",
+                     "idn_mA": 30,
+                     "rcd_type": "A",
+                     "poles": "1P+N",
+                     "phase": "L2",
+                     "cable": {
+                      "cores": "3G",
+                      "section_mm2": 2.5,
+                      "length_m": 300,
+                      "du_pct": 2.8
+                     },
+                     "children": [
+                      {
+                       "type": "load",
+                       "label": "CCTV & perimeter",
+                       "symbol_text": "CCTV",
+                       "p_kW": 0.8
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-Q3",
+                     "label": "Lighting",
+                     "in_A": 10,
+                     "curve": "C",
+                     "idn_mA": 30,
+                     "rcd_type": "A",
+                     "poles": "1P+N",
+                     "phase": "L3",
+                     "cable": {
+                      "cores": "3G",
+                      "section_mm2": 1.5
+                     },
+                     "children": [
+                      {
+                       "type": "lighting",
+                       "label": "Station lighting",
+                       "points": 6
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-Q4",
+                     "label": "Sockets",
+                     "in_A": 16,
+                     "curve": "C",
+                     "idn_mA": 30,
+                     "rcd_type": "A",
+                     "poles": "1P+N",
+                     "phase": "L1",
+                     "cable": {
+                      "cores": "3G",
+                      "section_mm2": 2.5
+                     },
+                     "children": [
+                      {
+                       "type": "socket",
+                       "label": "Service sockets",
+                       "points": 4
+                      }
+                     ]
+                    },
+                    {
+                     "type": "breaker",
+                     "ref": "-Q5",
+                     "label": "Station HVAC",
+                     "in_A": 20,
+                     "curve": "C",
+                     "poles": "3P",
+                     "icn_kA": 10,
+                     "cable": {
+                      "cores": "4G",
+                      "section_mm2": 4
+                     },
+                     "children": [
+                      {
+                       "type": "ventilation",
+                       "label": "Inverter room ventilation",
+                       "p_kW": 7.5
+                      }
+                     ]
+                    },
+                    {
+                     "type": "spare",
+                     "ref": "-Q6",
+                     "in_A": 16,
+                     "poles": "1P+N"
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "devices": [
+  {
+   "type": "insulation_monitor",
+   "id": "IMD",
+   "ref": "-P10",
+   "label": "IMD 690 V AC/DC",
+   "range": "1-500 kΩ"
+  },
+  {
+   "type": "protection_relay",
+   "id": "KF0",
+   "ref": "-KF0",
+   "label": "Grid interface protection",
+   "functions": [
+    "27",
+    "59",
+    "81U/O",
+    "59N",
+    "ROCOF"
+   ]
+  }
+ ],
+ "links": [
+  {
+   "kind": "measure",
+   "from": "IMD",
+   "to": "TR1"
+  },
+  {
+   "kind": "trip",
+   "from": "KF0",
+   "to": "Q10",
+   "label": "MX"
+  },
+  {
+   "kind": "data",
+   "from": "SCADA",
+   "to": "INV1",
+   "protocol": "Modbus TCP",
+   "label": "Fibre ring"
+  }
+ ],
+ "views": [
+  {
+   "id": "sld",
+   "paper": "A3",
+   "title": "PV farm: single-line diagram",
+   "cartouche": [
+    "label",
+    "ref",
+    "protection",
+    "poles",
+    "cable",
+    "length_m",
+    "p_kW",
+    "count"
+   ],
+   "overrides": {
+    "TR1": {
+     "label_offset": [
+      0,
+      6
+     ]
+    }
+   }
+  }
+ ]
+}

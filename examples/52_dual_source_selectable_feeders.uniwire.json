@@ -1,0 +1,135 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Example workshop: dual supply, feeders selectable by removable links",
+    "project": "EX-52", "client": "Example Workshop", "author": "uniwire examples", 
+    "lang": "en",
+    "notes": [
+      "Demonstrates: two independent supplies with no transfer switch; each feeder is fed from busbar W1 OR busbar W2 through removable bolted links. Default position in the tree (normal_state 'closed'), alternative position as an 'infeed' link (normally_open + device in normal_state 'open')",
+      "Both positions of a feeder carry the same 'locks' key, declared in 'interlocks' (kind 'removable_link', 1 key): only one set of links may be fitted. Moving a feeder: isolate it, remove the links, fit them in the other position",
+      "Normally-open links are drawn with a long dash; the junction dot marks where the alternative supply lands on the feeder input",
+      "Supply 2 limited to 160 A in operation: check the load of W2 before moving feeders A or B onto it"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50,
+    "supply": "Two independent LV supplies", "ik3_kA": 25, "standard": "IEC 60364 / IEC 61439-2"
+  },
+  "templates": {
+    "LINK": {"type": "disconnector", "poles": "4P", "in_A": 400, "range": "Removable copper links"},
+    "INCOMER": {"type": "breaker", "in_A": 400, "ir_A": 360, "icu_kA": 36, "poles": "4P", "trip_unit": "LSI"}
+  },
+  "sources": [
+    {
+      "id": "S1", "type": "grid", "ref": "-S1", "label": "Supply 1", "un_V": 400, "system": "3P+N",
+      "children": [
+        {
+          "id": "Q1", "type": "breaker", "ref": "-Q1", "label": "Incomer 1", "use": "INCOMER",
+          "cable": {"cores": "4x", "section_mm2": 185, "material": "Cu", "length_m": 35, "insulation": "XLPE", "install": "E", "pe_section_mm2": 95},
+          "children": [
+            {
+              "id": "W1", "type": "busbar", "ref": "-W1", "label": "Busbar 1", "in_A": 400,
+              "children": [
+                {"type": "spd", "ref": "-F1", "label": "SPD busbar 1", "spd_type": "2", "imax_kA": 40, "poles": "3P+N"},
+                {
+                  "id": "X11", "ref": "-X11", "type": "disconnector", "use": "LINK", "label": "Links W1 → A", "normal_state": "closed",
+                  "locks": ["LA"],
+                  "children": [
+                    {
+                      "id": "QA", "type": "breaker", "ref": "-QA", "in_A": 250, "ir_A": 225, "icu_kA": 36,
+                      "poles": "4P", "trip_unit": "LSI",
+                      "cable": {"cores": "4x", "section_mm2": 120, "material": "Cu", "length_m": 60, "insulation": "XLPE", "install": "E", "pe_section_mm2": 70},
+                      "children": [{"type": "load", "label": "Workshop A (DB-A)"}]
+                    }
+                  ]
+                },
+                {
+                  "id": "X12", "ref": "-X12", "type": "disconnector", "use": "LINK", "label": "Links W1 → B", "normal_state": "closed",
+                  "locks": ["LB"],
+                  "children": [
+                    {
+                      "id": "QB", "type": "breaker", "ref": "-QB", "in_A": 160, "ir_A": 160, "icu_kA": 36,
+                      "poles": "4P", "trip_unit": "LSI",
+                      "cable": {"cores": "4x", "section_mm2": 70, "material": "Cu", "length_m": 45, "insulation": "XLPE", "install": "E", "pe_section_mm2": 35},
+                      "children": [{"type": "load", "label": "Workshop B (DB-B)"}]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "S2", "type": "grid", "ref": "-S2", "label": "Supply 2 (≤ 160 A)", "un_V": 400, "system": "3P+N",
+      "children": [
+        {
+          "id": "Q2", "type": "breaker", "ref": "-Q2", "label": "Incomer 2", "use": "INCOMER", "ir_A": 160,
+          "cable": {"cores": "4x", "section_mm2": 185, "material": "Cu", "length_m": 50, "insulation": "XLPE", "install": "E", "pe_section_mm2": 95},
+          "children": [
+            {
+              "id": "W2", "type": "busbar", "ref": "-W2", "label": "Busbar 2", "in_A": 400,
+              "children": [
+                {
+                  "id": "X23", "ref": "-X23", "type": "disconnector", "use": "LINK", "label": "Links W2 → C", "normal_state": "closed",
+                  "locks": ["LC"],
+                  "children": [
+                    {
+                      "id": "QC", "type": "breaker", "ref": "-QC", "in_A": 63, "curve": "C", "icn_kA": 25,
+                      "poles": "4P",
+                      "cable": {"cores": "5G", "section_mm2": 16, "material": "Cu", "length_m": 30, "insulation": "XLPE", "install": "C"},
+                      "children": [{"type": "load", "label": "Offices (DB-C)"}]
+                    }
+                  ]
+                },
+                {"type": "spd", "ref": "-F2", "label": "SPD busbar 2", "spd_type": "2", "imax_kA": 40, "poles": "3P+N"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {"id": "MET", "type": "earth_bar", "ref": "-PE", "label": "Main earthing terminal", "kind": "main_earth"},
+    {"id": "EE", "type": "earth", "ref": "-E", "label": "Earth electrode", "resistance_ohm": 10}
+  ],
+  "links": [
+    {
+      "kind": "infeed", "from": "W2", "to": "QA", "normally_open": true, "label": "Alternative W2 → A",
+      "device": {"id": "X21", "ref": "-X21", "type": "disconnector", "use": "LINK", "normal_state": "open", "locks": ["LA"]}
+    },
+    {
+      "kind": "infeed", "from": "W2", "to": "QB", "normally_open": true, "label": "Alternative W2 → B",
+      "device": {"id": "X22", "ref": "-X22", "type": "disconnector", "use": "LINK", "normal_state": "open", "locks": ["LB"]}
+    },
+    {
+      "kind": "infeed", "from": "W1", "to": "QC", "normally_open": true, "label": "Alternative W1 → C",
+      "device": {"id": "X13", "ref": "-X13", "type": "disconnector", "use": "LINK", "in_A": 63, "normal_state": "open", "locks": ["LC"]}
+    },
+    {
+      "kind": "earth", "from": "MET", "to": "EE", "label": "Earthing conductor 1 × 25 mm²",
+      "cable": {"cores": "1x", "section_mm2": 25, "material": "Cu", "designation": "H07V-K green/yellow"}
+    }
+  ],
+  "interlocks": [
+    {"key": "LA", "kind": "removable_link", "label": "Feeder A: links W1 or W2"},
+    {"key": "LB", "kind": "removable_link", "label": "Feeder B: links W1 or W2"},
+    {"key": "LC", "kind": "removable_link", "label": "Feeder C: links W2 or W1"}
+  ],
+  "enclosures": [
+    {
+      "id": "MDB", "kind": "cabinet", "ref": "MDB", "label": "Main distribution board",
+      "nodes": ["Q1", "Q2", "W1", "W2", "X11", "X12", "X23", "QA", "QB", "QC", "MET"]
+    }
+  ],
+  "views": [
+    {"id": "sld", "paper": "A3", "orientation": "landscape",
+     "cartouche": ["label", "ref", "protection", "cable", "phase"]},
+    {"id": "ml", "kind": "multi-line", "paper": "A3", "orientation": "landscape"},
+    {"id": "colour", "paper": "A3", "orientation": "landscape",
+     "cartouche": ["label", "ref", "protection", "cable", "phase"], "color": "source"}
+  ]
+}

@@ -1,0 +1,360 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Supermarket (2 500 m² sales area): refrigeration plant and HVAC with load shedding", "project": "EX-21",
+    "client": "Example Supermarket", "author": "uniwire examples", "lang": "en",
+    "notes": [
+      "Demonstrates: refrigeration MCC with VFD, discrete DOL (MA breaker + contactor + overload relay) and integrated DOL starters; HVAC rooftop units on load-shedding contactors driven by an energy manager; priority classes (essential / non_essential)",
+      "Refrigeration is never shed: rooftops and bakery are shed first when demand exceeds 400 kVA"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50,
+    "supply": "MV customer substation (800 kVA, see separate drawing)", "ik3_kA": 20, "subscribed_kVA": 400,
+    "standard": "IEC 60364"
+  },
+  "templates": {
+    "GV": {
+      "type": "motor_starter", "poles": "3P",
+      "product": {"manufacturer": "Siemens", "range": "SIRIUS 3RA2 (3RV2 + 3RT2)", "description": "DOL starter"}
+    },
+    "C3": {
+      "type": "breaker", "curve": "C", "icn_kA": 25, "poles": "3P+N",
+      "product": {"manufacturer": "Siemens", "range": "5SP / 5SY"}
+    },
+    "MC": {"type": "breaker", "icu_kA": 36, "poles": "4P", "product": {"manufacturer": "Siemens", "range": "3VA"}},
+    "LS": {
+      "type": "contactor", "function": "load_shedding", "coil_V": 230, "poles": "3P",
+      "product": {"manufacturer": "Siemens", "range": "SIRIUS 3RT2"}
+    }
+  },
+  "sources": [
+    {
+      "id": "SUP", "type": "offpage", "label": "From MV/LV substation TR1", "target": "EX-21 drawing E-001",
+      "children": [
+        {
+          "id": "MSB", "type": "board", "ref": "MSB", "label": "Main switchboard", "kind": "main", "in_A": 1250,
+          "ik_kA": 20, "form": "4a", "ip": "IP31",
+          "children": [
+            {
+              "id": "Q0", "type": "breaker", "ref": "-Q0", "label": "Incomer", "in_A": 1250, "ir_A": 1150,
+              "icu_kA": 50, "poles": "4P", "trip_unit": "ETU600 LSI", "mounting": "withdrawable",
+              "product": {"manufacturer": "Siemens", "range": "3WA", "description": "ACB 4P 1250 A"},
+              "children": [
+                {
+                  "id": "Q1", "type": "breaker", "ref": "-Q1", "use": "MC", "in_A": 250, "ir_A": 250, "poles": "3P",
+                  "label": "Refrigeration", "priority": "essential",
+                  "cable": {
+                    "cores": "4G", "section_mm2": 120, "length_m": 20, "material": "Cu", "insulation": "XLPE",
+                    "install": "E", "pe_section_mm2": 70
+                  },
+                  "children": [
+                    {
+                      "id": "DBR", "type": "board", "ref": "DB-REF", "label": "Refrigeration plant", "kind": "mcc",
+                      "in_A": 250, "ik_kA": 20, "form": "2b", "ip": "IP54", "own_sheet": true,
+                      "location": "Plant room (rear of store)", "priority": "essential",
+                      "children": [
+                        {
+                          "id": "R_Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 250, "poles": "3P",
+                          "label": "Main isolator", "lockable": true,
+                          "children": [
+                            {
+                              "id": "R_Q1", "type": "breaker", "ref": "-Q1", "in_A": 63, "curve": "D", "icn_kA": 25,
+                              "poles": "3P", "product": {"manufacturer": "Siemens", "range": "5SY / 5SP"},
+                              "cable": {
+                                "cores": "4G", "section_mm2": 16, "length_m": 10, "material": "Cu",
+                                "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "id": "R_VFD1", "type": "motor_starter", "ref": "-TA1", "method": "vfd", "p_kW": 22,
+                                  "in_A": 45, "label": "Lead drive",
+                                  "product": {"manufacturer": "Siemens", "range": "SINAMICS G120X"},
+                                  "children": [
+                                    {
+                                      "type": "motor", "ref": "-M1", "label": "MT compressor 1 (variable)", "p_kW": 22,
+                                      "phases": 3,
+                                      "cable": {
+                                        "cores": "4G", "section_mm2": 16, "length_m": 6, "material": "Cu",
+                                        "insulation": "XLPE", "install": "C"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q12", "in_A": 6, "curve": "C", "icn_kA": 10, "poles": "1P+N",
+                              "product": {"manufacturer": "Siemens", "range": "5SY"},
+                              "children": [
+                                {
+                                  "type": "power_supply", "ref": "-T12", "u1_V": 230, "u2_V": 24, "in_A": 5,
+                                  "p_W": 120, "product": {"manufacturer": "Siemens", "range": "SITOP PSU6200"},
+                                  "children": [
+                                    {
+                                      "id": "PACK", "type": "controller", "ref": "-A12", "label": "Pack controller",
+                                      "function": "refrigeration pack controller", "symbol_text": "PACK"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "R_Q2", "type": "breaker", "ref": "-Q2", "in_A": 40, "curve": "MA", "icu_kA": 25,
+                              "poles": "3P", "label": "Motor circuit (magnetic only)",
+                              "product": {"manufacturer": "Siemens", "range": "3RV2"},
+                              "children": [
+                                {
+                                  "id": "R_KM2", "type": "contactor", "ref": "-KM2", "in_A": 38, "poles": "3P",
+                                  "coil_V": 230, "product": {"manufacturer": "Siemens", "range": "SIRIUS 3RT2"},
+                                  "children": [
+                                    {
+                                      "id": "R_F2", "type": "thermal_relay", "ref": "-F2", "range_A": "28-40",
+                                      "setting_A": 29, "product": {"manufacturer": "Siemens", "range": "SIRIUS 3RU2"},
+                                      "children": [
+                                        {
+                                          "type": "motor", "ref": "-M2", "label": "MT compressor 2", "p_kW": 15,
+                                          "phases": 3,
+                                          "cable": {
+                                            "cores": "4G", "section_mm2": 6, "length_m": 8, "material": "Cu",
+                                            "insulation": "XLPE", "install": "C"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "motor_starter", "ref": "-Q3", "method": "dol", "use": "GV", "in_A": 32,
+                              "p_kW": 15,
+                              "cable": {
+                                "cores": "4G", "section_mm2": 4, "length_m": 8, "material": "Cu",
+                                "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "type": "motor", "ref": "-M3", "label": "MT compressor 3", "p_kW": 15, "phases": 3,
+                                  "in_A": 29
+                                }
+                              ]
+                            },
+                            {
+                              "type": "motor_starter", "ref": "-Q4", "method": "dol", "use": "GV", "in_A": 32,
+                              "p_kW": 15,
+                              "cable": {
+                                "cores": "4G", "section_mm2": 4, "length_m": 8, "material": "Cu",
+                                "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "type": "motor", "ref": "-M4", "label": "MT compressor 4", "p_kW": 15, "phases": 3,
+                                  "in_A": 29
+                                }
+                              ]
+                            },
+                            {
+                              "type": "motor_starter", "ref": "-Q5", "method": "dol", "use": "GV", "in_A": 16,
+                              "p_kW": 7.5,
+                              "cable": {
+                                "cores": "4G", "section_mm2": 2.5, "length_m": 8, "material": "Cu",
+                                "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "type": "motor", "ref": "-M5", "label": "LT compressor 1", "p_kW": 7.5, "phases": 3,
+                                  "in_A": 15.5
+                                }
+                              ]
+                            },
+                            {
+                              "type": "motor_starter", "ref": "-Q6", "method": "dol", "use": "GV", "in_A": 16,
+                              "p_kW": 7.5,
+                              "cable": {
+                                "cores": "4G", "section_mm2": 2.5, "length_m": 8, "material": "Cu",
+                                "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "type": "motor", "ref": "-M6", "label": "LT compressor 2", "p_kW": 7.5, "phases": 3,
+                                  "in_A": 15.5
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q7", "use": "C3", "in_A": 32,
+                              "cable": {
+                                "cores": "5G", "section_mm2": 6, "length_m": 25, "material": "Cu",
+                                "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "type": "load", "ref": "-E7", "label": "Gas cooler EC fans (x6)",
+                                  "symbol_text": "EC", "p_kW": 9, "count": 6, "location": "Roof"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q8", "use": "C3", "in_A": 32,
+                              "cable": {
+                                "cores": "5G", "section_mm2": 6, "length_m": 45, "material": "Cu",
+                                "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "type": "appliance", "kind": "fridge", "label": "Multideck cases aisle 1-2",
+                                  "p_kW": 14
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q9", "use": "C3", "in_A": 32,
+                              "cable": {
+                                "cores": "5G", "section_mm2": 6, "length_m": 55, "material": "Cu",
+                                "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "type": "appliance", "kind": "fridge", "label": "Multideck cases aisle 3-4",
+                                  "p_kW": 14
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q10", "use": "C3", "in_A": 25,
+                              "cable": {
+                                "cores": "5G", "section_mm2": 4, "length_m": 40, "material": "Cu",
+                                "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "type": "appliance", "kind": "freezer", "label": "Freezer islands (defrost)",
+                                  "p_kW": 11
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q11", "use": "C3", "in_A": 16,
+                              "cable": {
+                                "cores": "5G", "section_mm2": 2.5, "length_m": 30, "material": "Cu",
+                                "insulation": "XLPE", "install": "C"
+                              },
+                              "children": [
+                                {
+                                  "type": "load", "ref": "-E11", "label": "Cold room evaporators",
+                                  "symbol_text": "EVAP", "p_kW": 5
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Q5", "type": "breaker", "ref": "-Q5", "use": "MC", "in_A": 100, "ir_A": 100,
+                  "cable": {
+                    "cores": "5G", "section_mm2": 25, "length_m": 35, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [{"type": "offpage", "label": "DB-L Sales floor lighting", "target": "EX-21 sheet DB-L"}]
+                },
+                {
+                  "id": "Q6", "type": "breaker", "ref": "-Q6", "use": "MC", "in_A": 63,
+                  "cable": {
+                    "cores": "5G", "section_mm2": 16, "length_m": 30, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "priority": "essential",
+                  "children": [{"type": "offpage", "label": "DB-T Checkouts, IT, security", "target": "EX-21 sheet DB-T"}]
+                },
+                {
+                  "id": "Q7", "type": "breaker", "ref": "-Q7", "use": "MC", "in_A": 40,
+                  "cable": {
+                    "cores": "5G", "section_mm2": 10, "length_m": 80, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [{"type": "lighting", "label": "Car park lighting (40 columns)", "points": 40, "p_kW": 4}]
+                },
+                {"type": "spare", "ref": "-Q8", "in_A": 250, "poles": "4P", "label": "Spare (future PV inverter)"},
+                {
+                  "id": "Q2", "type": "breaker", "ref": "-Q2", "use": "MC", "in_A": 160, "ir_A": 125, "poles": "3P",
+                  "cable": {
+                    "cores": "4G", "section_mm2": 35, "length_m": 40, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [
+                    {
+                      "id": "KS2", "type": "contactor", "ref": "-KM2", "use": "LS", "in_A": 115,
+                      "priority": "non_essential",
+                      "children": [
+                        {
+                          "type": "load", "ref": "-E2", "label": "Rooftop unit RTU-1 (sales)", "symbol_text": "RTU",
+                          "p_kW": 62
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Q3", "type": "breaker", "ref": "-Q3", "use": "MC", "in_A": 160, "ir_A": 125, "poles": "3P",
+                  "cable": {
+                    "cores": "4G", "section_mm2": 35, "length_m": 55, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [
+                    {
+                      "id": "KS3", "type": "contactor", "ref": "-KM3", "use": "LS", "in_A": 115,
+                      "priority": "non_essential",
+                      "children": [
+                        {
+                          "type": "load", "ref": "-E3", "label": "Rooftop unit RTU-2 (sales)", "symbol_text": "RTU",
+                          "p_kW": 62
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Q4", "type": "breaker", "ref": "-Q4", "use": "MC", "in_A": 100, "ir_A": 80,
+                  "cable": {
+                    "cores": "5G", "section_mm2": 25, "length_m": 30, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [
+                    {
+                      "id": "KS4", "type": "contactor", "ref": "-KM4", "use": "LS", "poles": "4P", "in_A": 80,
+                      "priority": "non_essential",
+                      "children": [{"type": "cooking", "kind": "oven", "ref": "-E4", "label": "Bakery deck ovens", "p_kW": 45}]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "id": "EMS", "type": "controller", "ref": "-A0", "label": "Energy manager", "function": "load shedding",
+      "symbol_text": "EMS"
+    }
+  ],
+  "links": [
+    {"kind": "control", "from": "EMS", "to": "KS4", "label": "shed 1"},
+    {"kind": "control", "from": "EMS", "to": "KS3", "label": "shed 2"},
+    {"kind": "control", "from": "EMS", "to": "KS2", "label": "shed 3"},
+    {"kind": "data", "from": "PACK", "to": "R_VFD1", "protocol": "Modbus RTU", "label": "speed ref"}
+  ],
+  "views": [
+    {
+      "id": "sld", "title": "Supermarket LV distribution", "paper": "A3",
+      "cartouche": ["label", "ref", "protection", "cable", "length_m", "p_kW"]
+    }
+  ]
+}

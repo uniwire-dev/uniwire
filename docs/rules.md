@@ -1,0 +1,120 @@
+# Rules
+
+Beyond the JSON Schema, uniwire checks documents against **rule profiles**. The `core` rules (including
+the PLC checks) always run; other profiles are enabled per document with `"profiles": [...]`, or on the
+command line with `--profile`.
+
+```bash
+uniwire check house.uniwire.json                       # core + the document's profiles
+uniwire check house.uniwire.json --profile iec60364    # core + iec60364 only
+```
+
+```python
+import uniwire
+findings = uniwire.check(uniwire.load("house.uniwire.json"), ["nfc15100", "iec60364"])
+```
+
+!!! note
+    These rules are consistency checks that help catch mistakes early. They do not replace the
+    applicable standards, nor the verification of an installation by a qualified person.
+
+## Findings
+
+Each finding has a level, a stable rule id, the node concerned and a message:
+
+```text
+house.uniwire.json: 2 finding(s)
+  WARNING nfc15100.rcd-count [Q1]: only one 30 mA residual-current device (dwellings: at least 2; set installation.premises for other premises)
+  ERROR   nfc15100.section [Q12]: 25 A breaker on 2.5 mm² (max 20 A)
+```
+
+| Level | Meaning |
+|---|---|
+| `error` | The document contradicts a rule; `uniwire check` exits with code 1 |
+| `warning` | Probably wrong, or a recommendation not met |
+| `info` | Reminder, or a check that could not be completed (data not covered) |
+
+In Python, a `Finding` has the attributes `level`, `rule`, `message`, `node` and `source`. Rules based on a
+standard carry a `source` (the document and clause the rule relies on) and a `confidence` (`high` or
+`medium`), available in `uniwire.rules.RULE_INFO`. Messages are translated: set `UNIWIRE_LANG=fr` for French.
+
+An unknown profile name produces a `profile` warning.
+
+## `core` (always active)
+
+| Rule | Check | Level |
+|---|---|---|
+| `core.ref-unique` | A reference designation is unique within a board (it may repeat across boards) | warning |
+| `core.rating-cascade` | A breaker, RCBO or fuse does not have a higher rating than the protective device directly upstream | warning |
+| `core.transfer-target` | A `transfer` link ends on a `transfer_switch` | error |
+| `core.transfer-source` | A transfer switch receives a second source (`transfer` link) | warning |
+| `core.tie-device` | A `tie` link describes its coupling device | info |
+| `core.terminal-node` | PV arrays, batteries, SPDs and earth electrodes feed nothing | warning |
+| `core.normalized` | A near-miss value was read in its canonical form on load: `poles: 2` as `"2P"`, `cable.cores: 3` as `"3G"`, `"3G2.5"` as `"3G"` plus `section_mm2: 2.5`, a `[15, 45]` range as `"15-45"`, a view `type`/`single_line` as `kind`/`single-line`, `meta.description` as a note. Ambiguous values are not guessed: validation rejects them. `uniwire normalize` writes the canonical form | warning |
+| `core.interlock` | Nodes and links sharing a `locks` key: no more members closed in normal operation than the interlock has `keys` (SPEC §4.1); a declared interlock is used by at least 2 members; an undeclared lock is not alone | error / warning |
+
+## PLC rules (part of `core`)
+
+Modular PLCs (`plc`) are checked whenever they appear in a document.
+
+| Rule | Check | Level |
+|---|---|---|
+| `plc.slots` | Module slots are unique (error) and in increasing order (warning) | error / warning |
+| `plc.port` | A link port (`from_port` / `to_port`, `"slot.channel"`) is readable, targets an existing slot and a channel within the module's channel count | error |
+| `plc.port-shared` | One output channel does not control several devices | warning |
+| `plc.coil` | A 24 V digital output does not drive a coil of a much higher voltage (e.g. 230 V) without an interposing relay | warning |
+| `plc.wago-end` | A WAGO local bus ends with an end module (750-600) | warning |
+| `plc.wago-feed` | A WAGO controller declares a potential feed module | info |
+
+## `nfc15100`: French dwelling installations
+
+Checks for a dwelling distribution board under NF C 15-100 (including part 7-722 for EV charging).
+
+| Rule | Check | Level |
+|---|---|---|
+| `nfc15100.section` | Copper cross-section ↔ rating: 1.5 → 16 A, 2.5 → 20 A, 4 → 25 A, 6 → 32 A | error |
+| `nfc15100.points` | Lighting: at most 8 points. Sockets: at most 8 on 1.5 mm², at most 12 on 2.5 mm² | error |
+| `nfc15100.lighting-rating` | Lighting protected at 16 A at most | error |
+| `nfc15100.rcd-30mA` | 30 mA protection for dwelling circuits, sockets and EV charging | error |
+| `nfc15100.rcd-type-A` | No type AC RCD for washing machine, dryer, hob / cooker, EV charging | error |
+| `nfc15100.rcd-count` | At least 2 30 mA RCDs per dwelling, including 1 type A; skipped when `installation.premises` is not `dwelling` | warning |
+| `nfc15100.rcd-circuits` | At most 8 circuits per 30 mA RCD | error |
+| `nfc15100.heating` | Heating power per circuit: 3.5 / 4.5 / 5.75 / 7.25 kW at 16 / 20 / 25 / 32 A | warning |
+| `nfc15100.dedicated-circuit` | Dedicated circuits: washing machine, dishwasher, dryer, freezer, oven, hob, water heater, EV charging (one load per circuit), heating and shutters (circuit reserved for that use) | error |
+| `nfc15100.ev-rcd` | EV charging: type B in three-phase mode 2 (error); in mode 3 with a type A or F RCD, reminder of 6 mA DC fault detection (info) | error / info |
+| `nfc15100.selectivity` | Selective (type S) incoming RCD upstream of other RCDs | warning |
+
+## `iec60364`: current-carrying capacity
+
+One rule, `iec60364.iz`: the rating of the protective device feeding a cable (`ir_A`, otherwise
+`fuse_A`, otherwise `in_A`) must not exceed the cable's current-carrying capacity Iz (multiplied by
+`parallel`).
+
+* Applies when the cable specifies `section_mm2`, `material`, `insulation` and `install`.
+* Coverage: copper, PVC or XLPE (`PR` and `EPR` are treated as XLPE); installation methods `A1`, `A2`,
+  `B1`, `B2`, `C`, `E`, `F` with 2 or 3 loaded conductors, 1.5 to 300 mm²; `D-duct` (buried in duct)
+  for copper and aluminium. Combinations outside the table produce an `info`.
+* Loaded conductors: 3 when the protective device is `3P`, `3P+N` or `4P`, otherwise 2; without poles,
+  `installation.system` decides.
+* Level: **warning**, never error. The tables (`src/uniwire/registry/data/iz_tables.json`, read with
+  `uniwire.registry.iz_tables()`) are given at 40 °C ambient and are therefore conservative compared with
+  IEC tables at 30 °C; no grouping or temperature correction factor is applied.
+
+See the [specification](SPEC.md) §10 for the data source and its limitations.
+
+## Writing a rule
+
+Rules are plain generator functions registered on a profile:
+
+```python
+from uniwire.rules import Finding, rule
+
+@rule("myprofile")
+def no_unlabelled_loads(doc, idx):
+    for node_id, node in idx.nodes.items():
+        if node.type == "load" and not node.label:
+            yield Finding("warning", "myprofile.load-label", "load without a label", node_id)
+```
+
+Once the module defining it is imported, `"profiles": ["myprofile"]` enables it. Rules contributed to the
+project must translate their messages through `uniwire.i18n` and come with tests.

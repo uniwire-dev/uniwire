@@ -1,0 +1,37 @@
+[project]
+name = "uniwire-data-iec81346"
+version = "0.1.0"
+description = "IEC 81346-2:2019 component classes (from Wikipedia, CC BY-SA 4.0) for the uniwire registry"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "CC-BY-SA-4.0"
+license-files = ["LICENSE"]
+authors = [{ name = "uniwire contributors" }]
+keywords = ["uniwire", "IEC 81346", "reference designation", "electrical", "data"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Manufacturing",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Scientific/Engineering",
+]
+
+[project.urls]
+Homepage = "https://uniwire.sh"
+Repository = "https://github.com/uniwire-dev/uniwire"
+Source = "https://github.com/uniwire-dev/uniwire/tree/main/packages/uniwire-data-iec81346"
+Issues = "https://github.com/uniwire-dev/uniwire/issues"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.sdist]
+only-include = ["src", "README.md", "LICENSE", "pyproject.toml"]
+exclude = ["__pycache__", "*.py[cod]"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/uniwire_data_iec81346"]
+exclude = ["__pycache__", "*.py[cod]"]

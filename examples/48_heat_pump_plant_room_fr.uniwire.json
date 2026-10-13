@@ -1,0 +1,433 @@
+{
+ "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+ "uniwire": "1.0.0",
+ "profiles": [
+  "iec60364"
+ ],
+ "meta": {
+  "title": "Immeuble de bureaux exemple : chaufferie pompe à chaleur (TD-CVC)",
+  "project": "EX-48",
+  "client": "Immeuble de bureaux exemple",
+  "author": "uniwire examples",
+  
+  "lang": "fr",
+  "notes": [
+   "Démontre : tableau CVC en local technique : PAC air/eau 3P, appoint électrique 3 étages par contacteurs, circulateurs EC monophasés répartis sur les phases, ballon ECS, régulateur de chaufferie relié en Modbus RTU (liens data) et commande des contacteurs d'appoint (liens control), tableau en TN-S alimenté depuis le TGBT",
+   "PAC 45 kW thermiques, COP nominal 3,2 : Pabs max 18 kW, Imax 32 A → disjoncteur courbe D 40 A, câble 5G10",
+   "Appoint 3 x 4 kW : contacteurs KM1 à KM3 pilotés par le régulateur (sorties relais)"
+  ]
+ },
+ "installation": {
+  "earthing": "TN-S",
+  "system": "3P+N",
+  "un_V": 400,
+  "uln_V": 230,
+  "f_Hz": 50,
+  "ik3_kA": 10,
+  "standard": "NF C 15-100"
+ },
+ "templates": {
+  "CIRC": {
+   "type": "breaker",
+   "in_A": 6,
+   "curve": "C",
+   "poles": "1P+N",
+   "icn_kA": 10
+  },
+  "APP": {
+   "type": "contactor",
+   "in_A": 25,
+   "poles": "3P",
+   "coil_V": 230,
+   "function": "power",
+   "product": {
+    "manufacturer": "Hager",
+    "range": "ESC contacteur modulaire",
+    "description": "Contacteur 25 A 3NO, bobine 230 V"
+   }
+  },
+  "RES": {
+   "type": "heating",
+   "p_kW": 4,
+   "label": "Résistance appoint"
+  }
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "label": "TGBT, départ CVC",
+   "status": "existing",
+   "children": [
+    {
+     "type": "breaker",
+     "ref": "-Q12",
+     "label": "Départ TD-CVC (TGBT)",
+     "in_A": 100,
+     "ir_A": 80,
+     "poles": "4P",
+     "icu_kA": 25,
+     "status": "existing",
+     "cable": {
+      "designation": "U1000R2V",
+      "cores": "5G",
+      "section_mm2": 25,
+      "material": "Cu",
+      "insulation": "XLPE",
+      "install": "E",
+      "length_m": 45
+     },
+     "children": [
+      {
+       "type": "board",
+       "id": "TDCVC",
+       "ref": "TD-CVC",
+       "label": "Tableau chaufferie",
+       "kind": "distribution",
+       "in_A": 100,
+       "ik_kA": 8,
+       "ip": "IP31",
+       "location": "Local technique R-1",
+       "children": [
+        {
+         "type": "switch_disconnector",
+         "ref": "-Q0",
+         "label": "Interrupteur général",
+         "in_A": 100,
+         "poles": "4P",
+         "children": [
+          {
+           "type": "breaker",
+           "ref": "-Q1",
+           "label": "PAC air/eau",
+           "in_A": 40,
+           "curve": "D",
+           "poles": "4P",
+           "icn_kA": 10,
+           "cable": {
+            "designation": "U1000R2V",
+            "cores": "5G",
+            "section_mm2": 10,
+            "material": "Cu",
+            "insulation": "XLPE",
+            "install": "E",
+            "length_m": 30
+           },
+           "children": [
+            {
+             "type": "load",
+             "id": "PAC",
+             "ref": "-E1",
+             "label": "PAC 45 kW th",
+             "symbol_text": "PAC",
+             "p_kW": 18
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "-Q2",
+           "label": "Appoint électrique",
+           "in_A": 20,
+           "curve": "C",
+           "poles": "3P",
+           "icn_kA": 10,
+           "children": [
+            {
+             "type": "contactor",
+             "id": "KM1",
+             "ref": "-KM1",
+             "use": "APP",
+             "children": [
+              {
+               "type": "heating",
+               "use": "RES",
+               "label": "Étage 1",
+               "cable": {
+                "designation": "U1000R2V",
+                "cores": "4G",
+                "section_mm2": 2.5,
+                "length_m": 6
+               }
+              }
+             ]
+            },
+            {
+             "type": "contactor",
+             "id": "KM2",
+             "ref": "-KM2",
+             "use": "APP",
+             "children": [
+              {
+               "type": "heating",
+               "use": "RES",
+               "label": "Étage 2",
+               "cable": {
+                "designation": "U1000R2V",
+                "cores": "4G",
+                "section_mm2": 2.5,
+                "length_m": 6
+               }
+              }
+             ]
+            },
+            {
+             "type": "contactor",
+             "id": "KM3",
+             "ref": "-KM3",
+             "use": "APP",
+             "children": [
+              {
+               "type": "heating",
+               "use": "RES",
+               "label": "Étage 3",
+               "cable": {
+                "designation": "U1000R2V",
+                "cores": "4G",
+                "section_mm2": 2.5,
+                "length_m": 6
+               }
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "-Q3",
+           "use": "CIRC",
+           "phase": "L1",
+           "label": "Circ. primaire",
+           "cable": {
+            "designation": "U1000R2V",
+            "cores": "3G",
+            "section_mm2": 1.5,
+            "material": "Cu",
+            "insulation": "XLPE",
+            "install": "C",
+            "length_m": 8
+           },
+           "children": [
+            {
+             "type": "motor",
+             "id": "P1",
+             "label": "Circ. primaire",
+             "p_kW": 0.45,
+             "phases": 1,
+             "product": {
+              "range": "Circulateur EC à rotor noyé",
+              "description": "Circulateur électronique, Modbus RTU"
+             }
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "-Q4",
+           "use": "CIRC",
+           "phase": "L2",
+           "label": "Circ. radiateurs",
+           "cable": {
+            "designation": "U1000R2V",
+            "cores": "3G",
+            "section_mm2": 1.5,
+            "material": "Cu",
+            "insulation": "XLPE",
+            "install": "C",
+            "length_m": 8
+           },
+           "children": [
+            {
+             "type": "motor",
+             "id": "P2",
+             "label": "Circ. radiateurs",
+             "p_kW": 0.35,
+             "phases": 1,
+             "product": {
+              "range": "Circulateur EC à rotor noyé",
+              "description": "Circulateur électronique, Modbus RTU"
+             }
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "-Q5",
+           "use": "CIRC",
+           "phase": "L3",
+           "label": "Circ. CTA",
+           "cable": {
+            "designation": "U1000R2V",
+            "cores": "3G",
+            "section_mm2": 1.5,
+            "material": "Cu",
+            "insulation": "XLPE",
+            "install": "C",
+            "length_m": 8
+           },
+           "children": [
+            {
+             "type": "motor",
+             "id": "P3",
+             "label": "Circ. CTA",
+             "p_kW": 0.25,
+             "phases": 1,
+             "product": {
+              "range": "Circulateur EC à rotor noyé",
+              "description": "Circulateur électronique, Modbus RTU"
+             }
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "-Q6",
+           "use": "CIRC",
+           "phase": "L1",
+           "label": "Bouclage ECS",
+           "cable": {
+            "designation": "U1000R2V",
+            "cores": "3G",
+            "section_mm2": 1.5,
+            "material": "Cu",
+            "insulation": "XLPE",
+            "install": "C",
+            "length_m": 8
+           },
+           "children": [
+            {
+             "type": "motor",
+             "id": "P4",
+             "label": "Bouclage ECS",
+             "p_kW": 0.1,
+             "phases": 1,
+             "product": {
+              "range": "Circulateur EC à rotor noyé",
+              "description": "Circulateur électronique, Modbus RTU"
+             }
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "-Q7",
+           "label": "Ballon ECS",
+           "in_A": 20,
+           "curve": "C",
+           "poles": "3P",
+           "icn_kA": 10,
+           "cable": {
+            "designation": "U1000R2V",
+            "cores": "4G",
+            "section_mm2": 2.5,
+            "length_m": 10
+           },
+           "children": [
+            {
+             "type": "water_heater",
+             "label": "Ballon ECS 500 L",
+             "volume_L": 500,
+             "p_kW": 6
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "-Q8",
+           "label": "Régulation",
+           "in_A": 2,
+           "curve": "C",
+           "poles": "1P+N",
+           "icn_kA": 10,
+           "phase": "L2",
+           "children": [
+            {
+             "type": "controller",
+             "id": "REG",
+             "ref": "-A1",
+             "label": "Régulateur",
+             "function": "régulation chaufferie",
+             "symbol_text": "REG"
+            }
+           ]
+          },
+          {
+           "type": "rcbo",
+           "ref": "-Q9",
+           "label": "Prises / éclairage",
+           "in_A": 16,
+           "curve": "C",
+           "idn_mA": 30,
+           "rcd_type": "A",
+           "poles": "1P+N",
+           "icn_kA": 10,
+           "phase": "L3",
+           "cable": {
+            "designation": "U1000R2V",
+            "cores": "3G",
+            "section_mm2": 2.5,
+            "length_m": 12
+           },
+           "children": [
+            {
+             "type": "socket",
+             "label": "Prises local",
+             "points": 2
+            }
+           ]
+          },
+          {
+           "type": "spare",
+           "ref": "-Q10",
+           "in_A": 16,
+           "poles": "4P",
+           "label": "Réserve"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "links": [
+  {
+   "kind": "data",
+   "from": "REG",
+   "to": "PAC",
+   "protocol": "Modbus RTU"
+  },
+  {
+   "kind": "control",
+   "from": "REG",
+   "to": "KM1"
+  },
+  {
+   "kind": "control",
+   "from": "REG",
+   "to": "KM2"
+  },
+  {
+   "kind": "control",
+   "from": "REG",
+   "to": "KM3"
+  }
+ ],
+ "views": [
+  {
+   "id": "sld",
+   "paper": "A3",
+   "cartouche": [
+    "label",
+    "ref",
+    "protection",
+    "poles",
+    "cable",
+    "length_m",
+    "phase",
+    "p_kW"
+   ]
+  }
+ ]
+}

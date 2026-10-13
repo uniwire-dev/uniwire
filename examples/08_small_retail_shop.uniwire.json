@@ -1,0 +1,109 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "lang": "en",
+    "title": "Small retail shop: distribution board",
+    "project": "EX-08",
+    "client": "Example corner shop (120 m²)",
+    "author": "uniwire examples",
+    
+    "notes": [
+      "Demonstrates: small commercial TN-S board with lighting contactors switched by an astronomical time switch (control links), refrigerated cabinets on dedicated circuits, 3-phase split air-conditioning, product references (Schneider Electric Acti9) and bill of materials (uniwire bom)",
+      "Lighting control parts grouped in a view frame"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50,
+    "supply": "LV 3x63 A", "ik3_kA": 6, "standard": "IEC 60364"
+  },
+  "templates": {
+    "C10_2P": {"type": "breaker", "in_A": 10, "curve": "C", "icn_kA": 6, "poles": "2P",
+               "product": {"manufacturer": "Schneider Electric", "part_number": "A9F74210", "range": "Acti9 iC60N", "description": "MCB 2P C10"}},
+    "C16_2P": {"type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "2P",
+               "product": {"manufacturer": "Schneider Electric", "part_number": "A9F74216", "range": "Acti9 iC60N", "description": "MCB 2P C16"}},
+    "C20_2P": {"type": "breaker", "in_A": 20, "curve": "C", "icn_kA": 6, "poles": "2P",
+               "product": {"manufacturer": "Schneider Electric", "part_number": "A9F74220", "range": "Acti9 iC60N", "description": "MCB 2P C20"}},
+    "ID4P": {"type": "rcd", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "4P",
+             "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iID", "description": "RCCB 4P 40 A 30 mA type A"}},
+    "ICT": {"type": "contactor", "in_A": 25, "poles": "2P", "coil_V": 230, "function": "lighting", "manual": true,
+            "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iCT", "description": "Modular contactor 2NO 25 A with manual override"}}
+  },
+  "sources": [
+    {"type": "grid", "label": "DSO LV supply", "un_V": 400, "ik_kA": 6, "children": [
+      {"type": "meter", "ref": "-P1", "label": "Tenant meter", "kind": "smart", "in_A": 63, "external": true, "children": [
+        {"type": "board", "id": "DB", "ref": "=DB1", "label": "Shop distribution board", "kind": "distribution", "system": "3P+N",
+         "in_A": 63, "ways": 48, "ip": "IP40",
+         "cable": {"designation": "NYY-J", "cores": "5x", "section_mm2": 16, "material": "Cu", "length_m": 15, "install": "C", "insulation": "PVC"},
+         "children": [
+          {"type": "switch_disconnector", "ref": "-Q0", "label": "Main switch", "in_A": 63, "poles": "4P",
+           "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iSW", "description": "Switch-disconnector 4P 63 A"},
+           "children": [
+            {"type": "rcd", "ref": "-F1", "use": "ID4P", "label": "RCCB lighting", "children": [
+              {"type": "breaker", "id": "QTS", "ref": "-F10", "use": "C10_2P", "in_A": 2, "label": "Time switch", "phase": "L1",
+               "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iC60N", "description": "MCB 2P C2"},
+               "children": [{"type": "controller", "id": "TS", "ref": "-K10", "label": "Astronomical time switch", "function": "time_switch",
+                             "symbol_text": "☼",
+                             "product": {"manufacturer": "Schneider Electric", "range": "Acti9 IHP", "description": "Astronomical time switch, 2 channels"}}]},
+              {"type": "breaker", "ref": "-F11", "use": "C10_2P", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "contactor", "id": "KM11", "ref": "-KM11", "use": "ICT",
+                             "children": [{"type": "lighting", "label": "Sales floor lighting A", "points": 14, "p_kW": 0.6}]}]},
+              {"type": "breaker", "ref": "-F12", "use": "C10_2P", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "contactor", "id": "KM12", "ref": "-KM12", "use": "ICT",
+                             "children": [{"type": "lighting", "label": "Sales floor lighting B", "points": 14, "p_kW": 0.6}]}]},
+              {"type": "breaker", "ref": "-F13", "use": "C10_2P", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "contactor", "id": "KM13", "ref": "-KM13", "use": "ICT",
+                             "children": [{"type": "lighting", "label": "Shop window + sign", "points": 6, "p_kW": 0.4}]}]},
+              {"type": "breaker", "ref": "-F14", "use": "C10_2P", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "Stockroom / WC lighting", "points": 6, "p_kW": 0.15}]},
+              {"type": "breaker", "ref": "-F15", "use": "C10_2P", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "Emergency lighting", "points": 8, "priority": "safety"}]}
+            ]},
+            {"type": "rcd", "ref": "-F2", "use": "ID4P", "label": "RCCB sockets", "children": [
+              {"type": "breaker", "ref": "-F21", "use": "C16_2P", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Cash desk (POS)", "points": 4}]},
+              {"type": "breaker", "ref": "-F22", "use": "C16_2P", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Sales floor sockets", "points": 8}]},
+              {"type": "breaker", "ref": "-F23", "use": "C16_2P", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Stockroom + office sockets", "points": 6}]},
+              {"type": "breaker", "ref": "-F24", "use": "C16_2P", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "water_heater", "label": "Under-sink heater 10 L", "volume_L": 10, "p_kW": 2}]},
+              {"type": "breaker", "ref": "-F25", "use": "C10_2P", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "load", "label": "Intruder alarm + CCTV", "symbol_text": "SEC", "p_kW": 0.1}]}
+            ]},
+            {"type": "rcd", "ref": "-F3", "use": "ID4P", "label": "RCCB refrigeration", "children": [
+              {"type": "breaker", "ref": "-F31", "use": "C16_2P", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "appliance", "kind": "fridge", "label": "Chilled display cabinet 1", "p_kW": 1.8}]},
+              {"type": "breaker", "ref": "-F32", "use": "C16_2P", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "appliance", "kind": "fridge", "label": "Chilled display cabinet 2", "p_kW": 1.8}]},
+              {"type": "breaker", "ref": "-F33", "use": "C16_2P", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "appliance", "kind": "freezer", "label": "Freezer island", "p_kW": 1.2}]}
+            ]},
+            {"type": "breaker", "ref": "-F4", "label": "Air conditioning", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "4P",
+             "product": {"manufacturer": "Schneider Electric", "part_number": "A9F74416", "range": "Acti9 iC60N", "description": "MCB 4P C16"},
+             "cable": {"designation": "NYY-J", "cores": "5x", "section_mm2": 2.5, "material": "Cu", "length_m": 18, "install": "C", "insulation": "PVC"},
+             "children": [{"type": "rcd", "ref": "-F41", "in_A": 25, "idn_mA": 300, "rcd_type": "A", "poles": "4P", "label": "Fire RCD", "children": [
+               {"type": "load", "label": "Split AC outdoor unit 12 kW", "symbol_text": "AC", "p_kW": 4.1, "location": "Roof"}]}]},
+            {"type": "breaker", "ref": "-F5", "label": "Hand dryer", "use": "C16_2P", "phase": "L3",
+             "cable": {"cores": "3G", "section_mm2": 2.5},
+             "children": [{"type": "rcd", "ref": "-F51", "in_A": 25, "idn_mA": 30, "rcd_type": "A", "poles": "2P", "children": [
+               {"type": "load", "label": "Hand dryer (WC)", "symbol_text": "HD", "p_kW": 1.6}]}]},
+            {"type": "breaker", "ref": "-F6", "label": "SPD", "in_A": 20, "curve": "C", "icn_kA": 6, "poles": "4P", "children": [
+              {"type": "spd", "ref": "-F61", "label": "SPD", "spd_type": "2", "imax_kA": 20, "up_kV": 1.4, "uc_V": 350, "poles": "3P+N",
+               "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iPRD", "description": "SPD type 2, 3P+N, 20 kA"}}
+            ]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "links": [
+    {"kind": "control", "from": "TS", "to": "KM11", "label": "Ch.1"},
+    {"kind": "control", "from": "TS", "to": "KM12", "label": "Ch.1"},
+    {"kind": "control", "from": "TS", "to": "KM13", "label": "Ch.2"}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "orientation": "landscape",
+             "frames": [{"label": "Lighting control", "nodes": ["TS", "KM11", "KM12", "KM13"]}],
+             "cartouche": ["label", "ref", "in_A", "curve", "poles", "idn_mA", "cable", "phase", "p_kW"]}]
+}

@@ -1,0 +1,191 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Poste HTA/BT 20 kV / 410 V : 1000 kVA, comptage BT, TGBT", "project": "EX-25",
+    "client": "Exemple : plateforme logistique et ateliers", "author": "uniwire examples", 
+    "lang": "fr",
+    "notes": [
+      "Montre : poste de livraison en coupure d'artère (2 cellules IM), protection transformateur par interrupteur-fusibles combiné (QM), relais DGPT2 en déclenchement, transformateur 1000 kVA Dyn11, disjoncteur général BT débrochable, enveloppes (cellules) et TGBT",
+      "Ik3 BT ≈ 1000 / (√3 × 0,41 × 0,06) ≈ 23,5 kA : appareillage BT Icu ≥ 36 kA",
+      "Fusibles HTA 43 A (Fusarc CF) choisis selon le tableau constructeur pour 1000 kVA sous 20 kV"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50,
+    "supply": "HTA 20 kV (coupure d'artère), comptage BT", "subscribed_kVA": 800, "ik3_kA": 23.5,
+    "standard": "NF C 13-100 / NF C 15-100"
+  },
+  "templates": {
+    "NSX": {
+      "type": "breaker", "icu_kA": 50, "poles": "4P", "trip_unit": "Micrologic 2.2",
+      "product": {"manufacturer": "Schneider Electric", "range": "ComPacT NSX N"}
+    }
+  },
+  "sources": [
+    {
+      "id": "HTA", "type": "grid", "label": "Réseau HTA Enedis", "supply": "HTA 20 kV", "un_V": 20000, "scc_MVA": 250,
+      "children": [
+        {
+          "id": "IM1", "type": "switch_disconnector", "ref": "-QS1", "label": "Arrivée boucle", "in_A": 630,
+          "ue_V": 24000, "poles": "3P", "icw_kA": 12.5,
+          "product": {"manufacturer": "Schneider Electric", "range": "SM6-24 IM"},
+          "children": [
+            {
+              "id": "JDB", "type": "busbar", "ref": "-WB", "label": "Jeu de barres HTA", "in_A": 400, "un_V": 20000,
+              "children": [
+                {"id": "VPIS", "type": "voltage_indicator", "ref": "-P1", "label": "VPIS"},
+                {
+                  "id": "IM2", "type": "switch_disconnector", "ref": "-QS2", "label": "Départ boucle", "in_A": 630,
+                  "ue_V": 24000, "poles": "3P", "icw_kA": 12.5,
+                  "product": {"manufacturer": "Schneider Electric", "range": "SM6-24 IM"},
+                  "children": [{"type": "offpage", "label": "Vers poste suivant", "target": "Réseau Enedis"}]
+                },
+                {
+                  "id": "QM", "type": "fuse_switch", "ref": "-QM", "label": "Protection transfo.", "in_A": 200,
+                  "fuse_A": 43, "fuse_class": "Fusarc CF", "ue_V": 24000, "poles": "3P", "aux": ["MX"],
+                  "product": {"manufacturer": "Schneider Electric", "range": "SM6-24 QM"},
+                  "cable": {
+                    "designation": "HN 33-S-23 (HTA)", "cores": "3x1x", "section_mm2": 95, "material": "Al",
+                    "length_m": 10
+                  },
+                  "children": [
+                    {
+                      "id": "T1", "type": "transformer", "ref": "-T1", "label": "Transformateur", "sn_kVA": 1000,
+                      "u1_V": 20000, "u2_V": 410, "ucc_pct": 6, "coupling": "Dyn11", "insulation": "oil",
+                      "product": {
+                        "manufacturer": "Exemple", "range": "Huile minérale, ONAN",
+                        "description": "1000 kVA 20 kV/410 V"
+                      },
+                      "children": [
+                        {
+                          "id": "CPT", "type": "meter", "ref": "-P0", "kind": "Comptage BT (TC 2000/5)",
+                          "cable": {
+                            "designation": "1 kV mono", "cores": "4x(4x1x240)", "section_mm2": 240, "parallel": 4,
+                            "material": "Cu", "length_m": 6, "insulation": "XLPE", "install": "F"
+                          },
+                          "children": [
+                            {
+                              "id": "TGBT", "type": "board", "ref": "TGBT", "label": "Tableau général BT",
+                              "kind": "main", "in_A": 1600, "ik_kA": 23.5, "form": "3b", "ip": "IP31",
+                              "children": [
+                                {
+                                  "id": "QG", "type": "breaker", "ref": "-Q0", "label": "Disjoncteur général BT",
+                                  "in_A": 1600, "ir_A": 1450, "icu_kA": 50, "poles": "4P",
+                                  "trip_unit": "Micrologic 5.0 X", "mounting": "withdrawable",
+                                  "aux": ["MX", "OF", "SD"], "lockable": true,
+                                  "product": {"manufacturer": "Schneider Electric", "range": "MasterPacT MTZ2 16 N1"},
+                                  "children": [
+                                    {"type": "spd", "ref": "-F0", "spd_type": "1+2", "imax_kA": 50, "poles": "3P+N"},
+                                    {
+                                      "type": "breaker", "ref": "-Q1", "use": "NSX", "in_A": 400, "ir_A": 360,
+                                      "cable": {
+                                        "cores": "5G", "section_mm2": 185, "length_m": 60, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "E"
+                                      },
+                                      "children": [{"type": "offpage", "label": "TD Atelier mécanique", "target": "EX-25 f. 2"}]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q2", "use": "NSX", "in_A": 400, "ir_A": 320,
+                                      "cable": {
+                                        "cores": "5G", "section_mm2": 150, "length_m": 120, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "E"
+                                      },
+                                      "children": [{"type": "offpage", "label": "TD Entrepôt (quais)", "target": "EX-25 f. 3"}]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q3", "use": "NSX", "in_A": 250, "ir_A": 200,
+                                      "poles": "3P",
+                                      "cable": {
+                                        "cores": "4G", "section_mm2": 95, "length_m": 25, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "E"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "motor", "ref": "-M3", "label": "Compresseur d'air 110 kW",
+                                          "p_kW": 110, "phases": 3
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q4", "use": "NSX", "in_A": 160, "ir_A": 125,
+                                      "cable": {
+                                        "cores": "5G", "section_mm2": 50, "length_m": 80, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "E"
+                                      },
+                                      "children": [{"type": "offpage", "label": "TD Bureaux", "target": "EX-25 f. 4"}]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q5", "use": "NSX", "in_A": 400, "ir_A": 400,
+                                      "poles": "3P",
+                                      "cable": {
+                                        "cores": "4G", "section_mm2": 240, "length_m": 10, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "E"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "load", "ref": "-C5", "label": "Batterie de condensateurs",
+                                          "symbol_text": "kvar", "q_kvar": 250,
+                                          "note": "Gradins 5 × 50 kvar, selfs anti-harmoniques 189 Hz"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker", "ref": "-Q6", "use": "NSX", "in_A": 100, "ir_A": 63,
+                                      "cable": {
+                                        "cores": "5G", "section_mm2": 16, "length_m": 40, "designation": "U1000 R2V",
+                                        "material": "Cu", "insulation": "XLPE", "install": "E"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "lighting", "label": "Éclairage extérieur et voiries", "points": 48,
+                                          "p_kW": 6
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "spare", "ref": "-Q7", "in_A": 400, "poles": "4P", "frame_A": 400,
+                                      "label": "Réserve équipée (IRVE)"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "id": "DGPT", "type": "protection_relay", "ref": "-F1", "label": "DGPT2", "functions": ["26", "63", "71"],
+      "settings": "T° alarme 90 °C, déclt 100 °C"
+    }
+  ],
+  "enclosures": [
+    {
+      "id": "C1", "kind": "cell", "ref": "=C1", "label": "IM arrivée", "cell_type": "IM", "position": 1,
+      "nodes": ["IM1"]
+    },
+    {
+      "id": "C2", "kind": "cell", "ref": "=C2", "label": "IM départ", "cell_type": "IM", "position": 2,
+      "nodes": ["IM2"]
+    },
+    {"id": "C3", "kind": "cell", "ref": "=C3", "label": "QM", "cell_type": "QM", "position": 3, "nodes": ["QM"]}
+  ],
+  "links": [{"kind": "trip", "from": "DGPT", "to": "QM", "label": "déclt MX"}],
+  "views": [
+    {
+      "id": "sld", "title": "Poste HTA/BT et TGBT", "paper": "A3", "pitch_mm": 26,
+      "cartouche": ["label", "ref", "protection", "cable", "length_m", "p_kW"]
+    }
+  ]
+}

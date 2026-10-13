@@ -1,0 +1,50 @@
+{
+ "id": "15_edit_studio_add_dishwasher",
+ "request": "Edit the starting document: add a dishwasher circuit (20 A curve C 1P+N breaker, 3G 2.5 mm² cable) under the type A residual-current device, and change the hob breaker to 40 A with a 10 mm² cable. Keep every existing id.",
+ "expect": [
+  {
+   "check": "under",
+   "ancestor": {
+    "type": "rcd",
+    "rcd_type": "A"
+   },
+   "descendant": {
+    "type": "appliance",
+    "kind": "dishwasher"
+   }
+  },
+  {
+   "check": "under",
+   "ancestor": {
+    "type": "breaker",
+    "in_A": 20,
+    "cable.section_mm2": 2.5
+   },
+   "descendant": {
+    "type": "appliance",
+    "kind": "dishwasher"
+   }
+  },
+  {
+   "check": "under",
+   "ancestor": {
+    "type": "breaker",
+    "in_A": 40,
+    "cable.section_mm2": 10
+   },
+   "descendant": {
+    "type": "cooking"
+   }
+  },
+  {
+   "check": "keeps_ids"
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ],
+ "base": "01_studio_apartment"
+}

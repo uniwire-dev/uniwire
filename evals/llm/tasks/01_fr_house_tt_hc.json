@@ -1,0 +1,67 @@
+{
+ "id": "01_fr_house_tt_hc",
+ "request": "Draw the single-line diagram of a French house (NF C 15-100): TT earthing, single-phase 230 V (1P+N), 12 kVA supply with a 500 mA selective main breaker. Three 30 mA residual-current groups (at least one type A for the hob and washing machine, the others type AC) protecting lighting, socket, hob, washing machine and heating circuits with cables. The 200 L water heater is on an off-peak (HC) contactor driven by the meter.",
+ "expect": [
+  {
+   "check": "profile",
+   "value": "nfc15100"
+  },
+  {
+   "check": "installation",
+   "fields": {
+    "earthing": "TT",
+    "system": "1P+N"
+   }
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "rcd",
+    "idn_mA": 30
+   },
+   "min": 3
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "rcd",
+    "rcd_type": "A"
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "main_breaker",
+    "idn_mA": 500
+   },
+   "min": 1
+  },
+  {
+   "check": "under",
+   "ancestor": {
+    "type": "contactor",
+    "function": "HC"
+   },
+   "descendant": {
+    "type": "water_heater"
+   }
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "breaker",
+    "cable.section_mm2": {
+     "exists": true
+    }
+   },
+   "min": 5
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ]
+}

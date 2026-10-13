@@ -1,0 +1,96 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "lang": "en",
+    "title": "Farmhouse and dairy barn: long buried feeder",
+    "project": "EX-14",
+    "client": "Example farm",
+    "author": "uniwire examples",
+    
+    "notes": [
+      "Demonstrates: long aluminium sub-main (125 m buried, NA2XY 4x35) sized for voltage drop (du_pct, installation du_max_pct), barn board on its own sheet with a type S 300 mA RCD, selective with the 30 mA RCDs downstream and the 1 A 0.5 s RCD upstream, agricultural loads (vacuum pump, milk cooling, frost-protected troughs), separate barn earth electrode (TT)",
+      "Voltage drop at Ib = 48 A, cos φ 0.85: 1.9 % on the sub-main, 2.4 % total at the barn board (limit 5 % for other uses)",
+      "Agricultural premises (IEC 60364-7-705): 30 mA on all socket circuits ≤ 32 A, 300 mA fire protection on the whole barn"
+    ]
+  },
+  "installation": {
+    "earthing": "TT", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50,
+    "supply": "Overhead LV line, 3x80 A", "earth_resistance_ohm": 25, "du_max_pct": 5, "standard": "IEC 60364 (incl. 7-705)"
+  },
+  "templates": {
+    "C10": {"type": "breaker", "in_A": 10, "curve": "C", "icn_kA": 6, "poles": "1P+N"},
+    "C16": {"type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "1P+N"},
+    "C16_4P": {"type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "4P"}
+  },
+  "sources": [
+    {"type": "grid", "label": "Overhead LV line", "un_V": 400, "ik_kA": 3, "children": [
+      {"type": "meter", "ref": "-P1", "label": "Farm meter", "kind": "smart", "in_A": 80, "external": true, "children": [
+        {"type": "board", "id": "MB", "ref": "=MB", "label": "Farmhouse main board", "kind": "main", "system": "3P+N", "ways": 48,
+         "cable": {"designation": "NA2XY", "cores": "4x", "section_mm2": 35, "material": "Al", "length_m": 30, "install": "D-duct", "insulation": "XLPE", "du_pct": 0.5},
+         "children": [
+          {"type": "rcd", "ref": "-Q0", "label": "Main switch + RCD (1 A, 0.5 s)", "in_A": 80, "idn_mA": 1000, "rcd_type": "A", "delay": "0.5 s", "poles": "4P", "children": [
+            {"type": "breaker", "ref": "-F1", "label": "Dwelling", "in_A": 40, "curve": "C", "icn_kA": 6, "poles": "4P",
+             "cable": {"designation": "NYM-J", "cores": "5x", "section_mm2": 10, "material": "Cu", "length_m": 4, "install": "C", "insulation": "PVC"},
+             "children": [{"type": "offpage", "label": "Dwelling board", "target": "Typical house board (see EX-03)"}]},
+            {"type": "breaker", "ref": "-F2", "label": "Barn sub-main", "in_A": 63, "curve": "C", "icn_kA": 6, "poles": "4P",
+             "children": [
+              {"type": "board", "id": "BARN", "ref": "=BN", "label": "Dairy barn board", "kind": "sub", "system": "3P+N", "own_sheet": true, "ip": "IP65",
+               "cable": {"ref": "W2", "designation": "NA2XY", "cores": "4x", "section_mm2": 35, "material": "Al", "length_m": 125, "install": "D-duct",
+                         "insulation": "XLPE", "du_pct": 1.9},
+               "children": [
+                {"type": "rcd", "ref": "-Q0", "label": "Incomer, fire RCD", "in_A": 63, "idn_mA": 300, "rcd_type": "A", "delay": "S", "poles": "4P", "children": [
+                  {"type": "rcd", "ref": "-F1", "label": "RCCB lighting / sockets", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "4P", "children": [
+                    {"type": "breaker", "ref": "-F11", "use": "C10", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 1.5},
+                     "children": [{"type": "lighting", "label": "Cubicle house LED", "points": 12, "p_kW": 0.9}]},
+                    {"type": "breaker", "ref": "-F12", "use": "C10", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 1.5},
+                     "children": [{"type": "lighting", "label": "Milking parlour LED", "points": 8, "p_kW": 0.5}]},
+                    {"type": "breaker", "ref": "-F13", "use": "C16", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+                     "children": [{"type": "socket", "label": "Sockets IP44", "points": 6}]},
+                    {"type": "breaker", "ref": "-F14", "use": "C16_4P", "cable": {"cores": "5G", "section_mm2": 2.5},
+                     "children": [{"type": "socket", "label": "CEE 16 A 5P", "points": 2, "poles": "3P+N+T", "socket_type": "IEC 60309"}]},
+                    {"type": "breaker", "ref": "-F15", "use": "C10", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 1.5},
+                     "children": [{"type": "load", "label": "Electric fence energiser", "symbol_text": "FEN", "p_kW": 0.02}]},
+                    {"type": "breaker", "ref": "-F16", "use": "C10", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 1.5},
+                     "children": [{"type": "heating", "label": "Trough frost protection", "p_kW": 0.6, "count": 4}]}
+                  ]},
+                  {"type": "breaker", "ref": "-Q2", "label": "Vacuum pump", "in_A": 16, "curve": "D", "icn_kA": 6, "poles": "3P",
+                   "cable": {"cores": "4G", "section_mm2": 2.5, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 15},
+                   "children": [{"type": "motor_starter", "ref": "-T2", "label": "VFD vacuum control", "method": "vfd", "in_A": 12, "children": [
+                     {"type": "motor", "ref": "-M2", "label": "Milking vacuum pump 4 kW", "p_kW": 4, "phases": 3, "in_A": 8.1}]}]},
+                  {"type": "breaker", "ref": "-Q3", "label": "Milk cooling", "in_A": 20, "curve": "C", "icn_kA": 6, "poles": "4P",
+                   "cable": {"cores": "5G", "section_mm2": 4, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 12},
+                   "children": [{"type": "load", "label": "Bulk milk tank 3,000 L", "symbol_text": "TANK", "p_kW": 6.5}]},
+                  {"type": "breaker", "ref": "-Q4", "label": "Hot water", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "4P",
+                   "cable": {"cores": "5G", "section_mm2": 2.5, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 10},
+                   "children": [{"type": "water_heater", "label": "Dairy hot water 300 L", "volume_L": 300, "p_kW": 9}]},
+                  {"type": "breaker", "ref": "-Q5", "label": "Yard lights", "use": "C10", "phase": "L3",
+                   "cable": {"designation": "N2XY-J", "cores": "3x", "section_mm2": 2.5, "material": "Cu", "length_m": 60, "install": "D-duct", "insulation": "XLPE", "du_pct": 1.1},
+                   "children": [{"type": "controller", "id": "PC", "ref": "-B5", "label": "Photocell", "function": "twilight_switch", "symbol_text": "LUX", "in_A": 16, "poles": "1P",
+                                 "children": [{"type": "lighting", "label": "Yard floodlights", "points": 4, "p_kW": 0.4}]}]},
+                  {"type": "breaker", "id": "QSPD", "ref": "-Q6", "label": "SPD", "in_A": 25, "curve": "C", "icn_kA": 6, "poles": "4P", "children": [
+                    {"type": "spd", "id": "SPD2", "ref": "-F6", "label": "SPD", "spd_type": "2", "imax_kA": 40, "up_kV": 1.5, "uc_V": 275, "poles": "3P+N"}]}
+                ]}
+              ]}
+            ]},
+            {"type": "breaker", "ref": "-F3", "label": "Grain store fan", "in_A": 25, "curve": "D", "icn_kA": 6, "poles": "3P",
+             "cable": {"designation": "N2XY-J", "cores": "4x", "section_mm2": 6, "material": "Cu", "length_m": 70, "install": "D-duct", "insulation": "XLPE", "du_pct": 2.6},
+             "children": [{"type": "motor_starter", "ref": "-T3", "label": "Soft starter", "method": "soft_starter", "in_A": 25, "children": [
+               {"type": "motor", "ref": "-M3", "label": "Grain drying fan 7.5 kW", "p_kW": 7.5, "phases": 3, "in_A": 14.8}]}]},
+            {"type": "breaker", "ref": "-F4", "label": "SPD", "in_A": 32, "curve": "C", "icn_kA": 6, "poles": "4P", "children": [
+              {"type": "spd", "ref": "-F41", "label": "SPD", "spd_type": "1+2", "imax_kA": 50, "in_kA": 12.5, "up_kV": 1.5, "uc_V": 275, "poles": "3P+N"}]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "devices": [
+    {"type": "earth", "id": "E2", "ref": "E2", "label": "Barn earth electrode", "resistance_ohm": 40}
+  ],
+  "links": [
+    {"kind": "earth", "from": "SPD2", "to": "E2", "label": "Barn PE bar"}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "orientation": "landscape",
+             "cartouche": ["label", "ref", "protection", "idn_mA", "cable", "length_m", "phase", "p_kW"]}]
+}

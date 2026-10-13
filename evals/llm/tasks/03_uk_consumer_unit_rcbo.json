@@ -1,0 +1,61 @@
+{
+ "id": "03_uk_consumer_unit_rcbo",
+ "request": "UK domestic consumer unit, TN-C-S (PME), 230 V single-phase, 100 A main switch, type 2 SPD, and eight 30 mA type A RCBOs (B6 lighting x2, B32 ring finals x3, B40 cooker, B16 immersion heater, B20 EV charger).",
+ "expect": [
+  {
+   "check": "installation",
+   "fields": {
+    "earthing": "TN-C-S",
+    "un_V": 230
+   }
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "switch_disconnector",
+    "in_A": 100
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "rcbo",
+    "idn_mA": 30
+   },
+   "min": 8
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "rcbo",
+    "curve": "B"
+   },
+   "min": 6
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "spd",
+    "spd_type": [
+     "2",
+     "1+2"
+    ]
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "ev_charger"
+   },
+   "min": 1
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ]
+}

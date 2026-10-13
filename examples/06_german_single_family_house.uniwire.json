@@ -1,0 +1,114 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "lang": "en",
+    "title": "Single-family house (Germany): meter cabinet and distribution board",
+    "project": "EX-06",
+    "client": "Example House (DE)",
+    "author": "uniwire examples",
+    
+    "notes": [
+      "Demonstrates: German-style TN-C-S house with service fuses (NH00) in the house connection box, bidirectional meter, selective main circuit breaker (SLS, E characteristic), combined Type 1+2 SPD, 3-phase cooker and instantaneous water heater, 11 kW wallbox, 9.8 kWp rooftop PV",
+      "PEN split at the main earthing terminal in the meter cabinet; foundation earth electrode",
+      "Instantaneous water heater: fixed 3-phase equipment, fault protection by automatic disconnection (TN), no RCD required"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-C-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50,
+    "supply": "Low-voltage house connection 63 A", "ik3_kA": 6, "standard": "DIN VDE 0100 / VDE-AR-N 4100"
+  },
+  "templates": {
+    "B10": {"type": "breaker", "in_A": 10, "curve": "B", "icn_kA": 6, "poles": "1P",
+            "product": {"manufacturer": "Siemens", "part_number": "5SY6110-6", "range": "5SY", "description": "MCB 1P B10 6 kA"}},
+    "B16": {"type": "breaker", "in_A": 16, "curve": "B", "icn_kA": 6, "poles": "1P",
+            "product": {"manufacturer": "Siemens", "part_number": "5SY6116-6", "range": "5SY", "description": "MCB 1P B16 6 kA"}},
+    "B16_3": {"type": "breaker", "in_A": 16, "curve": "B", "icn_kA": 6, "poles": "3P",
+              "product": {"manufacturer": "Siemens", "part_number": "5SY6316-6", "range": "5SY", "description": "MCB 3P B16 6 kA"}},
+    "RCD40A": {"type": "rcd", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "4P",
+               "product": {"manufacturer": "Siemens", "range": "5SV", "description": "RCCB 4P 40 A 30 mA type A"}}
+  },
+  "sources": [
+    {"type": "grid", "label": "DSO low-voltage network", "un_V": 400, "ik_kA": 6, "children": [
+      {"type": "fuse_switch", "ref": "-F0", "label": "House connection box", "fuse_A": 63, "in_A": 160, "size": "NH00", "fuse_class": "gG",
+       "poles": "3P", "external": true,
+       "cable": {"ref": "W0", "designation": "NAYY-J", "cores": "4x", "section_mm2": 50, "material": "Al", "length_m": 25, "pen": true, "install": "D-duct"},
+       "children": [
+        {"type": "board", "id": "ZS", "ref": "=ZS", "label": "Meter cabinet", "kind": "main", "system": "3P+N", "in_A": 63, "pen_split": true, "children": [
+          {"type": "breaker", "ref": "-Q0", "label": "Selective main CB (SLS)", "in_A": 63, "icn_kA": 25, "poles": "3P",
+           "selective": true, "range": "SLS (E char.)",
+           "cable": {"ref": "W1", "designation": "NYM-J", "cores": "5x", "section_mm2": 16, "material": "Cu", "length_m": 1},
+           "children": [
+            {"type": "meter", "id": "P1", "ref": "-P1", "label": "Bidirectional meter", "kind": "eHZ", "in_A": 63, "bidirectional": true, "children": [
+              {"type": "board", "id": "UV", "ref": "=UV1", "label": "Distribution board", "kind": "distribution", "system": "3P+N", "ways": 60,
+               "cable": {"ref": "W2", "designation": "NYM-J", "cores": "5x", "section_mm2": 16, "material": "Cu", "length_m": 4, "install": "C", "insulation": "PVC"},
+               "children": [
+                {"type": "switch_disconnector", "ref": "-Q1", "label": "Main switch", "in_A": 63, "poles": "4P", "children": [
+                  {"type": "rcd", "ref": "-F1", "use": "RCD40A", "label": "RCCB ground floor", "children": [
+                    {"type": "breaker", "ref": "-F11", "use": "B10", "phase": "L1", "cable": {"ref": "W11", "designation": "NYM-J", "cores": "3x", "section_mm2": 1.5},
+                     "children": [{"type": "lighting", "label": "Lighting GF", "points": 10}]},
+                    {"type": "breaker", "ref": "-F12", "use": "B16", "phase": "L2", "cable": {"ref": "W12", "designation": "NYM-J", "cores": "3x", "section_mm2": 1.5},
+                     "children": [{"type": "socket", "label": "Sockets living room", "points": 10}]},
+                    {"type": "breaker", "ref": "-F13", "use": "B16", "phase": "L3", "cable": {"ref": "W13", "designation": "NYM-J", "cores": "3x", "section_mm2": 2.5},
+                     "children": [{"type": "socket", "label": "Sockets kitchen worktop", "points": 6}]},
+                    {"type": "breaker", "ref": "-F14", "use": "B16_3", "cable": {"ref": "W14", "designation": "NYM-J", "cores": "5x", "section_mm2": 2.5},
+                     "children": [{"type": "cooking", "kind": "range", "label": "Cooker 3-phase", "p_kW": 10.5}]},
+                    {"type": "breaker", "ref": "-F15", "use": "B16", "phase": "L1", "cable": {"ref": "W15", "designation": "NYM-J", "cores": "3x", "section_mm2": 2.5},
+                     "children": [{"type": "appliance", "kind": "dishwasher", "label": "Dishwasher", "p_kW": 2.1}]}
+                  ]},
+                  {"type": "rcd", "ref": "-F2", "use": "RCD40A", "label": "RCCB upper floor / utility", "children": [
+                    {"type": "breaker", "ref": "-F21", "use": "B10", "phase": "L2", "cable": {"ref": "W21", "designation": "NYM-J", "cores": "3x", "section_mm2": 1.5},
+                     "children": [{"type": "lighting", "label": "Lighting UF", "points": 9}]},
+                    {"type": "breaker", "ref": "-F22", "use": "B16", "phase": "L3", "cable": {"ref": "W22", "designation": "NYM-J", "cores": "3x", "section_mm2": 1.5},
+                     "children": [{"type": "socket", "label": "Sockets bedrooms", "points": 12}]},
+                    {"type": "breaker", "ref": "-F23", "use": "B16", "phase": "L1", "cable": {"ref": "W23", "designation": "NYM-J", "cores": "3x", "section_mm2": 1.5},
+                     "children": [{"type": "socket", "label": "Sockets bathroom", "points": 3}]},
+                    {"type": "breaker", "ref": "-F24", "use": "B16", "phase": "L2", "cable": {"ref": "W24", "designation": "NYM-J", "cores": "3x", "section_mm2": 2.5},
+                     "children": [{"type": "appliance", "kind": "washing_machine", "label": "Washing machine", "p_kW": 2.2}]},
+                    {"type": "breaker", "ref": "-F25", "use": "B16", "phase": "L3", "cable": {"ref": "W25", "designation": "NYM-J", "cores": "3x", "section_mm2": 2.5},
+                     "children": [{"type": "appliance", "kind": "dryer", "label": "Tumble dryer (heat pump)", "p_kW": 0.9}]},
+                    {"type": "breaker", "ref": "-F26", "use": "B16", "phase": "L1", "cable": {"ref": "W26", "designation": "NYM-J", "cores": "3x", "section_mm2": 1.5},
+                     "children": [{"type": "load", "label": "Heating controls + circ. pump", "symbol_text": "HZG", "p_kW": 0.2}]}
+                  ]},
+                  {"type": "breaker", "ref": "-F3", "label": "Instantaneous water heater", "in_A": 32, "curve": "B", "icn_kA": 6, "poles": "3P",
+                   "cable": {"ref": "W3", "designation": "NYM-J", "cores": "5x", "section_mm2": 6, "material": "Cu", "length_m": 12, "install": "C", "insulation": "PVC"},
+                   "children": [{"type": "water_heater", "label": "Instantaneous heater 21 kW", "p_kW": 21, "room": "Bathroom"}]},
+                  {"type": "rcd", "ref": "-F4", "use": "RCD40A", "label": "RCCB wallbox", "children": [
+                    {"type": "breaker", "ref": "-F41", "use": "B16_3", "label": "Wallbox",
+                     "cable": {"ref": "W41", "designation": "NYY-J", "cores": "5x", "section_mm2": 4, "material": "Cu", "length_m": 22, "install": "C", "insulation": "PVC"},
+                     "children": [{"type": "ev_charger", "label": "Wallbox 11 kW", "mode": "3", "p_kW": 11, "location": "Garage",
+                                   "note": "Integrated 6 mA DC fault detection (IEC 62955)"}]}
+                  ]},
+                  {"type": "breaker", "ref": "-F5", "label": "PV inverter", "in_A": 16, "curve": "B", "icn_kA": 6, "poles": "3P",
+                   "cable": {"ref": "W5", "designation": "NYM-J", "cores": "5x", "section_mm2": 4, "material": "Cu", "length_m": 9, "install": "C", "insulation": "PVC"},
+                   "children": [
+                    {"type": "inverter", "ref": "-T1", "label": "PV inverter", "kind": "string", "p_kVA": 8, "mppt": 2, "protection": "VDE-AR-N 4105", "children": [
+                      {"type": "switch_disconnector", "ref": "-Q51", "label": "DC isolator", "in_A": 25, "dc": true, "poles": "2P", "children": [
+                        {"type": "pv_array", "label": "Roof PV 9.8 kWp", "modules": 24, "module_W": 410, "strings": 2, "p_kW": 9.84, "voc_V": 448, "isc_A": 13.8,
+                         "cable": {"ref": "W51", "designation": "H1Z2Z2-K", "cores": "2x", "section_mm2": 6, "length_m": 25}}
+                      ]}
+                    ]}
+                  ]},
+                  {"type": "spd", "id": "SPD1", "ref": "-F6", "label": "Combined SPD", "spd_type": "1+2", "imax_kA": 50, "in_kA": 12.5, "up_kV": 1.5, "uc_V": 264, "poles": "3P+N"}
+                ]}
+              ]}
+            ]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "devices": [
+    {"type": "earth", "id": "FE", "ref": "FE", "label": "Foundation earth electrode", "resistance_ohm": 2}
+  ],
+  "links": [
+    {"kind": "earth", "from": "SPD1", "to": "FE", "label": "PE 16 mm²"}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "orientation": "landscape",
+             "cartouche": ["label", "ref", "protection", "idn_mA", "cable", "phase", "p_kW"]},
+            {"id": "ml", "kind": "multi-line", "paper": "A3", "orientation": "landscape"},
+            {"id": "colour", "kind": "multi-line", "paper": "A3", "orientation": "landscape", "color": "conductors"},
+            {"id": "marks", "kind": "multi-line", "title": "Multi-line power diagram: wire marks", "paper": "A3", "orientation": "landscape",
+             "wire_marking": {"scheme": "pattern", "pattern": "{cable}-{conductor}"}}]
+}

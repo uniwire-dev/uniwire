@@ -1,0 +1,516 @@
+{
+ "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+ "uniwire": "1.0.0",
+ "profiles": [],
+ "meta": {
+  "title": "Example telecom shelter: -48 V DC power plant with battery backup and genset inlet",
+  "project": "EX-50",
+  "client": "Example tower company",
+  "author": "uniwire examples",
+  
+  "lang": "en",
+  "notes": [
+   "Demonstrates: -48 V DC rectifier plant (3 x 3 kW modules, N+1, positive pole earthed), two VRLA battery strings on fuse-switches, low-voltage disconnect separating priority and non-priority DC loads, manual transfer switch with mobile genset inlet ('transfer' link), monitoring controller (data link)",
+   "Battery: 2 strings x 190 Ah at 48 V ≈ 18 kWh → ~4 h autonomy at 3.5 kW DC load; LVD opens non-priority loads at 46 V, priority loads kept to 43.2 V",
+   "DC breakers single-pole on the -48 V conductor; return (+) conductor bonded to the shelter main earth bar"
+  ]
+ },
+ "installation": {
+  "earthing": "TT",
+  "system": "3P+N",
+  "un_V": 400,
+  "uln_V": 230,
+  "f_Hz": 50,
+  "earth_resistance_ohm": 10,
+  "supply": "LV 400 V, 36 kVA",
+  "standard": "IEC 60364 / ETSI EN 300 132-2"
+ },
+ "templates": {
+  "DCB": {
+   "type": "breaker",
+   "poles": "1P",
+   "ue_V": 60,
+   "icu_kA": 10,
+   "curve": "C",
+   "product": {
+    "range": "DC miniature circuit breaker 60 V DC",
+    "description": "Telecom DC breaker, single-pole on -48 V"
+   }
+  },
+  "STR": {
+   "type": "battery",
+   "capacity_kWh": 9.1,
+   "un_V": 48,
+   "technology": "VRLA 4 x 12 V 190 Ah"
+  }
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "label": "Utility LV supply",
+   "supply": "36 kVA",
+   "children": [
+    {
+     "type": "meter",
+     "ref": "-P0",
+     "label": "Utility meter",
+     "kind": "electronic",
+     "children": [
+      {
+       "type": "breaker",
+       "ref": "-Q0",
+       "label": "Service breaker",
+       "in_A": 63,
+       "curve": "C",
+       "poles": "4P",
+       "icn_kA": 10,
+       "cable": {
+        "designation": "XLPE",
+        "cores": "5G",
+        "section_mm2": 16,
+        "material": "Cu",
+        "length_m": 40
+       },
+       "children": [
+        {
+         "type": "board",
+         "id": "ACDB",
+         "ref": "ACDB",
+         "label": "Shelter AC board",
+         "kind": "distribution",
+         "in_A": 63,
+         "children": [
+          {
+           "type": "transfer_switch",
+           "id": "ATS",
+           "ref": "-Q1",
+           "label": "Mains / genset",
+           "in_A": 63,
+           "poles": "4P",
+           "mode": "manual",
+           "interlock": "mechanical",
+           "children": [
+            {
+             "type": "rcd",
+             "ref": "-Q2",
+             "label": "Main RCD",
+             "in_A": 63,
+             "idn_mA": 300,
+             "rcd_type": "A",
+             "delay": "S",
+             "poles": "4P",
+             "children": [
+              {
+               "type": "breaker",
+               "ref": "-F1",
+               "label": "SPD",
+               "in_A": 25,
+               "curve": "C",
+               "poles": "4P",
+               "icn_kA": 10,
+               "children": [
+                {
+                 "type": "spd",
+                 "ref": "-F11",
+                 "spd_type": "1+2",
+                 "imax_kA": 50,
+                 "up_kV": 1.5,
+                 "poles": "3P+N"
+                }
+               ]
+              },
+              {
+               "type": "fuse_switch",
+               "ref": "-Q3",
+               "label": "Rectifier shelf",
+               "in_A": 32,
+               "fuse_A": 20,
+               "fuse_class": "gG",
+               "size": "10x38",
+               "poles": "4P",
+               "cable": {
+                "cores": "5G",
+                "section_mm2": 4,
+                "material": "Cu",
+                "length_m": 5
+               },
+               "children": [
+                {
+                 "type": "power_supply",
+                 "id": "RECT",
+                 "ref": "-G10",
+                 "label": "Rectifiers -48 V",
+                 "u1_V": 230,
+                 "u2_V": 48,
+                 "output": "DC",
+                 "in_A": 186,
+                 "p_W": 9000,
+                 "redundant": true,
+                 "count": 3,
+                 "product": {
+                  "range": "3 kW -48 V rectifier modules",
+                  "description": "Hot-swap rectifier, 3 kW, 54.5 V float, 1 per phase (N+1)"
+                 },
+                 "children": [
+                  {
+                   "type": "board",
+                   "id": "DCDB",
+                   "ref": "DCDB",
+                   "label": "-48 V DC distribution",
+                   "kind": "distribution",
+                   "system": "DC",
+                   "un_V": 48,
+                   "in_A": 250,
+                   "children": [
+                    {
+                     "type": "fuse_switch",
+                     "ref": "-F21",
+                     "label": "Battery string 1",
+                     "in_A": 160,
+                     "fuse_A": 125,
+                     "fuse_class": "gG",
+                     "size": "NH00",
+                     "poles": "1P",
+                     "cable": {
+                      "cores": "1x",
+                      "section_mm2": 50,
+                      "material": "Cu",
+                      "length_m": 4
+                     },
+                     "children": [
+                      {
+                       "type": "battery",
+                       "ref": "-G21",
+                       "use": "STR",
+                       "label": "String 1"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "fuse_switch",
+                     "ref": "-F22",
+                     "label": "Battery string 2",
+                     "in_A": 160,
+                     "fuse_A": 125,
+                     "fuse_class": "gG",
+                     "size": "NH00",
+                     "poles": "1P",
+                     "cable": {
+                      "cores": "1x",
+                      "section_mm2": 50,
+                      "material": "Cu",
+                      "length_m": 4
+                     },
+                     "children": [
+                      {
+                       "type": "battery",
+                       "ref": "-G22",
+                       "use": "STR",
+                       "label": "String 2"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "breaker",
+                     "ref": "-F31",
+                     "use": "DCB",
+                     "in_A": 63,
+                     "label": "Baseband unit",
+                     "cable": {
+                      "cores": "2x",
+                      "section_mm2": 16,
+                      "material": "Cu",
+                      "length_m": 8
+                     },
+                     "children": [
+                      {
+                       "type": "load",
+                       "label": "Baseband unit",
+                       "symbol_text": "BBU",
+                       "p_kW": 1.2
+                      }
+                     ],
+                     "priority": "essential"
+                    },
+                    {
+                     "type": "breaker",
+                     "ref": "-F32",
+                     "use": "DCB",
+                     "in_A": 32,
+                     "label": "Remote radio units",
+                     "cable": {
+                      "cores": "2x",
+                      "section_mm2": 6,
+                      "material": "Cu",
+                      "length_m": 45
+                     },
+                     "children": [
+                      {
+                       "type": "load",
+                       "label": "Remote radio units",
+                       "symbol_text": "RRU",
+                       "p_kW": 1.8,
+                       "count": 3
+                      }
+                     ],
+                     "priority": "essential"
+                    },
+                    {
+                     "type": "breaker",
+                     "ref": "-F33",
+                     "use": "DCB",
+                     "in_A": 10,
+                     "label": "Microwave link",
+                     "cable": {
+                      "cores": "2x",
+                      "section_mm2": 6,
+                      "material": "Cu",
+                      "length_m": 8
+                     },
+                     "children": [
+                      {
+                       "type": "load",
+                       "label": "Microwave link",
+                       "symbol_text": "MW",
+                       "p_kW": 0.15
+                      }
+                     ],
+                     "priority": "essential"
+                    },
+                    {
+                     "type": "contactor",
+                     "id": "LVD",
+                     "ref": "-K40",
+                     "label": "LVD",
+                     "in_A": 125,
+                     "poles": "1P",
+                     "function": "load_shedding",
+                     "coil_V": 48,
+                     "children": [
+                      {
+                       "type": "breaker",
+                       "ref": "-F41",
+                       "use": "DCB",
+                       "in_A": 16,
+                       "label": "Transmission rack",
+                       "cable": {
+                        "cores": "2x",
+                        "section_mm2": 6,
+                        "material": "Cu",
+                        "length_m": 8
+                       },
+                       "children": [
+                        {
+                         "type": "load",
+                         "label": "Transmission rack",
+                         "symbol_text": "TX",
+                         "p_kW": 0.3
+                        }
+                       ],
+                       "priority": "non_essential"
+                      },
+                      {
+                       "type": "breaker",
+                       "ref": "-F42",
+                       "use": "DCB",
+                       "in_A": 10,
+                       "label": "Tenant 2 equipment",
+                       "cable": {
+                        "cores": "2x",
+                        "section_mm2": 6,
+                        "material": "Cu",
+                        "length_m": 8
+                       },
+                       "children": [
+                        {
+                         "type": "load",
+                         "label": "Tenant 2 equipment",
+                         "symbol_text": "T2",
+                         "p_kW": 0.2
+                        }
+                       ],
+                       "priority": "non_essential"
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "type": "breaker",
+               "ref": "-Q4",
+               "label": "Air conditioner 1",
+               "in_A": 16,
+               "curve": "C",
+               "poles": "1P+N",
+               "icn_kA": 10,
+               "phase": "L1",
+               "cable": {
+                "cores": "3G",
+                "section_mm2": 2.5,
+                "length_m": 6
+               },
+               "children": [
+                {
+                 "type": "motor",
+                 "label": "A/C 1",
+                 "p_kW": 2.5,
+                 "phases": 1
+                }
+               ]
+              },
+              {
+               "type": "breaker",
+               "ref": "-Q5",
+               "label": "Air conditioner 2",
+               "in_A": 16,
+               "curve": "C",
+               "poles": "1P+N",
+               "icn_kA": 10,
+               "phase": "L2",
+               "cable": {
+                "cores": "3G",
+                "section_mm2": 2.5,
+                "length_m": 6
+               },
+               "children": [
+                {
+                 "type": "motor",
+                 "label": "A/C 2",
+                 "p_kW": 2.5,
+                 "phases": 1
+                }
+               ]
+              },
+              {
+               "type": "rcbo",
+               "ref": "-Q6",
+               "label": "Lighting & sockets",
+               "in_A": 16,
+               "curve": "C",
+               "idn_mA": 30,
+               "rcd_type": "A",
+               "poles": "1P+N",
+               "icn_kA": 10,
+               "phase": "L3",
+               "cable": {
+                "cores": "3G",
+                "section_mm2": 2.5,
+                "length_m": 8
+               },
+               "children": [
+                {
+                 "type": "socket",
+                 "label": "Service sockets",
+                 "points": 2
+                }
+               ]
+              },
+              {
+               "type": "breaker",
+               "ref": "-Q7",
+               "label": "Monitoring",
+               "in_A": 6,
+               "curve": "C",
+               "poles": "1P+N",
+               "icn_kA": 10,
+               "phase": "L3",
+               "children": [
+                {
+                 "type": "controller",
+                 "id": "MON",
+                 "ref": "-A1",
+                 "label": "Site controller",
+                 "function": "power plant & alarm monitoring",
+                 "symbol_text": "MON"
+                }
+               ]
+              },
+              {
+               "type": "breaker",
+               "ref": "-Q8",
+               "label": "Tower lights",
+               "in_A": 6,
+               "curve": "C",
+               "poles": "1P+N",
+               "icn_kA": 10,
+               "phase": "L1",
+               "priority": "safety",
+               "cable": {
+                "cores": "3G",
+                "section_mm2": 2.5,
+                "length_m": 60
+               },
+               "children": [
+                {
+                 "type": "lighting",
+                 "label": "Aviation obstruction lights",
+                 "points": 2,
+                 "p_kW": 0.05
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "generator",
+   "id": "GEN",
+   "ref": "-G1",
+   "label": "Mobile genset",
+   "sn_kVA": 20,
+   "fuel": "diesel",
+   "external": true,
+   "children": [
+    {
+     "type": "connector",
+     "id": "INLET",
+     "ref": "-X1",
+     "label": "Genset inlet",
+     "kind": "IEC 60309 63 A 3P+N+E",
+     "in_A": 63
+    }
+   ]
+  }
+ ],
+ "links": [
+  {
+   "kind": "transfer",
+   "from": "INLET",
+   "to": "ATS"
+  },
+  {
+   "kind": "data",
+   "from": "MON",
+   "to": "RECT",
+   "protocol": "SNMP / Modbus"
+  }
+ ],
+ "views": [
+  {
+   "id": "sld",
+   "paper": "A3",
+   "cartouche": [
+    "label",
+    "ref",
+    "protection",
+    "poles",
+    "cable",
+    "p_kW",
+    "count"
+   ]
+  }
+ ]
+}

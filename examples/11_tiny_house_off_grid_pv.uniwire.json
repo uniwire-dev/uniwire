@@ -1,0 +1,92 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": [],
+  "meta": {
+    "lang": "en",
+    "title": "Off-grid tiny house: PV, 48 V battery and inverter/charger",
+    "project": "EX-11",
+    "client": "Example tiny house (off-grid)",
+    "author": "uniwire examples",
+    
+    "notes": [
+      "Demonstrates: island (off-grid) system drawn from the inverter/charger as source: 48 V DC busbar with class T battery fuse, MPPT charge controller and PV array, 48/12 V DC-DC converter for 12 V loads, 230 V AC distribution (TN-S, neutral-earth bond inside the inverter)",
+      "Battery: LiFePO4 48 V 200 Ah (10.2 kWh) with BMS; BMS → inverter on VE.Can (data link)",
+      "Cable sizes: DC battery cables 70 mm² for 5 kVA (approx. 110 A at 46 V)"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-S", "system": "1P+N", "un_V": 230, "f_Hz": 50,
+    "supply": "Off-grid (no utility connection)", "standard": "IEC 60364-7-712 / 7-722 / 8-82"
+  },
+  "templates": {
+    "B10": {"type": "breaker", "in_A": 10, "curve": "B", "icn_kA": 6, "poles": "1P+N"},
+    "B16": {"type": "breaker", "in_A": 16, "curve": "B", "icn_kA": 6, "poles": "1P+N"},
+    "DCF": {"type": "fuse", "poles": "1P", "fuse_class": "MEGA", "un_V": 58}
+  },
+  "sources": [
+    {"type": "inverter", "id": "INV", "ref": "-T1", "label": "Inverter/charger 48 V 5 kVA", "kind": "battery", "p_kVA": 5, "un_V": 230,
+     "product": {"manufacturer": "Victron Energy", "range": "MultiPlus-II", "description": "Inverter/charger 48 V 5000 VA, 230 V"},
+     "children": [
+      {"type": "board", "ref": "=DC", "label": "48 V DC distribution", "kind": "dc_box", "system": "DC", "un_V": 48, "children": [
+        {"type": "busbar", "ref": "-W1", "label": "DC busbar 48 V", "in_A": 250, "system": "DC",
+         "product": {"manufacturer": "Victron Energy", "range": "Lynx Distributor", "description": "DC distribution busbar 1000 A"},
+         "cable": {"designation": "H07RN-F", "cores": "2x", "section_mm2": 70, "material": "Cu", "length_m": 1.5},
+         "children": [
+          {"type": "fuse", "ref": "-F1", "in_A": 200, "fuse_class": "T", "poles": "1P", "icn_kA": 20, "children": [
+            {"type": "switch_disconnector", "ref": "-Q1", "in_A": 275, "dc": true, "poles": "2P", "children": [
+              {"id": "BAT", "type": "battery", "ref": "-G1", "label": "LiFePO4 48 V 200 Ah", "capacity_kWh": 10.2, "un_V": 51.2, "technology": "LiFePO4 with BMS",
+               "cable": {"designation": "H07RN-F", "cores": "2x", "section_mm2": 70, "material": "Cu", "length_m": 2}}
+            ]}
+          ]},
+          {"type": "fuse", "ref": "-F2", "use": "DCF", "in_A": 80, "children": [
+            {"type": "dc_converter", "id": "MPPT", "ref": "-T2", "label": "MPPT 150/60", "kind": "charge_controller", "in_A": 60,
+             "product": {"manufacturer": "Victron Energy", "range": "SmartSolar MPPT", "description": "Solar charge controller 150 V / 60 A"},
+             "cable": {"designation": "H07RN-F", "cores": "2x", "section_mm2": 16, "material": "Cu", "length_m": 1},
+             "children": [
+              {"type": "switch_disconnector", "ref": "-Q2", "label": "PV DC isolator", "in_A": 32, "dc": true, "poles": "2P", "children": [
+                {"type": "pv_array", "ref": "-G2", "label": "Roof PV 2.46 kWp", "modules": 6, "module_W": 410, "strings": 2, "p_kW": 2.46,
+                 "voc_V": 112, "isc_A": 27.6,
+                 "cable": {"designation": "H1Z2Z2-K", "cores": "2x", "section_mm2": 6, "material": "Cu", "length_m": 12}}
+              ]}
+            ]}
+          ]},
+          {"type": "fuse", "ref": "-F3", "use": "DCF", "in_A": 30, "children": [
+            {"type": "dc_converter", "ref": "-T3", "label": "DC-DC 48/12 V 30 A", "kind": "dcdc", "in_A": 30,
+             "children": [
+              {"type": "board", "ref": "=DC12", "label": "12 V fuse box", "kind": "dc_box", "system": "DC", "un_V": 12, "children": [
+                {"type": "fuse", "ref": "-F31", "label": "Fridge", "in_A": 15, "fuse_class": "ATO", "poles": "1P", "children": [
+                  {"type": "appliance", "kind": "fridge", "label": "12 V compressor fridge", "p_kW": 0.06, "un_V": 12}]},
+                {"type": "fuse", "ref": "-F32", "label": "LED lighting", "in_A": 10, "fuse_class": "ATO", "poles": "1P", "children": [
+                  {"type": "lighting", "label": "12 V LED lighting", "points": 10, "un_V": 12}]},
+                {"type": "fuse", "ref": "-F33", "label": "Water pump", "in_A": 10, "fuse_class": "ATO", "poles": "1P", "children": [
+                  {"type": "motor", "label": "12 V water pump", "p_kW": 0.08, "un_V": 12, "phases": 1}]}
+              ]}
+            ]}
+          ]}
+        ]}
+      ]},
+      {"type": "board", "ref": "=AC", "label": "230 V AC consumer unit", "kind": "distribution", "system": "1P+N", "ways": 12, "children": [
+        {"type": "breaker", "ref": "-Q10", "label": "AC-out main", "in_A": 25, "curve": "C", "icn_kA": 6, "poles": "1P+N",
+         "cable": {"designation": "H07RN-F", "cores": "3G", "section_mm2": 6, "material": "Cu", "length_m": 2},
+         "children": [
+          {"type": "rcd", "ref": "-F10", "label": "RCCB", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "2P", "children": [
+            {"type": "breaker", "ref": "-F11", "use": "B10", "cable": {"cores": "3G", "section_mm2": 1.5},
+             "children": [{"type": "lighting", "label": "230 V lighting (exterior)", "points": 3}]},
+            {"type": "breaker", "ref": "-F12", "use": "B16", "cable": {"cores": "3G", "section_mm2": 2.5},
+             "children": [{"type": "socket", "label": "Sockets", "points": 7}]},
+            {"type": "breaker", "ref": "-F13", "use": "B16", "cable": {"cores": "3G", "section_mm2": 2.5},
+             "children": [{"type": "cooking", "kind": "hob", "label": "2-zone induction hob (limited 3.5 kW)", "p_kW": 3.5}]},
+            {"type": "breaker", "ref": "-F14", "use": "B10", "cable": {"cores": "3G", "section_mm2": 1.5},
+             "children": [{"type": "water_heater", "label": "Water heater 30 L (surplus only)", "volume_L": 30, "p_kW": 1.2, "priority": "non_essential"}]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "links": [
+    {"kind": "data", "from": "BAT", "to": "INV", "protocol": "VE.Can", "label": "BMS"}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "orientation": "landscape",
+             "cartouche": ["label", "ref", "protection", "idn_mA", "cable", "un_V", "p_kW"]}]
+}

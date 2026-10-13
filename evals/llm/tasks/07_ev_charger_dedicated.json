@@ -1,0 +1,58 @@
+{
+ "id": "07_ev_charger_dedicated",
+ "request": "Add a 7.4 kW mode 3 EV charger on a dedicated circuit to a TT 1P+N house: 40 A breaker, 10 mm² cable, 30 mA RCD type B (or type A with 6 mA DC detection in the charger, then note it).",
+ "expect": [
+  {
+   "check": "count",
+   "match": {
+    "type": "ev_charger",
+    "mode": "3"
+   },
+   "min": 1
+  },
+  {
+   "check": "under",
+   "ancestor": {
+    "type": [
+     "rcd",
+     "rcbo"
+    ],
+    "idn_mA": 30
+   },
+   "descendant": {
+    "type": "ev_charger"
+   }
+  },
+  {
+   "check": "under",
+   "ancestor": {
+    "type": [
+     "breaker",
+     "rcbo"
+    ],
+    "in_A": 40
+   },
+   "descendant": {
+    "type": "ev_charger"
+   }
+  },
+  {
+   "check": "under",
+   "or_self": true,
+   "ancestor": {
+    "cable.section_mm2": {
+     "min": 10
+    }
+   },
+   "descendant": {
+    "type": "ev_charger"
+   }
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ]
+}

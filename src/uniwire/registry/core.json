@@ -1,0 +1,745 @@
+{
+ "registry": "core",
+ "version": "1.0.0",
+ "types": {
+  "grid": {
+   "category": "source",
+   "iec81346": "G",
+   "iec81346_class": null,
+   "label": {
+    "fr": "Réseau",
+    "en": "Utility grid"
+   },
+   "symbol": "grid",
+   "map": {
+    "cim": "EnergySource",
+    "scl": "IFL"
+   }
+  },
+  "transformer": {
+   "category": "source",
+   "iec81346": "T",
+   "iec81346_class": "TAA",
+   "label": {
+    "fr": "Transformateur",
+    "en": "Transformer"
+   },
+   "symbol": "transformer",
+   "map": {
+    "cim": "PowerTransformer",
+    "ifc": "IfcTransformer",
+    "scl": "PTR"
+   }
+  },
+  "generator": {
+   "category": "source",
+   "iec81346": "G",
+   "iec81346_class": "GAA",
+   "label": {
+    "fr": "Groupe électrogène",
+    "en": "Generator"
+   },
+   "symbol": "generator",
+   "map": {
+    "cim": "SynchronousMachine",
+    "ifc": "IfcElectricGenerator",
+    "scl": "GEN"
+   }
+  },
+  "ups": {
+   "category": "source",
+   "iec81346": "G",
+   "iec81346_class": "RBA",
+   "label": {
+    "fr": "ASI",
+    "en": "UPS"
+   },
+   "symbol": "ups",
+   "map": {
+    "ifc": "IfcElectricFlowStorageDevice/UPS"
+   }
+  },
+  "pv_array": {
+   "category": "source",
+   "iec81346": "G",
+   "iec81346_class": "GC",
+   "label": {
+    "fr": "Champ PV",
+    "en": "PV array"
+   },
+   "symbol": "pv_array",
+   "map": {
+    "cim": "PhotoVoltaicUnit",
+    "ifc": "IfcSolarDevice/SOLARPANEL"
+   }
+  },
+  "battery": {
+   "category": "source",
+   "iec81346": "G",
+   "iec81346_class": "GBA",
+   "label": {
+    "fr": "Batterie",
+    "en": "Battery"
+   },
+   "symbol": "battery",
+   "map": {
+    "cim": "BatteryUnit",
+    "ifc": "IfcElectricFlowStorageDevice/BATTERY",
+    "scl": "BAT"
+   }
+  },
+  "inverter": {
+   "category": "source",
+   "iec81346": "T",
+   "iec81346_class": "TBB",
+   "label": {
+    "fr": "Onduleur",
+    "en": "Inverter"
+   },
+   "symbol": "inverter",
+   "map": {
+    "cim": "PowerElectronicsConnection",
+    "ifc": "IfcElectricFlowTreatmentDevice/INVERTER"
+   }
+  },
+  "meter": {
+   "category": "measure",
+   "iec81346": "P",
+   "iec81346_class": "PGH",
+   "label": {
+    "fr": "Compteur",
+    "en": "Meter"
+   },
+   "symbol": "meter",
+   "map": {
+    "cim": "Meter",
+    "ifc": "IfcFlowMeter/ENERGYMETER"
+   }
+  },
+  "breaker": {
+   "category": "protection",
+   "iec81346": "Q",
+   "iec81346_class": "QAB",
+   "label": {
+    "fr": "Disjoncteur",
+    "en": "Circuit breaker"
+   },
+   "symbol": "breaker",
+   "map": {
+    "cim": "Breaker",
+    "ifc": "IfcProtectiveDevice/CIRCUITBREAKER",
+    "scl": "CBR"
+   }
+  },
+  "rcd": {
+   "category": "protection",
+   "iec81346": "Q",
+   "iec81346_class": "FBA",
+   "label": {
+    "fr": "Interrupteur différentiel",
+    "en": "Residual current switch"
+   },
+   "symbol": "rcd",
+   "map": {
+    "cim": "Switch",
+    "ifc": "IfcProtectiveDevice/RESIDUALCURRENTSWITCH"
+   }
+  },
+  "rcbo": {
+   "category": "protection",
+   "iec81346": "Q",
+   "iec81346_class": "FBA",
+   "label": {
+    "fr": "Disjoncteur différentiel",
+    "en": "RCBO"
+   },
+   "symbol": "rcbo",
+   "map": {
+    "cim": "Breaker",
+    "ifc": "IfcProtectiveDevice/RESIDUALCURRENTCIRCUITBREAKER",
+    "scl": "CBR"
+   }
+  },
+  "main_breaker": {
+   "category": "protection",
+   "iec81346": "Q",
+   "iec81346_class": "QAB",
+   "label": {
+    "fr": "Disjoncteur de branchement / AGCP",
+    "en": "Main breaker"
+   },
+   "symbol": "main_breaker",
+   "map": {
+    "cim": "Breaker",
+    "ifc": "IfcProtectiveDevice/EARTHLEAKAGECIRCUITBREAKER",
+    "scl": "CBR"
+   }
+  },
+  "fuse": {
+   "category": "protection",
+   "iec81346": "F",
+   "iec81346_class": "FCA",
+   "label": {
+    "fr": "Fusible",
+    "en": "Fuse"
+   },
+   "symbol": "fuse",
+   "map": {
+    "cim": "Fuse",
+    "ifc": "IfcProtectiveDevice/FUSEDISCONNECTOR"
+   }
+  },
+  "fuse_switch": {
+   "category": "protection",
+   "iec81346": "Q",
+   "iec81346_class": "QBB",
+   "label": {
+    "fr": "Interrupteur-sectionneur fusibles",
+    "en": "Fuse switch-disconnector"
+   },
+   "symbol": "fuse_switch",
+   "map": {
+    "cim": "Fuse",
+    "ifc": "IfcProtectiveDevice/FUSEDISCONNECTOR"
+   }
+  },
+  "switch_disconnector": {
+   "category": "switching",
+   "iec81346": "Q",
+   "iec81346_class": "QBA",
+   "label": {
+    "fr": "Interrupteur-sectionneur",
+    "en": "Switch-disconnector"
+   },
+   "symbol": "switch_disconnector",
+   "map": {
+    "cim": "LoadBreakSwitch",
+    "ifc": "IfcSwitchingDevice/SWITCHDISCONNECTOR",
+    "scl": "DIS"
+   }
+  },
+  "disconnector": {
+   "category": "switching",
+   "iec81346": "Q",
+   "iec81346_class": "QBA",
+   "label": {
+    "fr": "Sectionneur",
+    "en": "Disconnector"
+   },
+   "symbol": "disconnector",
+   "map": {
+    "cim": "Disconnector",
+    "ifc": "IfcSwitchingDevice/TOGGLESWITCH",
+    "scl": "DIS"
+   }
+  },
+  "contactor": {
+   "category": "switching",
+   "iec81346": "Q",
+   "iec81346_class": "QAA",
+   "label": {
+    "fr": "Contacteur",
+    "en": "Contactor"
+   },
+   "symbol": "contactor",
+   "map": {
+    "cim": "Switch",
+    "ifc": "IfcSwitchingDevice/CONTACTOR"
+   }
+  },
+  "impulse_relay": {
+   "category": "switching",
+   "iec81346": "K",
+   "iec81346_class": "KFA",
+   "label": {
+    "fr": "Télérupteur",
+    "en": "Impulse relay"
+   },
+   "symbol": "impulse_relay",
+   "map": {
+    "cim": "Switch",
+    "ifc": "IfcSwitchingDevice/RELAY"
+   }
+  },
+  "thermal_relay": {
+   "category": "protection",
+   "iec81346": "F",
+   "iec81346_class": "FC",
+   "label": {
+    "fr": "Relais thermique",
+    "en": "Overload relay"
+   },
+   "symbol": "thermal_relay",
+   "map": {
+    "ifc": "IfcProtectiveDeviceTrippingUnit/THERMAL"
+   }
+  },
+  "motor_starter": {
+   "category": "switching",
+   "iec81346": "Q",
+   "iec81346_class": "QA",
+   "label": {
+    "fr": "Départ moteur",
+    "en": "Motor starter"
+   },
+   "symbol": "motor_starter",
+   "map": {
+    "ifc": "IfcSwitchingDevice/STARTER"
+   }
+  },
+  "transfer_switch": {
+   "category": "switching",
+   "iec81346": "Q",
+   "iec81346_class": "QA",
+   "label": {
+    "fr": "Inverseur de source",
+    "en": "Transfer switch"
+   },
+   "symbol": "transfer_switch",
+   "map": {
+    "cim": "Switch",
+    "ifc": "IfcSwitchingDevice/SWITCHDISCONNECTOR"
+   }
+  },
+  "spd": {
+   "category": "protection",
+   "iec81346": "F",
+   "iec81346_class": "FAD",
+   "label": {
+    "fr": "Parafoudre",
+    "en": "Surge protective device"
+   },
+   "symbol": "spd",
+   "map": {
+    "cim": "SurgeArrester",
+    "ifc": "IfcProtectiveDevice/VARISTOR"
+   }
+  },
+  "controller": {
+   "category": "control",
+   "iec81346": "K",
+   "iec81346_class": "KEB",
+   "label": {
+    "fr": "Appareil de commande",
+    "en": "Controller"
+   },
+   "symbol": "controller",
+   "map": {
+    "ifc": "IfcController"
+   }
+  },
+  "busbar": {
+   "category": "conductor",
+   "iec81346": "W",
+   "iec81346_class": "WDA",
+   "label": {
+    "fr": "Jeu de barres",
+    "en": "Busbar"
+   },
+   "symbol": "busbar",
+   "map": {
+    "cim": "BusbarSection",
+    "ifc": "IfcCableSegment/BUSBARSEGMENT"
+   }
+  },
+  "board": {
+   "category": "container",
+   "iec81346": null,
+   "iec81346_class": "UC",
+   "label": {
+    "fr": "Tableau",
+    "en": "Distribution board"
+   },
+   "symbol": "board",
+   "map": {
+    "cim": "EquipmentContainer",
+    "ifc": "IfcElectricDistributionBoard"
+   }
+  },
+  "earth": {
+   "category": "conductor",
+   "iec81346": "X",
+   "iec81346_class": "XEE",
+   "label": {
+    "fr": "Prise de terre",
+    "en": "Earth electrode"
+   },
+   "symbol": "earth",
+   "map": {
+    "cim": "GroundingImpedance",
+    "ifc": "IfcProtectiveDevice/EARTHINGSWITCH"
+   }
+  },
+  "lighting": {
+   "category": "load",
+   "iec81346": "E",
+   "iec81346_class": "EAA",
+   "label": {
+    "fr": "Éclairage",
+    "en": "Lighting"
+   },
+   "symbol": "lighting",
+   "map": {
+    "cim": "EnergyConsumer",
+    "ifc": "IfcLightFixture"
+   }
+  },
+  "socket": {
+   "category": "load",
+   "iec81346": "X",
+   "iec81346_class": "XDB",
+   "label": {
+    "fr": "Prises de courant",
+    "en": "Socket outlets"
+   },
+   "symbol": "socket",
+   "map": {
+    "cim": "EnergyConsumer",
+    "ifc": "IfcOutlet/POWEROUTLET"
+   }
+  },
+  "heating": {
+   "category": "load",
+   "iec81346": "E",
+   "iec81346_class": "EB",
+   "label": {
+    "fr": "Chauffage",
+    "en": "Heating"
+   },
+   "symbol": "heating",
+   "map": {
+    "cim": "EnergyConsumer",
+    "ifc": "IfcSpaceHeater"
+   }
+  },
+  "water_heater": {
+   "category": "load",
+   "iec81346": "E",
+   "iec81346_class": "EB",
+   "label": {
+    "fr": "Chauffe-eau",
+    "en": "Water heater"
+   },
+   "symbol": "water_heater",
+   "map": {
+    "cim": "EnergyConsumer",
+    "ifc": "IfcElectricAppliance"
+   }
+  },
+  "cooking": {
+   "category": "load",
+   "iec81346": "E",
+   "iec81346_class": "EB",
+   "label": {
+    "fr": "Cuisson",
+    "en": "Cooking"
+   },
+   "symbol": "cooking",
+   "map": {
+    "cim": "EnergyConsumer",
+    "ifc": "IfcElectricAppliance/ELECTRICCOOKER"
+   }
+  },
+  "appliance": {
+   "category": "load",
+   "iec81346": "E",
+   "iec81346_class": null,
+   "label": {
+    "fr": "Appareil électroménager",
+    "en": "Appliance"
+   },
+   "symbol": "appliance",
+   "map": {
+    "cim": "EnergyConsumer",
+    "ifc": "IfcElectricAppliance"
+   }
+  },
+  "motor": {
+   "category": "load",
+   "iec81346": "M",
+   "iec81346_class": "MAA",
+   "label": {
+    "fr": "Moteur",
+    "en": "Motor"
+   },
+   "symbol": "motor",
+   "map": {
+    "cim": "AsynchronousMachine",
+    "ifc": "IfcElectricMotor",
+    "scl": "MOT"
+   }
+  },
+  "ev_charger": {
+   "category": "load",
+   "iec81346": "E",
+   "iec81346_class": null,
+   "label": {
+    "fr": "Borne de recharge (IRVE)",
+    "en": "EV charger"
+   },
+   "symbol": "ev_charger",
+   "map": {
+    "cim": "EnergyConsumer",
+    "ifc": "IfcElectricAppliance"
+   }
+  },
+  "ventilation": {
+   "category": "load",
+   "iec81346": "M",
+   "iec81346_class": "GQB",
+   "label": {
+    "fr": "Ventilation (VMC)",
+    "en": "Ventilation"
+   },
+   "symbol": "ventilation",
+   "map": {
+    "cim": "EnergyConsumer",
+    "ifc": "IfcFan"
+   }
+  },
+  "shutter": {
+   "category": "load",
+   "iec81346": "M",
+   "iec81346_class": "RQG",
+   "label": {
+    "fr": "Volets roulants",
+    "en": "Shutters"
+   },
+   "symbol": "shutter",
+   "map": {
+    "cim": "EnergyConsumer",
+    "ifc": "IfcElectricAppliance"
+   }
+  },
+  "load": {
+   "category": "load",
+   "iec81346": "E",
+   "iec81346_class": null,
+   "label": {
+    "fr": "Récepteur",
+    "en": "Load"
+   },
+   "symbol": "load",
+   "map": {
+    "cim": "EnergyConsumer",
+    "ifc": "IfcElectricAppliance"
+   }
+  },
+  "spare": {
+   "category": "load",
+   "iec81346": null,
+   "iec81346_class": null,
+   "label": {
+    "fr": "Réserve",
+    "en": "Spare"
+   },
+   "symbol": "spare",
+   "map": {}
+  },
+  "offpage": {
+   "category": "connector",
+   "iec81346": null,
+   "iec81346_class": null,
+   "label": {
+    "fr": "Renvoi de folio",
+    "en": "Off-page reference"
+   },
+   "symbol": "offpage",
+   "map": {}
+  },
+  "instrument_transformer": {
+   "category": "measure",
+   "iec81346": "B",
+   "label": {
+    "fr": "Transformateur de mesure (TC/TT)",
+    "en": "Instrument transformer"
+   },
+   "symbol": "instrument_transformer",
+   "map": {
+    "cim": "CurrentTransformer",
+    "ifc": "IfcSensor/CTSENSOR"
+   },
+   "iec81346_class": null
+  },
+  "protection_relay": {
+   "category": "protection",
+   "iec81346": "K",
+   "label": {
+    "fr": "Relais de protection",
+    "en": "Protection relay"
+   },
+   "symbol": "protection_relay",
+   "map": {
+    "cim": "ProtectionEquipment",
+    "ifc": "IfcProtectiveDeviceTrippingUnit/ELECTRONIC"
+   },
+   "iec81346_class": null
+  },
+  "earthing_switch": {
+   "category": "switching",
+   "iec81346": "Q",
+   "label": {
+    "fr": "Sectionneur de terre",
+    "en": "Earthing switch"
+   },
+   "symbol": "earthing_switch",
+   "map": {
+    "cim": "GroundDisconnector",
+    "ifc": "IfcSwitchingDevice/EARTHINGSWITCH"
+   },
+   "iec81346_class": null
+  },
+  "voltage_indicator": {
+   "category": "measure",
+   "iec81346": "P",
+   "label": {
+    "fr": "Indicateur de présence de tension",
+    "en": "Voltage presence indicator"
+   },
+   "symbol": "voltage_indicator",
+   "map": {
+    "ifc": "IfcSensor/VOLTAGESENSOR"
+   },
+   "iec81346_class": null
+  },
+  "insulation_monitor": {
+   "category": "measure",
+   "iec81346": "B",
+   "label": {
+    "fr": "Contrôleur permanent d'isolement",
+    "en": "Insulation monitoring device"
+   },
+   "symbol": "insulation_monitor",
+   "map": {
+    "ifc": "IfcProtectiveDevice"
+   },
+   "iec81346_class": null
+  },
+  "surge_limiter": {
+   "category": "protection",
+   "iec81346": "F",
+   "label": {
+    "fr": "Limiteur de surtension",
+    "en": "Surge limiter"
+   },
+   "symbol": "surge_limiter",
+   "map": {
+    "cim": "SurgeArrester",
+    "ifc": "IfcProtectiveDevice/VARISTOR"
+   },
+   "iec81346_class": null
+  },
+  "neutral_impedance": {
+   "category": "conductor",
+   "iec81346": "R",
+   "label": {
+    "fr": "Impédance de neutre",
+    "en": "Neutral earthing impedance"
+   },
+   "symbol": "neutral_impedance",
+   "map": {
+    "cim": "PetersenCoil"
+   },
+   "iec81346_class": null
+  },
+  "terminal_block": {
+   "category": "conductor",
+   "iec81346": "X",
+   "label": {
+    "fr": "Bornier",
+    "en": "Terminal block"
+   },
+   "symbol": "terminal_block",
+   "map": {
+    "cim": "Junction",
+    "ifc": "IfcJunctionBox"
+   },
+   "iec81346_class": null
+  },
+  "junction_box": {
+   "category": "conductor",
+   "iec81346": "X",
+   "label": {
+    "fr": "Boîte de jonction",
+    "en": "Junction box"
+   },
+   "symbol": "junction_box",
+   "map": {
+    "cim": "Junction",
+    "ifc": "IfcJunctionBox"
+   },
+   "iec81346_class": null
+  },
+  "connector": {
+   "category": "conductor",
+   "iec81346": "X",
+   "label": {
+    "fr": "Connecteur",
+    "en": "Connector"
+   },
+   "symbol": "connector",
+   "map": {
+    "cim": "Connector",
+    "ifc": "IfcElectricFlowTreatmentDevice"
+   },
+   "iec81346_class": null
+  },
+  "dc_converter": {
+   "category": "source",
+   "iec81346": "T",
+   "label": {
+    "fr": "Convertisseur DC (optimiseur, MPPT)",
+    "en": "DC converter"
+   },
+   "symbol": "dc_converter",
+   "map": {
+    "cim": "PowerElectronicsConnection",
+    "ifc": "IfcElectricFlowTreatmentDevice/INVERTER"
+   },
+   "iec81346_class": null
+  },
+  "earth_bar": {
+   "category": "conductor",
+   "iec81346": "X",
+   "label": {
+    "fr": "Barrette de terre / barre PE",
+    "en": "Earth bar"
+   },
+   "symbol": "earth_bar",
+   "map": {
+    "cim": "GroundingImpedance"
+   },
+   "iec81346_class": null
+  },
+  "plc": {
+   "category": "control",
+   "iec81346": "K",
+   "iec81346_class": null,
+   "label": {
+    "fr": "Automate programmable",
+    "en": "Programmable controller"
+   },
+   "symbol": "plc",
+   "map": {
+    "ifc": "IfcController/PROGRAMMABLE",
+    "cim": "RemoteUnit"
+   }
+  },
+  "power_supply": {
+   "category": "converter",
+   "iec81346": "T",
+   "iec81346_class": null,
+   "label": {
+    "fr": "Alimentation (AC/DC)",
+    "en": "Power supply"
+   },
+   "symbol": "power_supply",
+   "map": {
+    "ifc": "IfcElectricFlowTreatmentDevice/RECTIFIER"
+   }
+  }
+ },
+ "sources": {
+  "iec81346_class": "2- or 3-letter IEC 81346-2:2019 class chosen from the table of the optional uniwire-data-iec81346 package (Wikipedia table \"IEC 81346\", CC BY-SA 4.0, derived from the CCI classification). null: no class of the table matches (utility grid, cross-reference, spare, generic load, household appliance, EV charger). The \"iec81346\" letter remains the letter customarily used on diagrams and may differ from the class (e.g. RCD: letter Q, class FBA \"Residual current device\")."
+ }
+}

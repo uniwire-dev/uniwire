@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{#- uniwire: the light / dark choice is shared with the landing page and the viewer through localStorage
+    "uniwire-theme". Before the palette is applied, write it into Material's own "__palette" entry. -#}
+{% block extrahead %}
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("uniwire-theme");
+    if (t !== "light" && t !== "dark") return;
+    var dark = t === "dark";
+    __md_set("__palette", { index: dark ? 1 : 0, color: {
+      media: dark ? "(prefers-color-scheme: dark)" : "(prefers-color-scheme: light)",
+      scheme: dark ? "slate" : "uniwire", primary: "custom", accent: "custom" } });
+  } catch (e) { /* storage unavailable */ }
+})();
+</script>
+{% endblock %}

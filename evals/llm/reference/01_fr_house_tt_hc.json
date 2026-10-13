@@ -1,0 +1,304 @@
+{
+ "uniwire": "1.0.0",
+ "profiles": [
+  "nfc15100"
+ ],
+ "meta": {
+  "title": "French house: TT 1P+N, off-peak water heater",
+  "lang": "en"
+ },
+ "installation": {
+  "earthing": "TT",
+  "system": "1P+N",
+  "un_V": 230,
+  "subscribed_kVA": 12,
+  "supply": "Tarif Bleu",
+  "standard": "NF C 15-100"
+ },
+ "templates": {
+  "C16": {
+   "type": "breaker",
+   "in_A": 16,
+   "curve": "C",
+   "poles": "1P+N",
+   "icn_kA": 3
+  },
+  "C20": {
+   "type": "breaker",
+   "in_A": 20,
+   "curve": "C",
+   "poles": "1P+N",
+   "icn_kA": 3
+  },
+  "C32": {
+   "type": "breaker",
+   "in_A": 32,
+   "curve": "C",
+   "poles": "1P+N",
+   "icn_kA": 3
+  },
+  "ID40": {
+   "type": "rcd",
+   "in_A": 40,
+   "idn_mA": 30,
+   "poles": "2P"
+  }
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "id": "GRID",
+   "label": "Utility",
+   "children": [
+    {
+     "type": "meter",
+     "id": "CPT",
+     "ref": "P0",
+     "kind": "Linky",
+     "children": [
+      {
+       "type": "main_breaker",
+       "id": "Q0",
+       "ref": "-Q0",
+       "label": "Main breaker",
+       "range_A": "30-60",
+       "in_A": 60,
+       "idn_mA": 500,
+       "selective": true,
+       "poles": "2P",
+       "subscribed_kVA": 12,
+       "cable": {
+        "designation": "U1000R2V",
+        "cores": "3G",
+        "section_mm2": 16,
+        "material": "Cu",
+        "length_m": 5
+       },
+       "children": [
+        {
+         "type": "board",
+         "id": "TD",
+         "ref": "TD",
+         "label": "House board",
+         "children": [
+          {
+           "type": "rcd",
+           "id": "F1",
+           "ref": "-F1",
+           "use": "ID40",
+           "rcd_type": "AC",
+           "children": [
+            {
+             "type": "breaker",
+             "id": "Q11",
+             "ref": "-Q11",
+             "use": "C16",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 1.5
+             },
+             "children": [
+              {
+               "type": "lighting",
+               "id": "L1",
+               "label": "Lighting ground floor",
+               "points": 8
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "id": "Q12",
+             "ref": "-Q12",
+             "use": "C20",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 2.5
+             },
+             "children": [
+              {
+               "type": "socket",
+               "id": "S1",
+               "label": "Living room sockets",
+               "points": 8
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "id": "Q13",
+             "ref": "-Q13",
+             "use": "C20",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 2.5
+             },
+             "children": [
+              {
+               "type": "heating",
+               "id": "H1",
+               "label": "Heaters ground floor",
+               "p_kW": 3.5
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "type": "rcd",
+           "id": "F2",
+           "ref": "-F2",
+           "use": "ID40",
+           "rcd_type": "A",
+           "children": [
+            {
+             "type": "breaker",
+             "id": "Q21",
+             "ref": "-Q21",
+             "use": "C32",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 6
+             },
+             "children": [
+              {
+               "type": "cooking",
+               "id": "K1",
+               "kind": "hob",
+               "label": "Hob",
+               "p_kW": 7.2
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "id": "Q22",
+             "ref": "-Q22",
+             "use": "C20",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 2.5
+             },
+             "children": [
+              {
+               "type": "appliance",
+               "id": "A1",
+               "kind": "washing_machine",
+               "label": "Washing machine"
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "id": "Q23",
+             "ref": "-Q23",
+             "use": "C20",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 2.5
+             },
+             "children": [
+              {
+               "type": "contactor",
+               "id": "KM1",
+               "ref": "-KM1",
+               "function": "HC",
+               "in_A": 20,
+               "poles": "2P",
+               "coil_V": 230,
+               "manual": true,
+               "children": [
+                {
+                 "type": "water_heater",
+                 "id": "WH",
+                 "label": "Water heater 200 L",
+                 "volume_L": 200,
+                 "p_kW": 2.4
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "type": "rcd",
+           "id": "F3",
+           "ref": "-F3",
+           "use": "ID40",
+           "rcd_type": "AC",
+           "children": [
+            {
+             "type": "breaker",
+             "id": "Q31",
+             "ref": "-Q31",
+             "use": "C16",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 1.5
+             },
+             "children": [
+              {
+               "type": "lighting",
+               "id": "L2",
+               "label": "Lighting first floor",
+               "points": 7
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "id": "Q32",
+             "ref": "-Q32",
+             "use": "C20",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 2.5
+             },
+             "children": [
+              {
+               "type": "socket",
+               "id": "S2",
+               "label": "Bedroom sockets",
+               "points": 10
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "id": "Q33",
+             "ref": "-Q33",
+             "use": "C20",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 2.5
+             },
+             "children": [
+              {
+               "type": "heating",
+               "id": "H2",
+               "label": "Heaters first floor",
+               "p_kW": 3
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "links": [
+  {
+   "kind": "control",
+   "from": "CPT",
+   "to": "KM1",
+   "label": "Off-peak contact"
+  }
+ ]
+}

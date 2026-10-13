@@ -1,0 +1,63 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "lang": "en",
+    "title": "Hair salon: 230 V IT three-phase board (Nordic style)",
+    "project": "EX-17",
+    "client": "Example hair salon (85 m²)",
+    "author": "uniwire examples",
+    
+    "notes": [
+      "Demonstrates: IT earthing system 3 x 230 V without neutral (as in Norwegian low-voltage networks): all final circuits are two-pole line-to-line (phase column L1L2 / L2L3 / L1L3), one 2-pole 30 mA RCBO per circuit, insulation monitoring device for the first fault, SPD rated for line-to-line voltage, portrait sheet",
+      "Instantaneous water heater for the wash basins on a 3-pole circuit; hood dryers and styling stations on separate circuits for load balancing"
+    ]
+  },
+  "installation": {
+    "earthing": "IT", "system": "3P", "un_V": 230, "f_Hz": 50,
+    "supply": "IT 3 x 230 V, 63 A", "ik3_kA": 6, "standard": "NEK 400 / IEC 60364"
+  },
+  "templates": {
+    "RCBO": {"type": "rcbo", "curve": "C", "icn_kA": 6, "idn_mA": 30, "rcd_type": "A", "poles": "2P",
+             "product": {"manufacturer": "ABB", "range": "DS202C", "description": "RCBO 2P, 30 mA type A"}}
+  },
+  "sources": [
+    {"type": "grid", "label": "DSO IT network 3 x 230 V", "un_V": 230, "ik_kA": 6, "system": "3P", "children": [
+      {"type": "meter", "ref": "-P1", "label": "AMS meter", "kind": "smart", "in_A": 63, "external": true, "children": [
+        {"type": "board", "ref": "=DB1", "label": "Salon distribution board", "kind": "distribution", "system": "3P", "earthing": "IT", "ways": 36,
+         "cable": {"designation": "PFSP", "cores": "4G", "section_mm2": 16, "material": "Cu", "length_m": 14, "install": "C", "insulation": "PVC"},
+         "children": [
+          {"type": "breaker", "ref": "-Q0", "label": "Main CB", "in_A": 63, "curve": "C", "icn_kA": 10, "poles": "3P", "children": [
+            {"type": "rcbo", "ref": "-F1", "use": "RCBO", "in_A": 10, "phase": "L1L2", "cable": {"cores": "3G", "section_mm2": 1.5},
+             "children": [{"type": "lighting", "label": "Salon lighting", "points": 14, "p_kW": 0.7}]},
+            {"type": "rcbo", "ref": "-F2", "use": "RCBO", "in_A": 10, "phase": "L2L3", "cable": {"cores": "3G", "section_mm2": 1.5},
+             "children": [{"type": "lighting", "label": "Mirror lights + sign", "points": 8, "p_kW": 0.4}]},
+            {"type": "rcbo", "ref": "-F3", "use": "RCBO", "in_A": 16, "phase": "L1L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+             "children": [{"type": "socket", "label": "Styling stations 1-3", "points": 6}]},
+            {"type": "rcbo", "ref": "-F4", "use": "RCBO", "in_A": 16, "phase": "L1L2", "cable": {"cores": "3G", "section_mm2": 2.5},
+             "children": [{"type": "socket", "label": "Styling stations 4-6", "points": 6}]},
+            {"type": "rcbo", "ref": "-F5", "use": "RCBO", "in_A": 16, "phase": "L2L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+             "children": [{"type": "load", "label": "Hood dryers (2 x 1.6 kW)", "symbol_text": "HD", "p_kW": 3.2}]},
+            {"type": "rcbo", "ref": "-F6", "use": "RCBO", "in_A": 32, "poles": "3P", "cable": {"cores": "4G", "section_mm2": 6, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 9},
+             "children": [{"type": "water_heater", "label": "Instantaneous heater 11 kW (basins)", "p_kW": 11}]},
+            {"type": "rcbo", "ref": "-F7", "use": "RCBO", "in_A": 16, "phase": "L1L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+             "children": [{"type": "appliance", "kind": "washing_machine", "label": "Towel washer", "p_kW": 2.2}]},
+            {"type": "rcbo", "ref": "-F8", "use": "RCBO", "in_A": 16, "phase": "L1L2", "cable": {"cores": "3G", "section_mm2": 2.5},
+             "children": [{"type": "appliance", "kind": "dryer", "label": "Towel dryer", "p_kW": 2.5}]},
+            {"type": "rcbo", "ref": "-F9", "use": "RCBO", "in_A": 16, "phase": "L2L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+             "children": [{"type": "socket", "label": "Reception + staff room", "points": 8}]},
+            {"type": "rcbo", "ref": "-F10", "use": "RCBO", "in_A": 16, "phase": "L1L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+             "children": [{"type": "load", "label": "Air-to-air heat pump", "symbol_text": "HP", "p_kW": 1.8}]},
+            {"type": "breaker", "ref": "-F11", "in_A": 6, "curve": "C", "icn_kA": 6, "poles": "3P", "label": "IMD", "children": [
+              {"type": "insulation_monitor", "ref": "-P11", "label": "Insulation monitor", "range": "alarm at 30 kΩ"}]},
+            {"type": "breaker", "ref": "-F12", "in_A": 20, "curve": "C", "icn_kA": 6, "poles": "3P", "label": "SPD", "children": [
+              {"type": "spd", "ref": "-F121", "label": "SPD (IT)", "spd_type": "2", "imax_kA": 20, "uc_V": 275, "poles": "3P"}]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "orientation": "portrait",
+             "cartouche": ["label", "ref", "protection", "poles", "idn_mA", "cable", "phase", "p_kW"]}]
+}

@@ -1,0 +1,55 @@
+{
+ "id": "05_standby_generator_ats",
+ "request": "Small clinic: TN-S 400 V grid supply and a 100 kVA standby diesel generator on a 4-pole automatic transfer switch feeding an essential-services board (lighting, fridges, IT). Non-essential loads stay on the grid side.",
+ "expect": [
+  {
+   "check": "count",
+   "match": {
+    "type": "generator"
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "transfer_switch",
+    "mode": "automatic"
+   },
+   "min": 1
+  },
+  {
+   "check": "link",
+   "match": {
+    "kind": "transfer"
+   },
+   "from": {
+    "type": "generator"
+   },
+   "to": {
+    "type": "transfer_switch"
+   }
+  },
+  {
+   "check": "under",
+   "ancestor": {
+    "type": "transfer_switch"
+   },
+   "descendant": {
+    "type": "board"
+   }
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "board"
+   },
+   "min": 2
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ]
+}

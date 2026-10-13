@@ -1,0 +1,114 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["nfc15100"],
+  "meta": {
+    "title": "Maison exemple : autoconsommation PV 6 kWc avec onduleur string",
+    "project": "EX-35",
+    "client": "Maison exemple",
+    "author": "uniwire examples",
+    
+    "lang": "fr",
+    "notes": [
+      "Démontre : chaîne PV complète coffret DC (interrupteur-sectionneur DC, parafoudre DC) → onduleur string → coffret AC (DD 30 mA type A, parafoudre AC) → tableau de logement, compteur Linky bidirectionnel (vente du surplus)",
+      "Champ : 2 chaînes de 7 modules 425 Wc (une par MPPT), Voc chaîne ≈ 275 V à -10 °C ; câbles DC H1Z2Z2-K 6 mm²",
+      "Parafoudre AC type 2 obligatoire en tête du tableau (installation PV raccordée)"
+    ]
+  },
+  "installation": {
+    "earthing": "TT",
+    "system": "1P+N",
+    "un_V": 230,
+    "f_Hz": 50,
+    "supply": "Tarif Bleu",
+    "subscribed_kVA": 9,
+    "earth_resistance_ohm": 40,
+    "surface_m2": 95,
+    "standard": "NF C 15-100"
+  },
+  "templates": {
+    "C16": {"type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 4.5, "poles": "1P+N"},
+    "C20": {"type": "breaker", "in_A": 20, "curve": "C", "icn_kA": 4.5, "poles": "1P+N"},
+    "ID40": {"type": "rcd", "in_A": 40, "idn_mA": 30, "poles": "2P"},
+    "PVDC": {"type": "switch_disconnector", "in_A": 25, "poles": "2P", "dc": true, "ue_V": 600}
+  },
+  "sources": [
+    {"type": "grid", "id": "RES", "label": "Réseau public", "supply": "Tarif Bleu 9 kVA", "children": [
+      {"type": "meter", "id": "LINKY", "ref": "-P0", "label": "Compteur Linky", "kind": "Linky", "bidirectional": true, "children": [
+        {"type": "main_breaker", "id": "AGCP", "ref": "-Q0", "label": "Disjoncteur de branchement",
+         "range_A": "15-45", "in_A": 45, "idn_mA": 500, "selective": true, "subscribed_kVA": 9,
+         "cable": {"designation": "U1000R2V", "cores": "2x", "section_mm2": 16, "length_m": 6},
+         "children": [
+          {"type": "board", "id": "TD", "ref": "TD1", "label": "Tableau de logement", "kind": "main", "ways": 39, "children": [
+            {"type": "breaker", "id": "F0", "ref": "-F0", "use": "C20", "label": "Déconnecteur parafoudre", "children": [
+              {"type": "spd", "id": "SPD_AC", "ref": "-F01", "label": "Parafoudre AC", "spd_type": "2", "imax_kA": 20, "up_kV": 1.5, "poles": "1P+N"}
+            ]},
+            {"type": "rcd", "id": "ID1", "ref": "-Q1", "use": "ID40", "rcd_type": "AC", "children": [
+              {"type": "breaker", "ref": "-Q11", "use": "C16", "circuit": "1", "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "Éclairage jour", "points": 7, "room": "Séjour, cuisine, entrée"}]},
+              {"type": "breaker", "ref": "-Q12", "use": "C20", "circuit": "2", "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises séjour", "points": 8, "room": "Séjour"}]},
+              {"type": "breaker", "ref": "-Q13", "use": "C16", "circuit": "3", "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "shutter", "label": "Volets roulants", "room": "Séjour"}]}
+            ]},
+            {"type": "rcd", "id": "ID2", "ref": "-Q2", "use": "ID40", "rcd_type": "A", "children": [
+              {"type": "breaker", "ref": "-Q21", "use": "C20", "circuit": "4", "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "appliance", "label": "Lave-linge", "kind": "washing_machine"}]},
+              {"type": "breaker", "ref": "-Q22", "use": "C20", "in_A": 32, "circuit": "5", "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 6},
+               "children": [{"type": "cooking", "label": "Plaque de cuisson", "kind": "hob", "p_kW": 7.2}]},
+              {"type": "breaker", "ref": "-Q23", "use": "C20", "circuit": "6", "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "cooking", "label": "Four", "kind": "oven"}]}
+            ]},
+            {"type": "rcd", "id": "ID3", "ref": "-Q3", "use": "ID40", "rcd_type": "AC", "children": [
+              {"type": "breaker", "ref": "-Q31", "use": "C16", "circuit": "7", "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "Éclairage nuit", "points": 6, "room": "Chambres, SdB"}]},
+              {"type": "breaker", "ref": "-Q32", "use": "C20", "circuit": "8", "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises chambres", "points": 10, "room": "Chambres"}]},
+              {"type": "breaker", "ref": "-Q33", "use": "C20", "circuit": "9", "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "water_heater", "label": "Chauffe-eau 200 L", "volume_L": 200, "p_kW": 2.2}]}
+            ]},
+            {"type": "breaker", "id": "QPV", "ref": "-Q5", "label": "Production PV", "in_A": 32, "curve": "C", "icn_kA": 6, "poles": "1P+N",
+             "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 6, "length_m": 18},
+             "children": [
+              {"type": "board", "id": "CAC", "ref": "CAC", "label": "Coffret AC", "kind": "ac_box", "ip": "IP65", "children": [
+                {"type": "rcbo", "id": "QAC", "ref": "-QA1", "label": "Protection onduleur", "in_A": 32, "curve": "C", "idn_mA": 30, "rcd_type": "A", "poles": "1P+N", "icn_kA": 6, "children": [
+                  {"type": "spd", "ref": "-FA1", "label": "Parafoudre AC", "spd_type": "2", "imax_kA": 20, "up_kV": 1.5, "poles": "1P+N"},
+                  {"type": "inverter", "id": "OND", "ref": "-T1", "label": "Onduleur string", "kind": "string", "p_kVA": 5, "mppt": 2,
+                   "protection": "DIN VDE V 0126-1-1", "un_V": 230,
+                   "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 6, "length_m": 2},
+                   "children": [
+                    {"type": "board", "id": "CDC", "ref": "CDC", "label": "Coffret DC", "kind": "dc_box", "ip": "IP65", "children": [
+                      {"type": "spd", "ref": "-FD1", "label": "Parafoudre DC", "spd_type": "2", "dc": true, "uc_V": 600, "imax_kA": 40, "up_kV": 2.5},
+                      {"type": "switch_disconnector", "ref": "-QD1", "use": "PVDC", "label": "MPPT 1",
+                       "cable": {"designation": "H1Z2Z2-K", "cores": "2x", "section_mm2": 6, "length_m": 3},
+                       "children": [
+                        {"type": "pv_array", "ref": "-G1", "label": "Chaîne 1, toiture sud", "modules": 7, "module_W": 425, "strings": 1, "p_kW": 2.975, "voc_V": 275, "isc_A": 13.9,
+                         "cable": {"designation": "H1Z2Z2-K", "cores": "2x", "section_mm2": 6, "length_m": 22}}
+                      ]},
+                      {"type": "switch_disconnector", "ref": "-QD2", "use": "PVDC", "label": "MPPT 2",
+                       "cable": {"designation": "H1Z2Z2-K", "cores": "2x", "section_mm2": 6, "length_m": 3},
+                       "children": [
+                        {"type": "pv_array", "id": "PV2", "ref": "-G2", "label": "Chaîne 2, toiture sud", "modules": 7, "module_W": 425, "strings": 1, "p_kW": 2.975, "voc_V": 275, "isc_A": 13.9,
+                         "cable": {"designation": "H1Z2Z2-K", "cores": "2x", "section_mm2": 6, "length_m": 24}}
+                      ]}
+                    ]}
+                  ]}
+                ]}
+              ]}
+            ]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "devices": [
+    {"type": "earth_bar", "id": "MET", "ref": "-XE", "label": "Borne principale de terre", "kind": "main_earth"}
+  ],
+  "links": [
+    {"kind": "earth", "from": "PV2", "to": "MET", "label": "LEP structures PV 6 mm²"}
+  ],
+  "views": [
+    {"id": "sld", "paper": "A3", "orientation": "landscape",
+     "cartouche": ["circuit", "label", "ref", "protection", "idn_mA", "rcd_type", "cable", "p_kW"]}
+  ]
+}

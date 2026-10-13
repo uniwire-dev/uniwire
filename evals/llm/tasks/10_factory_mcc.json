@@ -1,0 +1,50 @@
+{
+ "id": "10_factory_mcc",
+ "request": "Factory MCC, TN-S 400 V: three motors (5.5 kW direct-on-line, 30 kW star-delta, 15 kW on a variable-speed drive), each with its protection and cable, plus a 24 V DC control power supply.",
+ "expect": [
+  {
+   "check": "count",
+   "match": {
+    "type": "motor"
+   },
+   "min": 3
+  },
+  {
+   "check": "distinct",
+   "match": {
+    "type": "motor_starter"
+   },
+   "field": "method",
+   "min": 2
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "motor_starter",
+    "method": "vfd"
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "power_supply"
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "board",
+    "kind": "mcc"
+   },
+   "min": 1
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ]
+}

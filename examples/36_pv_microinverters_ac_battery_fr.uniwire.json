@@ -1,0 +1,109 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["nfc15100"],
+  "meta": {
+    "title": "Maison exemple : PV 4 kWc à micro-onduleurs et batterie couplée AC",
+    "project": "EX-36",
+    "client": "Maison exemple",
+    "author": "uniwire examples",
+    
+    "lang": "fr",
+    "notes": [
+      "Démontre : micro-onduleurs représentés avec 'count' (2 branches de 5), câble de branche, batterie couplée AC sur circuit dédié, passerelle de supervision (lien data Modbus vers le convertisseur), tores de mesure sur l'arrivée câblés sur la passerelle (devices[] + lien measure)",
+      "Pas de partie DC accessible : chaque module est raccordé à son micro-onduleur (pas de coffret DC)",
+      "Branches micro-onduleurs : 5 x 1,7 A = 8,7 A par branche, protégées en C16 sur câble de branche 2,5 mm²"
+    ]
+  },
+  "installation": {
+    "earthing": "TT",
+    "system": "1P+N",
+    "un_V": 230,
+    "supply": "Tarif Bleu",
+    "subscribed_kVA": 9,
+    "earth_resistance_ohm": 30,
+    "surface_m2": 70,
+    "standard": "NF C 15-100"
+  },
+  "templates": {
+    "C16": {"type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 4.5, "poles": "1P+N"},
+    "C20": {"type": "breaker", "in_A": 20, "curve": "C", "icn_kA": 4.5, "poles": "1P+N"},
+    "MICRO": {"type": "inverter", "kind": "micro", "p_kVA": 0.4, "count": 5, "protection": "DIN VDE V 0126-1-1",
+              "product": {"range": "Micro-onduleur 400 VA", "description": "Micro-onduleur monophasé 400 VA, 1 module"}},
+    "BRANCHE": {"type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "1P+N"}
+  },
+  "sources": [
+    {"type": "grid", "label": "Réseau public", "supply": "Tarif Bleu 9 kVA", "children": [
+      {"type": "meter", "id": "LINKY", "ref": "-P0", "label": "Compteur Linky", "kind": "Linky", "bidirectional": true, "children": [
+        {"type": "main_breaker", "id": "AGCP", "ref": "-Q0", "label": "AGCP", "range_A": "15-45", "in_A": 45, "idn_mA": 500, "selective": true,
+         "subscribed_kVA": 9,
+         "children": [
+          {"type": "board", "ref": "TD1", "label": "Tableau de logement", "kind": "main", "ways": 26, "children": [
+            {"type": "breaker", "ref": "-F0", "use": "C20", "label": "Parafoudre", "children": [
+              {"type": "spd", "ref": "-F01", "spd_type": "2", "imax_kA": 20, "up_kV": 1.5, "poles": "1P+N"}
+            ]},
+            {"type": "rcd", "ref": "-Q1", "in_A": 40, "idn_mA": 30, "rcd_type": "AC", "poles": "2P", "children": [
+              {"type": "breaker", "ref": "-Q11", "use": "C16", "circuit": "1", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "Éclairage", "points": 8}]},
+              {"type": "breaker", "ref": "-Q12", "use": "C20", "circuit": "2", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises séjour", "points": 7}]},
+              {"type": "breaker", "ref": "-Q13", "use": "C20", "circuit": "3", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises chambres", "points": 9}]}
+            ]},
+            {"type": "rcd", "ref": "-Q2", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "2P", "children": [
+              {"type": "breaker", "ref": "-Q21", "use": "C20", "circuit": "4", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "appliance", "label": "Lave-linge", "kind": "washing_machine"}]},
+              {"type": "breaker", "ref": "-Q22", "use": "C20", "in_A": 32, "circuit": "5", "cable": {"cores": "3G", "section_mm2": 6},
+               "children": [{"type": "cooking", "label": "Cuisinière", "kind": "range", "p_kW": 6}]},
+              {"type": "breaker", "ref": "-Q23", "use": "C16", "circuit": "6", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "controller", "id": "GW", "ref": "-A1", "label": "Passerelle", "function": "EMS", "symbol_text": "EMS"}]}
+            ]},
+            {"type": "rcbo", "id": "QBAT", "ref": "-Q6", "label": "Batterie AC", "in_A": 16, "curve": "C", "idn_mA": 30, "rcd_type": "A",
+             "poles": "1P+N", "icn_kA": 6, "circuit": "7",
+             "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 8},
+             "children": [
+              {"type": "inverter", "id": "CONV", "ref": "-T2", "label": "Conv. batt.", "kind": "battery", "p_kVA": 2.5,
+               "children": [
+                {"type": "battery", "ref": "-G3", "label": "Batterie LFP", "capacity_kWh": 5, "technology": "LiFePO4", "un_V": 51.2}
+              ]}
+            ]},
+            {"type": "breaker", "ref": "-Q5", "use": "C20", "label": "Production PV", "icn_kA": 6, "circuit": "8",
+             "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 12},
+             "children": [
+              {"type": "board", "ref": "CAC", "label": "Coffret AC PV", "kind": "ac_box", "ip": "IP65", "children": [
+                {"type": "rcd", "ref": "-QA0", "in_A": 25, "idn_mA": 30, "rcd_type": "A", "poles": "2P", "children": [
+                  {"type": "spd", "ref": "-FA1", "spd_type": "2", "imax_kA": 20, "up_kV": 1.5, "poles": "1P+N"},
+                  {"type": "breaker", "ref": "-QA1", "use": "BRANCHE", "label": "Branche 1",
+                   "cable": {"designation": "Câble de branche", "cores": "3G", "section_mm2": 2.5, "length_m": 15},
+                   "children": [
+                    {"type": "inverter", "ref": "-T11", "use": "MICRO", "label": "Pan est", "children": [
+                      {"type": "pv_array", "ref": "-G11", "modules": 5, "module_W": 410, "p_kW": 2.05, "label": "Pan est"}
+                    ]}
+                  ]},
+                  {"type": "breaker", "ref": "-QA2", "use": "BRANCHE", "label": "Branche 2",
+                   "cable": {"designation": "Câble de branche", "cores": "3G", "section_mm2": 2.5, "length_m": 18},
+                   "children": [
+                    {"type": "inverter", "ref": "-T12", "use": "MICRO", "label": "Pan ouest", "children": [
+                      {"type": "pv_array", "ref": "-G12", "modules": 5, "module_W": 410, "p_kW": 2.05, "label": "Pan ouest"}
+                    ]}
+                  ]}
+                ]}
+              ]}
+            ]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "devices": [
+    {"type": "instrument_transformer", "id": "TORES", "ref": "-B1", "label": "Tores", "kind": "ct", "ratio": "100 A/50 mA"}
+  ],
+  "links": [
+    {"kind": "measure", "from": "TORES", "to": "LINKY"},
+    {"kind": "data", "from": "GW", "to": "CONV", "protocol": "Modbus RTU", "label": "Modbus"}
+  ],
+  "views": [
+    {"id": "sld", "paper": "A3", "cartouche": ["circuit", "label", "ref", "protection", "idn_mA", "cable", "p_kW"],
+     "overrides": {"LINKY": {"label_offset": [0, 4]}}}
+  ]
+}

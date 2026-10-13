@@ -1,0 +1,348 @@
+{
+ "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+ "uniwire": "1.0.0",
+ "profiles": [
+  "nfc15100"
+ ],
+ "meta": {
+  "lang": "fr",
+  "title": "Studio 28 m² : tableau de répartition",
+  "project": "EX-01",
+  "client": "Exemple de studio (T1)",
+  "author": "uniwire examples",
+  
+  "notes": [
+   "Démontre : le plus petit tableau de logement NF C 15-100 (AGCP 30 A, 2 interrupteurs différentiels 30 mA dont 1 type A), modèles (templates), format A4",
+   "Chauffe-eau 100 L commandé par contacteur heures creuses (relais du compteur communicant)"
+  ]
+ },
+ "installation": {
+  "earthing": "TT",
+  "system": "1P+N",
+  "un_V": 230,
+  "f_Hz": 50,
+  "supply": "Tarif Bleu",
+  "subscribed_kVA": 6,
+  "earth_resistance_ohm": 45,
+  "surface_m2": 28,
+  "standard": "NF C 15-100"
+ },
+ "templates": {
+  "C10": {
+   "type": "breaker",
+   "in_A": 10,
+   "curve": "C",
+   "icn_kA": 3,
+   "poles": "1P+N"
+  },
+  "C16": {
+   "type": "breaker",
+   "in_A": 16,
+   "curve": "C",
+   "icn_kA": 3,
+   "poles": "1P+N"
+  },
+  "C20": {
+   "type": "breaker",
+   "in_A": 20,
+   "curve": "C",
+   "icn_kA": 3,
+   "poles": "1P+N"
+  },
+  "C32": {
+   "type": "breaker",
+   "in_A": 32,
+   "curve": "C",
+   "icn_kA": 3,
+   "poles": "1P+N"
+  },
+  "ID40": {
+   "type": "rcd",
+   "in_A": 40,
+   "idn_mA": 30,
+   "poles": "2P"
+  }
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "label": "Réseau public",
+   "supply": "Tarif Bleu",
+   "un_V": 230,
+   "children": [
+    {
+     "type": "meter",
+     "id": "CPT",
+     "ref": "PDL",
+     "label": "Compteur communicant",
+     "kind": "Linky",
+     "in_A": 90,
+     "children": [
+      {
+       "type": "main_breaker",
+       "ref": "-Q0",
+       "label": "AGCP",
+       "range_A": "15-45",
+       "in_A": 45,
+       "idn_mA": 500,
+       "note": "Réglé à 30 A (6 kVA)",
+       "selective": true,
+       "poles": "2P",
+       "subscribed_kVA": 6,
+       "cable": {
+        "designation": "U1000R2V",
+        "cores": "3G",
+        "section_mm2": 10,
+        "material": "Cu",
+        "length_m": 4
+       },
+       "children": [
+        {
+         "type": "board",
+         "ref": "TD",
+         "label": "Tableau du studio",
+         "ways": 13,
+         "children": [
+          {
+           "type": "rcd",
+           "ref": "-F1",
+           "use": "ID40",
+           "rcd_type": "AC",
+           "label": "Interrupteur différentiel 1",
+           "children": [
+            {
+             "type": "breaker",
+             "ref": "-Q11",
+             "use": "C10",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 1.5
+             },
+             "children": [
+              {
+               "type": "lighting",
+               "label": "Éclairage",
+               "points": 5,
+               "room": "Séjour, entrée, SdB",
+               "id": "lighting"
+              }
+             ],
+             "id": "Q11"
+            },
+            {
+             "type": "breaker",
+             "ref": "-Q12",
+             "use": "C20",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 2.5
+             },
+             "children": [
+              {
+               "type": "socket",
+               "label": "Prises séjour",
+               "points": 7,
+               "room": "Séjour",
+               "id": "socket"
+              }
+             ],
+             "id": "Q12"
+            },
+            {
+             "type": "breaker",
+             "ref": "-Q13",
+             "use": "C16",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 1.5
+             },
+             "children": [
+              {
+               "type": "socket",
+               "label": "Prises entrée/SdB",
+               "points": 3,
+               "id": "socket_2"
+              }
+             ],
+             "id": "Q13"
+            },
+            {
+             "type": "breaker",
+             "ref": "-Q14",
+             "use": "C16",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 1.5
+             },
+             "children": [
+              {
+               "type": "heating",
+               "label": "Convecteurs",
+               "p_kW": 2.5,
+               "pilot_wire": true,
+               "count": 2,
+               "id": "heating"
+              }
+             ],
+             "id": "Q14"
+            }
+           ],
+           "id": "F1"
+          },
+          {
+           "type": "rcd",
+           "ref": "-F2",
+           "use": "ID40",
+           "rcd_type": "A",
+           "label": "Interrupteur différentiel 2",
+           "children": [
+            {
+             "type": "breaker",
+             "ref": "-Q21",
+             "use": "C32",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 10
+             },
+             "children": [
+              {
+               "type": "cooking",
+               "kind": "hob",
+               "label": "Plaque de cuisson",
+               "p_kW": 3.6,
+               "room": "Kitchenette",
+               "id": "cooking"
+              }
+             ],
+             "id": "Q21",
+             "in_A": 40
+            },
+            {
+             "type": "breaker",
+             "ref": "-Q22",
+             "use": "C20",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 2.5
+             },
+             "children": [
+              {
+               "type": "appliance",
+               "kind": "washing_machine",
+               "label": "Lave-linge",
+               "p_kW": 2.2,
+               "id": "appliance"
+              }
+             ],
+             "id": "Q22"
+            },
+            {
+             "type": "breaker",
+             "ref": "-Q23",
+             "use": "C20",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 2.5
+             },
+             "children": [
+              {
+               "type": "socket",
+               "label": "Prises cuisine",
+               "points": 4,
+               "room": "Kitchenette",
+               "id": "socket_3"
+              }
+             ],
+             "id": "Q23"
+            },
+            {
+             "type": "breaker",
+             "ref": "-Q24",
+             "use": "C16",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 2.5
+             },
+             "children": [
+              {
+               "type": "contactor",
+               "id": "KM1",
+               "ref": "-KM1",
+               "function": "HC",
+               "in_A": 20,
+               "poles": "2P",
+               "coil_V": 230,
+               "manual": true,
+               "children": [
+                {
+                 "type": "water_heater",
+                 "label": "Chauffe-eau",
+                 "volume_L": 100,
+                 "p_kW": 1.2,
+                 "id": "water_heater"
+                }
+               ]
+              }
+             ],
+             "id": "Q24"
+            },
+            {
+             "type": "breaker",
+             "id": "Q25",
+             "ref": "-Q25",
+             "in_A": 20,
+             "curve": "C",
+             "poles": "1P+N",
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 2.5
+             },
+             "children": [
+              {
+               "type": "appliance",
+               "id": "DW",
+               "kind": "dishwasher",
+               "label": "Lave-vaisselle"
+              }
+             ]
+            }
+           ],
+           "id": "F2"
+          }
+         ],
+         "id": "TD"
+        }
+       ],
+       "id": "Q0"
+      }
+     ]
+    }
+   ],
+   "id": "grid"
+  }
+ ],
+ "links": [
+  {
+   "kind": "control",
+   "from": "CPT",
+   "to": "KM1",
+   "label": "Contact HC"
+  }
+ ],
+ "views": [
+  {
+   "id": "sld",
+   "paper": "A4",
+   "orientation": "landscape",
+   "cartouche": [
+    "label",
+    "ref",
+    "protection",
+    "idn_mA",
+    "cable",
+    "points",
+    "p_kW"
+   ]
+  }
+ ]
+}

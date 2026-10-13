@@ -1,0 +1,122 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["nfc15100"],
+  "meta": {
+    "lang": "fr",
+    "title": "Grande maison triphasée : PAC air/eau et borne de recharge",
+    "project": "EX-03",
+    "client": "Exemple de maison 180 m² sur deux niveaux",
+    "author": "uniwire examples",
+    
+    "drawing_number": "EX-03-SLD-01",
+    "notes": [
+      "Démontre : branchement triphasé 3P+N 400 V, équilibrage des phases (colonne Phase), tableau divisionnaire d'étage sur folio séparé (own_sheet), pompe à chaleur triphasée, IRVE mode 3 7,4 kW sur circuit dédié",
+      "Borne de recharge avec détection 6 mA DC intégrée (RDC-DD, IEC 62955) : interrupteur différentiel amont type A admis",
+      "Parafoudre type 2 obligatoire (IRVE + zone AQ2)"
+    ]
+  },
+  "installation": {
+    "earthing": "TT", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50,
+    "supply": "Tarif Bleu", "subscribed_kVA": 24, "earth_resistance_ohm": 28,
+    "surface_m2": 180, "standard": "NF C 15-100"
+  },
+  "templates": {
+    "C2": {"type": "breaker", "in_A": 2, "curve": "C", "icn_kA": 4.5, "poles": "1P+N"},
+    "C10": {"type": "breaker", "in_A": 10, "curve": "C", "icn_kA": 4.5, "poles": "1P+N"},
+    "C16": {"type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 4.5, "poles": "1P+N"},
+    "C20": {"type": "breaker", "in_A": 20, "curve": "C", "icn_kA": 4.5, "poles": "1P+N"},
+    "C32": {"type": "breaker", "in_A": 32, "curve": "C", "icn_kA": 4.5, "poles": "1P+N"},
+    "ID4P": {"type": "rcd", "in_A": 40, "idn_mA": 30, "poles": "4P",
+             "product": {"manufacturer": "Hager", "description": "Interrupteur différentiel 4P 40 A 30 mA"}},
+    "ID2P": {"type": "rcd", "in_A": 40, "idn_mA": 30, "poles": "2P",
+             "product": {"manufacturer": "Hager", "description": "Interrupteur différentiel 2P 40 A 30 mA"}}
+  },
+  "sources": [
+    {"type": "grid", "label": "Réseau public", "supply": "Tarif Bleu", "un_V": 400, "children": [
+      {"type": "meter", "id": "CPT", "ref": "PDL", "label": "Compteur triphasé", "kind": "Linky tri", "in_A": 90, "children": [
+        {"type": "main_breaker", "ref": "-Q0", "label": "AGCP", "range_A": "10-60", "in_A": 60, "idn_mA": 500,
+         "selective": true, "poles": "4P", "subscribed_kVA": 24, "note": "Réglé à 40 A (24 kVA)",
+         "cable": {"designation": "U1000R2V", "cores": "5G", "section_mm2": 16, "material": "Cu", "length_m": 25, "install": "D-duct"},
+         "children": [
+          {"type": "board", "id": "TGBT", "ref": "TD-RDC", "label": "Tableau principal (garage)", "system": "3P+N", "ways": 52, "children": [
+            {"type": "rcd", "ref": "-F1", "use": "ID4P", "rcd_type": "AC", "label": "ID1 vie RdC", "children": [
+              {"type": "breaker", "ref": "-Q11", "use": "C16", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "Éclairage séjour/cuisine", "points": 8}]},
+              {"type": "breaker", "ref": "-Q12", "use": "C16", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "Éclairage entrée/garage", "points": 6}]},
+              {"type": "breaker", "ref": "-Q13", "use": "C20", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises séjour", "points": 11}]},
+              {"type": "breaker", "ref": "-Q14", "use": "C20", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises bureau", "points": 6}]},
+              {"type": "breaker", "ref": "-Q15", "use": "C2", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "ventilation", "label": "VMC double flux", "p_kW": 0.08}]},
+              {"type": "breaker", "ref": "-Q16", "use": "C20", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises garage/cellier", "points": 5}]}
+            ]},
+            {"type": "rcd", "ref": "-F2", "use": "ID4P", "rcd_type": "A", "label": "ID2 cuisine/buanderie", "children": [
+              {"type": "breaker", "ref": "-Q21", "use": "C32", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 6},
+               "children": [{"type": "cooking", "kind": "hob", "label": "Plaque induction", "p_kW": 7.2}]},
+              {"type": "breaker", "ref": "-Q22", "use": "C20", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "cooking", "kind": "oven", "label": "Four", "p_kW": 3.5}]},
+              {"type": "breaker", "ref": "-Q23", "use": "C20", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises plan de travail", "points": 6}]},
+              {"type": "breaker", "ref": "-Q24", "use": "C20", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "appliance", "kind": "dishwasher", "label": "Lave-vaisselle", "p_kW": 2.0}]},
+              {"type": "breaker", "ref": "-Q25", "use": "C20", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "appliance", "kind": "washing_machine", "label": "Lave-linge", "p_kW": 2.2}]},
+              {"type": "breaker", "ref": "-Q26", "use": "C20", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "appliance", "kind": "dryer", "label": "Sèche-linge", "p_kW": 2.5}]}
+            ]},
+            {"type": "rcd", "ref": "-F3", "use": "ID4P", "in_A": 63, "rcd_type": "A", "label": "ID3 chauffage/ECS", "children": [
+              {"type": "breaker", "ref": "-Q31", "in_A": 16, "curve": "C", "icn_kA": 4.5, "poles": "4P",
+               "cable": {"cores": "5G", "section_mm2": 2.5, "length_m": 12},
+               "children": [{"type": "load", "label": "PAC air/eau 14 kW", "symbol_text": "PAC", "p_kW": 4.6, "location": "Extérieur"}]},
+              {"type": "breaker", "ref": "-Q32", "in_A": 20, "curve": "C", "icn_kA": 4.5, "poles": "4P",
+               "cable": {"cores": "5G", "section_mm2": 2.5, "length_m": 4},
+               "children": [{"type": "load", "label": "Appoint électrique PAC", "symbol_text": "APP", "p_kW": 9}]},
+              {"type": "breaker", "ref": "-Q33", "use": "C20", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "water_heater", "label": "Chauffe-eau thermodynamique", "volume_L": 270, "p_kW": 1.8}]}
+            ]},
+            {"type": "breaker", "ref": "-Q4", "label": "Alim. TD étage", "in_A": 32, "curve": "C", "icn_kA": 4.5, "poles": "4P",
+             "cable": {"designation": "U1000R2V", "cores": "5G", "section_mm2": 6, "length_m": 18},
+             "children": [
+              {"type": "board", "id": "TDE", "ref": "TD-ETG", "label": "Tableau divisionnaire étage", "system": "3P+N", "own_sheet": true, "children": [
+                {"type": "switch_disconnector", "ref": "-Q0", "label": "Interrupteur général", "in_A": 40, "poles": "4P", "children": [
+                  {"type": "rcd", "ref": "-F1", "use": "ID2P", "rcd_type": "AC", "label": "ID chambres", "children": [
+                    {"type": "breaker", "ref": "-Q11", "use": "C16", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 1.5},
+                     "children": [{"type": "lighting", "label": "Éclairage chambres", "points": 7}]},
+                    {"type": "breaker", "ref": "-Q12", "use": "C20", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 2.5},
+                     "children": [{"type": "socket", "label": "Prises ch. 1-2", "points": 10}]},
+                    {"type": "breaker", "ref": "-Q13", "use": "C20", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 2.5},
+                     "children": [{"type": "socket", "label": "Prises ch. 3-4", "points": 10}]},
+                    {"type": "breaker", "ref": "-Q14", "use": "C16", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 1.5},
+                     "children": [{"type": "shutter", "label": "Volets étage", "count": 5, "p_kW": 0.5}]}
+                  ]},
+                  {"type": "rcd", "ref": "-F2", "use": "ID2P", "rcd_type": "A", "label": "ID salles d'eau", "children": [
+                    {"type": "breaker", "ref": "-Q21", "use": "C16", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 1.5},
+                     "children": [{"type": "lighting", "label": "Éclairage SdB/couloir", "points": 6}]},
+                    {"type": "breaker", "ref": "-Q22", "use": "C20", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 2.5},
+                     "children": [{"type": "socket", "label": "Prises SdB/couloir", "points": 5}]},
+                    {"type": "breaker", "ref": "-Q23", "use": "C16", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 1.5},
+                     "children": [{"type": "heating", "label": "Sèche-serviettes", "p_kW": 1.5, "count": 2, "pilot_wire": true}]}
+                  ]}
+                ]}
+              ]}
+            ]},
+            {"type": "rcd", "ref": "-F5", "use": "ID2P", "rcd_type": "A", "label": "ID IRVE", "children": [
+              {"type": "breaker", "ref": "-Q51", "use": "C32", "in_A": 40, "phase": "L3", "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 10, "length_m": 15},
+               "children": [{"id": "IRVE", "type": "ev_charger", "label": "Borne 7,4 kW", "mode": "3", "p_kW": 7.4, "location": "Carport",
+                             "product": {"description": "Borne murale 32 A mono T2S, RDC-DD intégré"}}]}
+            ]},
+            {"type": "breaker", "ref": "-Q6", "label": "Déconnexion parafoudre", "in_A": 20, "curve": "C", "icn_kA": 4.5, "poles": "4P", "children": [
+              {"type": "spd", "ref": "-F6", "label": "Parafoudre", "spd_type": "2", "imax_kA": 40, "in_kA": 15, "up_kV": 1.5, "uc_V": 275, "poles": "3P+N"}
+            ]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "orientation": "landscape",
+             "cartouche": ["label", "ref", "protection", "idn_mA", "rcd_type", "cable", "phase", "p_kW"]}]
+}

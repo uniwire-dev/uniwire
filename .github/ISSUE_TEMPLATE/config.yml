@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and discussions
+    url: https://github.com/uniwire-dev/uniwire/discussions
+    about: Ask questions and share how you use uniwire.
+  - name: Report a security vulnerability
+    url: https://github.com/uniwire-dev/uniwire/security/advisories/new
+    about: Please report security issues privately (see SECURITY.md).
+  - name: Documentation
+    url: https://uniwire.sh/docs/
+    about: Specification, Python API, code-first API and rule profiles.

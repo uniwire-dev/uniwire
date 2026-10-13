@@ -1,0 +1,100 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["nfc15100", "iec60364"],
+  "meta": {
+    "lang": "fr",
+    "title": "Boulangerie-pâtisserie : tableau général triphasé",
+    "project": "EX-09",
+    "client": "Exemple de boulangerie (fournil + magasin)",
+    "author": "uniwire examples",
+    
+    "notes": [
+      "Démontre : petit local professionnel en TT triphasé (Tarif Bleu 36 kVA) : four à soles 18 kW, pétrin et diviseuse avec départs moteurs (disjoncteur, contacteur, relais thermique), groupe froid, prises industrielles 3P+N+T, différentiels 300 mA sur la force motrice et 30 mA sur les prises et l'éclairage",
+      "Tableau du magasin alimenté depuis le TGBT (sous-tableau)"
+    ]
+  },
+  "installation": {
+    "earthing": "TT", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50,
+    "supply": "Tarif Bleu", "subscribed_kVA": 36, "earth_resistance_ohm": 22, "standard": "NF C 15-100"
+  },
+  "templates": {
+    "C16": {"type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "1P+N"},
+    "C10": {"type": "breaker", "in_A": 10, "curve": "C", "icn_kA": 6, "poles": "1P+N"},
+    "C20": {"type": "breaker", "in_A": 20, "curve": "C", "icn_kA": 6, "poles": "1P+N"},
+    "KM": {"type": "contactor", "coil_V": 230, "poles": "3P", "function": "power",
+           "product": {"manufacturer": "Schneider Electric", "range": "TeSys Deca", "description": "Contacteur 3P bobine 230 V"}}
+  },
+  "sources": [
+    {"type": "grid", "label": "Réseau public", "supply": "Tarif Bleu", "un_V": 400, "children": [
+      {"type": "meter", "ref": "PDL", "label": "Compteur triphasé", "kind": "Linky tri", "in_A": 90, "children": [
+        {"type": "main_breaker", "ref": "-Q0", "label": "AGCP", "range_A": "10-60", "in_A": 60, "idn_mA": 500, "selective": true,
+         "poles": "4P", "subscribed_kVA": 36,
+         "cable": {"designation": "U1000R2V", "cores": "5G", "section_mm2": 16, "material": "Cu", "length_m": 12, "install": "D-duct", "insulation": "XLPE"},
+         "children": [
+          {"type": "board", "id": "TGBT", "ref": "TGBT", "label": "Tableau général (fournil)", "kind": "main", "system": "3P+N", "ways": 72, "children": [
+            {"type": "rcd", "ref": "-F1", "label": "Diff. force motrice", "in_A": 63, "idn_mA": 300, "rcd_type": "A", "poles": "4P", "children": [
+              {"type": "breaker", "ref": "-Q11", "label": "Four à soles", "in_A": 32, "curve": "C", "icn_kA": 6, "poles": "4P",
+               "cable": {"designation": "U1000R2V", "cores": "5G", "section_mm2": 6, "material": "Cu", "length_m": 8, "install": "C", "insulation": "XLPE"},
+               "children": [{"type": "cooking", "kind": "oven", "label": "Four à soles 3 étages", "p_kW": 18, "un_V": 400}]},
+              {"type": "breaker", "ref": "-Q12", "label": "Pétrin", "in_A": 16, "curve": "D", "icn_kA": 6, "poles": "3P",
+               "cable": {"designation": "U1000R2V", "cores": "4G", "section_mm2": 2.5, "material": "Cu", "length_m": 10, "install": "C", "insulation": "XLPE"},
+               "children": [{"type": "contactor", "id": "KM12", "ref": "-KM12", "use": "KM", "in_A": 12, "children": [
+                 {"type": "thermal_relay", "ref": "-F12", "range_A": "7-10", "setting_A": 8.6, "children": [
+                   {"type": "motor", "ref": "-M12", "label": "Pétrin spirale", "p_kW": 4, "in_A": 8.6, "phases": 3, "rpm": 1450}]}]}]},
+              {"type": "breaker", "ref": "-Q13", "label": "Diviseuse", "in_A": 10, "curve": "D", "icn_kA": 6, "poles": "3P",
+               "cable": {"designation": "U1000R2V", "cores": "4G", "section_mm2": 1.5, "material": "Cu", "length_m": 9, "install": "C", "insulation": "XLPE"},
+               "children": [{"type": "contactor", "id": "KM13", "ref": "-KM13", "use": "KM", "in_A": 9, "children": [
+                 {"type": "thermal_relay", "ref": "-F13", "range_A": "2.5-4", "setting_A": 3.5, "children": [
+                   {"type": "motor", "ref": "-M13", "label": "Diviseuse-formeuse", "p_kW": 1.5, "in_A": 3.5, "phases": 3}]}]}]},
+              {"type": "breaker", "ref": "-Q14", "label": "Chambre de pousse", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "4P",
+               "cable": {"designation": "U1000R2V", "cores": "5G", "section_mm2": 2.5, "material": "Cu", "length_m": 7, "install": "C", "insulation": "XLPE"},
+               "children": [{"type": "load", "label": "Chambre de pousse contrôlée", "symbol_text": "CP", "p_kW": 6}]},
+              {"type": "breaker", "ref": "-Q15", "label": "Groupe froid", "in_A": 16, "curve": "D", "icn_kA": 6, "poles": "3P",
+               "cable": {"designation": "U1000R2V", "cores": "4G", "section_mm2": 2.5, "material": "Cu", "length_m": 14, "install": "C", "insulation": "XLPE"},
+               "children": [{"type": "motor", "ref": "-M15", "label": "Groupe froid chambre négative", "p_kW": 3, "in_A": 6.5, "phases": 3}]}
+            ]},
+            {"type": "rcd", "ref": "-F2", "label": "Diff. fournil 30 mA", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "4P", "children": [
+              {"type": "breaker", "ref": "-Q21", "label": "PC 3P+N+T", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "4P",
+               "cable": {"cores": "5G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises 3P+N+T 16 A", "points": 2, "poles": "3P+N+T", "socket_type": "IEC 60309 IP44"}]},
+              {"type": "breaker", "ref": "-Q22", "use": "C20", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises fournil / labo", "points": 6}]},
+              {"type": "breaker", "ref": "-Q23", "use": "C10", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "Éclairage fournil", "points": 8}]},
+              {"type": "breaker", "ref": "-Q24", "use": "C20", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "water_heater", "label": "Chauffe-eau 150 L", "volume_L": 150, "p_kW": 2.4}]},
+              {"type": "breaker", "ref": "-Q25", "use": "C10", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "Éclairage sécurité (BAES)", "points": 6, "priority": "safety"}]}
+            ]},
+            {"type": "breaker", "ref": "-Q3", "label": "Alim. tableau magasin", "in_A": 32, "curve": "C", "icn_kA": 6, "poles": "4P",
+             "cable": {"designation": "U1000R2V", "cores": "5G", "section_mm2": 6, "material": "Cu", "length_m": 15, "install": "C", "insulation": "XLPE"},
+             "children": [
+              {"type": "board", "id": "TDM", "ref": "TD-MAG", "label": "Tableau magasin", "kind": "sub", "system": "3P+N", "children": [
+                {"type": "rcd", "ref": "-F1", "label": "Diff. magasin", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "4P", "children": [
+                  {"type": "breaker", "ref": "-Q11", "use": "C10", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 1.5},
+                   "children": [{"type": "lighting", "label": "Éclairage vente", "points": 8}]},
+                  {"type": "breaker", "ref": "-Q12", "use": "C10", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 1.5},
+                   "children": [{"type": "lighting", "label": "Vitrine + enseigne", "points": 5}]},
+                  {"type": "breaker", "ref": "-Q13", "use": "C20", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+                   "children": [{"type": "load", "label": "Machine à café", "symbol_text": "CAF", "p_kW": 3.5}]},
+                  {"type": "breaker", "ref": "-Q14", "use": "C16", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 2.5},
+                   "children": [{"type": "appliance", "kind": "fridge", "label": "Vitrines réfrigérées", "p_kW": 1.6, "count": 2}]},
+                  {"type": "breaker", "ref": "-Q15", "use": "C16", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 2.5},
+                   "children": [{"type": "socket", "label": "Prises caisse", "points": 4}]},
+                  {"type": "breaker", "ref": "-Q16", "use": "C16", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+                   "children": [{"type": "load", "label": "Climatisation magasin", "symbol_text": "CLIM", "p_kW": 1.9}]}
+                ]}
+              ]}
+            ]},
+            {"type": "breaker", "ref": "-Q4", "label": "Parafoudre", "in_A": 20, "curve": "C", "icn_kA": 6, "poles": "4P", "children": [
+              {"type": "spd", "ref": "-F4", "label": "Parafoudre", "spd_type": "2", "imax_kA": 40, "up_kV": 1.5, "uc_V": 275, "poles": "3P+N"}
+            ]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "orientation": "landscape",
+             "cartouche": ["label", "ref", "protection", "poles", "idn_mA", "cable", "phase", "p_kW"]}]
+}

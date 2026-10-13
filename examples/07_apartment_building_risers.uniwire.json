@@ -1,0 +1,989 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "lang": "en",
+    "title": "Apartment building: 12 dwellings, meter room and common services",
+    "project": "EX-07",
+    "client": "Example residential block (4 floors)",
+    "author": "uniwire examples",
+    
+    "drawing_number": "EX-07-E-001",
+    "notes": [
+      "Demonstrates: multi-sheet building distribution with the main LV board in the meter room, two rising mains (own_sheet) with floor tap boxes, 12 individually metered apartments (offpage to the typical apartment board), landlord common services and car-park EV charging with dynamic load management",
+      "Apartments are balanced across L1/L2/L3 (column Phase). Safety circuits (fire alarm, emergency lighting) marked priority=safety, fire-resistant cable",
+      "EV chargers controlled by a dynamic load manager over OCPP (data links), total EV current capped at 63 A"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-C-S",
+    "system": "3P+N",
+    "un_V": 400,
+    "uln_V": 230,
+    "f_Hz": 50,
+    "supply": "LV service 250 A",
+    "planned_kVA": 150,
+    "ik3_kA": 12,
+    "standard": "IEC 60364"
+  },
+  "sources": [
+    {
+      "type": "grid",
+      "label": "DSO LV network",
+      "un_V": 400,
+      "ik_kA": 12,
+      "children": [
+        {
+          "type": "fuse_switch",
+          "ref": "-F0",
+          "label": "Service cut-out",
+          "in_A": 250,
+          "fuse_A": 250,
+          "size": "NH1",
+          "fuse_class": "gG",
+          "poles": "3P",
+          "external": true,
+          "cable": {
+            "designation": "NA2XY-J",
+            "cores": "4x",
+            "section_mm2": 240,
+            "material": "Al",
+            "length_m": 18,
+            "pen": true,
+            "install": "D-duct",
+            "insulation": "XLPE"
+          },
+          "children": [
+            {
+              "type": "board",
+              "id": "MDB",
+              "ref": "=MDB",
+              "label": "Main LV board, meter room",
+              "kind": "main",
+              "system": "3P+N",
+              "in_A": 250,
+              "ik_kA": 12,
+              "form": "1",
+              "children": [
+                {
+                  "type": "switch_disconnector",
+                  "id": "QS0",
+                  "ref": "-Q0",
+                  "label": "Main switch",
+                  "in_A": 250,
+                  "poles": "4P",
+                  "children": [
+                    {
+                      "type": "fuse_switch",
+                      "ref": "-F1",
+                      "label": "Rising main A",
+                      "in_A": 160,
+                      "fuse_A": 125,
+                      "fuse_class": "gG",
+                      "size": "NH00",
+                      "poles": "3P",
+                      "cable": {
+                        "ref": "W-RA",
+                        "designation": "N2XH-J",
+                        "cores": "5x",
+                        "section_mm2": 50,
+                        "material": "Cu",
+                        "length_m": 14,
+                        "install": "E",
+                        "insulation": "XLPE"
+                      },
+                      "children": [
+                        {
+                          "type": "board",
+                          "id": "RISER_A",
+                          "ref": "=RA",
+                          "label": "Rising main A, floors 1-2",
+                          "kind": "distribution",
+                          "system": "3P+N",
+                          "own_sheet": true,
+                          "children": [
+                            {
+                              "type": "junction_box",
+                              "ref": "=FB1",
+                              "label": "Floor 1 meter box",
+                              "kind": "tap",
+                              "children": [
+                                {
+                                  "type": "fuse",
+                                  "ref": "-F11",
+                                  "label": "Apt 1.1",
+                                  "in_A": 63,
+                                  "fuse_class": "gG",
+                                  "size": "D02",
+                                  "poles": "1P",
+                                  "phase": "L1",
+                                  "children": [
+                                    {
+                                      "type": "meter",
+                                      "ref": "-P11",
+                                      "label": "Meter apt 1.1",
+                                      "kind": "smart",
+                                      "in_A": 63,
+                                      "children": [
+                                        {
+                                          "type": "offpage",
+                                          "label": "Apt 1.1 board",
+                                          "target": "Typical apartment board (see EX-02)",
+                                          "cable": {"designation": "NYM-J", "cores": "3x", "section_mm2": 16, "material": "Cu", "length_m": 11}
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "fuse",
+                                  "ref": "-F12",
+                                  "label": "Apt 1.2",
+                                  "in_A": 63,
+                                  "fuse_class": "gG",
+                                  "size": "D02",
+                                  "poles": "1P",
+                                  "phase": "L2",
+                                  "children": [
+                                    {
+                                      "type": "meter",
+                                      "ref": "-P12",
+                                      "label": "Meter apt 1.2",
+                                      "kind": "smart",
+                                      "in_A": 63,
+                                      "children": [
+                                        {
+                                          "type": "offpage",
+                                          "label": "Apt 1.2 board",
+                                          "target": "Typical apartment board (see EX-02)",
+                                          "cable": {"designation": "NYM-J", "cores": "3x", "section_mm2": 16, "material": "Cu", "length_m": 11}
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "fuse",
+                                  "ref": "-F13",
+                                  "label": "Apt 1.3",
+                                  "in_A": 63,
+                                  "fuse_class": "gG",
+                                  "size": "D02",
+                                  "poles": "1P",
+                                  "phase": "L3",
+                                  "children": [
+                                    {
+                                      "type": "meter",
+                                      "ref": "-P13",
+                                      "label": "Meter apt 1.3",
+                                      "kind": "smart",
+                                      "in_A": 63,
+                                      "children": [
+                                        {
+                                          "type": "offpage",
+                                          "label": "Apt 1.3 board",
+                                          "target": "Typical apartment board (see EX-02)",
+                                          "cable": {"designation": "NYM-J", "cores": "3x", "section_mm2": 16, "material": "Cu", "length_m": 11}
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "junction_box",
+                              "ref": "=FB2",
+                              "label": "Floor 2 meter box",
+                              "kind": "tap",
+                              "children": [
+                                {
+                                  "type": "fuse",
+                                  "ref": "-F21",
+                                  "label": "Apt 2.1",
+                                  "in_A": 63,
+                                  "fuse_class": "gG",
+                                  "size": "D02",
+                                  "poles": "1P",
+                                  "phase": "L1",
+                                  "children": [
+                                    {
+                                      "type": "meter",
+                                      "ref": "-P21",
+                                      "label": "Meter apt 2.1",
+                                      "kind": "smart",
+                                      "in_A": 63,
+                                      "children": [
+                                        {
+                                          "type": "offpage",
+                                          "label": "Apt 2.1 board",
+                                          "target": "Typical apartment board (see EX-02)",
+                                          "cable": {"designation": "NYM-J", "cores": "3x", "section_mm2": 16, "material": "Cu", "length_m": 14}
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "fuse",
+                                  "ref": "-F22",
+                                  "label": "Apt 2.2",
+                                  "in_A": 63,
+                                  "fuse_class": "gG",
+                                  "size": "D02",
+                                  "poles": "1P",
+                                  "phase": "L2",
+                                  "children": [
+                                    {
+                                      "type": "meter",
+                                      "ref": "-P22",
+                                      "label": "Meter apt 2.2",
+                                      "kind": "smart",
+                                      "in_A": 63,
+                                      "children": [
+                                        {
+                                          "type": "offpage",
+                                          "label": "Apt 2.2 board",
+                                          "target": "Typical apartment board (see EX-02)",
+                                          "cable": {"designation": "NYM-J", "cores": "3x", "section_mm2": 16, "material": "Cu", "length_m": 14}
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "fuse",
+                                  "ref": "-F23",
+                                  "label": "Apt 2.3",
+                                  "in_A": 63,
+                                  "fuse_class": "gG",
+                                  "size": "D02",
+                                  "poles": "1P",
+                                  "phase": "L3",
+                                  "children": [
+                                    {
+                                      "type": "meter",
+                                      "ref": "-P23",
+                                      "label": "Meter apt 2.3",
+                                      "kind": "smart",
+                                      "in_A": 63,
+                                      "children": [
+                                        {
+                                          "type": "offpage",
+                                          "label": "Apt 2.3 board",
+                                          "target": "Typical apartment board (see EX-02)",
+                                          "cable": {"designation": "NYM-J", "cores": "3x", "section_mm2": 16, "material": "Cu", "length_m": 14}
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "fuse_switch",
+                      "ref": "-F2",
+                      "label": "Rising main B",
+                      "in_A": 160,
+                      "fuse_A": 125,
+                      "fuse_class": "gG",
+                      "size": "NH00",
+                      "poles": "3P",
+                      "cable": {
+                        "ref": "W-RB",
+                        "designation": "N2XH-J",
+                        "cores": "5x",
+                        "section_mm2": 50,
+                        "material": "Cu",
+                        "length_m": 22,
+                        "install": "E",
+                        "insulation": "XLPE"
+                      },
+                      "children": [
+                        {
+                          "type": "board",
+                          "id": "RISER_B",
+                          "ref": "=RB",
+                          "label": "Rising main B, floors 3-4",
+                          "kind": "distribution",
+                          "system": "3P+N",
+                          "own_sheet": true,
+                          "children": [
+                            {
+                              "type": "junction_box",
+                              "ref": "=FB3",
+                              "label": "Floor 3 meter box",
+                              "kind": "tap",
+                              "children": [
+                                {
+                                  "type": "fuse",
+                                  "ref": "-F31",
+                                  "label": "Apt 3.1",
+                                  "in_A": 63,
+                                  "fuse_class": "gG",
+                                  "size": "D02",
+                                  "poles": "1P",
+                                  "phase": "L1",
+                                  "children": [
+                                    {
+                                      "type": "meter",
+                                      "ref": "-P31",
+                                      "label": "Meter apt 3.1",
+                                      "kind": "smart",
+                                      "in_A": 63,
+                                      "children": [
+                                        {
+                                          "type": "offpage",
+                                          "label": "Apt 3.1 board",
+                                          "target": "Typical apartment board (see EX-02)",
+                                          "cable": {"designation": "NYM-J", "cores": "3x", "section_mm2": 16, "material": "Cu", "length_m": 17}
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "fuse",
+                                  "ref": "-F32",
+                                  "label": "Apt 3.2",
+                                  "in_A": 63,
+                                  "fuse_class": "gG",
+                                  "size": "D02",
+                                  "poles": "1P",
+                                  "phase": "L2",
+                                  "children": [
+                                    {
+                                      "type": "meter",
+                                      "ref": "-P32",
+                                      "label": "Meter apt 3.2",
+                                      "kind": "smart",
+                                      "in_A": 63,
+                                      "children": [
+                                        {
+                                          "type": "offpage",
+                                          "label": "Apt 3.2 board",
+                                          "target": "Typical apartment board (see EX-02)",
+                                          "cable": {"designation": "NYM-J", "cores": "3x", "section_mm2": 16, "material": "Cu", "length_m": 17}
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "fuse",
+                                  "ref": "-F33",
+                                  "label": "Apt 3.3",
+                                  "in_A": 63,
+                                  "fuse_class": "gG",
+                                  "size": "D02",
+                                  "poles": "1P",
+                                  "phase": "L3",
+                                  "children": [
+                                    {
+                                      "type": "meter",
+                                      "ref": "-P33",
+                                      "label": "Meter apt 3.3",
+                                      "kind": "smart",
+                                      "in_A": 63,
+                                      "children": [
+                                        {
+                                          "type": "offpage",
+                                          "label": "Apt 3.3 board",
+                                          "target": "Typical apartment board (see EX-02)",
+                                          "cable": {"designation": "NYM-J", "cores": "3x", "section_mm2": 16, "material": "Cu", "length_m": 17}
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "junction_box",
+                              "ref": "=FB4",
+                              "label": "Floor 4 meter box",
+                              "kind": "tap",
+                              "children": [
+                                {
+                                  "type": "fuse",
+                                  "ref": "-F41",
+                                  "label": "Apt 4.1",
+                                  "in_A": 63,
+                                  "fuse_class": "gG",
+                                  "size": "D02",
+                                  "poles": "1P",
+                                  "phase": "L1",
+                                  "children": [
+                                    {
+                                      "type": "meter",
+                                      "ref": "-P41",
+                                      "label": "Meter apt 4.1",
+                                      "kind": "smart",
+                                      "in_A": 63,
+                                      "children": [
+                                        {
+                                          "type": "offpage",
+                                          "label": "Apt 4.1 board",
+                                          "target": "Typical apartment board (see EX-02)",
+                                          "cable": {"designation": "NYM-J", "cores": "3x", "section_mm2": 16, "material": "Cu", "length_m": 20}
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "fuse",
+                                  "ref": "-F42",
+                                  "label": "Apt 4.2",
+                                  "in_A": 63,
+                                  "fuse_class": "gG",
+                                  "size": "D02",
+                                  "poles": "1P",
+                                  "phase": "L2",
+                                  "children": [
+                                    {
+                                      "type": "meter",
+                                      "ref": "-P42",
+                                      "label": "Meter apt 4.2",
+                                      "kind": "smart",
+                                      "in_A": 63,
+                                      "children": [
+                                        {
+                                          "type": "offpage",
+                                          "label": "Apt 4.2 board",
+                                          "target": "Typical apartment board (see EX-02)",
+                                          "cable": {"designation": "NYM-J", "cores": "3x", "section_mm2": 16, "material": "Cu", "length_m": 20}
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "fuse",
+                                  "ref": "-F43",
+                                  "label": "Apt 4.3",
+                                  "in_A": 63,
+                                  "fuse_class": "gG",
+                                  "size": "D02",
+                                  "poles": "1P",
+                                  "phase": "L3",
+                                  "children": [
+                                    {
+                                      "type": "meter",
+                                      "ref": "-P43",
+                                      "label": "Meter apt 4.3",
+                                      "kind": "smart",
+                                      "in_A": 63,
+                                      "children": [
+                                        {
+                                          "type": "offpage",
+                                          "label": "Apt 4.3 board",
+                                          "target": "Typical apartment board (see EX-02)",
+                                          "cable": {"designation": "NYM-J", "cores": "3x", "section_mm2": 16, "material": "Cu", "length_m": 20}
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "fuse_switch",
+                      "ref": "-F3",
+                      "label": "Landlord supply",
+                      "in_A": 160,
+                      "fuse_A": 100,
+                      "fuse_class": "gG",
+                      "size": "NH00",
+                      "poles": "3P",
+                      "children": [
+                        {
+                          "type": "meter",
+                          "id": "P_LL",
+                          "ref": "-P3",
+                          "label": "Landlord",
+                          "kind": "smart",
+                          "in_A": 100,
+                          "children": [
+                            {
+                              "type": "board",
+                              "id": "CSB",
+                              "ref": "=CS",
+                              "label": "Common services board",
+                              "kind": "distribution",
+                              "system": "3P+N",
+                              "own_sheet": true,
+                              "in_A": 100,
+                              "cable": {
+                                "designation": "NYY-J",
+                                "cores": "5x",
+                                "section_mm2": 35,
+                                "material": "Cu",
+                                "length_m": 6,
+                                "install": "C",
+                                "insulation": "PVC"
+                              },
+                              "children": [
+                                {
+                                  "type": "switch_disconnector",
+                                  "ref": "-Q0",
+                                  "label": "Main switch",
+                                  "in_A": 100,
+                                  "poles": "4P",
+                                  "children": [
+                                    {
+                                      "type": "rcd",
+                                      "ref": "-F1",
+                                      "in_A": 40,
+                                      "idn_mA": 30,
+                                      "rcd_type": "A",
+                                      "poles": "4P",
+                                      "label": "RCCB common areas",
+                                      "children": [
+                                        {
+                                          "type": "breaker",
+                                          "ref": "-F11",
+                                          "in_A": 10,
+                                          "curve": "C",
+                                          "icn_kA": 10,
+                                          "poles": "1P+N",
+                                          "phase": "L1",
+                                          "cable": {"cores": "3G", "section_mm2": 1.5},
+                                          "children": [
+                                            {
+                                              "type": "controller",
+                                              "id": "TS1",
+                                              "ref": "-K11",
+                                              "label": "Staircase timer",
+                                              "function": "staircase_timer",
+                                              "symbol_text": "3 min",
+                                              "in_A": 16,
+                                              "poles": "1P",
+                                              "children": [
+                                                {
+                                                  "type": "lighting",
+                                                  "label": "Staircase lighting",
+                                                  "points": 16,
+                                                  "note": "Push-buttons on each landing"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "breaker",
+                                          "ref": "-F12",
+                                          "in_A": 10,
+                                          "curve": "C",
+                                          "icn_kA": 10,
+                                          "poles": "1P+N",
+                                          "phase": "L2",
+                                          "cable": {"cores": "3G", "section_mm2": 1.5},
+                                          "children": [{"type": "lighting", "label": "Entrance + exterior lighting", "points": 10}]
+                                        },
+                                        {
+                                          "type": "breaker",
+                                          "ref": "-F13",
+                                          "in_A": 16,
+                                          "curve": "C",
+                                          "icn_kA": 10,
+                                          "poles": "1P+N",
+                                          "phase": "L3",
+                                          "cable": {"cores": "3G", "section_mm2": 2.5},
+                                          "children": [{"type": "socket", "label": "Cleaning sockets", "points": 6}]
+                                        },
+                                        {
+                                          "type": "breaker",
+                                          "ref": "-F14",
+                                          "in_A": 6,
+                                          "curve": "C",
+                                          "icn_kA": 10,
+                                          "poles": "1P+N",
+                                          "phase": "L1",
+                                          "cable": {"cores": "3G", "section_mm2": 1.5},
+                                          "children": [{"type": "load", "label": "Door entry / intercom", "symbol_text": "ICM", "p_kW": 0.1}]
+                                        },
+                                        {
+                                          "type": "breaker",
+                                          "ref": "-F15",
+                                          "in_A": 16,
+                                          "curve": "C",
+                                          "icn_kA": 10,
+                                          "poles": "1P+N",
+                                          "phase": "L2",
+                                          "cable": {"cores": "3G", "section_mm2": 2.5},
+                                          "children": [{"type": "load", "label": "Bin store + bike room", "symbol_text": "AUX", "p_kW": 0.5}]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker",
+                                      "ref": "-F2",
+                                      "label": "Lift",
+                                      "in_A": 32,
+                                      "curve": "C",
+                                      "icn_kA": 10,
+                                      "poles": "3P",
+                                      "cable": {
+                                        "designation": "NYY-J",
+                                        "cores": "5x",
+                                        "section_mm2": 10,
+                                        "material": "Cu",
+                                        "length_m": 22,
+                                        "install": "C",
+                                        "insulation": "PVC"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "load",
+                                          "label": "Lift controller (VFD) 11 kW",
+                                          "symbol_text": "LIFT",
+                                          "p_kW": 11,
+                                          "location": "Lift shaft head"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker",
+                                      "ref": "-F3",
+                                      "label": "Car park fans",
+                                      "in_A": 10,
+                                      "curve": "D",
+                                      "icn_kA": 10,
+                                      "poles": "3P",
+                                      "cable": {"cores": "5G", "section_mm2": 2.5, "length_m": 30},
+                                      "children": [
+                                        {
+                                          "type": "contactor",
+                                          "id": "KM_FAN",
+                                          "ref": "-KM3",
+                                          "in_A": 12,
+                                          "poles": "3P",
+                                          "coil_V": 230,
+                                          "children": [
+                                            {
+                                              "type": "thermal_relay",
+                                              "ref": "-F31",
+                                              "range_A": "5.5-8",
+                                              "setting_A": 7.5,
+                                              "children": [{"type": "motor", "ref": "-M3", "label": "Car park extract fan", "p_kW": 4, "phases": 3, "in_A": 8.2}]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker",
+                                      "ref": "-F4",
+                                      "label": "Booster pumps",
+                                      "in_A": 16,
+                                      "curve": "C",
+                                      "icn_kA": 10,
+                                      "poles": "3P",
+                                      "cable": {"cores": "5G", "section_mm2": 2.5, "length_m": 15},
+                                      "children": [{"type": "load", "label": "Water booster set 2x2.2 kW", "symbol_text": "PMP", "p_kW": 4.4}]
+                                    },
+                                    {
+                                      "type": "breaker",
+                                      "ref": "-F5",
+                                      "label": "Boiler room",
+                                      "in_A": 20,
+                                      "curve": "C",
+                                      "icn_kA": 10,
+                                      "poles": "3P",
+                                      "cable": {"cores": "5G", "section_mm2": 4, "length_m": 25},
+                                      "children": [{"type": "load", "label": "Boiler room (boilers + pumps)", "symbol_text": "BLR", "p_kW": 6}]
+                                    },
+                                    {
+                                      "type": "breaker",
+                                      "ref": "-F6",
+                                      "label": "Fire alarm",
+                                      "in_A": 6,
+                                      "curve": "C",
+                                      "icn_kA": 10,
+                                      "poles": "1P+N",
+                                      "priority": "safety",
+                                      "lockable": true,
+                                      "phase": "L3",
+                                      "cable": {"designation": "FE180 PH120", "cores": "3G", "section_mm2": 1.5},
+                                      "children": [
+                                        {
+                                          "type": "load",
+                                          "label": "Fire alarm control panel",
+                                          "symbol_text": "FACP",
+                                          "p_kW": 0.15,
+                                          "priority": "safety"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "breaker",
+                                      "ref": "-F7",
+                                      "label": "Emergency lighting",
+                                      "in_A": 10,
+                                      "curve": "C",
+                                      "icn_kA": 10,
+                                      "poles": "1P+N",
+                                      "priority": "safety",
+                                      "phase": "L1",
+                                      "cable": {"cores": "3G", "section_mm2": 1.5},
+                                      "children": [{"type": "lighting", "label": "Self-contained emergency luminaires", "points": 28, "priority": "safety"}]
+                                    },
+                                    {
+                                      "type": "breaker",
+                                      "ref": "-F8",
+                                      "label": "SPD",
+                                      "in_A": 25,
+                                      "curve": "C",
+                                      "icn_kA": 10,
+                                      "poles": "4P",
+                                      "children": [
+                                        {
+                                          "type": "spd",
+                                          "ref": "-F81",
+                                          "label": "SPD",
+                                          "spd_type": "2",
+                                          "imax_kA": 40,
+                                          "up_kV": 1.5,
+                                          "uc_V": 275,
+                                          "poles": "3P+N"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "fuse_switch",
+                      "ref": "-F4",
+                      "label": "Car park EV charging",
+                      "in_A": 160,
+                      "fuse_A": 80,
+                      "fuse_class": "gG",
+                      "size": "NH00",
+                      "poles": "3P",
+                      "children": [
+                        {
+                          "type": "meter",
+                          "ref": "-P4",
+                          "label": "EV",
+                          "kind": "smart",
+                          "in_A": 80,
+                          "children": [
+                            {
+                              "type": "board",
+                              "id": "EVB",
+                              "ref": "=EV",
+                              "label": "EV charging board (car park)",
+                              "kind": "distribution",
+                              "system": "3P+N",
+                              "own_sheet": true,
+                              "cable": {
+                                "designation": "NYY-J",
+                                "cores": "5x",
+                                "section_mm2": 25,
+                                "material": "Cu",
+                                "length_m": 35,
+                                "install": "C",
+                                "insulation": "PVC"
+                              },
+                              "children": [
+                                {
+                                  "type": "switch_disconnector",
+                                  "ref": "-Q0",
+                                  "label": "Main switch",
+                                  "in_A": 80,
+                                  "poles": "4P",
+                                  "children": [
+                                    {
+                                      "type": "breaker",
+                                      "ref": "-F1",
+                                      "label": "Load manager",
+                                      "in_A": 2,
+                                      "curve": "C",
+                                      "icn_kA": 10,
+                                      "poles": "1P+N",
+                                      "children": [
+                                        {
+                                          "type": "controller",
+                                          "id": "DLM",
+                                          "ref": "-A1",
+                                          "label": "Load manager",
+                                          "function": "load_management",
+                                          "symbol_text": "DLM"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rcbo",
+                                      "ref": "-F2",
+                                      "in_A": 40,
+                                      "curve": "C",
+                                      "icn_kA": 10,
+                                      "idn_mA": 30,
+                                      "rcd_type": "A",
+                                      "poles": "1P+N",
+                                      "phase": "L2",
+                                      "cable": {
+                                        "designation": "NYY-J",
+                                        "cores": "3x",
+                                        "section_mm2": 10,
+                                        "material": "Cu",
+                                        "length_m": 18,
+                                        "install": "C",
+                                        "insulation": "PVC"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "ev_charger",
+                                          "id": "EV1",
+                                          "label": "Parking bay 1",
+                                          "mode": "3",
+                                          "p_kW": 7.4,
+                                          "note": "RDC-DD 6 mA DC integrated"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rcbo",
+                                      "ref": "-F3",
+                                      "in_A": 40,
+                                      "curve": "C",
+                                      "icn_kA": 10,
+                                      "idn_mA": 30,
+                                      "rcd_type": "A",
+                                      "poles": "1P+N",
+                                      "phase": "L3",
+                                      "cable": {
+                                        "designation": "NYY-J",
+                                        "cores": "3x",
+                                        "section_mm2": 10,
+                                        "material": "Cu",
+                                        "length_m": 24,
+                                        "install": "C",
+                                        "insulation": "PVC"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "ev_charger",
+                                          "id": "EV2",
+                                          "label": "Parking bay 2",
+                                          "mode": "3",
+                                          "p_kW": 7.4,
+                                          "note": "RDC-DD 6 mA DC integrated"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rcbo",
+                                      "ref": "-F4",
+                                      "in_A": 40,
+                                      "curve": "C",
+                                      "icn_kA": 10,
+                                      "idn_mA": 30,
+                                      "rcd_type": "A",
+                                      "poles": "1P+N",
+                                      "phase": "L1",
+                                      "cable": {
+                                        "designation": "NYY-J",
+                                        "cores": "3x",
+                                        "section_mm2": 10,
+                                        "material": "Cu",
+                                        "length_m": 30,
+                                        "install": "C",
+                                        "insulation": "PVC"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "ev_charger",
+                                          "id": "EV3",
+                                          "label": "Parking bay 3",
+                                          "mode": "3",
+                                          "p_kW": 7.4,
+                                          "note": "RDC-DD 6 mA DC integrated"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rcbo",
+                                      "ref": "-F5",
+                                      "in_A": 40,
+                                      "curve": "C",
+                                      "icn_kA": 10,
+                                      "idn_mA": 30,
+                                      "rcd_type": "A",
+                                      "poles": "1P+N",
+                                      "phase": "L2",
+                                      "cable": {
+                                        "designation": "NYY-J",
+                                        "cores": "3x",
+                                        "section_mm2": 10,
+                                        "material": "Cu",
+                                        "length_m": 36,
+                                        "install": "C",
+                                        "insulation": "PVC"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "ev_charger",
+                                          "id": "EV4",
+                                          "label": "Parking bay 4",
+                                          "mode": "3",
+                                          "p_kW": 7.4,
+                                          "note": "RDC-DD 6 mA DC integrated"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "links": [
+    {"kind": "data", "from": "DLM", "to": "EV1", "protocol": "OCPP"},
+    {"kind": "data", "from": "DLM", "to": "EV2", "protocol": "OCPP"},
+    {"kind": "data", "from": "DLM", "to": "EV3", "protocol": "OCPP"},
+    {"kind": "data", "from": "DLM", "to": "EV4", "protocol": "OCPP"}
+  ],
+  "views": [
+    {
+      "id": "sld",
+      "paper": "A3",
+      "orientation": "landscape",
+      "cartouche": ["label", "ref", "protection", "idn_mA", "cable", "length_m", "phase", "p_kW"]
+    },
+    {
+      "id": "colour",
+      "paper": "A3",
+      "orientation": "landscape",
+      "cartouche": ["label", "ref", "protection", "idn_mA", "cable", "length_m", "phase", "p_kW"],
+      "color": "phase"
+    }
+  ]
+}

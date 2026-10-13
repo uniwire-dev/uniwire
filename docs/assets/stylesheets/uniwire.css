@@ -1,0 +1,105 @@
+/* uniwire brand for MkDocs Material (docs/brand/BRAND.md).
+   Public Sans (text, headings), JetBrains Mono (code). Fonts are self-hosted by the uniwire.sh website at /assets/fonts/ (SIL OFL 1.1). Built or served on its
+   own (`mkdocs serve`), the documentation does not find them and uses the system fallbacks. */
+@font-face { font-family: "Public Sans"; font-weight: 400; font-display: swap; src: url("/assets/fonts/public-sans-400.woff2") format("woff2"); }
+@font-face { font-family: "Public Sans"; font-weight: 600; font-display: swap; src: url("/assets/fonts/public-sans-600.woff2") format("woff2"); }
+@font-face { font-family: "Public Sans"; font-weight: 700; font-display: swap; src: url("/assets/fonts/public-sans-700.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400 700; font-display: swap; src: url("/assets/fonts/jetbrains-mono.woff2") format("woff2"); }
+
+:root {
+  --md-text-font: "Public Sans";
+  --md-code-font: "JetBrains Mono";
+  --uw-display: "Public Sans", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* light: paper and ink */
+[data-md-color-scheme="uniwire"] {
+  --md-primary-fg-color: #F8F9FA;
+  --md-primary-fg-color--light: #EEF1F4;
+  --md-primary-fg-color--dark: #101317;
+  --md-primary-bg-color: #101317;
+  --md-primary-bg-color--light: #343A42;
+  --md-accent-fg-color: #8F3F12;
+  --md-accent-fg-color--transparent: rgba(143, 63, 18, .1);
+  --md-default-bg-color: #F8F9FA;
+  --md-default-fg-color: #101317;
+  --md-default-fg-color--light: #343A42;
+  --md-default-fg-color--lighter: #565E68;
+  --md-default-fg-color--lightest: #D3D8DE;
+  --md-typeset-a-color: #1B57A3;
+  --md-code-bg-color: #EEF1F4;
+  --md-code-fg-color: #101317;
+  --md-footer-bg-color: #101317;
+  --md-footer-bg-color--dark: #0F1215;
+  --md-footer-fg-color: #F8F9FA;
+}
+
+/* dark: night blueprint */
+[data-md-color-scheme="slate"] {
+  --md-hue: 210;
+  --md-primary-fg-color: #2A2E33;
+  --md-primary-fg-color--light: #33383E;
+  --md-primary-fg-color--dark: #1E2125;
+  --md-primary-bg-color: #F1F2F3;
+  --md-primary-bg-color--light: #CFD3D8;
+  --md-accent-fg-color: #F0AF80;
+  --md-accent-fg-color--transparent: rgba(240, 175, 128, .12);
+  --md-default-bg-color: #2A2E33;
+  --md-default-fg-color: #F1F2F3;
+  --md-default-fg-color--light: #CFD3D8;
+  --md-default-fg-color--lighter: #AAB0B8;
+  --md-default-fg-color--lightest: #474D55;
+  --md-typeset-a-color: #A6CAF7;
+  --md-code-bg-color: #33383E;
+  --md-code-fg-color: #F1F2F3;
+  --md-footer-bg-color: #1E2125;
+  --md-footer-bg-color--dark: #17191C;
+}
+
+/* header: a drawing border, not a coloured bar */
+.md-header { box-shadow: none; border-bottom: 1px solid var(--md-default-fg-color); }
+[data-md-color-scheme="slate"] .md-header { border-bottom-color: #78808A; }  /* softened frame line on graphite */
+/* palette toggle: the uniwire half-disc icon in a 38 x 32 box, like the EN / FR switch of the site */
+.md-header__option label.md-header__button[hidden] { display: none; }
+.md-header__option label.md-header__button:not([hidden]) { width: 38px; height: 32px; padding: 0; margin: 0 .4rem; display: inline-flex; align-items: center;
+  justify-content: center; border: 1px solid currentColor; border-radius: 0; }
+.md-header__option label.md-header__button svg { width: 18px; height: 18px; }
+.md-header__option label.md-header__button:hover { background: var(--md-primary-fg-color--light); opacity: 1; }
+.md-header[data-md-state="shadow"], .md-header--shadow { box-shadow: none; }
+.md-tabs { border-bottom: 1px solid var(--md-default-fg-color--lightest); }
+.md-header__title { font-family: "Public Sans", sans-serif; font-weight: 700; font-size: .9rem; letter-spacing: -.01em; }
+.md-header__button.md-logo img { height: 1.45rem; width: auto; }
+/* the logo carries the name: hide the duplicated site title next to it (the page title still appears on scroll) */
+@media screen and (min-width: 76.25em) { .md-header__title .md-header__topic:first-child .md-ellipsis { visibility: hidden; } }
+.md-search__form { border-radius: 0; background: var(--md-primary-fg-color--light); }
+
+/* type */
+.md-typeset { font-size: .82rem; line-height: 1.65; }
+.md-typeset h1, .md-typeset h2 { font-family: var(--uw-display); font-weight: 700; letter-spacing: -.02em; color: var(--md-default-fg-color); }
+.md-typeset h3 { font-weight: 600; color: var(--md-default-fg-color); }
+.md-typeset h1 { font-size: 2em; margin-bottom: .8em; }
+.md-typeset h2 { font-size: 1.4em; border-top: 1px solid var(--md-default-fg-color--lightest); padding-top: .7em; }
+.md-typeset h3 { font-size: 1.1em; }
+.md-typeset code { border-radius: 0; }
+.md-typeset pre > code { border-left: 3px solid var(--md-default-fg-color--lightest); }
+.md-typeset a:hover { color: var(--md-accent-fg-color); }
+
+/* tables: schedule-like, square, hairlines */
+.md-typeset table:not([class]) { border-radius: 0; border: 1px solid var(--md-default-fg-color); box-shadow: none; font-size: .74rem; }
+.md-typeset table:not([class]) th {
+  font-family: var(--uw-display); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: .62rem;
+  background: var(--md-code-bg-color); border-bottom: 1px solid var(--md-default-fg-color);
+}
+.md-typeset .admonition, .md-typeset details { border-radius: 0; box-shadow: none; }
+
+/* nav */
+.md-nav__item--section > .md-nav__link { font-family: var(--uw-display); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: .62rem; }
+.md-nav__link--active { font-weight: 600; }
+
+/* drawings stay on white paper in dark mode */
+[data-md-color-scheme="slate"] .md-typeset img[src$=".png"], [data-md-color-scheme="slate"] .md-typeset img[src$=".svg"] { background: #fff; }
+
+.md-footer-meta { border-top: 1px solid rgba(255, 255, 255, .12); }
+/* dark: the colour logo for night backgrounds (brown and grey lightened, L2 stroke and word in paper) */
+[data-md-color-scheme="slate"] .md-header__button.md-logo img { opacity: 0; }
+[data-md-color-scheme="slate"] .md-header__button.md-logo { background: url("../../brand/assets/logo-reverse.svg") no-repeat center / auto 1.45rem; }

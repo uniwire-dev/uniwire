@@ -1,0 +1,92 @@
+site_name: uniwire
+site_description: "Electrical diagrams, as code: an open standard to describe electrical installations, and its Python library"
+site_url: https://uniwire.sh/docs/
+repo_url: https://github.com/uniwire-dev/uniwire
+repo_name: uniwire-dev/uniwire
+edit_uri: edit/main/docs/
+copyright: Code Apache-2.0 · Specification CC BY 4.0
+
+docs_dir: docs
+
+# Theme overrides live in docs/overrides/ (custom_dir below); they are templates, not pages.
+exclude_docs: |
+  overrides/
+
+theme:
+  name: material
+  custom_dir: docs/overrides
+  language: en
+  font: false                     # fonts are self-hosted (no request to Google Fonts)
+  logo: brand/assets/logo.svg
+  favicon: brand/assets/favicon.svg
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: uniwire
+      primary: custom
+      accent: custom
+      toggle:
+        icon: uniwire/theme
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: uniwire/theme
+        name: Switch to light mode
+
+extra:
+  homepage: /                     # the logo leads to the landing page (uniwire.sh/)
+
+extra_javascript:
+  - assets/javascripts/theme.js
+
+extra_css:
+  - assets/stylesheets/uniwire.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+
+# Pages include files from the repository root (CONTRIBUTING.md, CHANGELOG.md, examples/) and
+# link to sources outside docs/: report such links without failing the build.
+validation:
+  omitted_files: info
+  absolute_links: info
+  unrecognized_links: info
+  links:
+    not_found: info
+    anchors: info
+
+nav:
+  - Home: index.md
+  - Specification: SPEC.md
+  - Python API: api.md
+  - Code-first API: build.md
+  - Examples: examples.md
+  - Viewer: web-viewer.md
+  - Rules: rules.md
+  - In your assistant: assistants.md
+  - LLM tools: llm.md
+  - Contributing: contributing.md
+  - Proposals:
+      - Overview: uep/README.md
+      - "UEP-0001 Terminals and wires": uep/0001-terminals-and-wires.md
+  - Changelog: changelog.md
+  - License:
+      - Overview: license.md
+      - Specification licence: LICENSE-SPEC.md

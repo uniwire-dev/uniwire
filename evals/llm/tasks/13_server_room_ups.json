@@ -1,0 +1,39 @@
+{
+ "id": "13_server_room_ups",
+ "request": "Server room: 40 kVA UPS with static bypass feeding two PDUs (A and B), each with 6 outgoing 16 A circuits; utility supply TN-S 400 V.",
+ "expect": [
+  {
+   "check": "count",
+   "match": {
+    "type": "ups",
+    "bypass": true
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "board",
+    "kind": "pdu"
+   },
+   "min": 2
+  },
+  {
+   "check": "under",
+   "ancestor": {
+    "type": "ups"
+   },
+   "descendant": {
+    "type": "board",
+    "kind": "pdu"
+   },
+   "min": 2
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ]
+}

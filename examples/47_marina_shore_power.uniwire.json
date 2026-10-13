@@ -1,0 +1,805 @@
+{
+ "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+ "uniwire": "1.0.0",
+ "profiles": [
+  "iec60364"
+ ],
+ "meta": {
+  "title": "Example marina: shore power distribution to pontoon pedestals",
+  "project": "EX-47",
+  "client": "Example marina",
+  "author": "uniwire examples",
+  
+  "lang": "en",
+  "notes": [
+   "Demonstrates: IEC 60364-7-709 marina supply: every socket outlet individually protected by its own 30 mA RCBO disconnecting all poles, IEC 60309 sockets, pontoon feeder pillars on their own sheets (own_sheet), selective 300 mA type S RCDs on pontoon feeders, templates with phase allocation",
+   "TN-S from the harbour master building; no PEN conductor beyond the main switchboard (TN-C forbidden in marinas)",
+   "Pontoon A: 4 pedestals of 4 x 16 A (40 small berths, diversity 0.5 per 709.311); pontoon B: 2 superyacht pedestals 63 A 3P+N + 32 A"
+  ]
+ },
+ "installation": {
+  "earthing": "TN-S",
+  "system": "3P+N",
+  "un_V": 400,
+  "uln_V": 230,
+  "f_Hz": 50,
+  "ik3_kA": 15,
+  "supply": "LV 400 V, 160 kVA",
+  "standard": "IEC 60364-7-709"
+ },
+ "templates": {
+  "RC16": {
+   "type": "rcbo",
+   "in_A": 16,
+   "curve": "C",
+   "idn_mA": 30,
+   "rcd_type": "A",
+   "poles": "1P+N",
+   "icn_kA": 10,
+   "product": {
+    "manufacturer": "Hager",
+    "range": "ADA / ADC RCBO",
+    "description": "RCBO 1P+N C16 30 mA type A"
+   }
+  },
+  "S16": {
+   "type": "socket",
+   "in_A": 16,
+   "poles": "2P+T",
+   "points": 1,
+   "socket_type": "IEC 60309 16 A 2P+E blue"
+  },
+  "PEDF": {
+   "type": "breaker",
+   "in_A": 40,
+   "curve": "C",
+   "poles": "4P",
+   "icn_kA": 15
+  }
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "label": "Utility LV supply",
+   "supply": "400 V 3P+N",
+   "ik_kA": 15,
+   "children": [
+    {
+     "type": "meter",
+     "ref": "-P0",
+     "label": "Utility meter",
+     "kind": "CT 300/5 A",
+     "children": [
+      {
+       "type": "board",
+       "id": "MDB",
+       "ref": "MDB",
+       "label": "Marina main switchboard",
+       "kind": "main",
+       "in_A": 250,
+       "ik_kA": 15,
+       "location": "Harbour master building",
+       "children": [
+        {
+         "type": "breaker",
+         "ref": "-Q0",
+         "label": "Incomer",
+         "in_A": 250,
+         "ir_A": 225,
+         "poles": "4P",
+         "icu_kA": 36,
+         "children": [
+          {
+           "type": "breaker",
+           "ref": "-F0",
+           "label": "SPD",
+           "in_A": 32,
+           "curve": "C",
+           "poles": "4P",
+           "icn_kA": 15,
+           "children": [
+            {
+             "type": "spd",
+             "ref": "-F01",
+             "spd_type": "1+2",
+             "imax_kA": 50,
+             "in_kA": 12.5,
+             "up_kV": 1.5,
+             "poles": "3P+N"
+            }
+           ]
+          },
+          {
+           "type": "rcd",
+           "ref": "-Q10",
+           "label": "Pontoon A",
+           "in_A": 125,
+           "idn_mA": 300,
+           "rcd_type": "A",
+           "delay": "S",
+           "poles": "4P",
+           "children": [
+            {
+             "type": "breaker",
+             "ref": "-Q1",
+             "label": "Pontoon A",
+             "in_A": 125,
+             "ir_A": 100,
+             "poles": "4P",
+             "icu_kA": 36,
+             "cable": {
+              "designation": "XLPE/SWA",
+              "cores": "4x",
+              "section_mm2": 50,
+              "material": "Cu",
+              "insulation": "XLPE",
+              "install": "D-duct",
+              "length_m": 90
+             },
+             "children": [
+              {
+               "type": "board",
+               "id": "PA",
+               "ref": "FP-A",
+               "label": "Pontoon A feeder pillar",
+               "kind": "distribution",
+               "own_sheet": true,
+               "ip": "IP55",
+               "children": [
+                {
+                 "type": "breaker",
+                 "ref": "-Q1",
+                 "use": "PEDF",
+                 "label": "Pedestal A-1",
+                 "cable": {
+                  "cores": "5G",
+                  "section_mm2": 10,
+                  "material": "Cu",
+                  "insulation": "XLPE",
+                  "install": "D-duct",
+                  "length_m": 15
+                 },
+                 "children": [
+                  {
+                   "type": "board",
+                   "id": "PA1",
+                   "ref": "A-1",
+                   "label": "Pedestal 4 x 16 A",
+                   "kind": "enclosure",
+                   "ip": "IP44",
+                   "children": [
+                    {
+                     "type": "rcbo",
+                     "ref": "-F1",
+                     "use": "RC16",
+                     "phase": "L1",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-1.1"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F2",
+                     "use": "RC16",
+                     "phase": "L2",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-1.2"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F3",
+                     "use": "RC16",
+                     "phase": "L3",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-1.3"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F4",
+                     "use": "RC16",
+                     "phase": "L1",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-1.4"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F5",
+                     "use": "RC16",
+                     "in_A": 6,
+                     "phase": "L2",
+                     "children": [
+                      {
+                       "type": "lighting",
+                       "label": "Pedestal light",
+                       "points": 1
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "type": "breaker",
+                 "ref": "-Q2",
+                 "use": "PEDF",
+                 "label": "Pedestal A-2",
+                 "cable": {
+                  "cores": "5G",
+                  "section_mm2": 10,
+                  "material": "Cu",
+                  "insulation": "XLPE",
+                  "install": "D-duct",
+                  "length_m": 35
+                 },
+                 "children": [
+                  {
+                   "type": "board",
+                   "id": "PA2",
+                   "ref": "A-2",
+                   "label": "Pedestal 4 x 16 A",
+                   "kind": "enclosure",
+                   "ip": "IP44",
+                   "children": [
+                    {
+                     "type": "rcbo",
+                     "ref": "-F1",
+                     "use": "RC16",
+                     "phase": "L1",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-2.1"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F2",
+                     "use": "RC16",
+                     "phase": "L2",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-2.2"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F3",
+                     "use": "RC16",
+                     "phase": "L3",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-2.3"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F4",
+                     "use": "RC16",
+                     "phase": "L1",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-2.4"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F5",
+                     "use": "RC16",
+                     "in_A": 6,
+                     "phase": "L2",
+                     "children": [
+                      {
+                       "type": "lighting",
+                       "label": "Pedestal light",
+                       "points": 1
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "type": "breaker",
+                 "ref": "-Q3",
+                 "use": "PEDF",
+                 "label": "Pedestal A-3",
+                 "cable": {
+                  "cores": "5G",
+                  "section_mm2": 10,
+                  "material": "Cu",
+                  "insulation": "XLPE",
+                  "install": "D-duct",
+                  "length_m": 55
+                 },
+                 "children": [
+                  {
+                   "type": "board",
+                   "id": "PA3",
+                   "ref": "A-3",
+                   "label": "Pedestal 4 x 16 A",
+                   "kind": "enclosure",
+                   "ip": "IP44",
+                   "children": [
+                    {
+                     "type": "rcbo",
+                     "ref": "-F1",
+                     "use": "RC16",
+                     "phase": "L1",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-3.1"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F2",
+                     "use": "RC16",
+                     "phase": "L2",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-3.2"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F3",
+                     "use": "RC16",
+                     "phase": "L3",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-3.3"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F4",
+                     "use": "RC16",
+                     "phase": "L1",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-3.4"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F5",
+                     "use": "RC16",
+                     "in_A": 6,
+                     "phase": "L2",
+                     "children": [
+                      {
+                       "type": "lighting",
+                       "label": "Pedestal light",
+                       "points": 1
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "type": "breaker",
+                 "ref": "-Q4",
+                 "use": "PEDF",
+                 "label": "Pedestal A-4",
+                 "cable": {
+                  "cores": "5G",
+                  "section_mm2": 10,
+                  "material": "Cu",
+                  "insulation": "XLPE",
+                  "install": "D-duct",
+                  "length_m": 75
+                 },
+                 "children": [
+                  {
+                   "type": "board",
+                   "id": "PA4",
+                   "ref": "A-4",
+                   "label": "Pedestal 4 x 16 A",
+                   "kind": "enclosure",
+                   "ip": "IP44",
+                   "children": [
+                    {
+                     "type": "rcbo",
+                     "ref": "-F1",
+                     "use": "RC16",
+                     "phase": "L1",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-4.1"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F2",
+                     "use": "RC16",
+                     "phase": "L2",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-4.2"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F3",
+                     "use": "RC16",
+                     "phase": "L3",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-4.3"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F4",
+                     "use": "RC16",
+                     "phase": "L1",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "use": "S16",
+                       "label": "Berth A-4.4"
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F5",
+                     "use": "RC16",
+                     "in_A": 6,
+                     "phase": "L2",
+                     "children": [
+                      {
+                       "type": "lighting",
+                       "label": "Pedestal light",
+                       "points": 1
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "type": "rcd",
+           "ref": "-Q20",
+           "label": "Pontoon B",
+           "in_A": 250,
+           "idn_mA": 300,
+           "rcd_type": "A",
+           "delay": "S",
+           "poles": "4P",
+           "children": [
+            {
+             "type": "breaker",
+             "ref": "-Q2",
+             "label": "Pontoon B",
+             "in_A": 160,
+             "ir_A": 160,
+             "poles": "4P",
+             "icu_kA": 36,
+             "cable": {
+              "designation": "XLPE/SWA",
+              "cores": "4x",
+              "section_mm2": 95,
+              "material": "Cu",
+              "insulation": "XLPE",
+              "install": "D-duct",
+              "length_m": 120
+             },
+             "children": [
+              {
+               "type": "board",
+               "id": "PB",
+               "ref": "FP-B",
+               "label": "Pontoon B feeder pillar",
+               "kind": "distribution",
+               "own_sheet": true,
+               "ip": "IP55",
+               "children": [
+                {
+                 "type": "breaker",
+                 "ref": "-Q1",
+                 "in_A": 80,
+                 "curve": "C",
+                 "poles": "4P",
+                 "icn_kA": 15,
+                 "label": "Pedestal B-1",
+                 "cable": {
+                  "cores": "5G",
+                  "section_mm2": 25,
+                  "material": "Cu",
+                  "insulation": "XLPE",
+                  "install": "D-duct",
+                  "length_m": 20
+                 },
+                 "children": [
+                  {
+                   "type": "board",
+                   "id": "PB1",
+                   "ref": "B-1",
+                   "label": "Superyacht pedestal 63 A",
+                   "kind": "enclosure",
+                   "ip": "IP55",
+                   "children": [
+                    {
+                     "type": "meter",
+                     "ref": "-P1",
+                     "label": "Berth meter",
+                     "kind": "MID sub-metering",
+                     "in_A": 80,
+                     "children": [
+                      {
+                       "type": "rcbo",
+                       "ref": "-F1",
+                       "label": "63 A berth",
+                       "in_A": 63,
+                       "curve": "C",
+                       "idn_mA": 30,
+                       "rcd_type": "A",
+                       "poles": "4P",
+                       "icn_kA": 10,
+                       "rcd_in_A": 63,
+                       "children": [
+                        {
+                         "type": "socket",
+                         "label": "Berth B-1.1 63 A",
+                         "in_A": 63,
+                         "poles": "3P+N+T",
+                         "socket_type": "IEC 60309 63 A 3P+N+E red",
+                         "points": 1
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F2",
+                     "use": "RC16",
+                     "in_A": 32,
+                     "label": "32 A berth",
+                     "phase": "L1",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "label": "Berth B-1.2 32 A",
+                       "in_A": 32,
+                       "poles": "2P+T",
+                       "socket_type": "IEC 60309 32 A 2P+E blue",
+                       "points": 1
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "type": "breaker",
+                 "ref": "-Q2",
+                 "in_A": 80,
+                 "curve": "C",
+                 "poles": "4P",
+                 "icn_kA": 15,
+                 "label": "Pedestal B-2",
+                 "cable": {
+                  "cores": "5G",
+                  "section_mm2": 25,
+                  "material": "Cu",
+                  "insulation": "XLPE",
+                  "install": "D-duct",
+                  "length_m": 45
+                 },
+                 "children": [
+                  {
+                   "type": "board",
+                   "id": "PB2",
+                   "ref": "B-2",
+                   "label": "Superyacht pedestal 63 A",
+                   "kind": "enclosure",
+                   "ip": "IP55",
+                   "children": [
+                    {
+                     "type": "meter",
+                     "ref": "-P1",
+                     "label": "Berth meter",
+                     "kind": "MID sub-metering",
+                     "in_A": 80,
+                     "children": [
+                      {
+                       "type": "rcbo",
+                       "ref": "-F1",
+                       "label": "63 A berth",
+                       "in_A": 63,
+                       "curve": "C",
+                       "idn_mA": 30,
+                       "rcd_type": "A",
+                       "poles": "4P",
+                       "icn_kA": 10,
+                       "rcd_in_A": 63,
+                       "children": [
+                        {
+                         "type": "socket",
+                         "label": "Berth B-2.1 63 A",
+                         "in_A": 63,
+                         "poles": "3P+N+T",
+                         "socket_type": "IEC 60309 63 A 3P+N+E red",
+                         "points": 1
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    {
+                     "type": "rcbo",
+                     "ref": "-F2",
+                     "use": "RC16",
+                     "in_A": 32,
+                     "label": "32 A berth",
+                     "phase": "L1",
+                     "children": [
+                      {
+                       "type": "socket",
+                       "label": "Berth B-2.2 32 A",
+                       "in_A": 32,
+                       "poles": "2P+T",
+                       "socket_type": "IEC 60309 32 A 2P+E blue",
+                       "points": 1
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "type": "rcbo",
+           "ref": "-Q3",
+           "label": "Quay lighting",
+           "in_A": 16,
+           "curve": "C",
+           "idn_mA": 30,
+           "rcd_type": "A",
+           "poles": "4P",
+           "icn_kA": 10,
+           "cable": {
+            "cores": "5G",
+            "section_mm2": 6,
+            "material": "Cu",
+            "insulation": "XLPE",
+            "install": "D-duct",
+            "length_m": 250
+           },
+           "children": [
+            {
+             "type": "lighting",
+             "label": "Quay bollard lights",
+             "points": 24,
+             "p_kW": 0.9
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "-Q4",
+           "label": "Harbour office DB",
+           "in_A": 63,
+           "curve": "C",
+           "poles": "4P",
+           "icn_kA": 15,
+           "cable": {
+            "cores": "5G",
+            "section_mm2": 16,
+            "material": "Cu",
+            "insulation": "PVC",
+            "install": "C",
+            "length_m": 10
+           },
+           "children": [
+            {
+             "type": "offpage",
+             "label": "Harbour office DB",
+             "target": "Drawing EX-47-02"
+            }
+           ]
+          },
+          {
+           "type": "spare",
+           "ref": "-Q5",
+           "in_A": 125,
+           "poles": "4P",
+           "label": "Future pontoon C"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "views": [
+  {
+   "id": "sld",
+   "paper": "A3",
+   "cartouche": [
+    "label",
+    "ref",
+    "protection",
+    "idn_mA",
+    "poles",
+    "cable",
+    "length_m",
+    "phase"
+   ]
+  }
+ ]
+}

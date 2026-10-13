@@ -1,0 +1,335 @@
+{
+ "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+ "uniwire": "1.0.0",
+ "profiles": [
+  "iec60364"
+ ],
+ "meta": {
+  "title": "Example leisure centre: 50 kWe CHP running in parallel with the grid",
+  "project": "EX-49",
+  "client": "Example leisure centre",
+  "author": "uniwire examples",
+  
+  "lang": "en",
+  "notes": [
+   "Demonstrates: second source (gas-engine CHP) as its own tree joined to the main switchboard with a 'parallel' link, generator breaker with shunt trip driven by interface protection (trip link) CTs on the utility incomer wired to the CHP controller for export limitation (measure link), CHP auxiliaries",
+   "CHP 50 kWe / 63 kVA at cos φ 0.8 → 91 A; generator breaker Ir 100 A, 4x50 mm² Cu XLPE + 25 mm² PE, 35 m",
+   "Interface protection to EN 50549-1 (U<, U>, f<, f>, ROCOF, vector shift); export limited to 0 kW by the CHP controller"
+  ]
+ },
+ "installation": {
+  "earthing": "TN-S",
+  "system": "3P+N",
+  "un_V": 400,
+  "uln_V": 230,
+  "f_Hz": 50,
+  "ik3_kA": 22,
+  "supply": "LV 400 V, 250 kVA",
+  "subscribed_kVA": 250,
+  "standard": "IEC 60364"
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "label": "Utility LV supply",
+   "supply": "400 V 3P+N",
+   "ik_kA": 22,
+   "children": [
+    {
+     "type": "meter",
+     "id": "PM0",
+     "ref": "-P0",
+     "label": "Utility meter",
+     "kind": "CT 400/5 A",
+     "bidirectional": true,
+     "cable": {
+      "cores": "4x",
+      "section_mm2": 240,
+      "material": "Al",
+      "length_m": 20,
+      "insulation": "XLPE",
+      "install": "D-duct"
+     },
+     "children": [
+      {
+       "type": "board",
+       "id": "MSB",
+       "ref": "MSB",
+       "label": "Main switchboard",
+       "kind": "main",
+       "in_A": 400,
+       "ik_kA": 22,
+       "form": "2b",
+       "children": [
+        {
+         "type": "breaker",
+         "id": "Q0",
+         "ref": "-Q0",
+         "label": "Incomer",
+         "in_A": 400,
+         "ir_A": 360,
+         "poles": "4P",
+         "icu_kA": 36,
+         "children": [
+          {
+           "type": "breaker",
+           "ref": "-Q1",
+           "label": "Pool hall DB",
+           "in_A": 160,
+           "ir_A": 125,
+           "poles": "4P",
+           "icu_kA": 36,
+           "cable": {
+            "cores": "4x",
+            "section_mm2": 50,
+            "material": "Cu",
+            "insulation": "XLPE",
+            "install": "E",
+            "length_m": 40
+           },
+           "children": [
+            {
+             "type": "offpage",
+             "label": "Pool hall DB",
+             "target": "Sheet EX-49-02"
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "-Q2",
+           "label": "Plant room DB",
+           "in_A": 160,
+           "ir_A": 160,
+           "poles": "4P",
+           "icu_kA": 36,
+           "cable": {
+            "cores": "4x",
+            "section_mm2": 70,
+            "material": "Cu",
+            "insulation": "XLPE",
+            "install": "E",
+            "length_m": 25
+           },
+           "children": [
+            {
+             "type": "offpage",
+             "label": "Plant room DB",
+             "target": "Sheet EX-49-03"
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "-Q4",
+           "label": "Changing rooms DB",
+           "in_A": 100,
+           "ir_A": 80,
+           "poles": "4P",
+           "icu_kA": 36,
+           "cable": {
+            "cores": "4x",
+            "section_mm2": 25,
+            "material": "Cu",
+            "insulation": "XLPE",
+            "install": "E",
+            "length_m": 30
+           },
+           "children": [
+            {
+             "type": "offpage",
+             "label": "Changing rooms DB",
+             "target": "Sheet EX-49-04"
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "id": "Q3",
+           "ref": "-Q3",
+           "label": "CHP connection",
+           "in_A": 125,
+           "ir_A": 100,
+           "poles": "4P",
+           "icu_kA": 36,
+           "lockable": true
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "generator",
+   "id": "G1",
+   "ref": "-G1",
+   "label": "CHP gas engine",
+   "sn_kVA": 63,
+   "p_kW": 50,
+   "un_V": 400,
+   "fuel": "natural gas",
+   "prime_mover": "gas engine",
+   "cos_phi": 0.8,
+   "children": [
+    {
+     "type": "board",
+     "id": "CHPP",
+     "ref": "CHP-CP",
+     "label": "CHP control panel",
+     "kind": "enclosure",
+     "in_A": 125,
+     "children": [
+      {
+       "type": "breaker",
+       "id": "QG",
+       "ref": "-QG",
+       "label": "Generator breaker",
+       "in_A": 125,
+       "ir_A": 100,
+       "poles": "4P",
+       "icu_kA": 36,
+       "aux": [
+        "MX",
+        "OF",
+        "motor operator"
+       ],
+       "children": [
+        {
+         "type": "meter",
+         "id": "PG",
+         "ref": "-P1",
+         "label": "Generation meter",
+         "kind": "MID CT meter",
+         "children": [
+          {
+           "type": "breaker",
+           "ref": "-F1",
+           "label": "CHP auxiliaries",
+           "in_A": 16,
+           "curve": "C",
+           "poles": "4P",
+           "icn_kA": 10,
+           "children": [
+            {
+             "type": "motor",
+             "label": "Engine cooling pump",
+             "p_kW": 1.1,
+             "phases": 3,
+             "cable": {
+              "cores": "4G",
+              "section_mm2": 1.5,
+              "length_m": 6
+             }
+            },
+            {
+             "type": "ventilation",
+             "label": "Enclosure fan",
+             "p_kW": 0.75,
+             "cable": {
+              "cores": "4G",
+              "section_mm2": 1.5,
+              "length_m": 4
+             }
+            }
+           ]
+          },
+          {
+           "type": "breaker",
+           "ref": "-F2",
+           "label": "Controller",
+           "in_A": 4,
+           "curve": "C",
+           "poles": "1P+N",
+           "icn_kA": 10,
+           "phase": "L1",
+           "children": [
+            {
+             "type": "controller",
+             "id": "CHPC",
+             "ref": "-A1",
+             "label": "CHP controller",
+             "function": "engine, synchronising (25) & export control",
+             "symbol_text": "CHP"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "devices": [
+  {
+   "type": "protection_relay",
+   "id": "KF1",
+   "ref": "-KF1",
+   "label": "Interface protection",
+   "functions": [
+    "27",
+    "59",
+    "81U",
+    "81O",
+    "ROCOF",
+    "VS"
+   ]
+  },
+  {
+   "type": "instrument_transformer",
+   "id": "CT0",
+   "ref": "-T0",
+   "label": "Export CTs",
+   "kind": "ct",
+   "ratio": "400/5 A",
+   "accuracy": "0.5"
+  }
+ ],
+ "links": [
+  {
+   "kind": "parallel",
+   "from": "PG",
+   "to": "Q3",
+   "label": "4x50 + 25 mm² PE, 35 m",
+   "cable": {
+    "cores": "4x",
+    "section_mm2": 50,
+    "pe_section_mm2": 25,
+    "material": "Cu",
+    "insulation": "XLPE",
+    "install": "E",
+    "length_m": 35
+   }
+  },
+  {
+   "kind": "trip",
+   "from": "KF1",
+   "to": "QG"
+  },
+  {
+   "kind": "measure",
+   "from": "CT0",
+   "to": "PM0"
+  }
+ ],
+ "views": [
+  {
+   "id": "sld",
+   "paper": "A3",
+   "cartouche": [
+    "label",
+    "ref",
+    "protection",
+    "poles",
+    "cable",
+    "length_m",
+    "p_kW"
+   ]
+  }
+ ]
+}

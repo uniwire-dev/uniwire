@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest an improvement to the library, the renderer, the rules or the documentation.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For changes to the uniwire **format** itself (new fields, types or link kinds), please use the
+        "Format proposal (UEP)" template instead.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to do, and what is missing or hard today?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How could uniwire help? Example commands, Python code or drawings are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to work on this myself.

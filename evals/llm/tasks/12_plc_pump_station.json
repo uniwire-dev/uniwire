@@ -1,0 +1,47 @@
+{
+ "id": "12_plc_pump_station",
+ "request": "Pumping station: PLC (CPU + 8-channel DI + 8-channel relay output module) controlling two pump contactors through control links on the output channels (ports 'slot.channel'), pumps 7.5 kW each, TN-S 400 V.",
+ "expect": [
+  {
+   "check": "count",
+   "match": {
+    "type": "plc"
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "plc",
+    "modules": {
+     "exists": true
+    }
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "scope": "links",
+   "match": {
+    "kind": "control",
+    "from_port": {
+     "exists": true
+    }
+   },
+   "min": 2
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "motor"
+   },
+   "min": 2
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ]
+}

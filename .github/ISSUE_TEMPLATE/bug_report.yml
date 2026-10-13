@@ -1,0 +1,58 @@
+name: Bug report
+description: Something does not work as documented (validation, rules, rendering, CLI, Python API).
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. For security issues, please use
+        "Report a vulnerability" in the Security tab instead (see SECURITY.md).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: A clear description of the problem and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: |
+        The smallest `*.uniwire.json` document or Python script that shows the problem, and the exact
+        command you ran (e.g. `uniwire render house.uniwire.json -f pdf`). Remove any personal data.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output, error message or screenshot
+      description: Paste the full error output. For drawing issues, a screenshot of the rendered sheet helps.
+  - type: input
+    id: version
+    attributes:
+      label: uniwire version
+      description: Output of `python -c "import uniwire; print(uniwire.__version__)"`
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Python version and operating system
+      placeholder: "Python 3.12, Ubuntu 24.04"
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Validation / schema
+        - Rules (core, nfc15100, iec60364, PLC)
+        - Rendering (SVG / PDF)
+        - Bill of materials
+        - Code-first API (uniwire.build)
+        - CLI
+        - Translations
+        - Documentation

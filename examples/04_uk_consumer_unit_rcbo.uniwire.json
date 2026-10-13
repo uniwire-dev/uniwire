@@ -1,0 +1,78 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "lang": "en",
+    "title": "Semi-detached house: all-RCBO consumer unit",
+    "project": "EX-04",
+    "client": "Example House (UK)",
+    "author": "uniwire examples",
+    
+    "notes": [
+      "Demonstrates: UK domestic installation on a PME (TN-C-S) 100 A service, with DNO cut-out fuse marked external, 100 A main switch, Type 2 SPD, one Type A 30 mA RCBO per circuit, ring final circuits",
+      "Ring final circuits are entered as two parallel paths (cable.parallel = 2) so the Iz check of the iec60364 profile applies to the ring",
+      "Main protective bonding to gas and water: 10 mm² (not drawn)"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-C-S", "system": "1P+N", "un_V": 230, "f_Hz": 50,
+    "supply": "PME single-phase 100 A", "ik1_kA": 16, "standard": "BS 7671:2018+A2:2022"
+  },
+  "templates": {
+    "RCBO": {"type": "rcbo", "curve": "B", "icn_kA": 6, "idn_mA": 30, "rcd_type": "A", "poles": "1P+N",
+             "product": {"description": "Single-module RCBO, BS EN 61009-1, type A"}}
+  },
+  "sources": [
+    {"type": "grid", "label": "DNO supply (PME)", "un_V": 230, "ik_kA": 16, "children": [
+      {"type": "fuse", "ref": "-F0", "label": "Service cut-out", "in_A": 100, "fuse_class": "BS 88-3", "external": true, "children": [
+        {"type": "meter", "ref": "-P1", "label": "Smart meter", "kind": "SMETS2", "in_A": 100, "external": true,
+         "cable": {"designation": "6181Y meter tails", "cores": "2x", "section_mm2": 25, "material": "Cu", "length_m": 2},
+         "children": [
+          {"type": "board", "ref": "CU1", "label": "Consumer unit", "kind": "distribution", "in_A": 100, "ways": 12, "ik_kA": 16,
+           "note": "Metal enclosure, conditional rating 16 kA (BS EN 61439-3 Annex ZB)", "children": [
+            {"type": "switch_disconnector", "ref": "-Q0", "label": "Main switch", "in_A": 100, "poles": "2P", "children": [
+              {"type": "rcbo", "ref": "-F1", "use": "RCBO", "in_A": 6, "circuit": "1",
+               "cable": {"designation": "6242Y T&E", "cores": "2x", "section_mm2": 1.5, "pe_section_mm2": 1.0, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 28},
+               "children": [{"type": "lighting", "label": "Lighting ground floor", "points": 9}]},
+              {"type": "rcbo", "ref": "-F2", "use": "RCBO", "in_A": 6, "circuit": "2",
+               "cable": {"designation": "6242Y T&E", "cores": "2x", "section_mm2": 1.5, "pe_section_mm2": 1.0, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 30},
+               "children": [{"type": "lighting", "label": "Lighting first floor + smoke alarms", "points": 10}]},
+              {"type": "rcbo", "ref": "-F3", "use": "RCBO", "in_A": 32, "circuit": "3",
+               "cable": {"designation": "6242Y T&E", "cores": "2x", "section_mm2": 2.5, "pe_section_mm2": 1.5, "material": "Cu", "install": "C", "insulation": "PVC", "parallel": 2, "length_m": 46},
+               "children": [{"type": "socket", "label": "Ring final, ground floor", "points": 14, "socket_type": "BS 1363"}]},
+              {"type": "rcbo", "ref": "-F4", "use": "RCBO", "in_A": 32, "circuit": "4",
+               "cable": {"designation": "6242Y T&E", "cores": "2x", "section_mm2": 2.5, "pe_section_mm2": 1.5, "material": "Cu", "install": "C", "insulation": "PVC", "parallel": 2, "length_m": 52},
+               "children": [{"type": "socket", "label": "Ring final, first floor", "points": 12, "socket_type": "BS 1363"}]},
+              {"type": "rcbo", "ref": "-F5", "use": "RCBO", "in_A": 32, "circuit": "5",
+               "cable": {"designation": "6242Y T&E", "cores": "2x", "section_mm2": 2.5, "pe_section_mm2": 1.5, "material": "Cu", "install": "C", "insulation": "PVC", "parallel": 2, "length_m": 24},
+               "children": [{"type": "socket", "label": "Ring final, kitchen", "points": 8, "socket_type": "BS 1363", "room": "Kitchen"}]},
+              {"type": "rcbo", "ref": "-F6", "use": "RCBO", "in_A": 40, "circuit": "6",
+               "cable": {"designation": "6242Y T&E", "cores": "2x", "section_mm2": 10, "pe_section_mm2": 4, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 12},
+               "children": [{"type": "cooking", "kind": "range", "label": "Cooker (oven + hob)", "p_kW": 9.5, "room": "Kitchen", "note": "45 A cooker control unit"}]},
+              {"type": "rcbo", "ref": "-F7", "use": "RCBO", "in_A": 45, "circuit": "7",
+               "cable": {"designation": "6242Y T&E", "cores": "2x", "section_mm2": 10, "pe_section_mm2": 4, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 14},
+               "children": [{"type": "water_heater", "label": "Electric shower 9.5 kW", "p_kW": 9.5, "room": "Bathroom"}]},
+              {"type": "rcbo", "ref": "-F8", "use": "RCBO", "in_A": 16, "circuit": "8",
+               "cable": {"designation": "6242Y T&E", "cores": "2x", "section_mm2": 2.5, "pe_section_mm2": 1.5, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 15},
+               "children": [{"type": "water_heater", "label": "Immersion heater 3 kW", "volume_L": 180, "p_kW": 3, "room": "Airing cupboard"}]},
+              {"type": "rcbo", "ref": "-F9", "use": "RCBO", "in_A": 6, "circuit": "9",
+               "cable": {"designation": "6242Y T&E", "cores": "2x", "section_mm2": 1.5, "pe_section_mm2": 1.0, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 8},
+               "children": [{"type": "load", "label": "Gas boiler (3 A fused spur)", "symbol_text": "BLR", "p_kW": 0.15}]},
+              {"type": "rcbo", "ref": "-F10", "use": "RCBO", "in_A": 32, "circuit": "10",
+               "cable": {"designation": "SWA 3-core", "cores": "3G", "section_mm2": 6, "material": "Cu", "install": "C", "insulation": "XLPE", "length_m": 18},
+               "children": [{"type": "ev_charger", "label": "EV charger 7 kW", "mode": "3", "p_kW": 7.2, "location": "Driveway",
+                             "note": "Charger with built-in 6 mA DC detection and PEN-fault protection (BS 7671 722.411.4.1)"}]},
+              {"type": "spare", "ref": "-F11", "label": "Spare way", "in_A": 32},
+              {"type": "breaker", "ref": "-F12", "label": "SPD protection", "in_A": 32, "curve": "B", "icn_kA": 6, "poles": "1P+N", "children": [
+                {"type": "spd", "ref": "-FA1", "label": "SPD", "spd_type": "2", "imax_kA": 40, "in_kA": 20, "up_kV": 1.5, "uc_V": 275, "poles": "1P+N"}
+              ]}
+            ]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "orientation": "landscape",
+             "cartouche": ["circuit", "label", "ref", "protection", "idn_mA", "rcd_type", "cable", "length_m", "points", "p_kW"]}]
+}

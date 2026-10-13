@@ -1,0 +1,562 @@
+{
+ "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+ "uniwire": "1.0.0",
+ "profiles": [],
+ "meta": {
+  "title": "Packaging line control panel CP-100: Modicon M241 with EtherNet/IP remote I/O",
+  "project": "EX-44",
+  "client": "Example packaging plant",
+  "author": "uniwire examples",
+  
+  "lang": "en",
+  "notes": [
+   "Demonstrates: 480Y/277 V 60 Hz industrial control panel, class J fused main disconnect, 480/120 V control power transformer, 24 V DC supply, Modicon M241 with onboard I/O + TM3 expansion bus, TM3 EtherNet/IP remote I/O station (data link), VFDs commanded from DO channels and speed references from AO channels (ports)",
+   "Panel SCCR 65 kA; motor FLA per NEC table 430.250 (5 HP = 7.6 A, 3 HP = 4.8 A at 460 V)",
+   "Slot 0 = onboard outputs (10 DO 24 V DC transistor)"
+  ]
+ },
+ "installation": {
+  "earthing": "TN-S",
+  "system": "3P",
+  "un_V": 480,
+  "uln_V": 277,
+  "f_Hz": 60,
+  "ik3_kA": 42,
+  "standard": "NFPA 79 / UL 508A (informative)"
+ },
+ "templates": {
+  "ITB": {
+   "type": "breaker",
+   "poles": "3P",
+   "icu_kA": 65,
+   "ue_V": 480,
+   "product": {
+    "manufacturer": "Schneider Electric",
+    "range": "TeSys GV2 / UL 508 type E",
+    "description": "Motor circuit protector 480 V"
+   }
+  },
+  "B1P": {
+   "type": "breaker",
+   "poles": "1P",
+   "icu_kA": 10,
+   "ue_V": 120
+  }
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "label": "MCC-1 feeder",
+   "supply": "480Y/277 V 3Φ 4W",
+   "children": [
+    {
+     "type": "board",
+     "id": "CP",
+     "ref": "CP-100",
+     "label": "Packaging line control panel",
+     "kind": "enclosure",
+     "ip": "NEMA 12",
+     "in_A": 60,
+     "cable": {
+      "designation": "THHN",
+      "size_awg": "#6",
+      "section_mm2": 13.3,
+      "material": "Cu",
+      "raceway": "1\" EMT",
+      "length_m": 30
+     },
+     "children": [
+      {
+       "type": "fuse_switch",
+       "ref": "DS1",
+       "label": "Main disconnect",
+       "in_A": 60,
+       "fuse_A": 40,
+       "fuse_class": "J",
+       "poles": "3P",
+       "lockable": true,
+       "icu_kA": 65,
+       "children": [
+        {
+         "type": "breaker",
+         "ref": "CB1",
+         "use": "ITB",
+         "in_A": 16,
+         "label": "Conveyor 1",
+         "cable": {
+          "designation": "THHN",
+          "size_awg": "#12",
+          "section_mm2": 3.31,
+          "material": "Cu",
+          "raceway": "1/2\" flex"
+         },
+         "children": [
+          {
+           "type": "motor_starter",
+           "id": "VFD1",
+           "ref": "VFD1",
+           "method": "vfd",
+           "p_kW": 3.7,
+           "in_A": 9.879999999999999,
+           "product": {
+            "manufacturer": "Schneider Electric",
+            "range": "Altivar Machine ATV320",
+            "description": "VFD 480 V 5 HP"
+           },
+           "children": [
+            {
+             "type": "motor",
+             "ref": "M1",
+             "label": "Conveyor 1 5 HP",
+             "p_kW": 3.7,
+             "in_A": 7.6,
+             "phases": 3,
+             "rpm": 1750,
+             "cable": {
+              "designation": "VFD cable",
+              "size_awg": "#12",
+              "section_mm2": 3.31,
+              "material": "Cu",
+              "length_m": 25
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "breaker",
+         "ref": "CB2",
+         "use": "ITB",
+         "in_A": 16,
+         "label": "Conveyor 2",
+         "cable": {
+          "designation": "THHN",
+          "size_awg": "#12",
+          "section_mm2": 3.31,
+          "material": "Cu",
+          "raceway": "1/2\" flex"
+         },
+         "children": [
+          {
+           "type": "motor_starter",
+           "id": "VFD2",
+           "ref": "VFD2",
+           "method": "vfd",
+           "p_kW": 3.7,
+           "in_A": 9.879999999999999,
+           "product": {
+            "manufacturer": "Schneider Electric",
+            "range": "Altivar Machine ATV320",
+            "description": "VFD 480 V 5 HP"
+           },
+           "children": [
+            {
+             "type": "motor",
+             "ref": "M2",
+             "label": "Conveyor 2 5 HP",
+             "p_kW": 3.7,
+             "in_A": 7.6,
+             "phases": 3,
+             "rpm": 1750,
+             "cable": {
+              "designation": "VFD cable",
+              "size_awg": "#12",
+              "section_mm2": 3.31,
+              "material": "Cu",
+              "length_m": 25
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "breaker",
+         "ref": "CB3",
+         "use": "ITB",
+         "in_A": 10,
+         "label": "Conveyor 3",
+         "cable": {
+          "designation": "THHN",
+          "size_awg": "#14",
+          "section_mm2": 2.08,
+          "material": "Cu",
+          "raceway": "1/2\" flex"
+         },
+         "children": [
+          {
+           "type": "motor_starter",
+           "id": "VFD3",
+           "ref": "VFD3",
+           "method": "vfd",
+           "p_kW": 2.2,
+           "in_A": 6.24,
+           "product": {
+            "manufacturer": "Schneider Electric",
+            "range": "Altivar Machine ATV320",
+            "description": "VFD 480 V 3 HP"
+           },
+           "children": [
+            {
+             "type": "motor",
+             "ref": "M3",
+             "label": "Conveyor 3 3 HP",
+             "p_kW": 2.2,
+             "in_A": 4.8,
+             "phases": 3,
+             "rpm": 1750,
+             "cable": {
+              "designation": "VFD cable",
+              "size_awg": "#12",
+              "section_mm2": 3.31,
+              "material": "Cu",
+              "length_m": 25
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "breaker",
+         "ref": "CB4",
+         "use": "ITB",
+         "in_A": 6.3,
+         "label": "Exhaust fan",
+         "children": [
+          {
+           "type": "contactor",
+           "id": "M4C",
+           "ref": "M4C",
+           "in_A": 9,
+           "poles": "3P",
+           "coil_V": 120,
+           "product": {
+            "manufacturer": "Schneider Electric",
+            "range": "TeSys Deca LC1D09",
+            "description": "Contactor 9 A, 120 V AC coil"
+           },
+           "children": [
+            {
+             "type": "motor",
+             "ref": "M4",
+             "label": "Exhaust fan 2 HP",
+             "p_kW": 1.5,
+             "in_A": 3.4,
+             "phases": 3,
+             "cable": {
+              "designation": "THHN",
+              "size_awg": "#14",
+              "section_mm2": 2.08,
+              "material": "Cu",
+              "length_m": 15
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "fuse_switch",
+         "ref": "FU5",
+         "label": "CPT primary",
+         "in_A": 30,
+         "fuse_A": 5,
+         "fuse_class": "CC",
+         "poles": "2P",
+         "children": [
+          {
+           "type": "transformer",
+           "ref": "T1",
+           "label": "Control power transformer",
+           "kind": "isolation",
+           "sn_kVA": 1,
+           "u1_V": 480,
+           "u2_V": 120,
+           "insulation": "dry",
+           "children": [
+            {
+             "type": "board",
+             "id": "CTRL",
+             "ref": "120V",
+             "label": "120 V control",
+             "kind": "sub",
+             "system": "1P+N",
+             "un_V": 120,
+             "children": [
+              {
+               "type": "breaker",
+               "ref": "CB6",
+               "use": "B1P",
+               "in_A": 4,
+               "label": "24 V DC supply",
+               "children": [
+                {
+                 "type": "power_supply",
+                 "ref": "PS1",
+                 "u1_V": 120,
+                 "u2_V": 24,
+                 "output": "DC",
+                 "in_A": 5,
+                 "product": {
+                  "manufacturer": "Schneider Electric",
+                  "range": "Modicon ABL",
+                  "description": "Power supply 24 V DC 5 A"
+                 },
+                 "children": [
+                  {
+                   "type": "plc",
+                   "id": "PLC",
+                   "ref": "PLC1",
+                   "label": "Line controller",
+                   "role": "controller",
+                   "family": "M241",
+                   "protocols": [
+                    "EtherNet/IP",
+                    "Modbus TCP",
+                    "CANopen"
+                   ],
+                   "ip_address": "192.168.10.10",
+                   "product": {
+                    "manufacturer": "Schneider Electric",
+                    "part_number": "TM241CEC24T",
+                    "range": "Modicon M241",
+                    "description": "Logic controller 24 I/O, Ethernet, CANopen"
+                   },
+                   "onboard": [
+                    {
+                     "slot": 0,
+                     "kind": "di",
+                     "channels": 14,
+                     "un_V": 24
+                    },
+                    {
+                     "slot": 0,
+                     "kind": "do",
+                     "channels": 10,
+                     "un_V": 24,
+                     "rating_A": 0.5,
+                     "channel_labels": {
+                      "1": "VFD1 run",
+                      "2": "VFD2 run",
+                      "3": "VFD3 run"
+                     }
+                    }
+                   ],
+                   "modules": [
+                    {
+                     "slot": 1,
+                     "kind": "di",
+                     "part_number": "TM3DI16",
+                     "channels": 16,
+                     "un_V": 24
+                    },
+                    {
+                     "slot": 2,
+                     "kind": "relay_out",
+                     "part_number": "TM3DQ8R",
+                     "channels": 8,
+                     "rating_A": 2,
+                     "channel_labels": {
+                      "1": "Fan contactor"
+                     }
+                    },
+                    {
+                     "slot": 3,
+                     "kind": "ai",
+                     "part_number": "TM3AI4",
+                     "channels": 4,
+                     "signal": "4-20 mA"
+                    },
+                    {
+                     "slot": 4,
+                     "kind": "ao",
+                     "part_number": "TM3AQ4",
+                     "channels": 4,
+                     "signal": "0-10 V",
+                     "channel_labels": {
+                      "1": "VFD1 speed",
+                      "2": "VFD2 speed",
+                      "3": "VFD3 speed"
+                     }
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "type": "breaker",
+               "ref": "CB7",
+               "use": "B1P",
+               "in_A": 6,
+               "label": "Remote I/O station",
+               "cable": {
+                "designation": "THHN",
+                "size_awg": "#14",
+                "section_mm2": 2.08,
+                "material": "Cu",
+                "length_m": 40
+               },
+               "children": [
+                {
+                 "type": "power_supply",
+                 "ref": "PS2",
+                 "u1_V": 120,
+                 "u2_V": 24,
+                 "output": "DC",
+                 "in_A": 2.5,
+                 "children": [
+                  {
+                   "type": "plc",
+                   "id": "RIO",
+                   "ref": "RIO1",
+                   "label": "Infeed remote I/O",
+                   "role": "coupler",
+                   "family": "TM3",
+                   "protocols": [
+                    "EtherNet/IP"
+                   ],
+                   "ip_address": "192.168.10.20",
+                   "product": {
+                    "manufacturer": "Schneider Electric",
+                    "part_number": "TM3BCEIP",
+                    "range": "Modicon TM3",
+                    "description": "Bus coupler EtherNet/IP / Modbus TCP"
+                   },
+                   "modules": [
+                    {
+                     "slot": 1,
+                     "kind": "di",
+                     "part_number": "TM3DI16",
+                     "channels": 16,
+                     "un_V": 24,
+                     "channel_labels": {
+                      "1": "Photo-eye 1"
+                     }
+                    },
+                    {
+                     "slot": 2,
+                     "kind": "do",
+                     "part_number": "TM3DQ16T",
+                     "channels": 16,
+                     "un_V": 24,
+                     "rating_A": 0.5
+                    },
+                    {
+                     "slot": 3,
+                     "kind": "ai",
+                     "part_number": "TM3AI4",
+                     "channels": 4,
+                     "signal": "4-20 mA"
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "type": "breaker",
+               "ref": "CB8",
+               "use": "B1P",
+               "in_A": 15,
+               "label": "Panel light & receptacle",
+               "children": [
+                {
+                 "type": "rcbo",
+                 "ref": "GF1",
+                 "in_A": 15,
+                 "idn_mA": 5,
+                 "rcd_type": "A",
+                 "poles": "1P",
+                 "label": "GFCI receptacle",
+                 "children": [
+                  {
+                   "type": "socket",
+                   "label": "Service receptacle",
+                   "points": 1
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "links": [
+  {
+   "kind": "control",
+   "from": "PLC",
+   "from_port": "0.1",
+   "to": "VFD1"
+  },
+  {
+   "kind": "control",
+   "from": "PLC",
+   "from_port": "0.2",
+   "to": "VFD2"
+  },
+  {
+   "kind": "control",
+   "from": "PLC",
+   "from_port": "0.3",
+   "to": "VFD3"
+  },
+  {
+   "kind": "control",
+   "from": "PLC",
+   "from_port": "4.1",
+   "to": "VFD1"
+  },
+  {
+   "kind": "control",
+   "from": "PLC",
+   "from_port": "4.2",
+   "to": "VFD2"
+  },
+  {
+   "kind": "control",
+   "from": "PLC",
+   "from_port": "4.3",
+   "to": "VFD3"
+  },
+  {
+   "kind": "control",
+   "from": "PLC",
+   "from_port": "2.1",
+   "to": "M4C"
+  },
+  {
+   "kind": "data",
+   "from": "RIO",
+   "to": "PLC",
+   "protocol": "EtherNet/IP"
+  }
+ ],
+ "views": [
+  {
+   "id": "sld",
+   "paper": "A3",
+   "cartouche": [
+    "label",
+    "ref",
+    "protection",
+    "cable",
+    "p_kW"
+   ]
+  }
+ ]
+}

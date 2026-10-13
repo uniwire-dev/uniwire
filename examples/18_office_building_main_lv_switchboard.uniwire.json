@@ -1,0 +1,584 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Office building (3 floors): main LV switchboard and floor distribution boards", "project": "EX-18",
+    "client": "Example Office Building", "author": "uniwire examples", "lang": "en",
+    "drawing_number": "EX-18-E-001",
+    "notes": [
+      "Demonstrates: multi-sheet rendering (own_sheet floor boards), templates, RCBOs per socket circuit, phase balancing, iec60364 Iz check on every cable",
+      "TN-C-S: PEN of the service cable split into PE + N at the main earthing terminal of the MSB",
+      "Floor boards DB-0 to DB-2 are identical; the boiling-water tap only exists on level 0 (reception)"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-C-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "supply": "LV service 400 kVA",
+    "subscribed_kVA": 400, "ik3_kA": 22, "du_max_pct": 4, "standard": "IEC 60364"
+  },
+  "templates": {
+    "LGT": {
+      "type": "breaker", "in_A": 10, "curve": "B", "icn_kA": 6, "poles": "1P+N",
+      "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iC60N"}
+    },
+    "SP": {
+      "type": "rcbo", "in_A": 20, "curve": "C", "icn_kA": 6, "poles": "1P+N", "idn_mA": 30, "rcd_type": "A",
+      "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iDPN Vigi"}
+    },
+    "FCU": {
+      "type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 6, "poles": "3P+N",
+      "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iC60N"}
+    },
+    "SPD2": {"type": "spd", "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iPRD40r"}},
+    "FEED": {
+      "type": "breaker", "icu_kA": 36, "poles": "4P", "trip_unit": "TM-D",
+      "product": {"manufacturer": "Schneider Electric", "range": "ComPacT NSX F"}
+    }
+  },
+  "sources": [
+    {
+      "id": "SUP", "type": "grid", "label": "Utility LV service", "supply": "400 kVA", "un_V": 400, "ik_kA": 22,
+      "system": "3P+N",
+      "children": [
+        {
+          "id": "MTR", "type": "meter", "ref": "-P0", "kind": "CT meter 600/5", "label": "Utility meter",
+          "cable": {
+            "designation": "service cable (utility)", "cores": "4x", "section_mm2": 240, "parallel": 2,
+            "material": "Al", "length_m": 15, "pen": true, "conductors": "L1, L2, L3, PEN"
+          },
+          "external": true,
+          "children": [
+            {
+              "id": "MSB", "type": "board", "ref": "MSB", "label": "Main LV switchboard", "kind": "main", "in_A": 630,
+              "ik_kA": 22, "form": "2b", "ip": "IP31", "location": "Ground-floor LV room",
+              "children": [
+                {
+                  "id": "Q0", "type": "breaker", "ref": "-Q0", "label": "Main incomer", "in_A": 630, "ir_A": 580,
+                  "icu_kA": 36, "poles": "4P", "trip_unit": "Micrologic 2.3", "lockable": true, "aux": ["OF", "SD"],
+                  "product": {
+                    "manufacturer": "Schneider Electric", "range": "ComPacT NSX630F",
+                    "description": "Circuit breaker 4P 630 A, Micrologic 2.3"
+                  },
+                  "children": [
+                    {
+                      "id": "SPD0", "type": "spd", "ref": "-F0", "spd_type": "1+2", "imax_kA": 50, "in_kA": 25,
+                      "up_kV": 1.5, "poles": "3P+N",
+                      "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iPRF1 12.5r"}
+                    },
+                    {
+                      "id": "Q1", "type": "breaker", "ref": "-Q1", "use": "FEED", "in_A": 100, "circuit": "M1",
+                      "cable": {
+                        "designation": "XGB", "cores": "5G", "section_mm2": 35, "length_m": 12, "material": "Cu",
+                        "insulation": "XLPE", "install": "E"
+                      },
+                      "children": [
+                        {
+                          "id": "F0", "type": "board", "ref": "DB-0", "label": "Ground floor: reception, offices",
+                          "kind": "distribution", "in_A": 125, "system": "3P+N", "ip": "IP31", "ways": 48,
+                          "own_sheet": true, "location": "Riser cupboard, level 0",
+                          "children": [
+                            {
+                              "id": "F0_Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 100, "poles": "4P",
+                              "label": "Incomer",
+                              "product": {
+                                "manufacturer": "Schneider Electric", "range": "Acti9 iSW",
+                                "description": "Switch-disconnector 4P 100 A"
+                              },
+                              "children": [
+                                {
+                                  "type": "spd", "ref": "-F1", "spd_type": "2", "imax_kA": 40, "poles": "3P+N",
+                                  "use": "SPD2"
+                                },
+                                {
+                                  "id": "F0_L1", "type": "breaker", "ref": "-Q11", "use": "LGT", "phase": "L1",
+                                  "circuit": "0.1",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 1.5, "length_m": 35,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "lighting", "label": "Open-plan east", "points": 24, "p_kW": 1.6}]
+                                },
+                                {
+                                  "id": "F0_L2", "type": "breaker", "ref": "-Q12", "use": "LGT", "phase": "L2",
+                                  "circuit": "0.2",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 1.5, "length_m": 40,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "lighting", "label": "Open-plan west", "points": 24, "p_kW": 1.6}]
+                                },
+                                {
+                                  "id": "F0_L3", "type": "breaker", "ref": "-Q13", "use": "LGT", "phase": "L3",
+                                  "circuit": "0.3",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 1.5, "length_m": 30,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "lighting", "label": "Corridors, WC, stairs", "points": 18, "p_kW": 0.9}]
+                                },
+                                {
+                                  "id": "F0_S1", "type": "rcbo", "ref": "-Q21", "use": "SP", "phase": "L1",
+                                  "circuit": "0.4",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 30,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Desks east (floor boxes)", "points": 10, "p_kW": 2.0}]
+                                },
+                                {
+                                  "id": "F0_S2", "type": "rcbo", "ref": "-Q22", "use": "SP", "phase": "L2",
+                                  "circuit": "0.5",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 35,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Desks west (floor boxes)", "points": 10, "p_kW": 2.0}]
+                                },
+                                {
+                                  "id": "F0_S3", "type": "rcbo", "ref": "-Q23", "use": "SP", "phase": "L3",
+                                  "circuit": "0.6",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 25,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Meeting rooms", "points": 8, "p_kW": 1.5}]
+                                },
+                                {
+                                  "id": "F0_S4", "type": "rcbo", "ref": "-Q24", "use": "SP", "in_A": 16, "phase": "L1",
+                                  "circuit": "0.7",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 15,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Comms room", "points": 4, "p_kW": 1.5}]
+                                },
+                                {
+                                  "id": "F0_K1", "type": "rcbo", "ref": "-Q25", "use": "SP", "phase": "L2",
+                                  "circuit": "0.8",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 20,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Kitchenette", "points": 4, "p_kW": 2.5}]
+                                },
+                                {
+                                  "id": "F0_K2", "type": "rcbo", "ref": "-Q26", "use": "SP", "in_A": 16, "phase": "L3",
+                                  "circuit": "0.9",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 20,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "water_heater", "label": "Boiling-water tap", "p_kW": 2.2, "volume_L": 5}]
+                                },
+                                {
+                                  "id": "F0_V1", "type": "breaker", "ref": "-Q31", "use": "FCU", "circuit": "0.10",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "5G", "section_mm2": 2.5, "length_m": 40,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "ventilation", "label": "Fan-coil units", "p_kW": 2.4}]
+                                },
+                                {"type": "spare", "ref": "-Q40", "in_A": 16, "poles": "1P+N", "label": "Spare"}
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "Q2", "type": "breaker", "ref": "-Q2", "use": "FEED", "in_A": 100, "circuit": "M2",
+                      "cable": {
+                        "designation": "XGB", "cores": "5G", "section_mm2": 35, "length_m": 18, "material": "Cu",
+                        "insulation": "XLPE", "install": "E"
+                      },
+                      "children": [
+                        {
+                          "id": "F1", "type": "board", "ref": "DB-1", "label": "Level 1: offices",
+                          "kind": "distribution", "in_A": 125, "system": "3P+N", "ip": "IP31", "ways": 48,
+                          "own_sheet": true, "location": "Riser cupboard, level 1",
+                          "children": [
+                            {
+                              "id": "F1_Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 100, "poles": "4P",
+                              "label": "Incomer",
+                              "product": {
+                                "manufacturer": "Schneider Electric", "range": "Acti9 iSW",
+                                "description": "Switch-disconnector 4P 100 A"
+                              },
+                              "children": [
+                                {
+                                  "type": "spd", "ref": "-F1", "spd_type": "2", "imax_kA": 40, "poles": "3P+N",
+                                  "use": "SPD2"
+                                },
+                                {
+                                  "id": "F1_L1", "type": "breaker", "ref": "-Q11", "use": "LGT", "phase": "L1",
+                                  "circuit": "1.1",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 1.5, "length_m": 35,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "lighting", "label": "Open-plan east", "points": 24, "p_kW": 1.6}]
+                                },
+                                {
+                                  "id": "F1_L2", "type": "breaker", "ref": "-Q12", "use": "LGT", "phase": "L2",
+                                  "circuit": "1.2",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 1.5, "length_m": 40,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "lighting", "label": "Open-plan west", "points": 24, "p_kW": 1.6}]
+                                },
+                                {
+                                  "id": "F1_L3", "type": "breaker", "ref": "-Q13", "use": "LGT", "phase": "L3",
+                                  "circuit": "1.3",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 1.5, "length_m": 30,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "lighting", "label": "Corridors, WC, stairs", "points": 18, "p_kW": 0.9}]
+                                },
+                                {
+                                  "id": "F1_S1", "type": "rcbo", "ref": "-Q21", "use": "SP", "phase": "L1",
+                                  "circuit": "1.4",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 30,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Desks east (floor boxes)", "points": 10, "p_kW": 2.0}]
+                                },
+                                {
+                                  "id": "F1_S2", "type": "rcbo", "ref": "-Q22", "use": "SP", "phase": "L2",
+                                  "circuit": "1.5",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 35,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Desks west (floor boxes)", "points": 10, "p_kW": 2.0}]
+                                },
+                                {
+                                  "id": "F1_S3", "type": "rcbo", "ref": "-Q23", "use": "SP", "phase": "L3",
+                                  "circuit": "1.6",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 25,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Meeting rooms", "points": 8, "p_kW": 1.5}]
+                                },
+                                {
+                                  "id": "F1_S4", "type": "rcbo", "ref": "-Q24", "use": "SP", "in_A": 16, "phase": "L1",
+                                  "circuit": "1.7",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 15,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Comms room", "points": 4, "p_kW": 1.5}]
+                                },
+                                {
+                                  "id": "F1_K1", "type": "rcbo", "ref": "-Q25", "use": "SP", "phase": "L2",
+                                  "circuit": "1.8",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 20,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Kitchenette", "points": 4, "p_kW": 2.5}]
+                                },
+                                {
+                                  "id": "F1_V1", "type": "breaker", "ref": "-Q31", "use": "FCU", "circuit": "1.10",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "5G", "section_mm2": 2.5, "length_m": 40,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "ventilation", "label": "Fan-coil units", "p_kW": 2.4}]
+                                },
+                                {"type": "spare", "ref": "-Q40", "in_A": 16, "poles": "1P+N", "label": "Spare"}
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "Q3", "type": "breaker", "ref": "-Q3", "use": "FEED", "in_A": 100, "circuit": "M3",
+                      "cable": {
+                        "designation": "XGB", "cores": "5G", "section_mm2": 35, "length_m": 24, "material": "Cu",
+                        "insulation": "XLPE", "install": "E"
+                      },
+                      "children": [
+                        {
+                          "id": "F2", "type": "board", "ref": "DB-2", "label": "Level 2: offices",
+                          "kind": "distribution", "in_A": 125, "system": "3P+N", "ip": "IP31", "ways": 48,
+                          "own_sheet": true, "location": "Riser cupboard, level 2",
+                          "children": [
+                            {
+                              "id": "F2_Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 100, "poles": "4P",
+                              "label": "Incomer",
+                              "product": {
+                                "manufacturer": "Schneider Electric", "range": "Acti9 iSW",
+                                "description": "Switch-disconnector 4P 100 A"
+                              },
+                              "children": [
+                                {
+                                  "type": "spd", "ref": "-F1", "spd_type": "2", "imax_kA": 40, "poles": "3P+N",
+                                  "use": "SPD2"
+                                },
+                                {
+                                  "id": "F2_L1", "type": "breaker", "ref": "-Q11", "use": "LGT", "phase": "L1",
+                                  "circuit": "2.1",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 1.5, "length_m": 35,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "lighting", "label": "Open-plan east", "points": 24, "p_kW": 1.6}]
+                                },
+                                {
+                                  "id": "F2_L2", "type": "breaker", "ref": "-Q12", "use": "LGT", "phase": "L2",
+                                  "circuit": "2.2",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 1.5, "length_m": 40,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "lighting", "label": "Open-plan west", "points": 24, "p_kW": 1.6}]
+                                },
+                                {
+                                  "id": "F2_L3", "type": "breaker", "ref": "-Q13", "use": "LGT", "phase": "L3",
+                                  "circuit": "2.3",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 1.5, "length_m": 30,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "lighting", "label": "Corridors, WC, stairs", "points": 18, "p_kW": 0.9}]
+                                },
+                                {
+                                  "id": "F2_S1", "type": "rcbo", "ref": "-Q21", "use": "SP", "phase": "L1",
+                                  "circuit": "2.4",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 30,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Desks east (floor boxes)", "points": 10, "p_kW": 2.0}]
+                                },
+                                {
+                                  "id": "F2_S2", "type": "rcbo", "ref": "-Q22", "use": "SP", "phase": "L2",
+                                  "circuit": "2.5",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 35,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Desks west (floor boxes)", "points": 10, "p_kW": 2.0}]
+                                },
+                                {
+                                  "id": "F2_S3", "type": "rcbo", "ref": "-Q23", "use": "SP", "phase": "L3",
+                                  "circuit": "2.6",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 25,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Meeting rooms", "points": 8, "p_kW": 1.5}]
+                                },
+                                {
+                                  "id": "F2_S4", "type": "rcbo", "ref": "-Q24", "use": "SP", "in_A": 16, "phase": "L1",
+                                  "circuit": "2.7",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 15,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Comms room", "points": 4, "p_kW": 1.5}]
+                                },
+                                {
+                                  "id": "F2_K1", "type": "rcbo", "ref": "-Q25", "use": "SP", "phase": "L2",
+                                  "circuit": "2.8",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "3G", "section_mm2": 2.5, "length_m": 20,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "socket", "label": "Kitchenette", "points": 4, "p_kW": 2.5}]
+                                },
+                                {
+                                  "id": "F2_V1", "type": "breaker", "ref": "-Q31", "use": "FCU", "circuit": "2.10",
+                                  "cable": {
+                                    "designation": "H07V-U", "cores": "5G", "section_mm2": 2.5, "length_m": 40,
+                                    "material": "Cu", "insulation": "PVC", "install": "B1"
+                                  },
+                                  "children": [{"type": "ventilation", "label": "Fan-coil units", "p_kW": 2.4}]
+                                },
+                                {"type": "spare", "ref": "-Q40", "in_A": 16, "poles": "1P+N", "label": "Spare"}
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "Q4", "type": "breaker", "ref": "-Q4", "use": "FEED", "in_A": 160, "ir_A": 150,
+                      "poles": "3P", "circuit": "M4",
+                      "cable": {
+                        "designation": "XGB", "cores": "4G", "section_mm2": 70, "length_m": 45, "material": "Cu",
+                        "insulation": "XLPE", "install": "E"
+                      },
+                      "children": [
+                        {
+                          "type": "load", "ref": "-E4", "label": "Air-cooled chiller (roof)", "symbol_text": "CH",
+                          "p_kW": 78, "cos_phi": 0.86, "location": "Roof"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "Q5", "type": "breaker", "ref": "-Q5", "use": "FEED", "in_A": 63, "poles": "3P",
+                      "circuit": "M5",
+                      "cable": {
+                        "designation": "XGB", "cores": "4G", "section_mm2": 16, "length_m": 30, "material": "Cu",
+                        "insulation": "XLPE", "install": "E"
+                      },
+                      "children": [
+                        {
+                          "type": "motor", "ref": "-M5", "label": "Passenger lift (8 persons)", "p_kW": 15,
+                          "phases": 3, "location": "Lift motor room"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "Q6", "type": "breaker", "ref": "-Q6", "use": "FEED", "in_A": 80, "circuit": "M6",
+                      "cable": {
+                        "designation": "XGB", "cores": "5G", "section_mm2": 25, "length_m": 40, "material": "Cu",
+                        "insulation": "XLPE", "install": "E"
+                      },
+                      "children": [
+                        {
+                          "id": "EVDB", "type": "board", "ref": "DB-EV", "label": "Car park EV charging",
+                          "kind": "distribution", "in_A": 80, "ip": "IP55", "own_sheet": true,
+                          "children": [
+                            {
+                              "id": "EV_Q0", "type": "switch_disconnector", "ref": "-Q0", "in_A": 80, "poles": "4P",
+                              "children": [
+                                {
+                                  "id": "EV1", "type": "rcbo", "ref": "-Q1", "in_A": 20, "curve": "C", "icn_kA": 10,
+                                  "poles": "3P+N", "idn_mA": 30, "rcd_type": "A",
+                                  "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iC60N + Vigi iC60 A-SI"},
+                                  "cable": {
+                                    "designation": "XGB", "cores": "5G", "section_mm2": 6, "length_m": 23,
+                                    "material": "Cu", "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "ev_charger", "ref": "-EV1", "label": "Bay 1", "mode": "3", "p_kW": 11,
+                                      "note": "Charger with built-in 6 mA DC fault detection (IEC 62955)"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "EV2", "type": "rcbo", "ref": "-Q2", "in_A": 20, "curve": "C", "icn_kA": 10,
+                                  "poles": "3P+N", "idn_mA": 30, "rcd_type": "A",
+                                  "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iC60N + Vigi iC60 A-SI"},
+                                  "cable": {
+                                    "designation": "XGB", "cores": "5G", "section_mm2": 6, "length_m": 31,
+                                    "material": "Cu", "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "ev_charger", "ref": "-EV2", "label": "Bay 2", "mode": "3", "p_kW": 11,
+                                      "note": "Charger with built-in 6 mA DC fault detection (IEC 62955)"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "EV3", "type": "rcbo", "ref": "-Q3", "in_A": 20, "curve": "C", "icn_kA": 10,
+                                  "poles": "3P+N", "idn_mA": 30, "rcd_type": "A",
+                                  "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iC60N + Vigi iC60 A-SI"},
+                                  "cable": {
+                                    "designation": "XGB", "cores": "5G", "section_mm2": 6, "length_m": 39,
+                                    "material": "Cu", "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "ev_charger", "ref": "-EV3", "label": "Bay 3", "mode": "3", "p_kW": 11,
+                                      "note": "Charger with built-in 6 mA DC fault detection (IEC 62955)"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "EV4", "type": "rcbo", "ref": "-Q4", "in_A": 20, "curve": "C", "icn_kA": 10,
+                                  "poles": "3P+N", "idn_mA": 30, "rcd_type": "A",
+                                  "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iC60N + Vigi iC60 A-SI"},
+                                  "cable": {
+                                    "designation": "XGB", "cores": "5G", "section_mm2": 6, "length_m": 47,
+                                    "material": "Cu", "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "ev_charger", "ref": "-EV4", "label": "Bay 4", "mode": "3", "p_kW": 11,
+                                      "note": "Charger with built-in 6 mA DC fault detection (IEC 62955)"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "EV_Q5", "type": "breaker", "ref": "-Q5", "in_A": 2, "curve": "C",
+                                  "icn_kA": 10, "poles": "1P+N",
+                                  "children": [
+                                    {
+                                      "id": "EV_LM", "type": "controller", "ref": "-A1", "label": "Load management",
+                                      "function": "EV dynamic load management", "symbol_text": "DLM"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "Q8", "type": "breaker", "ref": "-Q8", "in_A": 10, "curve": "C", "icn_kA": 10,
+                      "poles": "1P+N", "circuit": "M8", "lockable": true,
+                      "label": "Fire alarm panel (dedicated, locked ON)",
+                      "cable": {
+                        "designation": "FP200 fire-resistant", "cores": "3G", "section_mm2": 1.5, "length_m": 10,
+                        "material": "Cu", "insulation": "XLPE", "install": "C"
+                      },
+                      "children": [
+                        {
+                          "type": "load", "ref": "-A8", "label": "Fire alarm control panel", "symbol_text": "FACP",
+                          "priority": "safety", "p_kW": 0.2
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spare", "ref": "-Q9", "in_A": 160, "poles": "4P", "frame_A": 160,
+                      "label": "Spare (equipped)"
+                    },
+                    {
+                      "id": "Q7", "type": "breaker", "ref": "-Q7", "in_A": 16, "curve": "C", "icn_kA": 10,
+                      "poles": "1P+N", "circuit": "M7",
+                      "product": {"manufacturer": "Schneider Electric", "range": "Acti9 iC60N"},
+                      "cable": {
+                        "designation": "XGB", "cores": "3G", "section_mm2": 2.5, "length_m": 60, "material": "Cu",
+                        "insulation": "XLPE", "install": "E"
+                      },
+                      "children": [
+                        {
+                          "id": "KM7", "type": "contactor", "ref": "-KM7", "in_A": 20, "poles": "2P", "coil_V": 230,
+                          "function": "lighting",
+                          "children": [{"type": "lighting", "label": "External & car park lighting", "points": 14, "p_kW": 0.9}]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "id": "TS7", "type": "controller", "ref": "-K7", "label": "Time switch", "function": "time switch",
+      "symbol_text": "ASTRO", "location": "MSB", "note": "Supplied from -Q7 (230 V), drives the -KM7 coil"
+    }
+  ],
+  "links": [{"kind": "control", "from": "TS7", "to": "KM7", "label": "dusk/dawn"}],
+  "views": [
+    {
+      "id": "sld", "title": "Office building: LV distribution", "paper": "A3", "orientation": "landscape",
+      "cartouche": ["circuit", "label", "ref", "protection", "idn_mA", "cable", "length_m", "p_kW", "phase"]
+    }
+  ]
+}

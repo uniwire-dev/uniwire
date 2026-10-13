@@ -1,0 +1,469 @@
+{
+ "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+ "uniwire": "1.0.0",
+ "profiles": [],
+ "meta": {
+  "title": "Small building services board: Siemens LOGO! 8 control of lighting and pumps",
+  "project": "EX-43",
+  "client": "Example community centre",
+  "author": "uniwire examples",
+  
+  "lang": "en",
+  "notes": [
+   "Demonstrates: small logic module (LOGO! 8 230RCE) with onboard I/O (slot 0 = relay outputs Q1-Q4) and expansion modules on the local bus; control links from slot.channel ports to lighting and motor contactors; motor protection circuit breakers",
+   "Onboard inputs I1-I8 (230 V): astronomical / twilight switch, corridor push-buttons, PIR, pump float switches; AM2 input 1: sump level 4-20 mA",
+   "Pumps alternate on each start (duty/standby); high-level alarm starts both"
+  ]
+ },
+ "installation": {
+  "earthing": "TN-S",
+  "system": "3P+N",
+  "un_V": 400,
+  "uln_V": 230,
+  "f_Hz": 50,
+  "ik3_kA": 6,
+  "standard": "IEC 60364"
+ },
+ "templates": {
+  "KML": {
+   "type": "contactor",
+   "in_A": 20,
+   "poles": "2P",
+   "function": "lighting",
+   "coil_V": 230,
+   "manual": true,
+   "product": {
+    "manufacturer": "Siemens",
+    "range": "5TT installation contactor",
+    "description": "Installation contactor 20 A 2NO, 230 V AC, manual override"
+   }
+  },
+  "MPCB": {
+   "type": "breaker",
+   "curve": "MA",
+   "poles": "3P",
+   "icu_kA": 50,
+   "product": {
+    "manufacturer": "Siemens",
+    "range": "SIRIUS 3RV2 size S00",
+    "description": "Motor protection circuit breaker"
+   }
+  },
+  "KMM": {
+   "type": "contactor",
+   "in_A": 9,
+   "poles": "3P",
+   "function": "power",
+   "coil_V": 230,
+   "product": {
+    "manufacturer": "Siemens",
+    "range": "SIRIUS 3RT2 size S00",
+    "description": "Contactor 4 kW AC-3, 230 V AC coil"
+   }
+  }
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "label": "From main LV board",
+   "un_V": 400,
+   "children": [
+    {
+     "type": "board",
+     "id": "DB",
+     "ref": "DB-BS",
+     "label": "Building services board",
+     "kind": "distribution",
+     "in_A": 40,
+     "ik_kA": 6,
+     "ip": "IP43",
+     "cable": {
+      "cores": "5G",
+      "section_mm2": 10,
+      "length_m": 35
+     },
+     "children": [
+      {
+       "type": "switch_disconnector",
+       "ref": "-Q0",
+       "label": "Main switch",
+       "in_A": 40,
+       "poles": "4P",
+       "children": [
+        {
+         "type": "breaker",
+         "ref": "-F1",
+         "label": "Control",
+         "in_A": 6,
+         "curve": "C",
+         "poles": "1P+N",
+         "icn_kA": 10,
+         "phase": "L1",
+         "children": [
+          {
+           "type": "plc",
+           "id": "LOGO",
+           "ref": "-A1",
+           "label": "LOGO! controller",
+           "role": "controller",
+           "family": "LOGO! 8",
+           "un_V": 230,
+           "protocols": [
+            "Ethernet (S7)",
+            "Modbus TCP"
+           ],
+           "product": {
+            "manufacturer": "Siemens",
+            "part_number": "6ED1052-1FB08-0BA1",
+            "range": "LOGO! 8",
+            "description": "LOGO! 230RCE logic module, 8 DI / 4 relay outputs 10 A, display, Ethernet"
+           },
+           "onboard": [
+            {
+             "slot": 0,
+             "kind": "di",
+             "channels": 8,
+             "un_V": 230,
+             "channel_labels": {
+              "1": "Twilight switch",
+              "2": "Corridor PB",
+              "3": "Corridor PIR",
+              "4": "P1 float",
+              "5": "P2 float",
+              "6": "High level",
+              "7": "MPCB trips",
+              "8": "Fan request"
+             }
+            },
+            {
+             "slot": 0,
+             "kind": "relay_out",
+             "channels": 4,
+             "rating_A": 10,
+             "channel_labels": {
+              "1": "Car park",
+              "2": "Facade",
+              "3": "Corridor",
+              "4": "Pump 1"
+             }
+            }
+           ],
+           "modules": [
+            {
+             "slot": 1,
+             "kind": "mixed_io",
+             "channels": 8,
+             "un_V": 230,
+             "rating_A": 5,
+             "label": "4 DI 230 V + 4 relay outputs (Q5-Q8 = channels 5-8)",
+             "product": {
+              "manufacturer": "Siemens",
+              "range": "LOGO! 8 DM8 230R",
+              "description": "Expansion module 4 DI / 4 relay outputs"
+             },
+             "channel_labels": {
+              "5": "Pump 2",
+              "6": "Extract fan",
+              "7": "Alarm beacon"
+             }
+            },
+            {
+             "slot": 2,
+             "kind": "ai",
+             "channels": 2,
+             "signal": "4-20 mA",
+             "product": {
+              "manufacturer": "Siemens",
+              "range": "LOGO! 8 AM2",
+              "description": "Analogue module 2 AI 0-10 V / 0-20 mA"
+             },
+             "channel_labels": {
+              "1": "Sump level"
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "breaker",
+         "ref": "-F2",
+         "in_A": 16,
+         "curve": "C",
+         "poles": "1P+N",
+         "icn_kA": 10,
+         "phase": "L1",
+         "children": [
+          {
+           "type": "contactor",
+           "id": "KM1",
+           "ref": "-KM1",
+           "use": "KML",
+           "children": [
+            {
+             "type": "lighting",
+             "label": "Car park lighting",
+             "points": 12,
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 2.5,
+              "length_m": 60
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "breaker",
+         "ref": "-F3",
+         "in_A": 10,
+         "curve": "C",
+         "poles": "1P+N",
+         "icn_kA": 10,
+         "phase": "L2",
+         "children": [
+          {
+           "type": "contactor",
+           "id": "KM2",
+           "ref": "-KM2",
+           "use": "KML",
+           "children": [
+            {
+             "type": "lighting",
+             "label": "Facade lighting",
+             "points": 8,
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 1.5,
+              "length_m": 25
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "breaker",
+         "ref": "-F4",
+         "in_A": 10,
+         "curve": "C",
+         "poles": "1P+N",
+         "icn_kA": 10,
+         "phase": "L3",
+         "children": [
+          {
+           "type": "contactor",
+           "id": "KM3",
+           "ref": "-KM3",
+           "use": "KML",
+           "children": [
+            {
+             "type": "lighting",
+             "label": "Corridor lighting",
+             "points": 10,
+             "cable": {
+              "cores": "3G",
+              "section_mm2": 1.5,
+              "length_m": 30
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "breaker",
+         "ref": "-Q5",
+         "use": "MPCB",
+         "in_A": 4,
+         "ir_A": 3.6,
+         "children": [
+          {
+           "type": "contactor",
+           "id": "KM4",
+           "ref": "-KM4",
+           "use": "KMM",
+           "children": [
+            {
+             "type": "motor",
+             "label": "Sump pump 1",
+             "p_kW": 1.5,
+             "phases": 3,
+             "cable": {
+              "cores": "4G",
+              "section_mm2": 2.5,
+              "length_m": 15
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "breaker",
+         "ref": "-Q6",
+         "use": "MPCB",
+         "in_A": 4,
+         "ir_A": 3.6,
+         "children": [
+          {
+           "type": "contactor",
+           "id": "KM5",
+           "ref": "-KM5",
+           "use": "KMM",
+           "children": [
+            {
+             "type": "motor",
+             "label": "Sump pump 2",
+             "p_kW": 1.5,
+             "phases": 3,
+             "cable": {
+              "cores": "4G",
+              "section_mm2": 2.5,
+              "length_m": 15
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "breaker",
+         "ref": "-Q7",
+         "use": "MPCB",
+         "in_A": 6.3,
+         "ir_A": 5,
+         "children": [
+          {
+           "type": "contactor",
+           "id": "KM6",
+           "ref": "-KM6",
+           "use": "KMM",
+           "children": [
+            {
+             "type": "motor",
+             "label": "Extract fan",
+             "p_kW": 2.2,
+             "phases": 3,
+             "cable": {
+              "cores": "4G",
+              "section_mm2": 2.5,
+              "length_m": 20
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "rcbo",
+         "ref": "-F8",
+         "label": "Plant room sockets",
+         "in_A": 16,
+         "curve": "C",
+         "idn_mA": 30,
+         "rcd_type": "A",
+         "poles": "1P+N",
+         "icn_kA": 10,
+         "phase": "L2",
+         "cable": {
+          "cores": "3G",
+          "section_mm2": 2.5,
+          "length_m": 12
+         },
+         "children": [
+          {
+           "type": "socket",
+           "label": "Sockets",
+           "points": 3
+          }
+         ]
+        },
+        {
+         "type": "breaker",
+         "ref": "-F9",
+         "label": "24 V DC",
+         "in_A": 2,
+         "curve": "C",
+         "poles": "1P+N",
+         "icn_kA": 10,
+         "phase": "L1",
+         "children": [
+          {
+           "type": "power_supply",
+           "ref": "-T1",
+           "label": "Sensor supply",
+           "u1_V": 230,
+           "u2_V": 24,
+           "output": "DC",
+           "in_A": 1.3,
+           "product": {
+            "manufacturer": "Siemens",
+            "range": "LOGO!Power",
+            "description": "Power supply 24 V DC 1.3 A"
+           }
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "links": [
+  {
+   "kind": "control",
+   "from": "LOGO",
+   "from_port": "0.1",
+   "to": "KM1"
+  },
+  {
+   "kind": "control",
+   "from": "LOGO",
+   "from_port": "0.2",
+   "to": "KM2"
+  },
+  {
+   "kind": "control",
+   "from": "LOGO",
+   "from_port": "0.3",
+   "to": "KM3"
+  },
+  {
+   "kind": "control",
+   "from": "LOGO",
+   "from_port": "0.4",
+   "to": "KM4"
+  },
+  {
+   "kind": "control",
+   "from": "LOGO",
+   "from_port": "1.5",
+   "to": "KM5"
+  },
+  {
+   "kind": "control",
+   "from": "LOGO",
+   "from_port": "1.6",
+   "to": "KM6"
+  }
+ ],
+ "views": [
+  {
+   "id": "sld",
+   "paper": "A3",
+   "pitch_mm": 24,
+   "cartouche": [
+    "label",
+    "ref",
+    "protection",
+    "cable",
+    "phase",
+    "p_kW"
+   ]
+  }
+ ]
+}

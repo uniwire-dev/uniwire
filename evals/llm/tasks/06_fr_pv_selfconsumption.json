@@ -1,0 +1,54 @@
+{
+ "id": "06_fr_pv_selfconsumption",
+ "request": "Maison NF C 15-100 avec autoconsommation photovoltaïque : 6 kWc en 2 chaînes, onduleur string 5 kVA, coffret DC (interrupteurs-sectionneurs DC + parafoudre DC), coffret AC (protection 30 mA type A + parafoudre AC), compteur Linky bidirectionnel.",
+ "expect": [
+  {
+   "check": "profile",
+   "value": "nfc15100"
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "pv_array"
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "inverter"
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "switch_disconnector",
+    "dc": true
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "spd",
+    "dc": true
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": "meter",
+    "bidirectional": true
+   },
+   "min": 1
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ]
+}

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "lang": "en",
+    "title": "Detached garage workshop: sub-board with motor circuits",
+    "project": "EX-12",
+    "client": "Example House, hobby workshop",
+    "author": "uniwire examples",
+    
+    "notes": [
+      "Demonstrates: sub-board fed from the house board through a buried SWA cable (voltage drop noted), motor starters (DOL with overload relay, VFD), interlock between table saw and dust extractor, IEC 60309 welder outlet, RCD types A and F",
+      "Lathe driven by a single-phase-input VFD: type F RCD (mixed-frequency leakage). Emergency stop push-buttons (door + bench) act on the undervoltage release (MN) of -Q0",
+      "The house board is shown only by its outgoing feeder -F7 (marked external)"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-C-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50,
+    "ik3_kA": 4, "du_max_pct": 5, "standard": "IEC 60364"
+  },
+  "templates": {
+    "B16": {"type": "breaker", "in_A": 16, "curve": "B", "icn_kA": 6, "poles": "1P+N"},
+    "B10": {"type": "breaker", "in_A": 10, "curve": "B", "icn_kA": 6, "poles": "1P+N"},
+    "MPCB": {"type": "breaker", "curve": "MA", "icn_kA": 50, "poles": "3P", "range": "Motor CB",
+             "product": {"manufacturer": "Schneider Electric", "range": "TeSys GV2ME", "description": "Motor circuit breaker, thermal-magnetic"}},
+    "KM": {"type": "contactor", "coil_V": 230, "poles": "3P", "function": "power", "in_A": 9,
+           "product": {"manufacturer": "Schneider Electric", "range": "TeSys Deca", "description": "Contactor 9 A, coil 230 V AC"}}
+  },
+  "sources": [
+    {"type": "grid", "label": "From house main board", "un_V": 400, "children": [
+      {"type": "breaker", "ref": "-F7", "label": "Workshop feeder (house board)", "in_A": 32, "curve": "C", "icn_kA": 6, "poles": "4P", "external": true,
+       "children": [
+        {"type": "board", "id": "WSB", "ref": "=WS", "label": "Workshop sub-board", "kind": "sub", "system": "3P+N", "ways": 36, "ip": "IP65",
+         "cable": {"ref": "W7", "designation": "SWA XLPE/PVC", "cores": "5x", "section_mm2": 6, "material": "Cu", "length_m": 38,
+                   "install": "D-duct", "insulation": "XLPE", "du_pct": 2.1},
+         "children": [
+          {"type": "breaker", "id": "Q0", "ref": "-Q0", "label": "Main CB", "in_A": 32, "curve": "C", "icn_kA": 6, "poles": "4P", "aux": ["MN"], "children": [
+            {"type": "rcd", "ref": "-F1", "label": "RCCB general", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "4P", "children": [
+              {"type": "breaker", "ref": "-F11", "use": "B10", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "LED battens", "points": 6, "p_kW": 0.3}]},
+              {"type": "breaker", "ref": "-F12", "use": "B16", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Bench sockets", "points": 6}]},
+              {"type": "breaker", "ref": "-F13", "use": "B16", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "heating", "label": "Fan heater 2 kW", "p_kW": 2}]},
+              {"type": "breaker", "ref": "-F14", "label": "Welder outlet", "in_A": 32, "curve": "C", "icn_kA": 6, "poles": "4P",
+               "cable": {"cores": "5G", "section_mm2": 6, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 6},
+               "children": [{"type": "socket", "label": "Welder outlet 32 A", "points": 1, "poles": "3P+N+T", "in_A": 32, "socket_type": "IEC 60309 IP44"}]}
+            ]},
+            {"type": "breaker", "ref": "-Q2", "label": "Compressor", "use": "MPCB", "in_A": 10, "ir_A": 6.8,
+             "cable": {"cores": "4G", "section_mm2": 2.5, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 8},
+             "children": [{"type": "contactor", "ref": "-KM2", "use": "KM", "children": [
+               {"type": "motor", "ref": "-M2", "label": "Air compressor 3 kW", "p_kW": 3, "phases": 3, "in_A": 6.4, "cos_phi": 0.82}]}]},
+            {"type": "breaker", "ref": "-Q3", "label": "Table saw", "use": "MPCB", "in_A": 10, "ir_A": 5.2,
+             "cable": {"cores": "4G", "section_mm2": 2.5, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 6},
+             "children": [{"type": "contactor", "id": "KM3", "ref": "-KM3", "use": "KM", "aux": ["NO 13-14"], "children": [
+               {"type": "motor", "ref": "-M3", "label": "Table saw 2.2 kW", "p_kW": 2.2, "phases": 3, "in_A": 4.9}]}]},
+            {"type": "breaker", "ref": "-Q35", "label": "Extractor", "use": "B16", "phase": "L1",
+             "cable": {"cores": "3G", "section_mm2": 2.5, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 6},
+             "children": [{"type": "contactor", "id": "KM35", "ref": "-KM35", "use": "KM", "poles": "2P", "children": [
+               {"type": "motor", "ref": "-M35", "label": "Dust extractor 1.5 kW", "p_kW": 1.5, "phases": 1, "in_A": 9}]}]},
+            {"type": "rcbo", "ref": "-F4", "label": "Lathe VFD", "in_A": 16, "curve": "C", "icn_kA": 6, "idn_mA": 30, "rcd_type": "F", "poles": "1P+N", "phase": "L2",
+             "cable": {"cores": "3G", "section_mm2": 2.5, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 7},
+             "children": [{"type": "motor_starter", "ref": "-T4", "label": "VFD 230 V 1~ / 3~ 230 V", "method": "vfd", "in_A": 10, "p_kW": 1.5,
+                           "children": [{"type": "motor", "ref": "-M4", "label": "Metal lathe 1.5 kW", "p_kW": 1.5, "phases": 3, "un_V": 230}]}]},
+            {"type": "breaker", "ref": "-F5", "label": "SPD", "in_A": 20, "curve": "C", "icn_kA": 6, "poles": "4P", "children": [
+              {"type": "spd", "ref": "-F51", "label": "SPD", "spd_type": "2", "imax_kA": 20, "uc_V": 275, "poles": "3P+N"}]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "links": [
+    {"kind": "interlock", "from": "KM3", "to": "KM35", "label": "Saw → extractor"}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "orientation": "landscape", "pitch_mm": 24,
+             "cartouche": ["label", "ref", "protection", "poles", "idn_mA", "rcd_type", "cable", "length_m", "p_kW"]}]
+}

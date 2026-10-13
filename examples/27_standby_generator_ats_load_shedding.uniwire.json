@@ -1,0 +1,257 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Medical centre: standby generator, automatic transfer switch and load shedding", "project": "EX-27",
+    "client": "Example Medical Centre", "author": "uniwire examples", "lang": "en",
+    "notes": [
+      "Demonstrates: generator as second source on a 4-pole ATS ('transfer' link), essential board with priority classes, load-shedding contactors and generator start signal driven by the ATS controller",
+      "On mains failure: ATS controller starts the genset, transfers after 10 s, then restores shed loads in steps of 30 s while genset load < 80 %",
+      "4-pole ATS switches the neutral: genset neutral earthed at the generator (separately derived source)"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-C-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "supply": "LV service 250 kVA",
+    "subscribed_kVA": 250, "ik3_kA": 16, "standard": "IEC 60364"
+  },
+  "templates": {
+    "FD": {"type": "breaker", "curve": "C", "icn_kA": 25, "product": {"manufacturer": "Legrand", "range": "DX³ 25 kA"}},
+    "MC": {"type": "breaker", "icu_kA": 36, "poles": "4P", "product": {"manufacturer": "Legrand", "range": "DPX³ 250"}},
+    "SHED": {
+      "type": "contactor", "function": "load_shedding", "coil_V": 230, "poles": "4P",
+      "product": {"manufacturer": "Legrand", "range": "CX³ power contactor"}
+    }
+  },
+  "sources": [
+    {
+      "id": "GRID", "type": "grid", "label": "Utility LV service", "supply": "250 kVA", "un_V": 400, "ik_kA": 16,
+      "children": [
+        {
+          "id": "MSB", "type": "board", "ref": "MSB", "label": "Main switchboard", "kind": "main", "in_A": 400,
+          "ik_kA": 16, "ip": "IP31",
+          "children": [
+            {
+              "id": "Q0", "type": "breaker", "ref": "-Q0", "label": "Mains incomer", "in_A": 400, "ir_A": 360,
+              "icu_kA": 36, "poles": "4P", "lockable": true,
+              "product": {"manufacturer": "Legrand", "range": "DPX³ 630"},
+              "children": [
+                {"type": "spd", "ref": "-F0", "spd_type": "1+2", "imax_kA": 50, "poles": "3P+N"},
+                {
+                  "type": "breaker", "ref": "-Q1", "use": "FD", "in_A": 63, "poles": "4P",
+                  "cable": {
+                    "cores": "5G", "section_mm2": 16, "length_m": 40, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [
+                    {
+                      "type": "load", "ref": "-E1", "label": "Chiller (comfort cooling)", "symbol_text": "CH",
+                      "p_kW": 32, "priority": "non_essential"
+                    }
+                  ]
+                },
+                {
+                  "type": "breaker", "ref": "-Q2", "use": "FD", "in_A": 40, "poles": "4P",
+                  "cable": {
+                    "cores": "5G", "section_mm2": 10, "length_m": 25, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [{"type": "offpage", "label": "DB-OF Offices & admin", "target": "EX-27 sheet 2"}]
+                },
+                {
+                  "type": "breaker", "ref": "-Q3", "use": "FD", "in_A": 32, "poles": "4P",
+                  "cable": {
+                    "cores": "5G", "section_mm2": 6, "length_m": 30, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [
+                    {
+                      "type": "ev_charger", "label": "Staff EV chargers (2 x 11 kW)", "mode": "3", "count": 2,
+                      "p_kW": 22, "priority": "non_essential"
+                    }
+                  ],
+                  "note": "Type B RCD and 6 mA DC detection in each charger"
+                },
+                {
+                  "id": "QN", "type": "breaker", "ref": "-Q4", "use": "MC", "in_A": 250, "ir_A": 225,
+                  "label": "Normal supply to ATS",
+                  "cable": {
+                    "cores": "5G", "section_mm2": 95, "length_m": 10, "material": "Cu", "insulation": "XLPE",
+                    "install": "E"
+                  },
+                  "children": [
+                    {
+                      "id": "ATS", "type": "transfer_switch", "ref": "-QA", "label": "ATS 4P", "in_A": 250,
+                      "poles": "4P", "mode": "automatic", "interlock": "both",
+                      "product": {"manufacturer": "Socomec", "range": "ATyS p", "description": "Motorised ATS 4P 250 A"},
+                      "children": [
+                        {
+                          "id": "EDB", "type": "board", "ref": "EDB", "label": "Essential services board",
+                          "kind": "distribution", "in_A": 250, "ik_kA": 16, "ip": "IP31",
+                          "children": [
+                            {
+                              "type": "breaker", "ref": "-Q11", "use": "FD", "in_A": 32, "poles": "4P",
+                              "cable": {
+                                "cores": "5G", "section_mm2": 6, "length_m": 20, "material": "Cu",
+                                "insulation": "XLPE", "install": "E"
+                              },
+                              "children": [
+                                {
+                                  "type": "socket", "label": "Treatment rooms (via RCBOs)", "points": 24,
+                                  "priority": "essential"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q12", "use": "FD", "in_A": 20, "poles": "4P",
+                              "cable": {
+                                "cores": "5G", "section_mm2": 2.5, "length_m": 25, "material": "Cu",
+                                "insulation": "XLPE", "install": "E"
+                              },
+                              "children": [
+                                {
+                                  "type": "appliance", "kind": "fridge", "label": "Vaccine fridges",
+                                  "priority": "essential", "p_kW": 1.5
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q13", "use": "FD", "in_A": 16, "poles": "1P+N",
+                              "cable": {
+                                "cores": "3G", "section_mm2": 2.5, "length_m": 30, "material": "Cu",
+                                "insulation": "XLPE", "install": "E"
+                              },
+                              "children": [
+                                {
+                                  "type": "load", "label": "Fire alarm & nurse call", "symbol_text": "FA",
+                                  "priority": "safety", "p_kW": 0.6
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q14", "use": "FD", "in_A": 20, "poles": "4P",
+                              "cable": {
+                                "cores": "5G", "section_mm2": 2.5, "length_m": 35, "material": "Cu",
+                                "insulation": "XLPE", "install": "E"
+                              },
+                              "children": [
+                                {
+                                  "type": "lighting", "label": "Corridors & escape lighting", "points": 40,
+                                  "priority": "safety", "p_kW": 1.8
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q15", "use": "FD", "in_A": 25, "poles": "4P",
+                              "cable": {
+                                "cores": "5G", "section_mm2": 4, "length_m": 40, "material": "Cu",
+                                "insulation": "XLPE", "install": "E"
+                              },
+                              "children": [
+                                {
+                                  "type": "load", "label": "IT room & phones", "symbol_text": "IT",
+                                  "priority": "essential", "p_kW": 6
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q16", "use": "FD", "in_A": 63, "poles": "4P",
+                              "cable": {
+                                "cores": "5G", "section_mm2": 16, "length_m": 30, "material": "Cu",
+                                "insulation": "XLPE", "install": "E"
+                              },
+                              "children": [
+                                {
+                                  "id": "KS1", "type": "contactor", "ref": "-KM16", "use": "SHED", "in_A": 63,
+                                  "label": "Shed step 1",
+                                  "children": [
+                                    {
+                                      "type": "load", "label": "Heat pump (heating)", "symbol_text": "HP", "p_kW": 38,
+                                      "priority": "standby"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q17", "use": "FD", "in_A": 40, "poles": "4P",
+                              "cable": {
+                                "cores": "5G", "section_mm2": 10, "length_m": 20, "material": "Cu",
+                                "insulation": "XLPE", "install": "E"
+                              },
+                              "children": [
+                                {
+                                  "id": "KS2", "type": "contactor", "ref": "-KM17", "use": "SHED", "in_A": 40,
+                                  "label": "Shed step 2",
+                                  "children": [
+                                    {
+                                      "type": "water_heater", "label": "DHW calorifier", "p_kW": 18, "volume_L": 500,
+                                      "priority": "standby"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "breaker", "ref": "-Q18", "use": "FD", "in_A": 32, "poles": "4P",
+                              "cable": {
+                                "cores": "5G", "section_mm2": 6, "length_m": 15, "material": "Cu",
+                                "insulation": "XLPE", "install": "E"
+                              },
+                              "children": [
+                                {
+                                  "id": "KS3", "type": "contactor", "ref": "-KM18", "use": "SHED", "in_A": 40,
+                                  "label": "Shed step 3",
+                                  "children": [
+                                    {
+                                      "type": "load", "label": "Steriliser (autoclave)", "symbol_text": "AUT",
+                                      "p_kW": 15, "priority": "standby"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GEN", "type": "generator", "ref": "-G1", "label": "Standby genset", "sn_kVA": 165, "p_kW": 132,
+      "un_V": 400, "fuel": "diesel", "prime_mover": "diesel", "location": "Generator enclosure (yard)",
+      "product": {"manufacturer": "Example", "range": "Sound-attenuated canopy", "description": "165 kVA ESP, 8 h tank"},
+      "children": [
+        {
+          "id": "QG", "type": "breaker", "ref": "-QG", "use": "MC", "in_A": 250, "ir_A": 240,
+          "label": "Generator breaker",
+          "cable": {"cores": "5G", "section_mm2": 95, "length_m": 35, "material": "Cu", "insulation": "XLPE", "install": "E"}
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "id": "sld", "title": "Normal / standby distribution", "paper": "A3", "orientation": "landscape",
+      "cartouche": ["label", "ref", "protection", "cable", "length_m", "p_kW"]
+    }
+  ],
+  "devices": [
+    {
+      "id": "ATC", "type": "controller", "ref": "-A1", "label": "ATS controller", "function": "ATS + load shedding",
+      "symbol_text": "ATC"
+    }
+  ],
+  "links": [
+    {"kind": "transfer", "from": "QG", "to": "ATS", "label": "standby"},
+    {"kind": "control", "from": "ATC", "to": "KS3", "label": "shed"},
+    {"kind": "control", "from": "ATC", "to": "KS2", "label": "shed"},
+    {"kind": "control", "from": "ATC", "to": "KS1", "label": "shed"},
+    {"kind": "control", "from": "ATC", "to": "GEN", "label": "start"}
+  ]
+}

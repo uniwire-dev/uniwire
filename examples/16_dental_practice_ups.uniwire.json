@@ -1,0 +1,111 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "lang": "en",
+    "title": "Dental practice: main board and UPS-backed circuits",
+    "project": "EX-16",
+    "client": "Example dental practice (3 surgeries)",
+    "author": "uniwire examples",
+    
+    "notes": [
+      "Demonstrates: group 1 medical locations (IEC 60364-7-710): one 30 mA RCBO per dental chair, dedicated X-ray circuits, compressor and suction plant, online UPS (VFI) with external maintenance bypass (bypass link) feeding a separate UPS board for imaging PCs, server and identified 'UPS' sockets",
+      "UPS: 6 kVA / 5.4 kW, 15 min autonomy at full load, internal static bypass. Maintenance bypass switch mechanically interlocked with the UPS output isolator",
+      "Room numbers in the room column"
+    ]
+  },
+  "installation": {
+    "earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50,
+    "supply": "LV 3x80 A", "ik3_kA": 10, "standard": "IEC 60364 (incl. 7-710)"
+  },
+  "templates": {
+    "RCBO16": {"type": "rcbo", "in_A": 16, "curve": "C", "icn_kA": 10, "idn_mA": 30, "rcd_type": "A", "poles": "1P+N",
+               "product": {"manufacturer": "ABB", "range": "DS201", "description": "RCBO 1P+N C16 30 mA type A"}},
+    "C10": {"type": "breaker", "in_A": 10, "curve": "C", "icn_kA": 10, "poles": "1P+N",
+            "product": {"manufacturer": "ABB", "range": "S200", "description": "MCB 1P+N C10"}},
+    "C16": {"type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 10, "poles": "1P+N",
+            "product": {"manufacturer": "ABB", "range": "S200", "description": "MCB 1P+N C16"}}
+  },
+  "sources": [
+    {"type": "grid", "label": "DSO LV supply", "un_V": 400, "ik_kA": 10, "children": [
+      {"type": "meter", "ref": "-P1", "label": "Meter", "kind": "smart", "in_A": 80, "external": true, "children": [
+        {"type": "board", "id": "MDB", "ref": "=MDB", "label": "Practice main board", "kind": "main", "system": "3P+N", "in_A": 80, "ways": 72,
+         "cable": {"designation": "NYY-J", "cores": "5x", "section_mm2": 25, "material": "Cu", "length_m": 20, "install": "C", "insulation": "PVC"},
+         "children": [
+          {"type": "switch_disconnector", "ref": "-Q0", "label": "Main switch", "in_A": 80, "poles": "4P", "children": [
+            {"type": "rcbo", "ref": "-F11", "use": "RCBO16", "label": "Chair 1", "phase": "L1",
+             "cable": {"cores": "3G", "section_mm2": 2.5, "material": "Cu", "install": "B2", "insulation": "PVC", "length_m": 14},
+             "children": [{"type": "load", "label": "Dental unit 1 + intraoral X-ray", "symbol_text": "DU", "p_kW": 1.6, "room": "S1"}]},
+            {"type": "rcbo", "ref": "-F12", "use": "RCBO16", "label": "Chair 2", "phase": "L2",
+             "cable": {"cores": "3G", "section_mm2": 2.5, "material": "Cu", "install": "B2", "insulation": "PVC", "length_m": 18},
+             "children": [{"type": "load", "label": "Dental unit 2 + intraoral X-ray", "symbol_text": "DU", "p_kW": 1.6, "room": "S2"}]},
+            {"type": "rcbo", "ref": "-F13", "use": "RCBO16", "label": "Chair 3", "phase": "L3",
+             "cable": {"cores": "3G", "section_mm2": 2.5, "material": "Cu", "install": "B2", "insulation": "PVC", "length_m": 22},
+             "children": [{"type": "load", "label": "Dental unit 3 + intraoral X-ray", "symbol_text": "DU", "p_kW": 1.6, "room": "S3"}]},
+            {"type": "rcbo", "ref": "-F14", "use": "RCBO16", "label": "OPG", "phase": "L1",
+             "cable": {"cores": "3G", "section_mm2": 2.5, "material": "Cu", "install": "B2", "insulation": "PVC", "length_m": 12},
+             "children": [{"type": "load", "label": "Panoramic X-ray (OPG)", "symbol_text": "XR", "p_kW": 2, "room": "X1"}]},
+            {"type": "rcbo", "ref": "-F15", "use": "RCBO16", "in_A": 20, "label": "Autoclave", "phase": "L2",
+             "cable": {"cores": "3G", "section_mm2": 4, "material": "Cu", "install": "B2", "insulation": "PVC", "length_m": 9},
+             "children": [{"type": "load", "label": "Autoclave class B", "symbol_text": "AUT", "p_kW": 3, "room": "STE"}]},
+            {"type": "rcbo", "ref": "-F16", "in_A": 10, "curve": "C", "icn_kA": 10, "idn_mA": 30, "rcd_type": "A", "poles": "3P+N", "label": "Compressor",
+             "cable": {"cores": "5G", "section_mm2": 2.5, "material": "Cu", "install": "B2", "insulation": "PVC", "length_m": 16},
+             "children": [{"type": "motor", "ref": "-M16", "label": "Oil-free compressor 2.2 kW", "p_kW": 2.2, "phases": 3, "in_A": 4.6, "room": "PLT"}]},
+            {"type": "rcbo", "ref": "-F17", "in_A": 10, "curve": "C", "icn_kA": 10, "idn_mA": 30, "rcd_type": "A", "poles": "3P+N", "label": "Suction",
+             "cable": {"cores": "5G", "section_mm2": 2.5, "material": "Cu", "install": "B2", "insulation": "PVC", "length_m": 16},
+             "children": [{"type": "motor", "ref": "-M17", "label": "Wet suction unit 1.5 kW", "p_kW": 1.5, "phases": 3, "in_A": 3.4, "room": "PLT"}]},
+            {"type": "rcd", "ref": "-F2", "label": "RCCB general", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "4P", "children": [
+              {"type": "breaker", "ref": "-F21", "use": "C10", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "Lighting surgeries", "points": 12, "p_kW": 0.6}]},
+              {"type": "breaker", "ref": "-F22", "use": "C10", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "lighting", "label": "Lighting reception / corridors", "points": 14, "p_kW": 0.5}]},
+              {"type": "breaker", "ref": "-F23", "use": "C16", "phase": "L2", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Sockets surgeries", "points": 9}]},
+              {"type": "breaker", "ref": "-F24", "use": "C16", "phase": "L3", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Sockets staff room", "points": 6}]},
+              {"type": "breaker", "ref": "-F25", "use": "C16", "phase": "L1", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "water_heater", "label": "Water heater 30 L", "volume_L": 30, "p_kW": 2}]}
+            ]},
+            {"type": "breaker", "ref": "-F3", "label": "Air conditioning", "in_A": 20, "curve": "C", "icn_kA": 10, "poles": "4P",
+             "cable": {"cores": "5G", "section_mm2": 4, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 25},
+             "children": [{"type": "load", "label": "VRF outdoor unit", "symbol_text": "AC", "p_kW": 7, "location": "Roof"}]},
+            {"type": "breaker", "id": "QBP", "ref": "-Q6", "label": "Maintenance bypass", "in_A": 40, "curve": "C", "icn_kA": 10, "poles": "1P+N", "phase": "L2",
+             "locks": ["K1"], "normal_state": "open"},
+            {"type": "breaker", "ref": "-Q5", "in_A": 40, "curve": "C", "icn_kA": 10, "poles": "1P+N", "phase": "L2",
+             "cable": {"cores": "3G", "section_mm2": 10, "material": "Cu", "install": "C", "insulation": "PVC", "length_m": 6},
+             "children": [
+              {"type": "ups", "id": "UPS", "ref": "-U1", "label": "Online UPS 6 kVA (VFI)", "sn_kVA": 6, "p_kW": 5.4, "autonomy_min": 15, "bypass": true,
+               "children": [
+                {"type": "switch_disconnector", "ref": "-Q50", "label": "UPS output isolator", "in_A": 40, "poles": "2P", "locks": ["K1"], "children": [
+                  {"type": "board", "id": "UPSB", "ref": "=UPS", "label": "UPS board", "kind": "sub", "system": "1P+N",
+                   "cable": {"cores": "3G", "section_mm2": 10, "material": "Cu", "length_m": 3},
+                   "children": [
+                    {"type": "rcbo", "ref": "-F51", "use": "RCBO16", "cable": {"cores": "3G", "section_mm2": 2.5},
+                     "children": [{"type": "load", "label": "Server + network rack", "symbol_text": "IT", "p_kW": 0.8, "room": "IT"}]},
+                    {"type": "rcbo", "ref": "-F52", "use": "RCBO16", "cable": {"cores": "3G", "section_mm2": 2.5},
+                     "children": [{"type": "socket", "label": "UPS sockets surgeries (imaging PCs)", "points": 6, "socket_type": "identified (red)"}]},
+                    {"type": "rcbo", "ref": "-F53", "use": "RCBO16", "cable": {"cores": "3G", "section_mm2": 2.5},
+                     "children": [{"type": "socket", "label": "UPS sockets reception", "points": 4, "socket_type": "identified (red)"}]},
+                    {"type": "rcbo", "ref": "-F54", "use": "RCBO16", "in_A": 10, "cable": {"cores": "3G", "section_mm2": 1.5},
+                     "children": [{"type": "lighting", "label": "Surgery task lights (backup)", "points": 3, "priority": "essential"}]}
+                  ]}
+                ]}
+              ]}
+            ]},
+            {"type": "breaker", "ref": "-F7", "label": "SPD", "in_A": 25, "curve": "C", "icn_kA": 10, "poles": "4P", "children": [
+              {"type": "spd", "ref": "-F71", "label": "SPD", "spd_type": "2", "imax_kA": 40, "up_kV": 1.5, "uc_V": 275, "poles": "3P+N"}]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "links": [
+    {"kind": "bypass", "from": "QBP", "to": "UPSB", "normally_open": true}
+  ],
+  "interlocks": [
+    {"key": "K1", "kind": "mechanical", "label": "Maintenance bypass -Q6 / UPS output isolator -Q50"}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "orientation": "landscape",
+             "cartouche": ["label", "ref", "protection", "idn_mA", "rcd_type", "cable", "phase", "room", "p_kW"]}]
+}

@@ -1,0 +1,83 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": [],
+  "meta": {
+    "title": "Commune exemple : armoire d'éclairage public avec horloge astronomique",
+    "project": "EX-42",
+    "client": "Commune exemple",
+    "author": "uniwire examples",
+    
+    "lang": "fr",
+    "notes": [
+      "Démontre : armoire d'éclairage public (NF C 17-200), horloge astronomique pilotant deux contacteurs (liens control), commutateurs Manu/0/Auto, départs triphasés longs protégés par DD 300 mA, circuit festif séparé, module de télégestion LoRaWAN, format A4",
+      "Luminaires LED classe II ; départ 1 : 18 x 55 W sur 620 m en 5G10, ΔU ≈ 1,3 % (charge répartie sur les 3 phases)",
+      "Abaissement de puissance nocturne 50 % de 23 h à 5 h géré par les drivers (programmation de la télégestion)"
+    ]
+  },
+  "installation": {
+    "earthing": "TT",
+    "system": "3P+N",
+    "un_V": 400,
+    "uln_V": 230,
+    "supply": "Tarif Bleu EP (C5)",
+    "subscribed_kVA": 12,
+    "earth_resistance_ohm": 20,
+    "standard": "NF C 17-200"
+  },
+  "templates": {
+    "DEP": {"type": "rcbo", "in_A": 16, "curve": "C", "idn_mA": 300, "rcd_type": "A", "poles": "4P", "icn_kA": 6,
+            "product": {"manufacturer": "Hager", "range": "Disjoncteur différentiel 4P", "description": "DD 4P C16 300 mA type A"}},
+    "EP": {"type": "lighting", "un_V": 230, "note": "Luminaires LED classe II, driver gradable"}
+  },
+  "sources": [
+    {"type": "grid", "label": "Réseau public", "supply": "Tarif Bleu 12 kVA", "children": [
+      {"type": "meter", "ref": "-P0", "label": "Compteur", "kind": "Linky triphasé", "children": [
+        {"type": "main_breaker", "ref": "-Q0", "label": "Disjoncteur de branchement", "range_A": "10-60", "in_A": 20, "poles": "4P",
+         "idn_mA": 500, "selective": true, "subscribed_kVA": 12,
+         "children": [
+          {"type": "board", "id": "AEP", "ref": "AEP1", "label": "Armoire d'éclairage public", "kind": "enclosure", "ip": "IP55 IK10", "children": [
+            {"type": "breaker", "ref": "-F1", "label": "Parafoudre", "in_A": 20, "curve": "C", "poles": "4P", "icn_kA": 6, "children": [
+              {"type": "spd", "ref": "-F11", "spd_type": "2", "imax_kA": 20, "up_kV": 1.5, "poles": "3P+N"}
+            ]},
+            {"type": "breaker", "ref": "-Q1", "label": "Commande", "in_A": 2, "curve": "C", "poles": "1P+N", "icn_kA": 6, "phase": "L1", "children": [
+              {"type": "controller", "id": "ASTRO", "ref": "-K1", "label": "Horloge astronomique", "function": "horloge astronomique 2 voies", "symbol_text": "HA",
+               "product": {"range": "Horloge astronomique 2 canaux", "description": "Interrupteur crépusculaire astronomique, 2 voies, réserve de marche 10 ans"}},
+              {"type": "controller", "id": "TG", "ref": "-A1", "label": "Télégestion", "function": "télégestion", "symbol_text": "TG"}
+            ]},
+            {"type": "contactor", "id": "KM1", "ref": "-KM1", "label": "Éclairage permanent", "in_A": 40, "poles": "4P", "function": "lighting",
+             "coil_V": 230, "manual": true, "children": [
+              {"type": "rcbo", "ref": "-Q11", "use": "DEP", "label": "Départ 1",
+               "cable": {"designation": "U1000R2V", "cores": "5G", "section_mm2": 10, "length_m": 620, "du_pct": 1.3},
+               "children": [{"type": "lighting", "use": "EP", "label": "Avenue principale", "points": 18, "p_kW": 1.0}]},
+              {"type": "rcbo", "ref": "-Q12", "use": "DEP", "label": "Départ 2",
+               "cable": {"designation": "U1000R2V", "cores": "5G", "section_mm2": 10, "length_m": 480, "du_pct": 1.0},
+               "children": [{"type": "lighting", "use": "EP", "label": "Lotissement", "points": 22, "p_kW": 0.8}]},
+              {"type": "rcbo", "ref": "-Q13", "use": "DEP", "in_A": 10, "label": "Départ 3",
+               "cable": {"designation": "U1000R2V", "cores": "5G", "section_mm2": 6, "length_m": 350, "du_pct": 1.1},
+               "children": [{"type": "lighting", "use": "EP", "label": "Parking et square", "points": 12, "p_kW": 0.6}]}
+            ]},
+            {"type": "contactor", "id": "KM2", "ref": "-KM2", "label": "Festif", "in_A": 25, "poles": "4P", "function": "lighting",
+             "coil_V": 230, "manual": true, "children": [
+              {"type": "rcbo", "ref": "-Q21", "label": "Prises festives", "in_A": 16, "curve": "C", "idn_mA": 30, "rcd_type": "A", "poles": "4P", "icn_kA": 6,
+               "cable": {"designation": "U1000R2V", "cores": "5G", "section_mm2": 6, "length_m": 300},
+               "children": [{"type": "socket", "label": "Prises sur candélabres", "points": 10, "poles": "2P+T", "status": "new"}]}
+            ]},
+            {"type": "rcbo", "ref": "-Q3", "label": "Prise de service", "in_A": 16, "curve": "C", "idn_mA": 30, "rcd_type": "A", "poles": "1P+N", "icn_kA": 6, "phase": "L2",
+             "cable": {"cores": "3G", "section_mm2": 2.5, "length_m": 1},
+             "children": [{"type": "socket", "label": "Prise armoire", "points": 1}]},
+            {"type": "spare", "ref": "-Q4", "label": "Réserve", "in_A": 16, "poles": "4P"}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "links": [
+    {"kind": "control", "from": "ASTRO", "to": "KM1", "label": "Voie 1"},
+    {"kind": "control", "from": "ASTRO", "to": "KM2", "label": "Voie 2"}
+  ],
+  "views": [
+    {"id": "sld", "paper": "A4", "orientation": "landscape",
+     "cartouche": ["label", "ref", "protection", "idn_mA", "cable", "length_m", "points", "p_kW"]}
+  ]
+}

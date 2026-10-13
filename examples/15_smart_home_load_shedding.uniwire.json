@@ -1,0 +1,103 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+  "uniwire": "1.0.0",
+  "profiles": ["nfc15100"],
+  "meta": {
+    "lang": "fr",
+    "title": "Maison tout électrique : télérupteurs et délestage",
+    "project": "EX-15",
+    "client": "Exemple de maison 110 m² chauffage électrique",
+    "author": "uniwire examples",
+    
+    "notes": [
+      "Démontre : gestionnaire d'énergie (délesteur 3 voies) lisant la téléinformation du compteur (lien data TIC) et commandant les contacteurs de délestage du chauffage (liens control), télérupteurs sur les circuits d'éclairage, contacteur jour/nuit du chauffe-eau (contact HC du compteur), 4 interrupteurs différentiels 30 mA",
+      "Ordre de délestage : V1 chambres, V2 salle de bains, V3 séjour"
+    ]
+  },
+  "installation": {
+    "earthing": "TT", "system": "1P+N", "un_V": 230, "f_Hz": 50,
+    "supply": "Tarif Bleu", "subscribed_kVA": 12, "earth_resistance_ohm": 40, "surface_m2": 110, "standard": "NF C 15-100"
+  },
+  "templates": {
+    "C2": {"type": "breaker", "in_A": 2, "curve": "C", "icn_kA": 3, "poles": "1P+N"},
+    "C10": {"type": "breaker", "in_A": 10, "curve": "C", "icn_kA": 3, "poles": "1P+N"},
+    "C16": {"type": "breaker", "in_A": 16, "curve": "C", "icn_kA": 3, "poles": "1P+N"},
+    "C20": {"type": "breaker", "in_A": 20, "curve": "C", "icn_kA": 3, "poles": "1P+N"},
+    "C32": {"type": "breaker", "in_A": 32, "curve": "C", "icn_kA": 3, "poles": "1P+N"},
+    "TL": {"type": "impulse_relay", "in_A": 16, "poles": "1P", "coil_V": 230,
+           "product": {"manufacturer": "Legrand", "range": "DX³", "description": "Télérupteur 16 A 1F bobine 230 V"}},
+    "KD": {"type": "contactor", "in_A": 25, "poles": "2P", "coil_V": 230, "function": "load_shedding",
+           "product": {"manufacturer": "Legrand", "range": "DX³", "description": "Contacteur 25 A 2F"}}
+  },
+  "sources": [
+    {"type": "grid", "label": "Réseau public", "supply": "Tarif Bleu", "un_V": 230, "children": [
+      {"type": "meter", "id": "CPT", "ref": "PDL", "label": "Compteur communicant", "kind": "Linky", "in_A": 90, "children": [
+        {"type": "main_breaker", "ref": "-Q0", "label": "AGCP", "range_A": "30-60", "in_A": 60, "idn_mA": 500, "selective": true,
+         "poles": "2P", "subscribed_kVA": 12, "note": "Réglé à 60 A",
+         "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 16, "material": "Cu", "length_m": 10, "install": "D-duct"},
+         "children": [
+          {"type": "board", "ref": "TD", "label": "Tableau de répartition", "ways": 52, "children": [
+            {"type": "rcd", "ref": "-F1", "label": "ID1 éclairage / prises", "in_A": 40, "idn_mA": 30, "rcd_type": "AC", "poles": "2P", "children": [
+              {"type": "breaker", "ref": "-Q11", "use": "C10", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "impulse_relay", "ref": "-KL11", "use": "TL", "children": [{"type": "lighting", "label": "Éclairage séjour", "points": 6}]}]},
+              {"type": "breaker", "ref": "-Q12", "use": "C10", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "impulse_relay", "ref": "-KL12", "use": "TL", "children": [{"type": "lighting", "label": "Éclairage couloir/entrée", "points": 5}]}]},
+              {"type": "breaker", "ref": "-Q13", "use": "C10", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "impulse_relay", "ref": "-KL13", "use": "TL", "children": [{"type": "lighting", "label": "Éclairage chambres", "points": 6}]}]},
+              {"type": "breaker", "ref": "-Q14", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises séjour", "points": 9}]},
+              {"type": "breaker", "ref": "-Q15", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises chambres", "points": 10}]},
+              {"type": "breaker", "ref": "-Q16", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "shutter", "label": "Volets roulants", "count": 7, "p_kW": 0.7}]},
+              {"type": "breaker", "ref": "-Q17", "use": "C2", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "ventilation", "label": "VMC", "p_kW": 0.04}]}
+            ]},
+            {"type": "rcd", "ref": "-F2", "label": "ID2 cuisine / buanderie", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "2P", "children": [
+              {"type": "breaker", "ref": "-Q21", "use": "C32", "cable": {"cores": "3G", "section_mm2": 6},
+               "children": [{"type": "cooking", "kind": "hob", "label": "Plaque de cuisson", "p_kW": 6}]},
+              {"type": "breaker", "ref": "-Q22", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "cooking", "kind": "oven", "label": "Four", "p_kW": 3}]},
+              {"type": "breaker", "ref": "-Q23", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises plan de travail", "points": 6}]},
+              {"type": "breaker", "ref": "-Q24", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "appliance", "kind": "washing_machine", "label": "Lave-linge", "p_kW": 2.2}]},
+              {"type": "breaker", "ref": "-Q25", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "appliance", "kind": "dishwasher", "label": "Lave-vaisselle", "p_kW": 2}]}
+            ]},
+            {"type": "rcd", "ref": "-F3", "label": "ID3 chauffage", "in_A": 63, "idn_mA": 30, "rcd_type": "AC", "poles": "2P", "children": [
+              {"type": "breaker", "ref": "-Q30", "use": "C2", "label": "Délesteur", "children": [
+                {"type": "controller", "id": "DEL", "ref": "-A30", "label": "Délesteur", "function": "load_shedding", "symbol_text": "DEL",
+                 "product": {"manufacturer": "Legrand", "range": "DX³", "description": "Gestionnaire d'énergie 3 voies, entrée TIC"}}]},
+              {"type": "breaker", "ref": "-Q31", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "contactor", "id": "KD31", "ref": "-KD31", "use": "KD",
+                             "children": [{"type": "heating", "label": "Radiateurs séjour", "p_kW": 4, "count": 2, "pilot_wire": true}]}]},
+              {"type": "breaker", "ref": "-Q32", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "contactor", "id": "KD32", "ref": "-KD32", "use": "KD",
+                             "children": [{"type": "heating", "label": "Radiateurs chambres", "p_kW": 3, "count": 3, "pilot_wire": true}]}]},
+              {"type": "breaker", "ref": "-Q33", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "contactor", "id": "KD33", "ref": "-KD33", "use": "KD",
+                             "children": [{"type": "heating", "label": "Sèche-serviettes SdB", "p_kW": 1.5, "pilot_wire": true}]}]}
+            ]},
+            {"type": "rcd", "ref": "-F4", "label": "ID4 ECS / gestion", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "2P", "children": [
+              {"type": "breaker", "ref": "-Q41", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "contactor", "id": "KM41", "ref": "-KM41", "in_A": 20, "poles": "2P", "coil_V": 230, "function": "HC", "manual": true,
+                             "children": [{"type": "water_heater", "label": "Chauffe-eau 200 L", "volume_L": 200, "p_kW": 3}]}]},
+              {"type": "breaker", "ref": "-Q43", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "socket", "label": "Prises box internet / VDI", "points": 3}]}
+            ]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ],
+  "links": [
+    {"kind": "data", "from": "CPT", "to": "DEL", "protocol": "TIC", "label": "TIC"},
+    {"kind": "control", "from": "CPT", "to": "KM41", "label": "Contact HC"},
+    {"kind": "control", "from": "DEL", "to": "KD32", "label": "V1"},
+    {"kind": "control", "from": "DEL", "to": "KD33", "label": "V2"},
+    {"kind": "control", "from": "DEL", "to": "KD31", "label": "V3"}
+  ],
+  "views": [{"id": "sld", "paper": "A3", "orientation": "landscape",
+             "cartouche": ["label", "ref", "protection", "idn_mA", "rcd_type", "cable", "points", "p_kW"]}]
+}

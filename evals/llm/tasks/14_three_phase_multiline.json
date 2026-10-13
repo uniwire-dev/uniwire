@@ -1,0 +1,41 @@
+{
+ "id": "14_three_phase_multiline",
+ "request": "Three-phase workshop sub-board (TN-S, 3P+N 400 V): 4-pole 63 A incomer, 30 mA type A RCD, a 3-phase socket 32 A, a 3-phase motor and single-phase lighting on L1. Also declare a multi-line view in addition to the single-line one.",
+ "expect": [
+  {
+   "check": "installation",
+   "fields": {
+    "system": "3P+N"
+   }
+  },
+  {
+   "check": "count",
+   "scope": "views",
+   "match": {
+    "kind": "multi-line"
+   },
+   "min": 1
+  },
+  {
+   "check": "count",
+   "match": {
+    "type": [
+     "breaker",
+     "rcbo"
+    ],
+    "phase": "L1"
+   },
+   "min": 1
+  },
+  {
+   "check": "renders",
+   "kind": "multi-line"
+  },
+  {
+   "check": "no_errors"
+  },
+  {
+   "check": "renders"
+  }
+ ]
+}

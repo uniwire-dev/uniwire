@@ -1,0 +1,31 @@
+uniwire: open standard and reference library for describing electrical installations
+(single-line and multi-line diagrams)
+Copyright 2026 The uniwire contributors
+https://github.com/uniwire-dev/uniwire
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The uniwire specification text (docs/SPEC.md) is licensed under the Creative Commons Attribution 4.0
+International licence (CC BY 4.0), see docs/LICENSE-SPEC.md.
+
+uniwire symbols are original drawings made for this project.
+
+Third-party data:
+- Current-carrying capacity tables (src/uniwire/registry/data/iz_tables.json) reproduce values
+  from the public Spanish technical guide GUIA-BT-19 (tables taken from UNE 20460-5-523:2004),
+  cited in the file header (see src/uniwire/registry/data/LICENSES.md).
+
+Optional data package (distributed separately, not covered by the Apache License):
+- uniwire-data-iec81346 (packages/uniwire-data-iec81346), installed with
+  `pip install "uniwire[iec81346]"`, contains an IEC 81346-2:2019 class table derived from the
+  Wikipedia article "IEC 81346" and is licensed under CC BY-SA 4.0 (see its README and LICENSE).
+
+Fonts:
+- No font files are included. The documentation theme and the web viewer (viewer/) refer to the Public
+  Sans and JetBrains Mono fonts (SIL Open Font License 1.1) served by the uniwire.sh website at
+  /assets/fonts/, and fall back to system fonts when built and served on their own.
+
+Used but not bundled:
+- The web viewer loads Pyodide (Mozilla Public License 2.0) and CodeMirror 6 (MIT) from public CDNs at run
+  time.
+- The documentation is built with MkDocs and Material for MkDocs (BSD-2-Clause and MIT).
