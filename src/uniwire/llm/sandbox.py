@@ -22,6 +22,7 @@ from .tools import ToolError
 #: Defaults of the public server (docs/llm.md, "Public server").
 WORKERS = 2
 TIMEOUT_S = 20.0
+STARTUP_TIMEOUT_S = 60.0  # importing the library in a fresh worker (slow machines, cold caches); not part of TIMEOUT_S
 MEMORY_BYTES = 768 * 1024 * 1024
 CPU_S = 25  # CPU seconds per call (Linux), a backstop behind the wall-clock timeout
 
@@ -62,6 +63,7 @@ def _worker(conn: Any, memory_bytes: Optional[int], cpu_s: Optional[int]) -> Non
     from . import tools
 
     tools.PUBLIC = True
+    conn.send(("ready", None))  # imports done: the call timeout must not include this start-up time
     while True:
         try:
             name, kwargs = conn.recv()
@@ -91,6 +93,13 @@ class _Worker:
                                 name="uniwire-worker")
         self.proc.start()
         child.close()
+        self.ready = False
+
+    def wait_ready(self, timeout: float) -> bool:
+        """Wait for the start-up message of the child (library imported); False if it did not come."""
+        if not self.ready and self.conn.poll(timeout):
+            self.ready = self.conn.recv() == ("ready", None)
+        return self.ready
 
     def kill(self) -> None:
         try:
@@ -130,6 +139,8 @@ class WorkerPool:
                 w.kill()
                 w = self._spawn()
             try:
+                if not w.wait_ready(STARTUP_TIMEOUT_S):
+                    raise ToolError("server starting, retry in a moment")
                 w.conn.send((name, kwargs))
                 if not w.conn.poll(self.timeout):
                     raise ToolError(f"timed out after {self.timeout:g} s: document too complex for this server")
