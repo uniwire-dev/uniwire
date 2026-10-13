@@ -115,6 +115,7 @@ def fuse(node: Any = None) -> Symbol:
 
 
 def fuse_switch(node: Any = None) -> Symbol:
+    """Fuse switch-disconnector (IEC 60617 S00370): the fuse on the blade of a switch-disconnector."""
     top, pivot = 1.5 * M, 3.5 * M
     ang = math.radians(28)
     length = (pivot - top) * 1.08
@@ -129,9 +130,11 @@ def fuse_switch(node: Any = None) -> Symbol:
 
 
 def rcd(node: Any = None) -> Symbol:
+    """Residual-current device: toroid linked to the blade, with the differential-current qualifier "IΔ"
+    (IEC 60617 S00331)."""
     h = 5.5 * M
-    items = [*_contact(h=h), *_torus(4.6 * M)]
-    return Symbol("rcd", items, h, 2.5, 2.8)
+    items = [*_contact(h=h), *_torus(4.6 * M), Text((-2.2, 4.6 * M), "IΔ", 1.5, "end", "middle")]
+    return Symbol("rcd", items, h, 4.6, 2.8)
 
 
 def rcbo(node: Any = None) -> Symbol:
@@ -176,11 +179,11 @@ ABBREVIATIONS: dict[str, dict[str, str]] = {
     "en": {"starter.vfd": "VFD", "starter.soft_starter": "SS", "starter.star_delta": "Y/Δ", "starter.reversing": "REV",
            "starter.": "MS", "impulse_relay": "IR", "water_heater": "WH", "oven": "OVEN", "washing_machine": "WM",
            "dishwasher": "DW", "dryer": "DRY", "freezer": "FRZ", "fridge": "FRG", "appliance": "APP",
-           "ev_charger": "EV", "shutter": "SHUT", "insulation_monitor": "IMD", "plc": "PLC"},
+           "ev_charger": "EV", "shutter": "SHUT", "insulation_monitor": "IMD", "plc": "PLC", "ups": "UPS"},
     "fr": {"starter.vfd": "VAR", "starter.soft_starter": "DÉM", "starter.star_delta": "Y/Δ", "starter.reversing": "INV",
            "starter.": "DM", "impulse_relay": "TL", "water_heater": "CE", "oven": "Four", "washing_machine": "LL",
            "dishwasher": "LV", "dryer": "SL", "freezer": "CONG", "fridge": "FRIG", "appliance": "APP",
-           "ev_charger": "IRVE", "shutter": "VR", "insulation_monitor": "CPI", "plc": "API"},
+           "ev_charger": "IRVE", "shutter": "VR", "insulation_monitor": "CPI", "plc": "API", "ups": "UPS"},
 }
 
 
@@ -192,9 +195,19 @@ def _abbr(key: str) -> str:
 
 
 def motor_starter(node: Any = None) -> Symbol:
+    """Motor starter (IEC 60617 S00297): a square with a "V" from its top corners, the starting method below it.
+    A variable-speed drive is a frequency converter (S01904)."""
     method = getattr(node, "method", None) or ""
-    label = _abbr(f"starter.{method}") or _abbr("starter.")
-    return _box("motor_starter", label, 5 * M, 7.0)
+    if method == "vfd":
+        return _converter("motor_starter", "~", "~", False)
+    w, h = 7.0, 5 * M
+    top, bh = 1.0 * M, h - 2 * M
+    items: list[Item] = [_lead(0, top), Rect(-w / 2, top, w, bh), Polyline([(-w / 2, top), (0, top + 1.9), (w / 2, top)]),
+                         _lead(h - 1.0 * M, h)]
+    label = _abbr(f"starter.{method}") if method else ""
+    if label:
+        items.append(_text((0, top + bh * 0.68), label, 1.6))
+    return Symbol("motor_starter", items, h, w / 2 + 0.2, w / 2 + 0.2)
 
 
 def controller(node: Any = None) -> Symbol:
@@ -293,11 +306,23 @@ def meter(node: Any = None) -> Symbol:
     return Symbol("meter", items, 3.8 * M, 3.1, 3.1)
 
 
+def _dc_mark(cx: float, cy: float, w: float = 2.6) -> list[Item]:
+    """Direct current (IEC 60617 S01401): a full line over a dashed one."""
+    d = w / 3
+    return [Line((cx - w / 2, cy - 0.45), (cx + w / 2, cy - 0.45)),
+            *(Line((cx - w / 2 + i * d + 0.12, cy + 0.45), (cx - w / 2 + (i + 1) * d - 0.28, cy + 0.45)) for i in range(3))]
+
+
+def _converter_mark(s: str, c: Point) -> list[Item]:
+    return _dc_mark(*c) if s == "=" else [_text(c, s, 2.4 if s == "~" else 2.0)]
+
+
 def _converter(name: str, a: str, b: str, source: bool) -> Symbol:
+    """Converter (IEC 60617 S00214): a square cut by a diagonal, ``a`` top left, ``b`` bottom right."""
     s = 3.2 * M
     y0 = 0.6 * M if not source else 0.0
     items: list[Item] = [Rect(-s / 2, y0, s, s), Line((-s / 2, y0 + s), (s / 2, y0)),
-                         _text((-s / 4, y0 + s / 4 + 0.2), a, 2.0), _text((s / 4, y0 + 3 * s / 4), b, 2.0),
+                         *_converter_mark(a, (-s / 4, y0 + s / 4 + 0.2)), *_converter_mark(b, (s / 4, y0 + 3 * s / 4)),
                          _lead(y0 + s, y0 + s + 0.6 * M)]
     if not source:
         items.insert(0, _lead(0, y0))
@@ -305,12 +330,15 @@ def _converter(name: str, a: str, b: str, source: bool) -> Symbol:
 
 
 def inverter(node: Any = None) -> Symbol:
-    # fed from the grid (AC side at the top): '~' at the top, '=' at the bottom
-    return _converter("inverter", "~", "=", False)
+    """Inverter (IEC 60617 S00896): direct current top left, alternating current bottom right, whatever the
+    direction of the wiring."""
+    return _converter("inverter", "=", "~", False)
 
 
 def ups(node: Any = None) -> Symbol:
     s = _converter("ups", "~", "~", False)
+    s.items.append(Text((-s.left - 0.6, s.height / 2), _abbr("ups"), 1.5, "end", "middle"))  # no standard symbol
+    s.left += 4.4
     if getattr(node, "bypass", False):
         top, bot = 0.3 * M, s.height - 0.3 * M
         s.items.append(Polyline([(0, top), (5.5, top), (5.5, bot), (0, bot)], DASH))
@@ -318,17 +346,24 @@ def ups(node: Any = None) -> Symbol:
     return s
 
 
+def _arrow(a: Point, b: Point, head: float = 0.8) -> list[Item]:
+    ang = math.atan2(b[1] - a[1], b[0] - a[0])
+    left = (b[0] - head * math.cos(ang - 0.45), b[1] - head * math.sin(ang - 0.45))
+    right = (b[0] - head * math.cos(ang + 0.45), b[1] - head * math.sin(ang + 0.45))
+    return [Line(a, b, Style(width=THIN)), Polyline([left, b, right], Style(width=THIN, fill="#000000"), closed=True)]
+
+
 def pv_array(node: Any = None) -> Symbol:
-    w, h = 4.0 * M, 2.6 * M
+    """Photovoltaic generator (IEC 60617 S00908): a static generator "G" with a cell, light arriving from outside."""
+    s = 3.4 * M
     y0 = 0.6 * M
-    items: list[Item] = [_lead(0, y0), Rect(-w / 2, y0, w, h), Line((-w / 2, y0 + h), (w / 2, y0))]
-    for i in (1, 2, 3):
-        x = -w / 2 + i * w / 4
-        items.append(Line((x, y0), (x, y0 + h), Style(width=THIN)))
-    items.append(Line((-w / 2, y0 + h / 2), (w / 2, y0 + h / 2), Style(width=THIN)))
-    for dx in (-2.5, 0.5):  # radiation
-        items.append(Line((-w / 2 + dx - 1.6, y0 + h + 2.4), (-w / 2 + dx, y0 + h + 0.6), Style(width=THIN)))
-    return Symbol("pv_array", items, y0 + h, w / 2, w / 2, has_output=False)
+    cy = y0 + s * 0.68
+    items: list[Item] = [_lead(0, y0), Rect(-s / 2, y0, s, s), _text((0, y0 + s * 0.3), "G", 2.6, True),
+                         Line((-2.2, cy), (-0.35, cy)), Line((-0.35, cy - 1.3), (-0.35, cy + 1.3)),
+                         Line((0.35, cy - 0.7), (0.35, cy + 0.7), Style(width=THICK)), Line((0.35, cy), (2.2, cy))]
+    for dy in (-1.3, 1.0):  # light
+        items += _arrow((-s / 2 - 3.4, y0 + s / 2 + dy - 2.0), (-s / 2 - 0.8, y0 + s / 2 + dy))
+    return Symbol("pv_array", items, y0 + s, s / 2 + 3.6, s / 2, has_output=False)
 
 
 def battery(node: Any = None) -> Symbol:
@@ -365,12 +400,13 @@ def _load_box(name: str, label: str, w: float = 5.6, h: float = 4.4) -> Symbol:
 
 
 def socket(node: Any = None) -> Symbol:
+    """Socket outlet with protective contact (IEC 60617 S00460): an arc open downwards, the protective-contact
+    bar across its top."""
     y0 = 1.6 * M
     r = 2.2
-    items: list[Item] = [_lead(0, y0), Line((-r - 0.8, y0), (r + 0.8, y0)),
-                         Polyline(arc_points((0, y0 + r + 0.4), r, 180, 360, 14)),
-                         Line((-r, y0 + r + 0.4), (r, y0 + r + 0.4))]
-    return Symbol("socket", items, y0 + r + 0.4, r + 0.8, r + 0.8, has_output=False)
+    items: list[Item] = [_lead(0, y0), Line((-r, y0), (r, y0)),
+                         Polyline(arc_points((0, y0 + r), r, 180, 360, 14))]
+    return Symbol("socket", items, y0 + r, r, r, has_output=False)
 
 
 def lighting(node: Any = None) -> Symbol:
@@ -393,7 +429,14 @@ def heating(node: Any = None) -> Symbol:
 
 
 def water_heater(node: Any = None) -> Symbol:
-    return _load_box("water_heater", _abbr("water_heater"))
+    """Water heater (IEC 60617 S00493): a circle hatched vertically."""
+    r = 2.6
+    c = (0, 0.8 * M + r)
+    items: list[Item] = [_lead(0, 0.8 * M), Circle(c, r)]
+    for x in (-1.2, -0.4, 0.4, 1.2, 2.0):
+        hh = math.sqrt(r * r - x * x)
+        items.append(Line((x, c[1] - hh), (x, c[1] + hh), Style(width=THIN)))
+    return Symbol("water_heater", items, c[1] + r, r, r, has_output=False)
 
 
 def cooking(node: Any = None) -> Symbol:
@@ -481,7 +524,7 @@ def earthing_switch(node: Any = None) -> Symbol:
 
 
 def voltage_indicator(node: Any = None) -> Symbol:
-    items: list[Item] = [_lead(0, 0.8 * M), Circle((0, 0.8 * M + 1.2), 1.2), _text((0, 0.8 * M + 1.2), "U", 1.4)]
+    items: list[Item] = [_lead(0, 0.8 * M), Circle((0, 0.8 * M + 1.2), 1.2), _text((0, 0.8 * M + 1.2), "V", 1.4)]  # voltmeter, S00913
     return Symbol("voltage_indicator", items, 0.8 * M + 2.4, 1.3, 1.3, has_output=False)
 
 
@@ -507,7 +550,9 @@ def terminal_block(node: Any = None) -> Symbol:
 
 
 def junction_box(node: Any = None) -> Symbol:
-    items = [_lead(0, 0.6 * M), Rect(-1.4, 0.6 * M, 2.8, 2.8), Circle((0, 0.6 * M + 1.4), 0.4, Style(fill="#000000")),
+    """Junction box (IEC 60617 S00454): a small circle with a dot (the square with a dot, S00455, is a consumer's
+    terminal)."""
+    items = [_lead(0, 0.6 * M), Circle((0, 0.6 * M + 1.4), 1.4), Circle((0, 0.6 * M + 1.4), 0.35, Style(fill="#000000")),
              _lead(0.6 * M + 2.8, 2.4 * M)]
     return Symbol("junction_box", items, 2.4 * M, 1.5, 1.5)
 
@@ -527,9 +572,10 @@ def earth_bar(node: Any = None) -> Symbol:
     if getattr(node, "kind", None) == "neutral_bar":
         items = [_lead(0, 0.8 * M), Line((-2.5, 0.8 * M), (2.5, 0.8 * M), Style(width=THICK)), _text((0, 1.6 * M), "N", 1.8)]
         return Symbol("earth_bar", items, 2.0 * M, 2.6, 2.6, has_output=False)
-    items = [_lead(0, 0.8 * M), Line((-2.5, 0.8 * M), (2.5, 0.8 * M), Style(width=THICK)), _lead(0.8 * M, 1.6 * M),
-             *_earth_items(1.6 * M)]
-    return Symbol("earth_bar", items, 1.6 * M + 1.6, 2.6, 2.6, has_output=False)
+    y = 1.9 * M  # protective earthing (IEC 60617 S00202): the earth in a circle
+    items = [_lead(0, 0.8 * M), Line((-2.5, 0.8 * M), (2.5, 0.8 * M), Style(width=THICK)), _lead(0.8 * M, y),
+             *_earth_items(y), Circle((0, y + 0.55), 2.4)]
+    return Symbol("earth_bar", items, y + 3.0, 2.6, 2.6, has_output=False)
 
 
 # ------------------------------------------------------------ PLCs, power supplies

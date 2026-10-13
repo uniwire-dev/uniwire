@@ -66,21 +66,26 @@ Modular PLCs (`plc`) are checked whenever they appear in a document.
 | `plc.wago-end` | A WAGO local bus ends with an end module (750-600) | warning |
 | `plc.wago-feed` | A WAGO controller declares a potential feed module | info |
 
-## `nfc15100`: French dwelling installations
+## `nfc15100`: French low-voltage installations
 
-Checks for a dwelling distribution board under NF C 15-100 (including part 7-722 for EV charging).
+Checks of a French low-voltage installation under NF C 15-100, which covers every kind of premises. The rules
+of part 7-771 (dwellings) apply when `installation.premises` is `dwelling` or not set. For other premises
+(`commercial`, `office`, `industrial`, `public`, `agricultural`, `other`) only the general rules apply: 30 mA
+protection of socket-outlet and charging circuits (part 4-41, 411.3.3), EV charging (part 7-722) and
+selectivity; the residential cable table becomes a warning to size the cable for its installation method
+(part 5-52, guide UTE C 15-105). Rules marked *dwelling* below are skipped for other premises.
 
 | Rule | Check | Level |
 |---|---|---|
-| `nfc15100.section` | Copper cross-section ↔ rating: 1.5 → 16 A, 2.5 → 20 A, 4 → 25 A, 6 → 32 A | error |
-| `nfc15100.points` | Lighting: at most 8 points. Sockets: at most 8 on 1.5 mm², at most 12 on 2.5 mm² | error |
-| `nfc15100.lighting-rating` | Lighting protected at 16 A at most | error |
-| `nfc15100.rcd-30mA` | 30 mA protection for dwelling circuits, sockets and EV charging | error |
-| `nfc15100.rcd-type-A` | No type AC RCD for washing machine, dryer, hob / cooker, EV charging | error |
-| `nfc15100.rcd-count` | At least 2 30 mA RCDs per dwelling, including 1 type A; skipped when `installation.premises` is not `dwelling` | warning |
-| `nfc15100.rcd-circuits` | At most 8 circuits per 30 mA RCD | error |
-| `nfc15100.heating` | Heating power per circuit: 3.5 / 4.5 / 5.75 / 7.25 kW at 16 / 20 / 25 / 32 A | warning |
-| `nfc15100.dedicated-circuit` | Dedicated circuits: washing machine, dishwasher, dryer, freezer, oven, hob, water heater, EV charging (one load per circuit), heating and shutters (circuit reserved for that use) | error |
+| `nfc15100.section` | Copper cross-section ↔ rating: 1.5 → 16 A, 2.5 → 20 A, 4 → 25 A, 6 → 32 A; outside dwellings, a warning to check the cable for its installation method | error (dwelling) / warning |
+| `nfc15100.points` | *Dwelling*. Lighting: at most 8 points. Sockets: at most 8 on 1.5 mm², at most 12 on 2.5 mm² | error |
+| `nfc15100.lighting-rating` | *Dwelling*. Lighting protected at 16 A at most | error |
+| `nfc15100.rcd-30mA` | 30 mA protection for sockets and EV charging (all premises) and for every dwelling circuit | error |
+| `nfc15100.rcd-type-A` | No type AC RCD for EV charging (all premises) and, in dwellings, for washing machine, dryer, hob / cooker | error |
+| `nfc15100.rcd-count` | *Dwelling*. At least 2 30 mA RCDs per dwelling, including 1 type A | warning |
+| `nfc15100.rcd-circuits` | *Dwelling*. At most 8 circuits per 30 mA RCD | error |
+| `nfc15100.heating` | *Dwelling*. Heating power per circuit: 3.5 / 4.5 / 5.75 / 7.25 kW at 16 / 20 / 25 / 32 A | warning |
+| `nfc15100.dedicated-circuit` | *Dwelling*. Dedicated circuits: washing machine, dishwasher, dryer, freezer, oven, hob, water heater, EV charging (one load per circuit), heating and shutters (circuit reserved for that use) | error |
 | `nfc15100.ev-rcd` | EV charging: type B in three-phase mode 2 (error); in mode 3 with a type A or F RCD, reminder of 6 mA DC fault detection (info) | error / info |
 | `nfc15100.selectivity` | Selective (type S) incoming RCD upstream of other RCDs | warning |
 

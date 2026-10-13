@@ -68,6 +68,8 @@ _TEXT: dict[str, dict[str, str]] = {
                    "`normal_state` (nodes) / `normally_open` (links) give the normal position.",
         "views": "Views (optional; rendering preferences)",
         "profiles": "Rule profiles (`profiles`; `core` always applies)",
+        "nfc_note": "French installations (NF C 15-100); set `installation.premises`: the rules of dwellings (part 7-771) "
+                    "apply only to `dwelling` or when it is absent",
         "pitfalls": "Common pitfalls",
         "pit": "\n".join([
             "- `children` is always a list of node objects; never put ids there. Links use ids, not refs.",
@@ -130,6 +132,8 @@ _TEXT: dict[str, dict[str, str]] = {
                    "donnent la position normale.",
         "views": "Vues (facultatives ; préférences de rendu)",
         "profiles": "Profils de règles (`profiles` ; `core` s'applique toujours)",
+        "nfc_note": "installations françaises (NF C 15-100) ; préciser `installation.premises` : les règles du logement "
+                    "(partie 7-771) ne s'appliquent qu'à `dwelling` ou en son absence",
         "pitfalls": "Pièges courants",
         "pit": "\n".join([
             "- `children` est toujours une liste d'objets nœuds ; jamais d'ids. Les liens utilisent les ids, pas "
@@ -482,6 +486,8 @@ def card(lang: str = "en", level: Level = "compact") -> str:
     for p, rules in PROFILES.items():
         names = sorted({n for n in RULE_INFO if n.split(".")[0] == p})
         line = f"- `{p}`: {len(rules)} rule(s)"
+        if p == "nfc15100":
+            line += f"; {T['nfc_note']}"
         if full and names:
             line += " (" + ", ".join(names) + ")"
         add(line)

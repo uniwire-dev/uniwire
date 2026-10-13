@@ -12,6 +12,7 @@
     ]
   },
   "installation": {
+    "premises": "other",
     "earthing": "TT", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "supply": "Tarif Bleu forain 36 kVA",
     "subscribed_kVA": 36, "ik3_kA": 6, "earth_resistance_ohm": 28, "standard": "NF C 15-100 (7-704)"
   },

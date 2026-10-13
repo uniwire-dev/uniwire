@@ -81,6 +81,8 @@ EN: dict[str, str] = {
     "iec60364.ambient_air": "40 °C ambient",
     # nfc15100
     "nfc15100.section": "{in_a:g} A breaker on {section:g} mm² (max {limit} A)",
+    "nfc15100.section_sizing": "{in_a:g} A breaker on {section:g} mm²: above the usual {limit} A, check the cable "
+                               "for its installation method (NF C 15-100 part 5-52, guide UTE C 15-105)",
     "nfc15100.lighting_points": "{points} points on a lighting circuit (max {limit})",
     "nfc15100.lighting_rating": "lighting protected by {in_a:g} A (max 16 A)",
     "nfc15100.socket_section": " at {section:g} mm²",
@@ -269,6 +271,8 @@ FR: dict[str, str] = {
     "iec60364.ambient_ground": "sol 25 °C",
     "iec60364.ambient_air": "40 °C ambiant",
     "nfc15100.section": "disjoncteur {in_a:g} A sur {section:g} mm² (max {limit} A)",
+    "nfc15100.section_sizing": "disjoncteur {in_a:g} A sur {section:g} mm² : au-delà des {limit} A usuels, vérifier "
+                               "le câble selon son mode de pose (NF C 15-100 partie 5-52, guide UTE C 15-105)",
     "nfc15100.lighting_points": "{points} points sur un circuit d'éclairage (max {limit})",
     "nfc15100.lighting_rating": "éclairage protégé par {in_a:g} A (max 16 A)",
     "nfc15100.socket_section": " en {section:g} mm²",

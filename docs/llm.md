@@ -52,7 +52,7 @@ Every `document` argument accepts a JSON object, a JSON string or the path of a 
 | `describe` | `document`, `lang`? | text outline |
 | `apply_patch` | `document`, `ops`, `validate`? | `{ok, document}` or `{ok: false, errors}` |
 | `render` | `document`, `kind` (`single-line` / `multi-line`), `format` (`svg` / `pdf`), `sheet`?, `view`?, `path`?, `color`? (`none`/`conductors`/`phase`/`source`/`status`/`voltage`), `conductor_colors`? (`iec`/`us`) | SVG text of each sheet; PDF written to `path` or returned as base64 |
-| `viewer_link` | `document` | `{viewer_url, pdf_url}`: links that open the document in the web editor (drawing, findings, PDF and SVG downloads); `pdf_url` also downloads the PDF |
+| `viewer_link` | `document` | `{viewer_url, pdf_url}`: links that open the document in the web editor (drawing, findings, PDF and SVG downloads); `pdf_url` also downloads the PDF (on the hosted server, a plain PDF link: see [Short links](#short-links)) |
 | `bom` | `document` | bill-of-materials rows |
 | `wiring` | `document`, `what` (`markers` / `wires` / `cables`), `view`? | wire marker list, wire list or cable schedule as rows (stable column names) |
 | `list_examples`, `get_example` | `name` (e.g. `02` or `02_house_3_bedrooms_tt`) | the 52 bundled examples |
@@ -92,6 +92,11 @@ characters): the server keeps the document text in `DIR` and serves it at `GET /
 the content (the same document gives the same link) and cannot be guessed without it. A document is deleted 30
 days after its last use, and the oldest documents go first when the store exceeds 500 MB. The hosted endpoint runs
 with `--store`: documents sent to its tools are kept on that basis. `--link-base` sets the editor URL of the links.
+
+Over HTTP with `--store`, `pdf_url` is a plain PDF link as well (`https://uniwire.sh/pdf/<id>`): the server draws
+the PDF with the library (in a worker process in public mode) and serves it at `GET /pdf/<id>`, named after the
+document title. It works without the editor and cannot be mistaken for `viewer_url`. `--pdf-base` sets its prefix
+(default: the editor URL with `/viewer/` replaced by `/pdf/`).
 
 ## Reference card
 

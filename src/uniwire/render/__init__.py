@@ -124,5 +124,5 @@ def render_pdf(doc: Document, path: str | Path, view: Optional[View] = None) -> 
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    write_pdf(render_pages(doc, view), path, normalize_lang(doc.meta.lang))
+    write_pdf(render_pages(doc, view), path, normalize_lang(doc.meta.lang), doc.meta.title)
     return path

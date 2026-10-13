@@ -1,9 +1,16 @@
-"""``nfc15100`` profile: usual checks for a dwelling distribution board (NF C 15-100).
+"""``nfc15100`` profile: usual checks of a French low-voltage installation (NF C 15-100).
+
+NF C 15-100 covers every low-voltage installation in France; its part 7-771 adds the rules of dwellings. The
+residential rules apply when ``installation.premises`` is ``"dwelling"`` or not set; for other premises
+(commercial, office, industrial...) only the general rules apply, and the residential cable table becomes a
+reminder to size the cable for its installation method.
 
 Each rule carries a source (the part of the standard it derives from) and a confidence level
 (:data:`RULE_INFO`). References:
 
 * **NF C 15-100, part 7-771**: residential premises (circuits, protections, residual-current devices);
+* **NF C 15-100, part 4-41 (411.3.3)**: 30 mA additional protection of socket-outlets up to 32 A, all premises;
+* **NF C 15-100, part 5-52 and guide UTE C 15-105**: cable sizing for the installation method;
 * **NF C 15-100, part 7-722**: supplies for electric vehicles (IEC 60364-7-722).
 
 These are consistency checks for common cases: they do not replace the standard, which remains
@@ -19,11 +26,14 @@ from ..resolve import Index
 from . import describe, rule
 
 RES = "NF C 15-100, part 7-771 (residential)"
+GEN = "NF C 15-100, part 4-41 (411.3.3)"
+SIZING = "NF C 15-100, part 5-52 / guide UTE C 15-105 (non-residential premises)"
 EV = "NF C 15-100, part 7-722 (EV charging)"
 
 SECTION = describe(
     "nfc15100.section",
-    f"{RES}: protection per circuit (copper 1.5 mm² → 16 A, 2.5 mm² → 20 A, 4 mm² → 25 A, 6 mm² → 32 A)",
+    f"{RES}: protection per circuit (copper 1.5 mm² → 16 A, 2.5 mm² → 20 A, 4 mm² → 25 A, 6 mm² → 32 A); "
+    f"{SIZING}: beyond these values, size the cable for its installation method",
     "high")
 POINTS = describe(
     "nfc15100.points",
@@ -36,6 +46,7 @@ LIGHTING_RATING = describe(
 RCD_30MA = describe(
     "nfc15100.rcd-30mA",
     f"{RES}: all dwelling circuits protected by 30 mA residual-current devices; "
+    f"{GEN}: socket-outlet circuits protected by 30 mA RCDs in all premises; "
     f"{EV}: individual RCD ≤ 30 mA per charging point",
     "high")
 RCD_TYPE_A = describe(
@@ -94,6 +105,11 @@ PROTECTION_TYPES = ("breaker", "rcbo")
 THREE_PHASE_POLES = ("3P", "3P+N", "4P")
 
 
+def _dwelling(doc: Document) -> bool:
+    """Residential rules (part 7-771) apply: premises not set (the usual case of this profile) or a dwelling."""
+    return doc.installation.premises in (None, "dwelling")
+
+
 def _kind(n) -> str | None:
     return getattr(n, "kind", None) if n.type in ("appliance", "cooking") else None  # type: ignore[attr-defined]
 
@@ -145,11 +161,16 @@ def section_vs_rating(doc: Document, idx: Index):
             continue  # beyond that: Iz calculation (iec60364 profile)
         limit = max((a for s, a in MAX_BREAKER_FOR_SECTION.items() if s <= cable.section_mm2), default=None)
         if limit is not None and n.in_A > limit:  # type: ignore[attr-defined]
-            yield SECTION.finding("error", _t("nfc15100.section", in_a=n.in_A, section=cable.section_mm2, limit=limit), nid)  # type: ignore[attr-defined]
+            if _dwelling(doc):
+                yield SECTION.finding("error", _t("nfc15100.section", in_a=n.in_A, section=cable.section_mm2, limit=limit), nid)  # type: ignore[attr-defined]
+            else:  # outside dwellings the cable is sized for its installation method (part 5-52)
+                yield SECTION.finding("warning", _t("nfc15100.section_sizing", in_a=n.in_A, section=cable.section_mm2, limit=limit), nid)  # type: ignore[attr-defined]
 
 
 @rule("nfc15100")
 def points_per_circuit(doc: Document, idx: Index):
+    if not _dwelling(doc):
+        return  # residential rule (part 7-771)
     for nid, n in idx.nodes.items():
         t = n.type  # type: ignore[attr-defined]
         pts = getattr(n, "points", None)
@@ -170,6 +191,8 @@ def points_per_circuit(doc: Document, idx: Index):
 
 @rule("nfc15100")
 def heating_power(doc: Document, idx: Index):
+    if not _dwelling(doc):
+        return  # residential rule (part 7-771)
     seen: set[str] = set()
     for nid, n in idx.nodes.items():
         if n.type != "heating" or not getattr(n, "p_kW", None):  # type: ignore[attr-defined]
@@ -190,7 +213,9 @@ def heating_power(doc: Document, idx: Index):
 
 @rule("nfc15100")
 def rcd_coverage(doc: Document, idx: Index):
-    """Every final circuit must be protected by a 30 mA RCD; no type AC for certain uses."""
+    """Dwellings: every final circuit protected by a 30 mA RCD, no type AC for certain uses (part 7-771). All
+    premises: socket-outlet and charging circuits protected by a 30 mA RCD (411.3.3, part 7-722)."""
+    dwelling = _dwelling(doc)
     for nid, n in idx.nodes.items():
         t = n.type  # type: ignore[attr-defined]
         if registry.category(t) != "load" or t == "spare":
@@ -200,10 +225,11 @@ def rcd_coverage(doc: Document, idx: Index):
             what = n.label or t
             if t in ("socket", "ev_charger"):
                 yield RCD_30MA.finding("error", _t("nfc15100.rcd_30mA_socket", what=what), nid)
-            elif doc.installation.system == "1P+N":
+            elif dwelling and doc.installation.system == "1P+N":
                 yield RCD_30MA.finding("error", _t("nfc15100.rcd_30mA_dwelling", what=what), nid)
             continue
-        if (t, _kind(n)) in TYPE_A_LOADS and getattr(hr[0], "rcd_type", None) not in NOT_AC:
+        if (dwelling or t == "ev_charger") and (t, _kind(n)) in TYPE_A_LOADS \
+                and getattr(hr[0], "rcd_type", None) not in NOT_AC:
             yield RCD_TYPE_A.finding("error", _t("nfc15100.rcd_type_A", what=n.label or t), nid)
 
 
@@ -211,7 +237,7 @@ def rcd_coverage(doc: Document, idx: Index):
 def rcd_count(doc: Document, idx: Index):
     """Dwelling (1P+N): at least 2 30 mA RCDs, one of them type A (RCBOs count). Skipped when
     ``installation.premises`` says the premises are not a dwelling."""
-    if doc.installation.system != "1P+N" or doc.installation.premises not in (None, "dwelling"):
+    if doc.installation.system != "1P+N" or not _dwelling(doc):
         return
     if not any(registry.category(n.type) == "load" and n.type != "spare" for n in idx.nodes.values()):  # type: ignore[attr-defined]
         return
@@ -227,6 +253,8 @@ def rcd_count(doc: Document, idx: Index):
 
 @rule("nfc15100")
 def circuits_per_rcd(doc: Document, idx: Index):
+    if not _dwelling(doc):
+        return  # residential rule (part 7-771)
     for nid, n in idx.nodes.items():
         if n.type != "rcd" or not getattr(n, "idn_mA", None) or n.idn_mA > 30:  # type: ignore[attr-defined]
             continue
@@ -237,6 +265,8 @@ def circuits_per_rcd(doc: Document, idx: Index):
 
 @rule("nfc15100")
 def dedicated_circuits(doc: Document, idx: Index):
+    if not _dwelling(doc):
+        return  # residential rule (part 7-771)
     for nid, n in idx.nodes.items():
         t = n.type  # type: ignore[attr-defined]
         single = (t, _kind(n)) in SINGLE_LOAD

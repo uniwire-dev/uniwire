@@ -1133,8 +1133,18 @@ function openShared(text, fromHashChange) {
     state.pendingDownload = dl[1];
     history.replaceState(history.state, "", location.href.replace(/&download=pdf(?=&|$)/, ""));
   }
-  loadText(text, "shared", { keepDraft: true });
+  loadText(text, titleStem(text), { keepDraft: true });
   $("#examples").value = "";
+}
+
+/** File name stem from the document title ("Small bakery, 400 V" -> "small-bakery-400-v"), as the PDF links of
+ * the hosted server name their files; "uniwire" when there is no title. */
+function titleStem(text) {
+  let title = "";
+  try { title = String((JSON.parse(text).meta || {}).title || ""); } catch (_) { /* invalid JSON: no title */ }
+  const slug = title.normalize("NFKD").replace(/[^\x00-\x7f]/g, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80).replace(/-+$/, "");
+  return slug || "uniwire";
 }
 
 /** A link whose document cannot be opened: say so, and do not show another document (the draft) instead. */

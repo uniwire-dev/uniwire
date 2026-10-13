@@ -483,21 +483,25 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
      `core.interlock` (§4.1): **error** when more members of an interlock are closed in normal operation than it
      has keys (or when a key is declared twice), **warning** when a declared interlock is used by fewer than
      2 members, or when an undeclared `locks` key is used by a single member (it interlocks nothing);
-   * `nfc15100`: checks for a dwelling. Each rule carries a `source` (document and page) and a
-     `confidence` (`high` / `medium`), available in `uniwire.rules.RULE_INFO`. Each `Finding`
-     repeats the source. EV charging rules refer to part 7-722 of NF C 15-100.
+   * `nfc15100`: checks of a French low-voltage installation under NF C 15-100. The rules of part 7-771
+     (dwellings, marked *dwelling*) apply when `installation.premises` is `dwelling` or absent; for other
+     premises only the general rules apply (30 mA on socket-outlet and charging circuits, part 4-41 411.3.3;
+     EV charging, part 7-722; selectivity), and the cable table becomes a warning to size the cable for its
+     installation method (part 5-52, guide UTE C 15-105). Each rule carries a `source` (document and page) and
+     a `confidence` (`high` / `medium`), available in `uniwire.rules.RULE_INFO`. Each `Finding` repeats the
+     source.
 
      | Rule | Check | Level |
      |---|---|---|
-     | `nfc15100.section` | Copper cross-section ↔ rating: 1.5 → 16 A, 2.5 → 20 A, 4 → 25 A, 6 → 32 A | error |
-     | `nfc15100.points` | Lighting: at most 8 points. Sockets: at most 8 on 1.5 mm², at most 12 on 2.5 mm² | error |
-     | `nfc15100.lighting-rating` | Lighting protected at 16 A at most | error |
-     | `nfc15100.rcd-30mA` | 30 mA protection for dwelling circuits, sockets and EV charging | error |
-     | `nfc15100.rcd-type-A` | No type AC RCD for washing machine, dryer, hob / cooker, EV charging | error |
-     | `nfc15100.rcd-count` | At least 2 30 mA RCCBs (ID) per dwelling, including 1 type A; skipped when `installation.premises` is not `dwelling` | warning |
-     | `nfc15100.rcd-circuits` | At most 8 circuits per 30 mA RCCB | error |
-     | `nfc15100.heating` | Heating power per circuit: 3.5 / 4.5 / 5.75 / 7.25 kW at 16 / 20 / 25 / 32 A | warning |
-     | `nfc15100.dedicated-circuit` | Dedicated circuits: washing machine, dishwasher, dryer, freezer, oven, hob, water heater, EV charging (one load per circuit), heating and shutters (circuit reserved for that use) | error |
+     | `nfc15100.section` | Copper cross-section ↔ rating: 1.5 → 16 A, 2.5 → 20 A, 4 → 25 A, 6 → 32 A; outside dwellings, a warning to check the cable for its installation method | error (dwelling) / warning |
+     | `nfc15100.points` | *Dwelling*. Lighting: at most 8 points. Sockets: at most 8 on 1.5 mm², at most 12 on 2.5 mm² | error |
+     | `nfc15100.lighting-rating` | *Dwelling*. Lighting protected at 16 A at most | error |
+     | `nfc15100.rcd-30mA` | 30 mA protection for sockets and EV charging (all premises) and for every dwelling circuit | error |
+     | `nfc15100.rcd-type-A` | No type AC RCD for EV charging (all premises) and, in dwellings, for washing machine, dryer, hob / cooker | error |
+     | `nfc15100.rcd-count` | *Dwelling*. At least 2 30 mA RCCBs (ID) per dwelling, including 1 type A | warning |
+     | `nfc15100.rcd-circuits` | *Dwelling*. At most 8 circuits per 30 mA RCCB | error |
+     | `nfc15100.heating` | *Dwelling*. Heating power per circuit: 3.5 / 4.5 / 5.75 / 7.25 kW at 16 / 20 / 25 / 32 A | warning |
+     | `nfc15100.dedicated-circuit` | *Dwelling*. Dedicated circuits: washing machine, dishwasher, dryer, freezer, oven, hob, water heater, EV charging (one load per circuit), heating and shutters (circuit reserved for that use) | error |
      | `nfc15100.ev-rcd` | EV charging: type B in three-phase mode 2 (error). In mode 3 with a type A or F, reminder of 6 mA DC detection (info) | error / info |
      | `nfc15100.selectivity` | Selective (S) incoming residual current device upstream of other RCDs | warning |
 

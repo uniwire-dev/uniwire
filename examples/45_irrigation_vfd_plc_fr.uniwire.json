@@ -18,6 +18,7 @@
   ]
  },
  "installation": {
+  "premises": "agricultural",
   "earthing": "TT",
   "system": "3P+N",
   "un_V": 400,

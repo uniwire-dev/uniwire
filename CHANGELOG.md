@@ -5,7 +5,24 @@ The format and the library are versioned separately: the format follows `1.y.z` 
 [SPEC §9](https://uniwire.sh/docs/SPEC/#9-extensibility-and-versions)), the library follows its own semantic
 version.
 
-## Unreleased
+## 0.1.1
+
+* `nfc15100` profile: the rules of dwellings (part 7-771) apply only when `installation.premises` is `dwelling`
+  or not set. For other premises the profile keeps the general rules (30 mA on socket-outlet and charging
+  circuits, EV charging, selectivity) and the residential cable table becomes a warning to size the cable for
+  its installation method (part 5-52, guide UTE C 15-105). The `scope` of `check` results says which rules applied.
+* Symbols redrawn to follow the international drawing conventions: socket outlet with protective contact, inverter
+  with direct current top left, junction box as a circle with a dot, motor starter, variable-speed drive as a
+  frequency converter, protective earthing on earth bars, "IΔ" on residual-current devices, "V" on voltmeters,
+  photovoltaic generator, water heater. Converters draw direct current as a full line over a dashed one; UPS
+  symbols carry the "UPS" label.
+* The MCP server announces its website and icon to clients.
+* Hosted MCP server: the tools that return links (validate, check, apply_patch, render, viewer_link) are annotated
+  as publishing (not read-only, open world) when the server keeps documents for short links (`--store`).
+* Hosted MCP server: `pdf_url` is a plain PDF link (`GET /pdf/<id>`, drawn on the server and named after the
+  document title) instead of an editor link that downloads the PDF; `--pdf-base` sets its prefix.
+* Web editor: files downloaded from a shared link are named after the document title instead of "shared".
+* PDF: the document title is the PDF title (shown by PDF readers and browser tabs), instead of the first sheet's.
 
 ## 0.1.0 (format 1.0)
 

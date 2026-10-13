@@ -38,8 +38,9 @@ def _fonts() -> tuple[str, str, bool]:
     return "Helvetica", "Helvetica-Bold", False
 
 
-def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None) -> None:
-    """Write ``pages`` to ``path``; ``lang`` is the language of the bookmarks (document language)."""
+def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None, title: str | None = None) -> None:
+    """Write ``pages`` to ``path``; ``lang`` is the language of the bookmarks (document language), ``title`` the
+    PDF title (document title; default: the title of the first sheet)."""
     try:
         from reportlab.lib.units import mm
         from reportlab.pdfgen import canvas
@@ -49,7 +50,7 @@ def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None) 
     regular, bold, unicode_ok = _fonts()
     pages = list(pages)
     c = canvas.Canvas(str(path))
-    c.setTitle(xml_safe(pages[0].title) if pages else "uniwire")
+    c.setTitle(xml_safe(title or (pages[0].title if pages else "") or "uniwire"))
     c.setCreator("uniwire")
 
     def style(s: Style) -> None:

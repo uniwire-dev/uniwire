@@ -15,6 +15,7 @@
     ]
   },
   "installation": {
+    "premises": "commercial",
     "earthing": "TT", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50,
     "supply": "Tarif Bleu", "subscribed_kVA": 36, "earth_resistance_ohm": 22, "standard": "NF C 15-100"
   },

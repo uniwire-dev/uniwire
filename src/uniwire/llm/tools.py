@@ -10,8 +10,10 @@ import base64
 import copy
 import json
 import os
+import re
 import sys
 import tempfile
+import unicodedata
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
@@ -44,6 +46,22 @@ MAX_PATCH_OPS = 500  # operations of one apply_patch call
 CHECK_SCOPE = ("Automatic checks of the rules of the listed profiles, on the data in the document only. Not a "
                "conformity certificate: a qualified electrician must verify the installation (design, installation "
                "conditions, earthing, short-circuit currents, equipment data) before it is built.")
+
+
+def _scope(doc: Document, profiles: list[str]) -> str:
+    """What the checks covered: :data:`CHECK_SCOPE`, plus which NF C 15-100 rules apply to the premises."""
+    if "nfc15100" not in profiles:
+        return CHECK_SCOPE
+    premises = doc.installation.premises
+    if premises in (None, "dwelling"):
+        extra = ("NF C 15-100: the rules of dwellings (part 7-771) were applied"
+                 + (" (installation.premises not set: set it for other premises)." if premises is None else "."))
+    else:
+        extra = (f"NF C 15-100, premises '{premises}': only the general rules were applied (30 mA protection of "
+                 "socket-outlets, EV charging, selectivity, cable table as a reminder); the rules of dwellings (part "
+                 "7-771) do not apply. Not checked: fire safety of premises open to the public (ERP), safety "
+                 "lighting, workplace rules.")
+    return f"{CHECK_SCOPE} {extra}"
 
 
 def _count_raw_nodes(raw: dict[str, Any]) -> int:
@@ -119,7 +137,8 @@ def _doc(document: Any) -> Document:
 
 def _link(raw: dict[str, Any]) -> dict[str, str]:
     """``{"viewer_url", "pdf_url"}`` for a raw document, empty when the links would be too long to pass around.
-    ``pdf_url`` opens the same editor page and downloads the PDF drawn by the library."""
+    ``pdf_url`` opens the same editor page and downloads the PDF drawn by the library (on the hosted server, a
+    plain PDF link instead: see :func:`uniwire.mcp_server._shorten`)."""
     url = _viewer_link(raw)
     return {"viewer_url": url, "pdf_url": url + "&download=pdf"} if len(url) <= MAX_LINK_CHARS else {}
 
@@ -190,7 +209,7 @@ def check(document: Any, profiles: Optional[list[str]] = None) -> dict[str, Any]
     return {
         "valid": True,
         "profiles": ["core", *(profiles if profiles is not None else doc.profiles)],
-        "scope": CHECK_SCOPE,
+        "scope": _scope(doc, profiles if profiles is not None else doc.profiles),
         "summary": summary,
         "findings": [{"level": f.level, "rule": f.rule, "node": f.node, "message": f.message, "source": f.source}
                      for f in findings],
@@ -272,7 +291,6 @@ def render(document: Any, kind: str = "single-line", format: str = "svg",  # noq
     ``pdf``: written to ``path`` when given, else returned as base64; in public mode, ``pdf_url`` only (no files,
     and chat apps cannot hand base64 to the user). ``color`` / ``conductor_colors`` override the view's colour
     mode. Every result also carries ``viewer_url`` and ``pdf_url`` (see :func:`viewer_link`)."""
-    from ..i18n import normalize_lang
     from ..render import default_view, render_pages
     from ..render.svg import page_to_svg
 
@@ -298,8 +316,8 @@ def render(document: Any, kind: str = "single-line", format: str = "svg",  # noq
         # no files on this server, and chat apps cannot hand base64 to the user: the PDF comes from the link
         if not link:
             raise ToolError(f"document too large for a link (at most {MAX_LINK_CHARS} characters)")
-        return {**link, "note": "Give the user pdf_url as a clickable link: it opens the drawing in the uniwire "
-                                "web editor and downloads the PDF drawn by uniwire."}
+        return {**link, "note": "Give the user pdf_url as a clickable link: it opens the PDF drawn by uniwire "
+                                "(viewer_url opens the drawing in the uniwire web editor)."}
     pages = render_pages(doc, v)
     if PUBLIC and len(pages) > MAX_SHEETS:
         raise ToolError(f"too many sheets for this server: {len(pages)} (at most {MAX_SHEETS})")
@@ -318,27 +336,58 @@ def render(document: Any, kind: str = "single-line", format: str = "svg",  # noq
             if PUBLIC and sum(map(len, svgs)) > MAX_OUTPUT_BYTES:
                 raise ToolError(too_big)
         return {"sheets": len(pages), "svg": svgs, **link}
+    if path:
+        target = Path(path).expanduser()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(_pdf_bytes(doc, pages))
+        return {"path": str(target), **link}
+    data = _pdf_bytes(doc, pages)
+    if PUBLIC and len(data) > MAX_OUTPUT_BYTES:
+        raise ToolError(too_big)
+    return {"pdf_base64": base64.b64encode(data).decode("ascii"), **link}
+
+
+def _pdf_bytes(doc: Document, pages: list) -> bytes:
+    from ..i18n import normalize_lang
+
     try:
         from ..render.pdf import write_pdf
 
-        lang = normalize_lang(doc.meta.lang)
-        if path:
-            target = Path(path).expanduser()
-            target.parent.mkdir(parents=True, exist_ok=True)
-            write_pdf(pages, target, lang)
-            return {"path": str(target), **link}
         with tempfile.TemporaryDirectory() as tmp:
-            write_pdf(pages, Path(tmp) / "sld.pdf", lang)
-            data = (Path(tmp) / "sld.pdf").read_bytes()
+            write_pdf(pages, Path(tmp) / "sld.pdf", normalize_lang(doc.meta.lang), doc.meta.title)
+            return (Path(tmp) / "sld.pdf").read_bytes()
     except ImportError as e:
         raise ToolError(f"PDF output needs the 'uniwire[pdf]' extra (reportlab): {e}") from None
     except RuntimeError as e:
         if isinstance(e.__cause__, ImportError):  # reportlab missing (write_pdf)
             raise ToolError(f"PDF output needs the 'uniwire[pdf]' extra (reportlab): {e}") from None
         raise
+
+
+def pdf_filename(title: Optional[str]) -> str:
+    """File name for the PDF of a document titled ``title`` ("Small bakery, 400 V" -> "small-bakery-400-v.pdf")."""
+    ascii_ = unicodedata.normalize("NFKD", title or "").encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_.lower()).strip("-")[:80].strip("-")
+    return f"{slug or 'uniwire'}.pdf"
+
+
+def pdf_file(document: Any, kind: str = "single-line") -> dict[str, Any]:
+    """The PDF of a document (all sheets of the default ``kind`` view) and its file name: ``{pdf_base64,
+    filename}``. Not an assistant tool: the hosted server serves it at ``GET /pdf/<id>`` (the ``pdf_url`` links)."""
+    from ..render import default_view, render_pages
+
+    raw = _raw(document)
+    try:
+        doc = _load(raw)
+    except UniwireError as e:
+        raise ToolError("invalid document:\n" + "\n".join(f"- {i}" for i in _issues(raw, e))) from None
+    pages = render_pages(doc, default_view(doc, None, kind))
+    if PUBLIC and len(pages) > MAX_SHEETS:
+        raise ToolError(f"too many sheets for this server: {len(pages)} (at most {MAX_SHEETS})")
+    data = _pdf_bytes(doc, pages)
     if PUBLIC and len(data) > MAX_OUTPUT_BYTES:
-        raise ToolError(too_big)
-    return {"pdf_base64": base64.b64encode(data).decode("ascii"), **link}
+        raise ToolError(f"output too large for this server (at most {MAX_OUTPUT_BYTES} bytes per rendering)")
+    return {"pdf_base64": base64.b64encode(data).decode("ascii"), "filename": pdf_filename(doc.meta.title)}
 
 
 def wiring(document: Any, what: str = "markers", view: Optional[str] = None) -> dict[str, Any]:

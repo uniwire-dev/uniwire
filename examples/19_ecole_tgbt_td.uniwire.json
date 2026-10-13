@@ -11,6 +11,7 @@
     ]
   },
   "installation": {
+    "premises": "public",
     "earthing": "TT", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "supply": "Tarif Jaune (C4)",
     "subscribed_kVA": 108, "ik3_kA": 10, "earth_resistance_ohm": 22, "standard": "NF C 15-100"
   },

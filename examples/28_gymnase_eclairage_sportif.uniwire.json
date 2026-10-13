@@ -12,6 +12,7 @@
     ]
   },
   "installation": {
+    "premises": "public",
     "earthing": "TT", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "ik3_kA": 6, "earth_resistance_ohm": 35,
     "standard": "NF C 15-100"
   },

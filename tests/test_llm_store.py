@@ -4,10 +4,12 @@ import json
 import os
 import time
 
+import pytest
+
 from uniwire.llm import tools
 from uniwire.llm.link import document_from_link, viewer_link
 from uniwire.llm.store import ID_LENGTH, DocStore, doc_id
-from uniwire.mcp_server import _shorten
+from uniwire.mcp_server import _pdf_base, _shorten
 
 from .conftest import ROOT
 
@@ -49,3 +51,54 @@ def test_shorten_tool_results(tmp_path):
     assert res["summary"]["error"] == 0  # the rest of the result is unchanged
     assert _shorten(["rows"], store, "x") == ["rows"] and _shorten({"svg": "<svg/>"}, store, "x") == {"svg": "<svg/>"}
     assert document_from_link(viewer_link(d)) == json.dumps(d, ensure_ascii=False, separators=(",", ":"))
+
+
+def test_shorten_pdf_links(tmp_path):
+    store = DocStore(tmp_path)
+    d = json.loads(STUDIO.read_text("utf-8"))
+    res = _shorten(tools.check(d), store, "https://uniwire.sh/viewer/", _pdf_base("https://uniwire.sh/viewer/"))
+    id_ = res["viewer_url"].rpartition("#d=")[2]
+    assert res["pdf_url"] == f"https://uniwire.sh/pdf/{id_}"
+    assert _pdf_base("http://localhost:8080/editor.html") is None
+
+
+def test_pdf_filename():
+    assert tools.pdf_filename("Small bakery, 400 V") == "small-bakery-400-v.pdf"
+    assert tools.pdf_filename("École: TGBT / TD-1") == "ecole-tgbt-td-1.pdf"
+    assert tools.pdf_filename(None) == tools.pdf_filename("—") == "uniwire.pdf"
+
+
+def test_pdf_route(tmp_path):
+    pytest.importorskip("reportlab")
+    pytest.importorskip("mcp.server.mcpserver")
+    from starlette.testclient import TestClient
+
+    from uniwire.mcp_server import _add_pdf_route, build_server
+
+    store = DocStore(tmp_path)
+    id_ = store.put(STUDIO.read_text("utf-8"))
+    server = build_server(None, store)
+    _add_pdf_route(server, store, None)
+    client = TestClient(server.streamable_http_app())
+    r = client.get(f"/pdf/{id_}")
+    assert r.status_code == 200 and r.content.startswith(b"%PDF-")
+    assert r.headers["content-type"] == "application/pdf" and r.headers["cache-control"] == "no-store"
+    assert r.headers["content-disposition"] == 'inline; filename="studio-28-m2-tableau-de-repartition.pdf"'
+    assert client.get("/pdf/AAAAAAAAAAAA").status_code == 404
+    bad_id = store.put('{"uniwire": "1.0.0"}')
+    bad = client.get(f"/pdf/{bad_id}")
+    assert bad.status_code == 422 and "cannot draw" in bad.text
+
+
+def test_linked_tools_not_read_only_with_store(tmp_path):
+    """With a store, the tools that return links keep the document: not read-only (app directory checks)."""
+    pytest.importorskip("mcp.server.mcpserver")
+    import asyncio
+
+    from uniwire.mcp_server import LINKED, build_server
+
+    tools = asyncio.run(build_server(None, DocStore(tmp_path)).list_tools())
+    for t in tools:
+        assert t.annotations.read_only_hint is (t.name not in LINKED), t.name
+        assert t.annotations.open_world_hint is (t.name in LINKED), t.name
+        assert t.annotations.destructive_hint is False and t.annotations.idempotent_hint is True

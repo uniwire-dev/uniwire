@@ -1,8 +1,9 @@
 from uniwire import check, load
 
 
-def doc(children, system="1P+N"):
-    return load({"profiles": ["nfc15100"], "installation": {"system": system},
+def doc(children, system="1P+N", premises=None):
+    inst = {"system": system, **({"premises": premises} if premises else {})}
+    return load({"profiles": ["nfc15100"], "installation": inst,
                  "sources": [{"type": "grid", "children": children}]})
 
 
@@ -223,3 +224,33 @@ def test_interlock_messages_in_french(monkeypatch):
     monkeypatch.setenv("UNIWIRE_LANG", "fr")
     f = _interlock(_two_bus(link_open=False))
     assert "verrouillage" in f[0].message
+
+
+def test_nfc15100_premises():
+    """Outside dwellings: only the general NF C 15-100 rules; the residential cable table is a warning."""
+    children = [
+        {"type": "breaker", "in_A": 20, "children": [{"type": "socket", "points": 4}]},  # no 30 mA: all premises
+        {"type": "breaker", "in_A": 16, "children": [{"type": "lighting", "points": 12}]},  # 7-771 only
+        {"type": "rcd", "idn_mA": 30, "rcd_type": "AC", "children": [
+            {"type": "breaker", "in_A": 25, "cable": {"section_mm2": 2.5},
+             "children": [{"type": "appliance", "kind": "washing_machine"}, {"type": "lighting"}]}]}]
+    home = check(doc(children))
+    shop = check(doc(children, premises="commercial"))
+    assert {"nfc15100.rcd-30mA", "nfc15100.points", "nfc15100.rcd-type-A", "nfc15100.dedicated-circuit",
+            "nfc15100.section"} <= rules_of(home)
+    assert rules_of(shop) & {"nfc15100.points", "nfc15100.rcd-type-A", "nfc15100.dedicated-circuit",
+                             "nfc15100.rcd-count", "nfc15100.heating", "nfc15100.rcd-circuits"} == set()
+    assert any(f.rule == "nfc15100.rcd-30mA" for f in shop)  # socket-outlets: 30 mA in all premises
+    section = [f for f in shop if f.rule == "nfc15100.section"]
+    assert len(section) == 1 and section[0].level == "warning" and "5-52" in section[0].message
+    assert [f.level for f in home if f.rule == "nfc15100.section"] == ["error"]
+
+
+def test_check_scope_premises():
+    from uniwire.llm import tools
+
+    base = {"profiles": ["nfc15100"], "sources": [{"type": "grid", "children": []}]}
+    assert "part 7-771) were applied (installation.premises not set" in tools.check(base)["scope"]
+    shop = tools.check({**base, "installation": {"premises": "commercial"}})["scope"]
+    assert "premises 'commercial': only the general rules" in shop and "ERP" in shop
+    assert "7-771" not in tools.check({**base, "profiles": ["iec60364"]})["scope"]
