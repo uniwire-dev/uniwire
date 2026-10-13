@@ -12,7 +12,9 @@ The hosted MCP server runs the reference library for any assistant that supports
 https://mcp.uniwire.sh/mcp
 ```
 
-Streamable HTTP, no account, no authentication. Its tools validate and check documents, describe and edit them by
+Streamable HTTP, no account, no authentication. It is listed in the
+[official MCP registry](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.uniwire-dev/uniwire)
+as `io.github.uniwire-dev/uniwire`, so clients that browse the registry find it by name. Its tools validate and check documents, describe and edit them by
 id, draw them and export wire lists and bills of materials. Their results carry two links for the user: one opens
 the drawing in the [web editor](https://uniwire.sh/viewer/), the other also downloads the PDF.
 
