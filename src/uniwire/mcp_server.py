@@ -246,10 +246,11 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
     def check(
             document: Doc,
             profiles: Annotated[Optional[list[str]], Field(description=(
-                "Rule profiles to apply, e.g. ['nfc15100'] (France) or ['iec60364']; default: the 'profiles' "
+                "Rule profiles to apply, e.g. ['nfc15100', 'enedis'] (France) or ['iec60364']; default: the 'profiles' "
                 "of the document. 'core' always applies."))] = None) -> dict[str, Any]:
         """Check an electrical installation (single-line diagram, panel, schéma unifilaire, tableau électrique):
-        validates the document, then applies the rule profiles (NF C 15-100 'nfc15100', IEC 60364 'iec60364', PLC;
+        validates the document, then applies the rule profiles (NF C 15-100 'nfc15100', French grid connection 'enedis',
+        IEC 60364 'iec60364', PLC;
         default: the document's 'profiles'; 'core' always applies): breaker ratings against cable sections, RCDs,
         circuits per protection, selectivity...
         Returns findings (level error/warning/info, rule, node id, message, source), a summary, 'scope' (what the
