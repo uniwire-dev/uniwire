@@ -34,6 +34,10 @@ version.
   be reduced, down to 1.5 mm), and a board's column widens to its name, so that board frames no longer cross
   their name or each other.
 * Multi-line diagrams: board frames keep clear of the switch blades and of the frames next to them.
+* Multi-line diagrams, TT and IT: the PE starts at the main earthing terminal of the first board, no longer at
+  the incoming device whose cable carries a protective conductor; a board drawn on its own sheet starts its PE
+  there, and the sheet that feeds it carries the live conductors only.
+* Examples 03 and 09: three-phase smart meter rated 60 A.
 * Boards fed from the same board are drawn side by side on one line (single-line and multi-line): their frames,
   names and first devices are aligned.
 * Inverters/chargers and UPS feeding both a DC side (batteries, PV, DC converters, DC boards, or a device feeding

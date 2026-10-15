@@ -82,6 +82,32 @@ def test_cable_cores_and_earthing():
     assert c["G"].out == ["L1", "N"] and c["B"].src["PE"] is None  # TT: PE from the board's earth electrode
 
 
+def _tt_incomer(earthing="TT", own_sheet=False):
+    board = {"type": "board", "id": "B", "children": [{"type": "socket", "id": "S"}, {"type": "lighting", "id": "L"}]}
+    if own_sheet:
+        board["own_sheet"] = True
+    return load({"installation": {"earthing": earthing, "system": "3P+N"}, "sources": [{"type": "grid", "id": "G", "children": [
+        {"type": "main_breaker", "id": "Q0", "poles": "4P", "idn_mA": 500, "cable": {"cores": "5G", "section_mm2": 16, "pe_section_mm2": 16},
+         "children": [board]}]}]})
+
+
+@pytest.mark.parametrize("earthing", ["TT", "IT"])
+def test_pe_starts_at_the_first_board(earthing):
+    # a 5G cable upstream of the first board does not bring the PE from the supply
+    c = conductors(_tt_incomer(earthing))
+    assert "PE" not in c["Q0"].inp and "PE" not in c["Q0"].out
+    assert "PE" in c["B"].inp and c["B"].src["PE"] is None
+
+
+def test_pe_of_a_board_on_its_own_sheet():
+    doc = _tt_incomer(own_sheet=True)
+    pages = render_pages(doc, default_view(doc, kind="multi-line"))
+    assert len(pages) == 2
+    first, board = (page_to_svg(p) for p in pages)
+    assert 'data-uw-cond="PE"' not in first  # the incomer sheet carries the live conductors only
+    assert 'data-uw-cond="PE"' in board
+
+
 def test_render_multiline_small(tmp_path):
     doc = load(SMALL)
     view = default_view(doc, "ml")

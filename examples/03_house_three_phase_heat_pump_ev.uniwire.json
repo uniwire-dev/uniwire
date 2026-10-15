@@ -34,7 +34,7 @@
   },
   "sources": [
     {"type": "grid", "label": "Réseau public", "supply": "Tarif Bleu", "un_V": 400, "children": [
-      {"type": "meter", "id": "CPT", "ref": "PDL", "label": "Compteur triphasé", "kind": "Linky tri", "in_A": 90, "children": [
+      {"type": "meter", "id": "CPT", "ref": "PDL", "label": "Compteur triphasé", "kind": "Linky tri", "in_A": 60, "children": [
         {"type": "main_breaker", "ref": "-Q0", "label": "AGCP", "range_A": "10-60", "in_A": 60, "idn_mA": 500,
          "selective": true, "poles": "4P", "subscribed_kVA": 24, "note": "Réglé à 40 A (24 kVA)",
          "cable": {"designation": "U1000R2V", "cores": "5G", "section_mm2": 16, "material": "Cu", "length_m": 25, "install": "D-duct"},

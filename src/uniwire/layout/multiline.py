@@ -351,8 +351,10 @@ class _Assigner:
             src = {c: src.get(c, "PEN") if c not in ("N", "PE") else "PEN" for c in inp}
             out = list(inp)
         pe_cable = node.cable is not None and node.cable.pe_section_mm2  # cable with its own protective conductor
-        if pending and parent is not None and (t in ("board", "busbar") or len(node.children) != 1 or pe_cable) \
-                and "PE" not in inp and not any(c in DC for c in inp):
+        # TT, IT: the PE starts at the main earthing terminal, in the first board (never upstream of it, even in a
+        # cable that carries a protective conductor); without a board downstream, at the device or load
+        here = t in ("board", "busbar") or (not _board_below(node) and (len(node.children) != 1 or pe_cable))
+        if pending and parent is not None and here and "PE" not in inp and not any(c in DC for c in inp):
             inp = _sorted(inp + ["PE"])
             src["PE"] = None
             out = _sorted(out + ["PE"]) if t not in CONVERTERS | {"transformer"} else out
@@ -368,6 +370,17 @@ class _Assigner:
                 self._walk(c, list(DC), False, node)
             else:
                 self._walk(c, out, pending, node)
+
+
+def _board_below(node: Any) -> bool:
+    """A board downstream: the main earthing terminal of a TT / IT installation is in a board."""
+    stack = list(node.children)
+    while stack:
+        n = stack.pop()
+        if n.type == "board":
+            return True
+        stack.extend(n.children)
+    return False
 
 
 def _first_boards(doc: Document) -> list[NodeBase]:
@@ -538,7 +551,8 @@ def _build(node: NodeBase, spec: SheetSpec, info: dict[int, Conductors], is_root
     c = info[id(node)]
     if not is_root and node.id in spec.detached:
         label = node.ref or node.label or node.id or ""
-        return MLNode(node, "stub", list(c.inp), list(c.inp), dict(c.src), label=label, target=node.id)
+        fed = [x for x in c.inp if c.src.get(x) is not None]  # a PE starting in the board is drawn on its sheet
+        return MLNode(node, "stub", fed, fed, {x: c.src[x] for x in fed}, label=label, target=node.id)
     children = list(node.children)
     bus_out = False
     if spec.bus_slice and spec.bus_slice[0] == node.id:
@@ -777,7 +791,7 @@ def _needs_split_room(ln: MLNode, parent: Optional[MLNode]) -> bool:
     if parent is not None and parent.on_dc_side(ln):
         return False
     if parent is None or parent.rails:
-        return any(s is None for s in ln.src.values()) and not ln.root
+        return any(s is None for s in ln.src.values()) and not (ln.root and ln.type in SOURCE_TYPES)
     for c in ln.inp:
         s = ln.src.get(c)
         if s is None or s not in parent.off_out or parent.off_out[s] != ln.off_in[c]:
@@ -1350,6 +1364,11 @@ def _draw(ln: MLNode, g: Group, lang: str, view: View, sheet_left: float, folio_
         rg = ref_group(*incoming_ref)
         for c in ln.inp:
             x = ln.xi(c)
+            if ln.src.get(c) is None:  # starts here (PE at the main earthing terminal of the board)
+                ys = ln.y - SPLIT_H + 1.0
+                g.add(cond_group(c, Line((x, ys), (x, ln.y)), Line((x, ys), (x + 2.0, ys)), *_earth(x + 2.0, ys)),
+                      Text((x - 0.5, ys + 2.6), c, 1.4, "end", color="#333333"))
+                continue
             rg.add(cond_group(c, Line((x, top), (x, ln.y))), _lane_label(x, top + 3.0, c))
         if incoming:
             rg.add(Text((ln.x_left + ln.lanes_max() + 2.5, top + 1.5), incoming, 1.8))
