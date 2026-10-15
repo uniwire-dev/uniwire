@@ -4,7 +4,8 @@
 Steps:
 
 1. build the ``uniwire`` wheel into ``viewer/dist/`` (``uv build`` when available, else ``pip wheel``);
-2. copy ``examples/*.uniwire.json`` into ``viewer/examples/`` and write ``viewer/examples/index.json``;
+2. copy ``examples/*.uniwire.json`` into ``viewer/examples/``, draw the first sheet of each one as
+   ``<name>.svg`` (shown at once while the in-browser engine starts) and write ``viewer/examples/index.json``;
 3. write ``viewer/version.json`` (library version + wheel file name, read by the worker);
 4. copy the favicons from ``docs/brand/assets/`` (the single source of the brand files) into ``viewer/``.
 
@@ -59,6 +60,19 @@ def build_wheel() -> Path:
     return wheels[-1]
 
 
+def preview_svg(path: Path) -> str | None:
+    """First sheet of an example, drawn by the library of this checkout (None when it cannot be drawn)."""
+    sys.path.insert(0, str(ROOT / "src"))
+    try:
+        from uniwire.llm import tools
+        return tools.render(path.read_text("utf-8"), format="svg", sheet=1)["svg"]
+    except Exception as e:  # noqa: BLE001  (a preview is optional: the editor draws the example anyway)
+        print(f"  no preview for {path.name}: {e}", file=sys.stderr)
+        return None
+    finally:
+        sys.path.remove(str(ROOT / "src"))
+
+
 def copy_examples() -> list[dict]:
     if EXAMPLES.exists():
         shutil.rmtree(EXAMPLES)
@@ -71,12 +85,12 @@ def copy_examples() -> list[dict]:
             meta = json.loads(src.read_text("utf-8")).get("meta", {})
         except json.JSONDecodeError:
             meta = {}
-        index.append({
-            "name": name,
-            "file": src.name,
-            "title": meta.get("title") or name,
-            "lang": meta.get("lang") or "en",
-        })
+        entry = {"name": name, "file": src.name, "title": meta.get("title") or name, "lang": meta.get("lang") or "en"}
+        svg = preview_svg(src)
+        if svg:
+            (EXAMPLES / f"{name}.svg").write_text(svg, "utf-8")
+            entry["preview"] = f"{name}.svg"
+        index.append(entry)
     (EXAMPLES / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=1), "utf-8")
     return index
 

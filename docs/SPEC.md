@@ -207,6 +207,9 @@ enclosure, cable as a first-class edge (sections, shared trunk), named ports (`Q
 `product` takes precedence over the simple `manufacturer` / `part_number` fields (which are kept). The quantity of a
 bill of materials line is `product.quantity`, otherwise `count`, otherwise 1. `uniwire bom file.uniwire.json` produces the bill
 of materials (CSV): one line per part number, summed quantities, reference designations involved (`-A1.3` = module in slot 3 of `-A1`).
+Equipment without a reference is grouped by type and main characteristics (`spec`: rating, curve, sensitivity, poles,
+breaking capacity, e.g. `C16 1P+N 6kA`), and cables by type, composition and material with their total known length
+(`length_m`), so that the bill of materials is useful before products are chosen.
 
 ### Modular PLC (`plc`)
 | Field | Description |
@@ -340,7 +343,7 @@ Common enumerations: `poles` ∈ {1P, 1P+N, 2P, 3P, 3P+N, 4P}.
 | `kind` | `single-line` | `single-line` or `multi-line` (power diagram, one line per conductor, §7.1) |
 | `title` | - | Sheet title |
 | `root` | - | Draw only the subtree of this node |
-| `paper` / `orientation` | `A3` / `landscape` | Sheet format |
+| `paper` / `orientation` | `A3` / `landscape` | Sheet format. When `paper` is absent, a renderer may choose the smallest format that holds the drawing at full size (the reference library: A4 landscape when it fits, else A3) |
 | `direction` | `down` | Direction of power flow (future values reserved) |
 | `pitch_mm` | 20 | Width of an outgoing feeder column |
 | `cartouche` | `label, ref, protection, idn_mA, cable, p_kW` | Rows of the circuit schedule (among `label`, `ref`, `protection`, `in_A`, `curve`, `icn_kA`, `idn_mA`, `rcd_type`, `poles`, `cable`, `section_mm2`, `length_m`, `p_kW`, `phase`, `room`, `points`, and the 1.2 rows below, e.g. `cable_ref` "Cable tag"); an `idn_mA` value carried by a device upstream of the feeder (incomer, group RCD), not by its own protection, reads "30mA (upstream)" |

@@ -34,7 +34,8 @@ INSTRUCTIONS = (
     "tree (sources -> devices -> loads, each node in its parent's 'children') plus 'links' for anything outside the "
     "tree. Read the reference card (get_reference_card or resource uniwire://card) before writing a document. "
     "Workflow: write the document, call check (it validates too), fix the findings (apply_patch edits nodes by "
-    "id), then give the user the links. describe gives a compact outline with the stable ids to use in patches. "
+    "id), then give the user the links. describe gives a compact outline with the stable ids to use in patches; "
+    "the examples (list_examples, get_example) are good starting points to adapt to the user's project. "
     "validate, check, apply_patch and render return 'viewer_url' and 'pdf_url': always give them to the user as "
     "clickable links. viewer_url opens the document in the uniwire web editor (drawing, findings, PDF and SVG "
     "downloads); pdf_url gives the PDF drawn by uniwire. They are two different links: when the user asks for a "
@@ -199,8 +200,8 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
     @tool("Reference card of the uniwire format")
     def get_reference_card(level: str = "compact", lang: str = "en") -> str:
         """Reference card of the uniwire format for electrical diagrams: document skeleton, node types (breakers,
-        RCDs, cables, loads, transformers, PV...) and fields, enums, links, pitfalls, examples. Read it before writing
-        a document. level: 'compact' (~3k tokens) or 'full'; lang: 'en' or 'fr'."""
+        RCDs, cables, loads, transformers, PV...) and fields, enums, links, pitfalls, examples. level: 'compact'
+        (~3k tokens) or 'full'; lang: 'en' or 'fr'."""
         return T.get_reference_card(level, lang)
 
     @tool("List the node types")
@@ -217,8 +218,8 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
     @tool("Validate an electrical diagram")
     def validate(document: Document) -> dict[str, Any]:
         """Validate a uniwire document (electrical diagram as JSON: object, JSON text or file path) against the
-        format. Returns valid + issues, each naming the node id and field when possible, plus viewer_url and pdf_url
-        (links for the user). check does the same and also applies the electrical rules."""
+        format. Returns valid + issues, each naming the node id and field when possible, plus viewer_url (the
+        document in the uniwire web editor) and pdf_url (the PDF drawn by uniwire)."""
         return T.validate(document)
 
     @tool("Check an electrical installation (NF C 15-100, IEC 60364)")
@@ -227,17 +228,16 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
         validates the document, then applies the rule profiles (NF C 15-100 'nfc15100', IEC 60364 'iec60364', PLC;
         default: the document's 'profiles'; 'core' always applies): breaker ratings against cable sections, RCDs,
         circuits per protection, selectivity...
-        Returns findings (level error/warning/info, rule, node id, message, source), a summary, viewer_url (opens
-        the document in the uniwire web editor: drawing, findings, downloads) and pdf_url (the PDF drawn by
-        uniwire). Give both to the user as clickable links. 'scope' says what the checks cover: tell the
-        user once that they are not a conformity certificate."""
+        Returns findings (level error/warning/info, rule, node id, message, source), a summary, 'scope' (what the
+        checks cover and do not cover: automatic checks of the document data, not a conformity certificate),
+        viewer_url (the document in the uniwire web editor: drawing, findings, downloads) and pdf_url (the PDF
+        drawn by uniwire)."""
         return T.check(document, profiles)
 
     @tool("Outline of an electrical diagram")
     def describe(document: Document, lang: str = "en") -> str:
         """Text outline of an electrical diagram: installation, full tree of the panel with stable ids, ratings
-        and cables, links, interlocks, boards and findings summary. Use it to review a document or find the ids for
-        apply_patch."""
+        and cables, links, interlocks, boards and findings summary."""
         return T.describe(document, lang)
 
     @tool("Edit an electrical diagram")
@@ -260,18 +260,17 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
         view: a view id of the document (e.g. a
         wire-marking view). format 'svg' returns the SVG text of every sheet (or of 'sheet', numbered from 1);
         'pdf' writes to 'path' if given, else returns base64 (requires the uniwire[pdf] extra); on the hosted
-        server it returns pdf_url instead. To give the user the PDF, give them pdf_url as a clickable link.
+        server it returns pdf_url (the PDF drawn by uniwire) instead.
         color: 'none' | 'conductors' | 'phase' | 'source' | 'status' | 'voltage' (adds a legend);
         conductor_colors: 'iec' (IEC 60445) | 'us'."""
         return T.render(document, kind, format, sheet, view, path, color, conductor_colors)
 
     @tool("Links to open the diagram and its PDF")
     def viewer_link(document: Document) -> dict[str, Any]:
-        """Links for the user: viewer_url opens the document in the uniwire web editor (drawing, single-line and
-        multi-line, rule findings, PDF and SVG downloads, nothing to install); pdf_url gives the PDF drawn by
+        """Links to a document: viewer_url opens it in the uniwire web editor (drawing, single-line and
+        multi-line, rule findings, PDF and SVG downloads, nothing to install); pdf_url is the PDF drawn by
         uniwire. On the hosted server the document is kept 30 days so that the short links open it
-        (anyone with a link can open it); elsewhere it travels in the link (after '#') and is stored nowhere. Give
-        them to the user as clickable Markdown links."""
+        (anyone with a link can open it); elsewhere it travels in the link (after '#') and is stored nowhere."""
         return T.viewer_link(document)
 
     @tool("Wire list, wire markers and cable schedule")
@@ -284,20 +283,21 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
 
     @tool("Bill of materials")
     def bom(document: Document) -> list[dict[str, Any]]:
-        """Bill of materials of an electrical installation (nomenclature), grouped by manufacturer / part number
-        (nodes with a product reference)."""
+        """Bill of materials of an electrical installation (nomenclature): one row per manufacturer / part number
+        for the nodes with a product reference, then one row per kind of equipment without a reference (type and
+        main characteristics in 'spec', e.g. 'C16 1P+N') and per kind of cable, with quantities and the
+        reference designations involved."""
         return T.bom(document)
 
     @tool("List the example installations")
     def list_examples() -> list[dict[str, Any]]:
         """List the 52 example installations (dwellings, shops, offices, workshops, PV, EV charging, UPS, MV/LV
-        substations, PLCs): name, title, language, profiles, earthing, system. Good starting points."""
+        substations, PLCs): name, title, language, profiles, earthing, system."""
         return T.list_examples()
 
     @tool("Get an example installation")
     def get_example(name: str) -> dict[str, Any]:
-        """Return an example installation document by name (or number prefix, e.g. '02'), to adapt to the
-        user's project."""
+        """Return an example installation document by name (or number prefix, e.g. '02')."""
         return T.get_example(name)
 
     @tool("Normalized document")
@@ -439,6 +439,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         if store is not None:
             _add_doc_route(server, store)
             _add_pdf_route(server, store, pool)
+            _add_svg_route(server, store, pool)
         server.run("streamable-http", host=a.host, port=a.port, streamable_http_path=a.path,
                    stateless_http=True, json_response=True, transport_security=security, **extra)
         return 0
@@ -493,6 +494,34 @@ def _add_pdf_route(server, store, pool) -> None:
         disp = f'inline; filename="{r["filename"]}"'
         return Response(base64.b64decode(r["pdf_base64"]), media_type="application/pdf",
                         headers={**headers, "Content-Disposition": disp})
+
+
+def _add_svg_route(server, store, pool) -> None:
+    """``GET /svg/<id>`` -> the first sheet of a stored document as SVG: the web editor shows it at once while its
+    own engine starts (a few seconds), then replaces it with the live drawing. 404 when unknown or expired."""
+    from starlette.concurrency import run_in_threadpool
+    from starlette.responses import PlainTextResponse, Response
+
+    headers = {"Cache-Control": "no-store", "X-Robots-Tag": "noindex", "X-Content-Type-Options": "nosniff",
+               "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"}
+    args = {"format": "svg", "sheet": 1}
+
+    def make(text: str) -> dict[str, Any]:
+        return pool.call("render", {"document": text, **args}) if pool is not None else T.render(text, **args)
+
+    @server.custom_route("/svg/{doc_id}", methods=["GET"], include_in_schema=False)
+    async def get_svg(request):
+        text = store.get(request.path_params["doc_id"])
+        if text is None:
+            return PlainTextResponse("unknown or expired document", status_code=404, headers=headers)
+        t0 = time.monotonic()
+        try:
+            r = await run_in_threadpool(make, text)
+        except Exception as e:  # noqa: BLE001  (worker errors and timeouts: a short message, no stack trace)
+            log.info("route=svg status=error ms=%d", (time.monotonic() - t0) * 1000)
+            return PlainTextResponse(f"cannot draw this document: {e}", status_code=422, headers=headers)
+        log.info("route=svg status=ok ms=%d", (time.monotonic() - t0) * 1000)
+        return Response(r["svg"], media_type="image/svg+xml; charset=utf-8", headers=headers)
 
 
 def _add_doc_route(server, store) -> None:

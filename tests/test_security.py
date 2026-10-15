@@ -203,11 +203,17 @@ def test_local_mode_is_unlimited(monkeypatch):
     assert T.render(str(EXAMPLE))["sheets"] >= 1
 
 
+POOL_TIMEOUT = 8  # seconds; the slow document below needs about a minute
+
+
 @pytest.fixture(scope="module")
 def pool():
     from uniwire.llm.sandbox import WorkerPool
 
-    p = WorkerPool(size=1, timeout=3, queue_timeout=1)
+    # The first call of a worker imports the library: seconds on a slow CI runner. A generous timeout, and a warm
+    # worker before the tests, so that only the deliberately slow documents time out.
+    p = WorkerPool(size=1, timeout=POOL_TIMEOUT, queue_timeout=1)
+    p.call("validate", {"document": _flat(3)})
     yield p
     p.close()
 
@@ -230,7 +236,7 @@ def test_pool_timeout_kills_the_worker(pool):
     t = time.perf_counter()
     with pytest.raises(T.ToolError, match="timed out"):
         pool.call("render", {"document": slow})
-    assert time.perf_counter() - t < 6
+    assert time.perf_counter() - t < POOL_TIMEOUT + 4
     w.proc.join(2)
     assert not w.proc.is_alive()  # really terminated, not abandoned
     assert pool.call("validate", {"document": _flat(3)})["valid"] is True  # a fresh worker took over

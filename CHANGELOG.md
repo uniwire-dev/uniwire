@@ -5,6 +5,42 @@ The format and the library are versioned separately: the format follows `1.y.z` 
 [SPEC §9](https://uniwire.sh/docs/SPEC/#9-extensibility-and-versions)), the library follows its own semantic
 version.
 
+## Unreleased
+
+* Bill of materials: equipment without a product reference is grouped by type and main characteristics (new
+  `spec` key, e.g. `C16 1P+N 6kA`, `40A 30mA 2P type A`) and cables by type, composition and material (new
+  `length_m` key with the total known length), instead of being left out. Rows with a reference are unchanged
+  and come first; the CSV puts the characteristics in the description column. The utility's meter (fed directly
+  by the grid) is not listed unless it carries a reference; sub-meters are.
+* MCP server: tool descriptions say what each tool does, takes and returns; the guidance for assistants (which
+  links to give, the conformity disclaimer, the workflow) lives in the server instructions only.
+* Web viewer: a link to an example that does not exist (`?example=98`) opens the first example with a message,
+  instead of an empty editor.
+* Web viewer: panning the drawing no longer selects its text; text is selected on purpose only (double-click a
+  text, or drag with Alt/Option held).
+* Web viewer: the drawing shows at once, while the in-browser engine starts (10 to 25 seconds on a first visit):
+  the examples come with their first sheet drawn at build time, and short links (`#d=`) with the first sheet drawn
+  by the server (new route `GET /svg/<id>` of the hosted MCP server). The live drawing replaces it when ready.
+* Sheets: when a view gives no `paper`, the drawing goes on an A4 landscape sheet if it fits there at full size,
+  else on A3 as before. A drawing that uses little of its sheet is enlarged, up to 1.25 (annotations of 2.5 mm),
+  with the same scale for all the sheets of a view so that the text keeps one size; large drawings are still
+  reduced to fit.
+* Battery symbol: the two cells are joined by a dashed line, with a lead below the last one and the + and − marked,
+  so that it no longer reads as an earth symbol at small sizes.
+* Heating symbol: the last of the four strokes no longer goes past the right side of the box.
+* Single-line diagrams: an annotation is no longer cut with "…": its column widens as needed (the text may still
+  be reduced, down to 1.5 mm), and a board's column widens to its name, so that board frames no longer cross
+  their name or each other.
+* Multi-line diagrams: board frames keep clear of the switch blades and of the frames next to them.
+* Inverters/chargers and UPS feeding both a DC side (batteries, PV, DC converters, DC boards, or a device feeding
+  one of them alone) and an AC side: in single-line diagrams the DC side is drawn from a side terminal of the
+  symbol, no longer from the busbar of the AC outputs; in multi-line diagrams the AC outputs keep the AC
+  conductors and only the DC side gets the L+/L- pair, also when the inverter/charger is the source.
+* MCP server image: Python 3.14.
+* Tests: the worker pool tests start from a warm worker with a wider timeout (they failed on slow CI runners).
+* Web viewer and documentation: light by default, whatever the system setting; dark when the reader chooses it
+  (the choice is remembered and shared with uniwire.sh).
+
 ## 0.1.1
 
 * `nfc15100` profile: the rules of dwellings (part 7-771) apply only when `installation.premises` is `dwelling`

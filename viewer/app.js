@@ -95,6 +95,7 @@ worker.onmessage = (ev) => {
     state.versions = { version: msg.version, pyodide: msg.pyodide };
     $("#powered").textContent = t("footer.powered", state.versions);
     $("#loader").hidden = true;
+    $("#loader").classList.remove("compact");
     scheduleRender(0);
     return;
   }
@@ -278,7 +279,22 @@ function showSheet(i, { keepView = false } = {}) {
   vp.prepend(svg);
   if (keepView && state.vb && prevPage && prevPage.w === w && prevPage.h === h) setViewBox(state.vb);
   else fit();
-  interaction.attach(svg);
+  if (!state.pages[i].preview) interaction.attach(svg);
+}
+
+/** While the engine starts (several seconds), show a drawing made in advance (the example's sheet, or the server's
+ *  drawing of a short link), with a small "starting" note instead of the full loader. The live drawing replaces it. */
+async function showPreview(url) {
+  if (state.ready || state.pages.length) return;
+  try {
+    const r = await fetch(url);
+    const svg = r.ok && /svg/.test(r.headers.get("content-type") || "") ? await r.text() : "";
+    if (!svg || state.ready || state.pages.length) return;
+    state.pages = [{ svg, title: "", sheetNo: null, preview: true }];
+    $("#empty").hidden = true;
+    $("#loader").classList.add("compact");
+    showSheet(0);
+  } catch (_) { /* no preview: the loader stays */ }
 }
 
 /** Page index of the sheet numbered ``n`` (data-uw-sheet), else of the n-th sheet; -1 when unknown. */
@@ -457,8 +473,16 @@ function setupViewport() {
   const pointers = new Map();
   let moved = 0;
   let pinch = null;
+  // Dragging pans and never selects text. Text is selected on purpose only: double-click on a text, or drag
+  // with Alt (Option) held. The selection stays until the next plain click or drag.
   vp.addEventListener("pointerdown", (e) => {
     if (!state.vb || e.button !== 0) return;
+    if (e.altKey && e.pointerType === "mouse") { vp.classList.add("selecting"); return; }
+    if (vp.classList.contains("selecting")) {
+      vp.classList.remove("selecting");
+      window.getSelection()?.removeAllRanges();
+    }
+    e.preventDefault();  // no text selection while panning
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     vp.setPointerCapture(e.pointerId);
     moved = 0;
@@ -497,6 +521,16 @@ function setupViewport() {
   };
   vp.addEventListener("pointerup", end);
   vp.addEventListener("pointercancel", end);
+  vp.addEventListener("dblclick", (e) => {
+    const text = e.target.closest && e.target.closest("text");
+    if (!text) return;
+    vp.classList.add("selecting");
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
 
   // hover highlighting (mouse only; touch uses tap = sticky selection)
   let hoverFrame = 0;
@@ -721,18 +755,23 @@ function loadText(text, stem, { keepDraft = false } = {}) {
   updateBack();
   state.view = "";
   state.kind = "";
-  state.pages = [];
-  state.page = null;
+  if (!(state.pages[0] && state.pages[0].preview)) {  // a preview stays on screen until the live drawing replaces it
+    state.pages = [];
+    state.page = null;
+  }
   state.editor.setText(text);
   if (keepDraft) offerDraft(text);
   else saveDraft(text);
   scheduleRender(0);
 }
 
+/** Load an example by name, file or number; false when it cannot (unknown name, network error). */
 async function loadExample(name, { updateUrl = true } = {}) {
   const ex = state.examples.find((e) => e.name === name || e.file === name || e.name.startsWith(name + "_") ||
                                        e.name.replace(/^\d+_/, "") === name);
+  if (!ex && state.examples.length) return false;  // not in the index: a mistyped or invented link
   const file = ex ? ex.file : `${name}.uniwire.json`;
+  if (ex && ex.preview) showPreview(`examples/${encodeURIComponent(ex.preview)}`);
   try {
     const r = await fetch(`examples/${encodeURIComponent(file)}`);
     if (!r.ok) throw new Error(String(r.status));
@@ -744,8 +783,10 @@ async function loadExample(name, { updateUrl = true } = {}) {
       url.searchParams.set("example", ex ? ex.name : name);
       history.replaceState(null, "", url);
     }
+    return true;
   } catch (_) {
     toast(t("msg.example_error", { name }));
+    return false;
   }
 }
 
@@ -1167,6 +1208,7 @@ async function openInitialDocument(fromHashChange) {
   }
   if (state.hashShort) {
     try {
+      showPreview(`/api/svg/${state.hashShort}`);
       const r = await fetch(`/api/doc/${state.hashShort}`, { cache: "no-store" });
       if (r.status === 404) return sharedFailed(t("msg.short_missing"));
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -1176,7 +1218,18 @@ async function openInitialDocument(fromHashChange) {
     }
   }
   if (fromHashChange) return;
-  if (params.get("example")) return loadExample(params.get("example"), { updateUrl: false });
+  const asked = params.get("example");
+  if (asked) {
+    if (await loadExample(asked, { updateUrl: false })) return;
+    // an example that does not exist: open the first one rather than an empty editor
+    const url = new URL(location.href);
+    url.searchParams.delete("example");
+    history.replaceState(null, "", url);
+    if (state.examples.length) {
+      toast(t("msg.example_missing", { name: asked, first: state.examples[0].name.replace(/_/g, " ") }));
+      return loadExample(state.examples[0].name, { updateUrl: false });
+    }
+  }
   const draft = loadDraft();
   if (draft) return loadText(draft.text, draft.stem);
   if (state.examples.length) return loadExample(state.examples[0].name, { updateUrl: false });

@@ -316,8 +316,8 @@ def render(document: Any, kind: str = "single-line", format: str = "svg",  # noq
         # no files on this server, and chat apps cannot hand base64 to the user: the PDF comes from the link
         if not link:
             raise ToolError(f"document too large for a link (at most {MAX_LINK_CHARS} characters)")
-        return {**link, "note": "Give the user pdf_url as a clickable link: it opens the PDF drawn by uniwire "
-                                "(viewer_url opens the drawing in the uniwire web editor)."}
+        return {**link, "note": "This server returns the PDF as a link: pdf_url is the PDF drawn by uniwire, "
+                                "viewer_url the drawing in the uniwire web editor."}
     pages = render_pages(doc, v)
     if PUBLIC and len(pages) > MAX_SHEETS:
         raise ToolError(f"too many sheets for this server: {len(pages)} (at most {MAX_SHEETS})")

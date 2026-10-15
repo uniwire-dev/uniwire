@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from ..i18n import normalize_lang
 from ..i18n import t as _t
-from ..layout.engine import layout_sheet, plan_sheets, sheet_node_ids
+from ..layout.engine import drawing_area, layout_sheet, plan_sheets, sheet_node_ids
 from ..model import Document, View
 from ..resolve import build_index
 from .colors import colorize
@@ -50,9 +50,41 @@ def render_pages(doc: Document, view: Optional[View] = None) -> list[Page]:
     return pages
 
 
+#: Largest enlargement of a drawing that leaves most of its sheet empty (annotations 2 mm -> 2.5 mm).
+MAX_ENLARGE = 1.25
+#: Largest enlargement of a multi-line diagram (its symbols are smaller).
+ML_MAX_ENLARGE = 1.4
+
+
+def _room(lay: Any, view: View) -> float:
+    """How much the drawing could grow on its sheet (>1: room left, <1: it must be reduced)."""
+    _, _, aw, ah = drawing_area(view)
+    return min(aw / max(lay.width, 1e-6), ah / max(lay.height, 1e-6))
+
+
+def _enlargement(lays: list[Any], view: View, cap: float) -> Optional[float]:
+    """One enlargement for all the sheets of a view (the text keeps the same size from sheet to sheet), when every
+    sheet has room for it; None otherwise (each sheet is then reduced as needed, never enlarged)."""
+    rooms = [_room(lay, view) for lay in lays]
+    k = min(rooms, default=1.0)
+    return min(cap, k) if k > 1.0 else None
+
+
 def _render_pages(doc: Document, view: View, lang: str) -> list[Page]:
     if view.kind == "multi-line":
         return _render_multiline(doc, view, lang)
+    if "paper" not in view.model_fields_set:
+        # no paper in the document: the smallest sheet that holds the drawing at full size (A4 landscape), else A3
+        small = view.model_copy(update={"paper": "A4"})
+        index = build_index(doc)
+        if len(plan_sheets(doc, small, index)) == len(plan_sheets(doc, view, index)):
+            pages, lays = _render_sheets(doc, small, lang)
+            if all(_room(lay, small) >= 0.999 for lay in lays):
+                return pages
+    return _render_sheets(doc, view, lang)[0]
+
+
+def _render_sheets(doc: Document, view: View, lang: str) -> tuple[list[Page], list[Any]]:
     index = build_index(doc)
     specs = plan_sheets(doc, view, index)
     folio_by_root: dict[str, int] = {}
@@ -63,7 +95,7 @@ def _render_pages(doc: Document, view: View, lang: str) -> list[Page]:
     for i, s in enumerate(specs, 1):
         for nid in sheet_node_ids(doc, s, index):
             folio_of_node.setdefault(nid, i)
-    pages = []
+    built = []
     total = len(specs)
     number = {id(s): i for i, s in enumerate(specs, 1)}
     for i, spec in enumerate(specs, 1):
@@ -82,8 +114,11 @@ def _render_pages(doc: Document, view: View, lang: str) -> list[Page]:
                            incoming=incoming, node_folio=folio_of_node.get, incoming_ref=incoming_ref)
         title = spec.name or view.title or _t("render.default_title", lang)
         legend = colorize(lay.group, doc, view, index)
-        pages.append(compose_page(doc, view, lay, i, total, title, legend))
-    return pages
+        built.append((lay, title, legend))
+    grow = _enlargement([b[0] for b in built], view, MAX_ENLARGE)
+    pages = [compose_page(doc, view, lay, i, total, title, legend, scale=grow)
+             for i, (lay, title, legend) in enumerate(built, 1)]
+    return pages, [b[0] for b in built]
 
 
 def _render_multiline(doc: Document, view: View, lang: str) -> list[Page]:
@@ -92,12 +127,13 @@ def _render_multiline(doc: Document, view: View, lang: str) -> list[Page]:
     index = build_index(doc)
     lays = multiline_layouts(doc, view, index)
     pages = []
+    grow = _enlargement(lays, view, ML_MAX_ENLARGE)
     for i, lay in enumerate(lays, 1):
         title = lay.spec.name or view.title or _t("render.multiline_title", lang)
         if lay.spec.name:
             title = f"{_t('render.multiline_title', lang)} · {lay.spec.name}"
         legend = colorize(lay.group, doc, view, index, multiline=True)
-        pages.append(compose_page(doc, view, lay, i, len(lays), title, legend))
+        pages.append(compose_page(doc, view, lay, i, len(lays), title, legend, scale=grow))
     return pages
 
 

@@ -92,6 +92,8 @@ class LNode:
     ann: list[str] = field(default_factory=list)
     ann_size: float = ANN_SIZE
     tagged: bool = False
+    need: float = 0.0  # width the column needs for its annotation (or a board for its name), at full size
+    dc_side: int = 0  # leading children on the DC side of an inverter/charger: fed from its DC terminal, not the bus
 
     @property
     def id(self) -> str:
@@ -106,10 +108,20 @@ class LNode:
         return self.kind == "node" and self.type == "board"
 
     @property
+    def bus_children(self) -> list[LNode]:
+        """The children on the output side (all of them, except the DC side of an inverter/charger)."""
+        return self.children[self.dc_side:]
+
+    @property
     def has_bus(self) -> bool:
         if self.kind == "bus_in":
             return True
-        return len(self.children) >= 2 or self.bus_out or (self.type == "busbar" and len(self.children) >= 1)
+        kids = self.bus_children
+        return len(kids) >= 2 or self.bus_out or (self.type == "busbar" and len(kids) >= 1)
+
+    def dc_terminal(self) -> tuple[float, float]:
+        """Side terminal of the DC side (left of the symbol, at the height of its "=" mark)."""
+        return (self.x - self.sym.left, self.y + self.sym.height * 0.3)
 
     @property
     def out_y(self) -> float:
@@ -188,7 +200,29 @@ def _build(node: NodeBase, spec: SheetSpec, is_root: bool) -> LNode:
         bus_out = e < len(children)
         children = children[s:e]
     ln = LNode(node, "node", symbol_for(node), [_build(c, spec, False) for c in children], bus_out=bus_out)
+    if node.type in DC_PORT_TYPES:  # an inverter/charger feeding both a DC side (batteries...) and an AC side
+        dc = [c for c in ln.children if c.node is not None and _is_dc(c.node)]
+        if dc and len(dc) < len(ln.children):
+            ln.children = dc + [c for c in ln.children if c not in dc]
+            ln.dc_side = len(dc)
     return ln
+
+
+DC_PORT_TYPES = {"inverter", "ups"}
+
+
+def _is_dc(node: NodeBase) -> bool:
+    """A child on the DC side of an inverter/charger: batteries, PV, DC converters, DC boards, or a device
+    (fuse, disconnector...) feeding one of them alone."""
+    n = node
+    while True:
+        if n.type in ("battery", "pv_array", "dc_converter"):
+            return True
+        if n.type in ("board", "busbar"):
+            return getattr(n, "kind", None) == "dc_box" or getattr(n, "system", None) == "DC"
+        if len(n.children) != 1:
+            return False
+        n = n.children[0]
 
 
 def _build_sheet_roots(spec: SheetSpec, index: Index) -> list[LNode]:
@@ -210,12 +244,34 @@ def _measure(ln: LNode, pitch: float) -> float:
     # intrinsic symbol width (modular PLC, transfer switch...): the column widens if needed
     own = pitch / 2 + ln.sym.right + 16.0 if ln.sym.right > pitch / 2 - 2 else pitch  # + room for the annotation
     if not ln.children:
-        ln.width = max(pitch, own)
+        ln.width = max(pitch, own, ln.need)
     else:
-        ln.width = max(sum(c.width for c in ln.children), own)
+        ln.width = max(sum(c.width for c in ln.children), own, ln.need)
     if ln.is_board:
         ln.width += 2 * BOARD_PAD + pitch * 0.3  # right margin: annotations of the last column
+        short = ln.need - ln.width
+        if short > 0:  # the name of the board is wider than its columns: widen the last one
+            ln.width += short
+            c = ln.children[-1] if ln.children else None
+            while c is not None:
+                c.width += short
+                c = c.children[-1] if c.children else None
     return ln.width
+
+
+def _needs(ln: LNode, view: View, lang: str) -> None:
+    """Widths the columns need so that no annotation is cut and the names of the boards keep their size."""
+    for n in ln.walk():
+        if n.is_board and n.node is not None:
+            name = " ".join(x for x in (n.node.ref, n.node.label) if x)
+            # the name starts above the first column, 1.5 right of its axis
+            n.need = BOARD_PAD + view.pitch_mm / 2 + 1.5 + 1.1 * text_width(name, 2.4) + 1.5 if name else 0.0
+        elif len(n.children) <= 1:  # a load, or a device feeding one load: its text has the column to itself
+            lines = _ann_lines(n, view, lang)
+            if lines:
+                # room for the text reduced to ANN_MIN at most: a long text is reduced, never cut
+                widest = max(text_width(t, ANN_MIN) for t in lines)
+                n.need = view.pitch_mm / 2 + n.sym.right + 2.0 + widest
 
 
 def _place_x(ln: LNode, x_left: float, pitch: float = 20.0) -> None:
@@ -227,10 +283,25 @@ def _place_x(ln: LNode, x_left: float, pitch: float = 20.0) -> None:
     for c in ln.children:
         _place_x(c, cx, pitch)
         cx += c.width
-    ln.x = ln.children[0].x
+    out = ln.bus_children
+    ln.x = out[0].x
     if ln.has_bus:
-        ln.bus_x0 = min(ln.x, ln.children[0].x) - (6.0 if ln.kind == "bus_in" else 0.0)
-        ln.bus_x1 = ln.children[-1].x + (6.0 if ln.bus_out else 0.0)
+        ln.bus_x0 = min(ln.x, out[0].x) - (6.0 if ln.kind == "bus_in" else 0.0)
+        ln.bus_x1 = out[-1].x + (6.0 if ln.bus_out else 0.0)
+
+
+def _ann_lines(ln: LNode, view: View, lang: str) -> list[str]:
+    """Annotation of a node: its tag, then its characteristics (5 lines at most)."""
+    node = ln.node
+    if ln.kind != "node" or not view.annotations or node is None or ln.bottom or ln.is_board:
+        return []
+    feeds_bus = any(len(d.children) >= 2 for d in ln.walk())
+    lines = annotation(node, lang, show_label=feeds_bus)
+    pn = part_number(node)
+    tag = pn if view.tag_field == "part_number" and pn else node.ref
+    if tag:
+        lines.insert(0, tag)
+    return lines[:5]
 
 
 def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = None) -> None:
@@ -242,14 +313,9 @@ def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = N
     if ln.bottom or ln.is_board:
         ln.ann = []
         return
-    feeds_bus = any(len(d.children) >= 2 for d in ln.walk())
-    lines = annotation(node, lang, show_label=feeds_bus)
+    ln.ann = _ann_lines(ln, view, lang)
     pn = part_number(node)
-    tag = pn if view.tag_field == "part_number" and pn else node.ref
-    if tag:
-        lines.insert(0, tag)
-    ln.tagged = bool(tag)
-    ln.ann = lines[:5]
+    ln.tagged = bool(pn if view.tag_field == "part_number" and pn else node.ref)
     # space available to the right of the symbol
     avail = (ln.x_left + ln.width) - (ln.x + ln.sym.right + 1.0) + view.pitch_mm / 2 - 3.5
     if not ln.children:
@@ -445,6 +511,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
             wide_gap |= set(range(ia, ib))
     x = 0.0
     for i, r in enumerate(main):
+        _needs(r, view, lang)
         _measure(r, pitch)
         _place_x(r, x, pitch)
         x += r.width + pitch * (ROOT_GAP_COLS + (1.0 if i in wide_gap else 0.0))
@@ -509,7 +576,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
 
     NO_COLUMN = {"earth", "earth_bar", "earthing_switch", "voltage_indicator", "neutral_impedance",
                  "surge_limiter", "insulation_monitor", "protection_relay", "instrument_transformer"}
-    on_bus = {id(c) for n in everything if n.has_bus for c in n.children}
+    on_bus = {id(c) for n in everything if n.has_bus for c in n.bus_children}
     columns = [n for n in everything if not n.children and n.kind != "bus_in" and not
                (n.type in NO_COLUMN and not (n.type == "insulation_monitor" and id(n) in on_bus)) and not
                (n.node is not None and any(n.node.id == l.from_ for l in doc.links if l.kind == "transfer"))]
@@ -1027,13 +1094,13 @@ def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callabl
         else:
             bg.add(Line((ln.bus_x0, ln.bus_y), (x1, ln.bus_y), Style(width=BUS)))
         g.add(bg)
-        for c in ln.children:
+        for c in ln.bus_children:
             eg = edge_group(c.id, me, [Line((c.x, ln.bus_y + trunk), (c.x, c.frame_top if c.is_board else c.y))])
             if c.is_board:
                 eg.add(Line((c.x, c.frame_top), (c.x, c.y)))
             g.add(eg)
     else:
-        for c in ln.children:
+        for c in ln.bus_children:
             top = c.frame_top if c.is_board else c.y
             eg = edge_group(c.id, me)
             if ln.x == c.x:
@@ -1043,6 +1110,13 @@ def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callabl
             if c.is_board:
                 eg.add(Line((c.x, c.frame_top), (c.x, c.y)))
             g.add(eg)
+    tx, ty = ln.dc_terminal()
+    for c in ln.children[:ln.dc_side]:  # DC side: from the side terminal of the inverter/charger
+        top = c.frame_top if c.is_board else c.y
+        eg = edge_group(c.id, me, [Polyline([(tx, ty), (c.x, ty), (c.x, top)])])
+        if c.is_board:
+            eg.add(Line((c.x, c.frame_top), (c.x, c.y)))
+        g.add(eg)
     for c in ln.children:
         _draw_tree(c, g, y_load, view, folio_of, me)
 

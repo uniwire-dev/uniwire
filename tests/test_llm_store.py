@@ -90,6 +90,28 @@ def test_pdf_route(tmp_path):
     assert bad.status_code == 422 and "cannot draw" in bad.text
 
 
+def test_svg_route(tmp_path):
+    """The first sheet as SVG, for the web editor to show while its engine starts."""
+    pytest.importorskip("mcp.server.mcpserver")
+    from starlette.testclient import TestClient
+
+    from uniwire.mcp_server import _add_svg_route, build_server
+
+    store = DocStore(tmp_path)
+    id_ = store.put(STUDIO.read_text("utf-8"))
+    server = build_server(None, store)
+    _add_svg_route(server, store, None)
+    client = TestClient(server.streamable_http_app())
+    r = client.get(f"/svg/{id_}")
+    assert r.status_code == 200 and r.text.lstrip().startswith(("<svg", "<?xml"))
+    assert r.headers["content-type"].startswith("image/svg+xml") and r.headers["cache-control"] == "no-store"
+    assert "default-src 'none'" in r.headers["content-security-policy"]
+    assert client.get("/svg/AAAAAAAAAAAA").status_code == 404
+    bad_id = store.put('{"uniwire": "1.0.0"}')
+    bad = client.get(f"/svg/{bad_id}")
+    assert bad.status_code == 422
+
+
 def test_linked_tools_not_read_only_with_store(tmp_path):
     """With a store, the tools that return links keep the document: not read-only (app directory checks)."""
     pytest.importorskip("mcp.server.mcpserver")

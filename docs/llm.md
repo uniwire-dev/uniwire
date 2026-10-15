@@ -53,7 +53,7 @@ Every `document` argument accepts a JSON object, a JSON string or the path of a 
 | `apply_patch` | `document`, `ops`, `validate`? | `{ok, document}` or `{ok: false, errors}` |
 | `render` | `document`, `kind` (`single-line` / `multi-line`), `format` (`svg` / `pdf`), `sheet`?, `view`?, `path`?, `color`? (`none`/`conductors`/`phase`/`source`/`status`/`voltage`), `conductor_colors`? (`iec`/`us`) | SVG text of each sheet; PDF written to `path` or returned as base64 |
 | `viewer_link` | `document` | `{viewer_url, pdf_url}`: links that open the document in the web editor (drawing, findings, PDF and SVG downloads); `pdf_url` also downloads the PDF (on the hosted server, a plain PDF link: see [Short links](#short-links)) |
-| `bom` | `document` | bill-of-materials rows |
+| `bom` | `document` | bill-of-materials rows: referenced products, then equipment without a reference grouped by type and characteristics (`spec`), then cables |
 | `wiring` | `document`, `what` (`markers` / `wires` / `cables`), `view`? | wire marker list, wire list or cable schedule as rows (stable column names) |
 | `list_examples`, `get_example` | `name` (e.g. `02` or `02_house_3_bedrooms_tt`) | the 52 bundled examples |
 | `normalize` | `document` | resolved document (templates applied, ids assigned) |
@@ -96,7 +96,8 @@ with `--store`: documents sent to its tools are kept on that basis. `--link-base
 Over HTTP with `--store`, `pdf_url` is a plain PDF link as well (`https://uniwire.sh/pdf/<id>`): the server draws
 the PDF with the library (in a worker process in public mode) and serves it at `GET /pdf/<id>`, named after the
 document title. It works without the editor and cannot be mistaken for `viewer_url`. `--pdf-base` sets its prefix
-(default: the editor URL with `/viewer/` replaced by `/pdf/`).
+(default: the editor URL with `/viewer/` replaced by `/pdf/`). `GET /svg/<id>` serves the first sheet as SVG, which
+the web editor shows while its engine starts, and `GET /doc/<id>` the document text.
 
 ## Reference card
 

@@ -71,7 +71,7 @@ from ..resolve import Index, build_index, iter_nodes
 from ..symbols import ABBREVIATIONS, symbol_for
 from ..symbols import grid as grid_symbol
 from ..units import fmt
-from .engine import SheetLayout, SheetSpec, drawing_area
+from .engine import DC_PORT_TYPES, SheetLayout, SheetSpec, _is_dc, drawing_area
 
 S = 3.0  # spacing of the conductors of a bundle (mm)
 PAD = 3.0  # first conductor of a column, from the column's left edge
@@ -81,7 +81,9 @@ CHILD_GAP = 4.5  # between the last rail and the outgoing feeders
 RAIL_IN = 6.0  # horizontal room between the incoming conductors and the first outgoing feeder
 COL_GAP = 2.5
 BOARD_TOP = 7.0  # room for the board name
+FRAME_ROOM = 2.5  # right of a board's content: its frame, then a gap before the next frame
 SPLIT_H = 6.0  # room for a PEN split / a conductor starting in a board
+DC_JOG = 4.5  # under an inverter/charger: room for its DC pair turning toward the DC side
 CABLE_BAND = 9.0  # room above the loads for the feeder cable
 DEV_H = 12.5  # height of a contact (5 modules)
 ANN_SIZE = 1.8
@@ -113,6 +115,14 @@ _VECTOR = re.compile(r"^(YN|ZN|Y|D|Z)(yn|zn|y|d|z)")
 
 def _sorted(conds: list[str]) -> list[str]:
     return sorted(dict.fromkeys(conds), key=lambda c: ORDER.get(c, 99))
+
+
+def _dc_side(node: Any) -> list[Any]:
+    """Children on the DC side of an inverter/charger or UPS that also feeds an AC side (none otherwise)."""
+    if node.type not in DC_PORT_TYPES:
+        return []
+    dc = [c for c in node.children if _is_dc(c)]
+    return dc if len(dc) < len(node.children) else []
 
 
 # ------------------------------------------------------------- conductors
@@ -334,7 +344,7 @@ class _Assigner:
             out = list(inp)
             if t == "transformer":
                 out, pending = self._transformer_out(node)
-            elif t in CONVERTERS and not any(c in DC for c in inp):
+            elif t in CONVERTERS and not any(c in DC for c in inp) and not _dc_side(node):
                 out = list(DC)
         if "PEN" in inp and id(node) in self.split:
             inp = _sorted([c for c in inp if c != "PEN"] + ["N"] + (["PE"] if self.show_pe else []))
@@ -347,9 +357,17 @@ class _Assigner:
             src["PE"] = None
             out = _sorted(out + ["PE"]) if t not in CONVERTERS | {"transformer"} else out
             pending = False
-        self.info[id(node)] = Conductors(inp, out, src)
+        dc_side = _dc_side(node) if not any(c in DC for c in inp) else []
+        if dc_side:  # AC side on the outputs, plus a DC pair for the batteries, PV...
+            out = list(inp)
+            self.info[id(node)] = Conductors(inp, _sorted(out + list(DC)), src)
+        else:
+            self.info[id(node)] = Conductors(inp, out, src)
         for c in node.children:
-            self._walk(c, out, pending, node)
+            if any(c is d for d in dc_side):
+                self._walk(c, list(DC), False, node)
+            else:
+                self._walk(c, out, pending, node)
 
 
 def _first_boards(doc: Document) -> list[NodeBase]:
@@ -420,6 +438,8 @@ class MLNode:
     head: float = 0.0  # room between the incoming conductors and the first feeder, for link taps
     tail: float = 0.0  # room after the last feeder, for link taps
     extra_taps: dict[str, list[float]] = field(default_factory=dict)  # link taps on the rails, per conductor
+    dc_side: int = 0  # last children: the DC side of an inverter/charger, fed from its DC pair, not the AC outputs
+    dc_at: float = 0.0  # where the columns of the DC side start, from the column's left edge
 
     @property
     def id(self) -> str:
@@ -434,8 +454,20 @@ class MLNode:
         return self.kind == "node" and self.type == "board"
 
     @property
+    def bus_children(self) -> list[MLNode]:
+        """The children fed by the outputs (all of them, except the DC side of an inverter/charger)."""
+        return self.children[:len(self.children) - self.dc_side]
+
+    @property
+    def dc_children(self) -> list[MLNode]:
+        return self.children[len(self.children) - self.dc_side:]
+
+    def on_dc_side(self, child: MLNode) -> bool:
+        return any(child is c for c in self.dc_children)
+
+    @property
     def rails(self) -> bool:
-        return self.kind == "bus_in" or len(self.children) >= 2 or self.bus_out or \
+        return self.kind == "bus_in" or len(self.bus_children) >= 2 or self.bus_out or \
             (self.type == "busbar" and bool(self.children))
 
     @property
@@ -513,8 +545,10 @@ def _build(node: NodeBase, spec: SheetSpec, info: dict[int, Conductors], is_root
         _, s, e = spec.bus_slice
         bus_out = e < len(children)
         children = children[s:e]
+    dc = [ch for ch in children if any(ch is d for d in _dc_side(node))]
+    children = [ch for ch in children if not any(ch is d for d in dc)] + dc
     return MLNode(node, "node", list(c.inp), list(c.out), dict(c.src),
-                  [_build(ch, spec, info, False) for ch in children], bus_out=bus_out, root=is_root)
+                  [_build(ch, spec, info, False) for ch in children], bus_out=bus_out, root=is_root, dc_side=len(dc))
 
 
 def _build_roots(spec: SheetSpec, index: Index, info: dict[int, Conductors]) -> list[MLNode]:
@@ -655,7 +689,7 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
 
 
 def _assign_offsets(ln: MLNode, parent: Optional[MLNode]) -> None:
-    if parent is None or parent.rails:
+    if parent is None or parent.rails or parent.on_dc_side(ln):
         ln.off_in = {c: PAD + i * S for i, c in enumerate(ln.inp)}
     else:
         ln.off_in = {}
@@ -702,14 +736,19 @@ def _measure(ln: MLNode) -> float:
     if ln.rails:
         start = ln.lanes_max() + RAIL_IN + ln.head
         extra = 0.0
-        if ln.tail and ln.children:  # link taps right of the last feeder's conductors, in its annotation room
-            last = ln.children[-1]
+        if ln.tail and ln.bus_children:  # link taps right of the last feeder's conductors, in its annotation room
+            last = ln.bus_children[-1]
             extra = max(0.0, ln.tail - (last.width - last.lanes_max() - 3.0))
-        ln.width = max(own, start + sum(c.width for c in ln.children) + 4.0 + extra)
+        ln.width = max(own, start + sum(c.width for c in ln.bus_children) + 4.0 + extra)
     elif ln.children:
         ln.width = max(own, ln.children[0].width)
     else:
         ln.width = max(own, 14.0)
+    if ln.dc_side:  # the DC side in columns of its own, right of the AC side
+        ln.dc_at = ln.width
+        ln.width += sum(c.width for c in ln.dc_children)
+    if ln.is_board:  # room for the frame between the symbols and the next column
+        ln.width += FRAME_ROOM
     ln.width += ln.lead
     return ln.width
 
@@ -722,15 +761,21 @@ def _place_x(ln: MLNode, x_left: float) -> None:
     ln.x_left = x_left
     if ln.rails:
         cx = x_left + ln.lanes_max() + RAIL_IN + ln.head
-        for c in ln.children:
+        for c in ln.bus_children:
             _place_x(c, cx + c.lead)
             cx += c.width
     else:
-        for c in ln.children:
+        for c in ln.bus_children:
             _place_x(c, x_left)
+    cx = x_left + ln.dc_at
+    for c in ln.dc_children:
+        _place_x(c, cx + c.lead)
+        cx += c.width
 
 
 def _needs_split_room(ln: MLNode, parent: Optional[MLNode]) -> bool:
+    if parent is not None and parent.on_dc_side(ln):
+        return False
     if parent is None or parent.rails:
         return any(s is None for s in ln.src.values()) and not ln.root
     for c in ln.inp:
@@ -748,10 +793,10 @@ def _place_y(ln: MLNode, y: float, parent: Optional[MLNode]) -> None:
         y += SPLIT_H
     ln.y = y
     if ln.rails:
-        ln.rail_y0 = y + (ln.block_h() + RAIL_GAP if (ln.h > 0 or ln.ann) else 2.0)
+        ln.rail_y0 = y + (ln.block_h() + RAIL_GAP if (ln.h > 0 or ln.ann) else 2.0) + (DC_JOG if ln.dc_side else 0.0)
         child_y = ln.rails_bottom() + CHILD_GAP
     else:
-        child_y = y + ln.block_h() + (GAP if ln.block_h() > 0 else 0.0)
+        child_y = y + ln.block_h() + (GAP if ln.block_h() > 0 else 0.0) + (DC_JOG if ln.dc_side else 0.0)
     for c in ln.children:
         _place_y(c, child_y, ln)
 
@@ -1191,15 +1236,39 @@ def _draw_transition(ln: MLNode, ch: MLNode, g: Group) -> None:
     g.add(*labels)
 
 
+def _draw_dc_side(ln: MLNode, g: Group) -> None:
+    """DC pair of an inverter/charger down from its "=" corner, then right to the columns of the DC side; the
+    leftmost conductor turns lowest so that the pair never crosses itself."""
+    pair = sorted((c for c in ln.out if c in DC), key=ln.xo)
+    y0 = ln.y + ln.h
+    base = ln.y + ln.block_h() + 1.5
+    branches: dict[str, list[tuple[float, float]]] = {}
+    for ch in ln.dc_children:
+        eg = edge_group(ch.id, ln.id)
+        g.add(eg)
+        for c in ch.inp:
+            s = ch.src.get(c)
+            if s not in pair:
+                continue
+            xs, xc = ln.xo(s), ch.xi(c)
+            yj = base + (len(pair) - 1 - pair.index(s)) * S
+            eg.add(cond_group(c, Polyline([(xs, y0), (xs, yj), (xc, yj), (xc, ch.y)])))
+            branches.setdefault(s, []).append((xc, yj))
+    for pts in branches.values():  # several columns on the DC side: a dot where each one leaves the pair
+        for p in sorted(pts)[:-1]:
+            g.add(_dot(*p))
+
+
 def _draw_rails(ln: MLNode, g: Group, sheet_left: float, folio_of: Callable[[str], Optional[int]],
                 continuation: tuple[Optional[int], Optional[int]], lang: str) -> None:
     assert ln.rail_y0 is not None
-    ry = {c: ln.rail_y0 + i * S for i, c in enumerate(ln.out)}
-    taps: dict[str, list[float]] = {c: [] for c in ln.out}
+    bars = [c for c in ln.out if not (ln.dc_side and c in DC)]
+    ry = {c: ln.rail_y0 + i * S for i, c in enumerate(bars)}
+    taps: dict[str, list[float]] = {c: [] for c in bars}
     news: list[tuple[MLNode, str]] = []
     me = ln.target if ln.kind == "bus_in" else ln.id
     edges: dict[int, Group] = {}
-    for ch in ln.children:
+    for ch in ln.bus_children:
         top = ch.frame_top if ch.is_board else ch.y
         eg = edges[id(ch)] = edge_group(ch.id, me)
         g.add(eg)
@@ -1214,12 +1283,14 @@ def _draw_rails(ln: MLNode, g: Group, sheet_left: float, folio_of: Callable[[str
     for c, xs_ in ln.extra_taps.items():  # power links outside the tree tapped on the rails
         if c in taps:
             taps[c] += xs_
-    x_end = max([x for v in taps.values() for x in v] + [ln.xo(c) for c in ln.out]) + 2.0
+    x_end = max([x for v in taps.values() for x in v] + [ln.xo(c) for c in bars]) + 2.0
     if ln.bus_out:
         x_end += 4.0
-    style = Style(width=THICK if (ln.type in ("board", "busbar") or ln.kind == "bus_in" or len(ln.children) > 2)
+    style = Style(width=THICK if (ln.type in ("board", "busbar") or ln.kind == "bus_in" or len(ln.bus_children) > 2)
                   else NORMAL)
     for c in ln.out:
+        if c not in ry:
+            continue
         y = ry[c]
         bg = busbar_group(me or ln.id, cond=c)
         if ln.kind == "bus_in":
@@ -1296,8 +1367,10 @@ def _draw(ln: MLNode, g: Group, lang: str, view: View, sheet_left: float, folio_
         _draw_load_texts(ln, g, folio_of, lang)
     if ln.rails:
         _draw_rails(ln, g, sheet_left, folio_of, continuation, lang)
-    elif ln.children:
-        _draw_transition(ln, ln.children[0], g)
+    elif ln.bus_children:
+        _draw_transition(ln, ln.bus_children[0], g)
+    if ln.dc_side:
+        _draw_dc_side(ln, g)
     for c in ln.children:
         _draw(c, g, lang, view, sheet_left, folio_of, continuation, None)
 
@@ -1337,11 +1410,16 @@ def _draw_load_texts(ln: MLNode, g: Group, folio_of: Callable[[str], Optional[in
 
 
 def _draw_frames(roots: list[MLNode], g: Group) -> None:
+    drawn = {it.id: it for it in g.items if isinstance(it, Group) and it.id and it.cls.startswith("ml-sym")}
     for r in roots:
         for b in r.walk():
             if not b.is_board or b.node is None:
                 continue
-            x0, x1 = b.x_left + 0.8, b.x_left + b.width - 1.5
+            x0, x1 = b.x_left + 0.8, b.x_left + b.width - FRAME_ROOM
+            # clear of the symbols (blades and their mechanical link reach left of the first conductor), and
+            # of the frame of the column on the left
+            lefts = [box[0] for n in _owned(b) if n.id in drawn and (box := bbox(drawn[n.id])) is not None]
+            x0 = max(b.x_left - 0.5, min([x0] + [x - 2.0 for x in lefts]))
             y0, y1 = b.frame_top, _frame_bottom(b)
             fg = Group(id=b.id, cls="board uw-node")
             fg.add(Rect(x0, y0, x1 - x0, y1 - y0, Style(width=THIN, dash=(2.0, 1.0), color="#555555")))
