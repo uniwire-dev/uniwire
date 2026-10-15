@@ -74,3 +74,22 @@ def test_production_finding_points_at_a_single_inverter():
     doc = _doc(kva=12, agcp={"in_A": 60, "idn_mA": 500}, inverters=[("string", 8.2)])
     f = next(f for f in check(doc) if f.rule == "enedis.production")
     assert f.node == "G0" and "8.2 kVA" in f.message
+
+
+def test_production_above_36_kva_three_phase():
+    agcp = {"in_A": 60, "idn_mA": 500}
+    assert "enedis.production" in _rules(_doc(system="3P+N", kva=36, agcp=agcp, inverters=[("string", 50)]), "info")
+
+
+def _with_meter_cable(cable):
+    doc = _doc(agcp={"in_A": 45, "idn_mA": 500})
+    raw = doc.model_dump(exclude_none=True, by_alias=True)
+    q0 = raw["sources"][0]["children"][0]
+    raw["sources"][0]["children"][0] = {"type": "meter", "id": "P1", "cable": cable, "children": [q0]}
+    return load(raw)
+
+
+def test_service_cable():
+    assert _rules(_with_meter_cable({"cores": "2x", "section_mm2": 35, "material": "Al", "length_m": 20})) == []
+    assert _rules(_with_meter_cable({"section_mm2": 35, "length_m": 45}), "warning") == ["enedis.service-cable"]
+    assert _rules(_with_meter_cable({"section_mm2": 16, "length_m": 10}), "warning") == ["enedis.service-cable"]

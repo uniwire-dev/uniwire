@@ -15,7 +15,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   above), `enedis.agcp-setting` (the service main breaker setting carries the connection power and cannot be
   below the subscribed power or above 60 A), `enedis.agcp-rcd` (500 mA residual-current service breaker
   recommended), `enedis.production` (injection and installed power limits in single-phase and three-phase,
-  storage included, Enedis-NMO-RES_032E) and `enedis.decoupling` (decoupling protection of production and
+  storage included, Enedis-NMO-RES_032E), `enedis.service-cable` (individual service cable: 30 m and 35 mm²
+  aluminium) and `enedis.decoupling` (decoupling protection of production and
   storage inverters). The French examples on a Tarif Bleu supply
   declare it.
 

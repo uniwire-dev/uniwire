@@ -122,6 +122,12 @@ EN: dict[str, str] = {
                                 "limited to 6 kVA (limit the export or connect in three-phase)",
     "enedis.prod_installed_3p": "{kva:g} kVA of production and storage ({what}): installed power is limited to "
                                 "250 kVA in low voltage",
+    "enedis.prod_above_36": "{kva:g} kVA of production and storage ({what}): an injection above 36 kVA follows "
+                            "the connection procedure of installations above 36 kVA",
+    "enedis.service_cable_length": "individual service cable of {length:g} m: limited-power connections allow 30 m "
+                                   "at most (voltage variation within 2 %)",
+    "enedis.service_cable_section": "individual service cable of {section:g} mm²: the standard section is 35 mm² "
+                                    "aluminium (2 x 35 single-phase, 4 x 35 three-phase)",
     "enedis.decoupling": "{what}: give its decoupling protection, mandatory for production and storage "
                          "(`protection`, e.g. NF EN 50549-1 / NF EN 50549-10)",
     # --- CLI
@@ -334,6 +340,12 @@ FR: dict[str, str] = {
                                 "limitée à 6 kVA (brider l'injection ou passer en triphasé)",
     "enedis.prod_installed_3p": "{kva:g} kVA de production et de stockage ({what}) : la puissance installée est "
                                 "limitée à 250 kVA en basse tension",
+    "enedis.prod_above_36": "{kva:g} kVA de production et de stockage ({what}) : une injection au-delà de 36 kVA "
+                            "suit la procédure de raccordement des installations de plus de 36 kVA",
+    "enedis.service_cable_length": "dérivation individuelle de {length:g} m : un branchement à puissance limitée "
+                                   "admet 30 m au plus (variation de tension dans les 2 %)",
+    "enedis.service_cable_section": "dérivation individuelle en {section:g} mm² : la section normalisée est "
+                                    "35 mm² aluminium (2 x 35 en monophasé, 4 x 35 en triphasé)",
     "enedis.decoupling": "{what} : préciser sa protection de découplage, obligatoire pour la production et le "
                          "stockage (`protection`, par ex. NF EN 50549-1 / NF EN 50549-10)",
     "cli.description": "Format uniwire : validation, vérification des règles et dessin des schémas électriques (unifilaires et multifilaires)",

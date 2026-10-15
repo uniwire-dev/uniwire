@@ -6,7 +6,8 @@ technical reference, not by NF C 15-100, which starts downstream of the AGCP: th
 
 * **Enedis-NMO-RAC_001E** (version 2, 2025-03-24), technical reference for low-voltage connections: power tiers
   of limited-power connections (§3.1.1) and of monitored-power connections (§3.1.2), injection limits of
-  production installations (§3.2.1), connection power carried by the AGCP setting (§4.1);
+  production installations (§3.2.1, §3.2.2), connection power carried by the AGCP setting (§4.1), length and
+  section of the individual service cable (§4.1.3);
 * **SéQuélec fiche n°2** (service main breaker): NF C 14-100 recommends a 500 mA residual-current service
   breaker in new and renovated-as-new buildings;
 * **Enedis-NMO-RES_032E** (version 1, 2025-09-15), connection of installations that may inject and draw: the
@@ -47,8 +48,14 @@ AGCP_RCD = describe(
 PRODUCTION = describe(
     "enedis.production",
     f"{RAC} §3.2.1: single-phase production, injection up to 6 kVA and installed power up to 18 kVA; "
-    f"three-phase, installed power up to 250 kVA; {RES} §1.2.1.2: the installed production power includes "
-    "storage",
+    f"three-phase, installed power up to 250 kVA; §3.2.2: an injection above 36 kVA follows the connection "
+    f"procedure of installations above 36 kVA; {RES} §1.2.1.2: the installed production power includes storage",
+    "high")
+SERVICE_CABLE = describe(
+    "enedis.service-cable",
+    f"{RAC} §4.1.3: the individual service cable (dérivation individuelle, from the CCPI to the meter) is at most "
+    "30 m long, in 2 x 35 mm² aluminium single-phase or 4 x 35 mm² aluminium three-phase, so that the voltage "
+    "variation of the connection stays within 2 %",
     "high")
 DECOUPLING = describe(
     "enedis.decoupling",
@@ -65,6 +72,9 @@ AGCP_MAX_A = 60.0
 KVA_PER_A = {"1P+N": 0.2, "3P+N": 0.6, "3P": 0.6}
 SINGLE_PHASE_INJECTION_KVA = 6.0
 SINGLE_PHASE_INSTALLED_KVA = 18.0
+LIMITED_INJECTION_KVA = 36.0
+SERVICE_CABLE_MAX_M = 30.0
+SERVICE_CABLE_MM2 = 35.0
 # inverters that can inject: PV and storage (battery inverters, hybrids); a charger only draws
 INJECTING = (None, "string", "central", "micro", "hybrid", "battery")
 
@@ -163,6 +173,24 @@ def production(doc: Document, idx: Index):
             yield PRODUCTION.finding("warning", _t("enedis.prod_injection_1p", kva=installed, what=what), node)
     elif installed > MONITORED_MAX_KVA:
         yield PRODUCTION.finding("error", _t("enedis.prod_installed_3p", kva=installed, what=what), node)
+    elif installed > LIMITED_INJECTION_KVA:
+        yield PRODUCTION.finding("info", _t("enedis.prod_above_36", kva=installed, what=what), node)
+
+
+@rule("enedis")
+def service_cable(doc: Document, idx: Index):
+    if not _public_lv(doc, idx) or not _limited(doc):
+        return
+    for nid, n in idx.nodes.items():
+        if n.type != "meter" or n.cable is None:  # type: ignore[attr-defined]
+            continue
+        if any(a.type != "grid" for a in idx.ancestors(nid)):  # type: ignore[attr-defined]
+            continue  # a sub-meter, not the meter of the connection
+        c = n.cable
+        if c.length_m is not None and c.length_m > SERVICE_CABLE_MAX_M:
+            yield SERVICE_CABLE.finding("warning", _t("enedis.service_cable_length", length=c.length_m), nid)
+        if c.section_mm2 is not None and c.section_mm2 < SERVICE_CABLE_MM2:
+            yield SERVICE_CABLE.finding("warning", _t("enedis.service_cable_section", section=c.section_mm2), nid)
 
 
 @rule("enedis")
