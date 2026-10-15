@@ -941,9 +941,8 @@ function loadDraft() {
 
 /* ================================================================== downloads */
 
-function download(name, content) {
-  // saved as a generic file: the browser never shows it in a tab instead (a PDF blob could open there)
-  const blob = new Blob([content], { type: "application/octet-stream" });
+function download(name, content, type) {
+  const blob = content instanceof Blob ? content : new Blob([content], { type });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = name;
@@ -985,11 +984,11 @@ ${body}
 async function onDownload(kind) {
   closeMenu();
   const text = state.editor.getText();
-  if (kind === "source") return download(`${state.stem}.uniwire.json`, text);
+  if (kind === "source") return download(`${state.stem}.uniwire.json`, text, "application/json");
   if (kind === "svg") {
     if (!state.pages.length) return toast(t("msg.need_valid"));
     const n = state.pages.length > 1 ? `-f${state.sheet + 1}` : "";
-    return download(`${state.stem}${suffix()}${n}.svg`, state.pages[state.sheet].svg);
+    return download(`${state.stem}${suffix()}${n}.svg`, state.pages[state.sheet].svg, "image/svg+xml");
   }
   if (kind === "print") return printAll();
   if (!(state.result && state.result.ok)) return toast(t("msg.need_valid"));
@@ -997,8 +996,8 @@ async function onDownload(kind) {
     try {
       const r = await call("export", { text, what: kind === "json" ? "normalized" : "bom", lang: lang() });
       if (!r.ok) return toast(r.error);
-      if (kind === "json") download(`${state.stem}.normalized.uniwire.json`, r.content);
-      else download(`${state.stem}-bom.csv`, "﻿" + r.content);
+      if (kind === "json") download(`${state.stem}.normalized.uniwire.json`, r.content, "application/json");
+      else download(`${state.stem}-bom.csv`, "﻿" + r.content, "text/csv");
     } catch (err) {
       toast(String(err.message || err));
     }
@@ -1008,7 +1007,7 @@ async function onDownload(kind) {
     toast(t("msg.pdf_wait"), 60000);
     try {
       const r = await call("pdf", { text, view: state.view, kind: state.kind, lang: lang(), options: viewOverrides() });
-      download(`${state.stem}${suffix()}.pdf`, r.bytes);
+      download(`${state.stem}${suffix()}.pdf`, new Blob([r.bytes], { type: "application/pdf" }));
       hideToast();
     } catch (err) {
       toast(t("msg.pdf_failed", { error: err.message || err }), 8000);

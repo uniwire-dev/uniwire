@@ -16,7 +16,8 @@ version.
   links to give, the conformity disclaimer, the workflow) lives in the server instructions only.
 * Web viewer: a link to an example that does not exist (`?example=98`) opens the first example with a message,
   instead of an empty editor.
-* Web viewer: downloads (PDF, SVG, CSV, JSON) are always saved as files, never opened in a browser tab.
+* Web viewer: clearer download menu: "PDF, all sheets" downloads the PDF, "Print all sheets…" opens the sheets
+  for printing.
 * Web viewer: panning the drawing no longer selects its text; text is selected on purpose only (double-click a
   text, or drag with Alt/Option held).
 * Web viewer: the drawing shows at once, while the in-browser engine starts (10 to 25 seconds on a first visit):
