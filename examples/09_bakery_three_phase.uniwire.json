@@ -1,7 +1,7 @@
 {
   "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
   "uniwire": "1.0.0",
-  "profiles": ["nfc15100", "iec60364"],
+  "profiles": ["nfc15100", "iec60364", "enedis"],
   "meta": {
     "lang": "fr",
     "title": "Boulangerie-pâtisserie : tableau général triphasé",

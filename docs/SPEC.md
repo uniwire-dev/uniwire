@@ -51,7 +51,7 @@ The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are to be interpret
 |---|---|---|
 | `$schema` | no | Schema URL (the major version appears in the path: `/v1/`) |
 | `uniwire` | no (default `1.0.0`) | Format version, semver `1.x.y` |
-| `profiles` | no | Business rule profiles to apply (`nfc15100`…) |
+| `profiles` | no | Business rule profiles to apply (`nfc15100`, `iec60364`, `enedis`…) |
 | `meta` | no | Title, project, client, author, date, `revisions[]`, `notes[]`, `lang` |
 | `installation` | no | `earthing` (TT, TN-C, TN-S, TN-C-S, IT), `system` (1P+N, 3P+N…), `un_V`, `f_Hz`, `supply`, `subscribed_kVA`, `planned_kVA`, `ik3_kA`, `earth_resistance_ohm`, `surface_m2`, `standard`, `premises` (dwelling, commercial, office, industrial, public, agricultural, other: dwelling rules apply to `dwelling` or when absent) |
 | `templates` | no | Named attribute templates |
@@ -533,6 +533,16 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
          lower.
        * No grouping or temperature correction factor is applied.
        * The IEC 60364-5-52:2009 edition may differ slightly.
+
+   * `enedis` *(optional, must be declared in `profiles`)*: connection of a low-voltage installation to the
+     French public network (NF C 14-100, Enedis technical reference Enedis-NMO-RAC_001E), separate from
+     `nfc15100`, which starts downstream of the service main breaker. Rules `enedis.connection` (power tiers
+     of the connection), `enedis.agcp-setting` (the setting `in_A` of the service `main_breaker` carries the
+     connection power: 0.2 kVA per ampere single-phase, 0.6 kVA per ampere three-phase, 60 A at most),
+     `enedis.agcp-rcd` (500 mA residual-current service breaker recommended), `enedis.production` (PV
+     injection and installed power limits) and `enedis.decoupling` (decoupling protection of PV inverters).
+     Applies only to a low-voltage supply from a `grid` source. Details and levels:
+     [Rules](rules.md#enedis-connection-to-the-french-public-network).
 
    These rules are consistency checks: they do not replace the standard.
 

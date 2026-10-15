@@ -8,6 +8,18 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* New rule profile `enedis` (opt-in): connection of a low-voltage installation to the French public network,
+  following the Enedis technical reference (Enedis-NMO-RAC_001E) and NF C 14-100, separate from `nfc15100`,
+  which starts downstream of the service main breaker. Rules: `enedis.connection` (12 kVA at most in
+  single-phase, 36 kVA in three-phase for a limited-power connection; monitored power and medium voltage
+  above), `enedis.agcp-setting` (the service main breaker setting carries the connection power and cannot be
+  below the subscribed power or above 60 A), `enedis.agcp-rcd` (500 mA residual-current service breaker
+  recommended), `enedis.production` (PV injection and installed power limits in single-phase and three-phase)
+  and `enedis.decoupling` (decoupling protection of PV inverters). The French examples on a Tarif Bleu supply
+  declare it.
+
+## 0.1.2 (not released yet)
+
 * Bill of materials: equipment without a product reference is grouped by type and main characteristics (new
   `spec` key, e.g. `C16 1P+N 6kA`, `40A 30mA 2P type A`) and cables by type, composition and material (new
   `length_m` key with the total known length), instead of being left out. Rows with a reference are unchanged
