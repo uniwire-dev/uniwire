@@ -112,6 +112,13 @@ Every change to the format goes through a short public proposal, opened as a Git
    updated, the changelog entry, at least one example or test using it, and the whole
    test suite green.
 
+## Library versions
+
+The library and the format are versioned separately. Before the library's 1.0, a `0.x.y` release adds features
+and fixes that keep existing documents and code working (a new rule profile, a layout improvement, a bug fix);
+a `0.x.0` release may break compatibility and says what to change in `CHANGELOG.md`. A rule profile is opt-in
+(a document lists it in `profiles`), so adding one never changes the results of existing documents.
+
 ## Code style
 
 * Python ≥ 3.10, type hints everywhere; pydantic v2 models are the source of truth for the schema.

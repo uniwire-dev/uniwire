@@ -3,7 +3,8 @@
 All notable changes to the uniwire format and to the `uniwire` Python library are documented here.
 The format and the library are versioned separately: the format follows `1.y.z` (see
 [SPEC §9](https://uniwire.sh/docs/SPEC/#9-extensibility-and-versions)), the library follows its own semantic
-version.
+version. Before the library's 1.0, a `0.x.y` release adds features and fixes that keep existing documents and
+code working, and a `0.x.0` release may break compatibility (described here, with what to change).
 
 ## Unreleased
 
