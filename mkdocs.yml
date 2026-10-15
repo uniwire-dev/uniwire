@@ -24,16 +24,14 @@ theme:
     - navigation.top
     - content.code.copy
     - search.suggest
-  palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: uniwire
+  palette:                        # light by default (first scheme), dark when the reader switches
+    - scheme: uniwire
       primary: custom
       accent: custom
       toggle:
         icon: uniwire/theme
         name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
+    - scheme: slate
       primary: custom
       accent: custom
       toggle:

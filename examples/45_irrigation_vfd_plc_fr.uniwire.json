@@ -2,7 +2,8 @@
  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
  "uniwire": "1.0.0",
  "profiles": [
-  "nfc15100"
+  "nfc15100",
+  "enedis"
  ],
  "meta": {
   "title": "Exploitation agricole exemple : armoire de pompage d'irrigation à variateur",

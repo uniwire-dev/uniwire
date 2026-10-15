@@ -34,7 +34,7 @@ review and diff.
 * **Closed typing and unit-suffixed fields**: `in_A`, `idn_mA`, `section_mm2`, `p_kW`; unknown fields are
   errors (`calibre` instead of `in_A` is caught), extensions live in `ext`. Templates declare a device once.
 * **Rule profiles**: `core` (always), `nfc15100` (French dwellings), `iec60364` (cable current-carrying
-  capacity), plus PLC consistency checks.
+  capacity), `enedis` (connection to the French public network), plus PLC consistency checks.
 * **Bill of materials**: structured `product` references (manufacturer, part number, range, accessories)
   on any node or PLC module, aggregated to CSV (`uniwire bom`).
 * **Wire and cable marking**: marking rules per view (manual, sequential, per potential, pattern), marks

@@ -92,4 +92,4 @@ def check(doc: Document, profiles: Iterable[str] | None = None) -> list[Finding]
     return findings
 
 
-from . import core, iec60364, nfc15100, plc  # noqa: E402,F401  (rule registration)
+from . import core, enedis, iec60364, nfc15100, plc  # noqa: E402,F401  (rule registration)

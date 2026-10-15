@@ -1,4 +1,6 @@
+import re
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 from uniwire import load, render_pages, render_pdf, render_svg
 from uniwire.graph import to_graph
@@ -39,7 +41,9 @@ def test_normally_open_link_dashed_with_its_device(tmp_path):
     ex = Path(__file__).resolve().parents[1] / "examples" / "52_dual_source_selectable_feeders.uniwire.json"
     doc = load(ex)
     svg = render_svg(doc, tmp_path, "alt", view=doc.views[0])[0].read_text("utf-8")
-    assert 'stroke-dasharray="3 1.2"' in svg  # long dash of the normally-open power links
+    # long dash of the normally-open power links (3 1.2, scaled with the drawing when it is enlarged)
+    dashes = [(float(a), float(b)) for a, b in re.findall(r'stroke-dasharray="([\d.]+) ([\d.]+)"', svg)]
+    assert any(abs(a / b - 2.5) < 0.01 for a, b in dashes)
     for dev in ("X21", "X22", "X13"):  # the removable links carried by the infeed links are drawn
         assert f'id="{dev}"' in svg
     assert "N.O., key LA" in svg
@@ -52,3 +56,22 @@ def test_normally_open_annotation_in_french():
     q = doc.sources[0].children[0]
     assert annotation(q, "fr")[-1] == "NO, clé K1"
     assert annotation(q, "en")[-1] == "N.O., key K1"
+
+
+def test_paper_chosen_when_the_document_has_none():
+    """No paper in the document: the smallest sheet holding the drawing at full size (A4 landscape here)."""
+    assert (render_pages(load(SMALL))[0].width, render_pages(load(SMALL))[0].height) == (297.0, 210.0)
+    big = load(Path(__file__).resolve().parents[1] / "examples" / "18_office_building_main_lv_switchboard.uniwire.json")
+    big.views = []  # the example says A3: without it, its switchboard does not fit an A4 at full size
+    assert render_pages(big)[0].width > 297.0
+
+
+def test_small_drawing_enlarged_on_a_given_paper():
+    """A paper given by the document is kept; a drawing using little of it is enlarged (one scale per view)."""
+    doc = dict(SMALL)
+    doc["views"] = [{"id": "v", "paper": "A3"}]
+    from uniwire.render.svg import page_to_svg
+
+    svg = page_to_svg(render_pages(load(doc))[0])
+    assert 'width="420mm"' in svg
+    assert 'font-size="2.5"' in svg  # annotations: 2 mm x 1.25

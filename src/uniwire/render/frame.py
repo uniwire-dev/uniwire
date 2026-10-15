@@ -22,8 +22,6 @@ from ..units import fmt
 from .colors import Legend
 from .scene import NORMAL, THICK, THIN, Group, Item, Line, Page, Rect, Style, Text, bbox, text_width, transform
 
-ML_MAX_SCALE = 1.4  # largest enlargement of a multi-line diagram
-
 
 def _generator() -> str:
     from .. import __version__
@@ -36,7 +34,9 @@ def _fit(text: str, size: float, width: float) -> float:
 
 
 def compose_page(doc: Document, view: View, lay: SheetLayout, folio: int, total: int, sheet_title: str,
-                 legend: Optional[Legend] = None) -> Page:
+                 legend: Optional[Legend] = None, scale: Optional[float] = None) -> Page:
+    """One sheet: frame, title block, the drawing (``scale``: the enlargement shared by the sheets of the view;
+    otherwise reduced to fit when needed, never enlarged)."""
     w, h = PAPER[view.paper]
     if view.orientation == "portrait":
         w, h = h, w
@@ -50,10 +50,9 @@ def compose_page(doc: Document, view: View, lay: SheetLayout, folio: int, total:
         ah += TITLE_BAND + 2.0
 
     lang = normalize_lang(doc.meta.lang)
-    # drawing scaled to fit
-    # (a multi-line diagram, drawn small, may be enlarged a little to use the sheet)
-    cap = ML_MAX_SCALE if view.kind == "multi-line" else 1.0
-    scale = min(cap, aw / max(lay.width, 1e-6), ah / max(lay.height, 1e-6))
+    # drawing scaled to fit; enlarged only with the scale shared by all the sheets of the view (see render_pages)
+    if scale is None:
+        scale = min(1.0, aw / max(lay.width, 1e-6), ah / max(lay.height, 1e-6))
     dx = ax + max(0.0, (aw - lay.width * scale) / 2) if lay.width * scale < aw * 0.6 else ax
     drawing = transform(lay.group, dx, ay, scale=scale)
     root.add(drawing)  # type: ignore[arg-type]

@@ -51,7 +51,7 @@ The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are to be interpret
 |---|---|---|
 | `$schema` | no | Schema URL (the major version appears in the path: `/v1/`) |
 | `uniwire` | no (default `1.0.0`) | Format version, semver `1.x.y` |
-| `profiles` | no | Business rule profiles to apply (`nfc15100`…) |
+| `profiles` | no | Business rule profiles to apply (`nfc15100`, `iec60364`, `enedis`…) |
 | `meta` | no | Title, project, client, author, date, `revisions[]`, `notes[]`, `lang` |
 | `installation` | no | `earthing` (TT, TN-C, TN-S, TN-C-S, IT), `system` (1P+N, 3P+N…), `un_V`, `f_Hz`, `supply`, `subscribed_kVA`, `planned_kVA`, `ik3_kA`, `earth_resistance_ohm`, `surface_m2`, `standard`, `premises` (dwelling, commercial, office, industrial, public, agricultural, other: dwelling rules apply to `dwelling` or when absent) |
 | `templates` | no | Named attribute templates |
@@ -207,6 +207,9 @@ enclosure, cable as a first-class edge (sections, shared trunk), named ports (`Q
 `product` takes precedence over the simple `manufacturer` / `part_number` fields (which are kept). The quantity of a
 bill of materials line is `product.quantity`, otherwise `count`, otherwise 1. `uniwire bom file.uniwire.json` produces the bill
 of materials (CSV): one line per part number, summed quantities, reference designations involved (`-A1.3` = module in slot 3 of `-A1`).
+Equipment without a reference is grouped by type and main characteristics (`spec`: rating, curve, sensitivity, poles,
+breaking capacity, e.g. `C16 1P+N 6kA`), and cables by type, composition and material with their total known length
+(`length_m`), so that the bill of materials is useful before products are chosen.
 
 ### Modular PLC (`plc`)
 | Field | Description |
@@ -340,7 +343,7 @@ Common enumerations: `poles` ∈ {1P, 1P+N, 2P, 3P, 3P+N, 4P}.
 | `kind` | `single-line` | `single-line` or `multi-line` (power diagram, one line per conductor, §7.1) |
 | `title` | - | Sheet title |
 | `root` | - | Draw only the subtree of this node |
-| `paper` / `orientation` | `A3` / `landscape` | Sheet format |
+| `paper` / `orientation` | `A3` / `landscape` | Sheet format. When `paper` is absent, a renderer may choose the smallest format that holds the drawing at full size (the reference library: A4 landscape when it fits, else A3) |
 | `direction` | `down` | Direction of power flow (future values reserved) |
 | `pitch_mm` | 20 | Width of an outgoing feeder column |
 | `cartouche` | `label, ref, protection, idn_mA, cable, p_kW` | Rows of the circuit schedule (among `label`, `ref`, `protection`, `in_A`, `curve`, `icn_kA`, `idn_mA`, `rcd_type`, `poles`, `cable`, `section_mm2`, `length_m`, `p_kW`, `phase`, `room`, `points`, and the 1.2 rows below, e.g. `cable_ref` "Cable tag"); an `idn_mA` value carried by a device upstream of the feeder (incomer, group RCD), not by its own protection, reads "30mA (upstream)" |
@@ -530,6 +533,18 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
          lower.
        * No grouping or temperature correction factor is applied.
        * The IEC 60364-5-52:2009 edition may differ slightly.
+
+   * `enedis` *(optional, must be declared in `profiles`)*: connection of a low-voltage installation to the
+     French public network (NF C 14-100, Enedis technical reference Enedis-NMO-RAC_001E), separate from
+     `nfc15100`, which starts downstream of the service main breaker. Rules `enedis.connection` (power tiers
+     of the connection), `enedis.agcp-setting` (the setting `in_A` of the service `main_breaker` carries the
+     connection power: 0.2 kVA per ampere single-phase, 0.6 kVA per ampere three-phase, 60 A at most),
+     `enedis.agcp-rcd` (500 mA residual-current service breaker recommended), `enedis.production` (injection
+     and installed power limits, storage included), `enedis.service-cable` (length and section of the
+     individual service cable) and `enedis.decoupling` (decoupling protection of production
+     and storage inverters).
+     Applies only to a low-voltage supply from a `grid` source. Details and levels:
+     [Rules](rules.md#enedis-connection-to-the-french-public-network).
 
    These rules are consistency checks: they do not replace the standard.
 
