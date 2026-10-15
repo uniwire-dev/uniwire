@@ -397,10 +397,14 @@ def _board_bottom(board: LNode) -> float:
 def _separate_boards(ln: LNode) -> None:
     for n in ln.walk():
         if n.is_board:
-            for sb in _sub_boards(n):
-                delta = _board_bottom(n) + 4.0 - sb.frame_top
-                if delta > 0:
-                    _shift(sb, delta)
+            subs = _sub_boards(n)
+            if not subs:
+                continue
+            # below the frame, and side by side on one line (their frames, names and first devices aligned)
+            top = max([_board_bottom(n) + 4.0] + [sb.frame_top for sb in subs])
+            for sb in subs:
+                if top > sb.frame_top:
+                    _shift(sb, top - sb.frame_top)
 
 
 def _translate(ln: LNode, dx: float, dy: float) -> None:

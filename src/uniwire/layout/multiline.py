@@ -838,10 +838,12 @@ def _frame_bottom(board: MLNode) -> float:
 
 def _separate_boards(ln: MLNode) -> None:
     if ln.is_board:
-        bottom = _frame_bottom(ln)
-        for sb in _sub_boards(ln):
-            if sb.frame_top < bottom + 3.0:
-                _shift(sb, bottom + 3.0 - sb.frame_top)
+        subs = _sub_boards(ln)
+        # below the frame, and side by side on one line (their frames, names and first devices aligned)
+        top = max([_frame_bottom(ln) + 3.0] + [sb.frame_top for sb in subs])
+        for sb in subs:
+            if sb.frame_top < top:
+                _shift(sb, top - sb.frame_top)
     for c in ln.children:
         _separate_boards(c)
 

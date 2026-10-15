@@ -16,6 +16,7 @@ version.
   links to give, the conformity disclaimer, the workflow) lives in the server instructions only.
 * Web viewer: a link to an example that does not exist (`?example=98`) opens the first example with a message,
   instead of an empty editor.
+* Web viewer: downloads (PDF, SVG, CSV, JSON) are always saved as files, never opened in a browser tab.
 * Web viewer: panning the drawing no longer selects its text; text is selected on purpose only (double-click a
   text, or drag with Alt/Option held).
 * Web viewer: the drawing shows at once, while the in-browser engine starts (10 to 25 seconds on a first visit):
@@ -32,6 +33,8 @@ version.
   be reduced, down to 1.5 mm), and a board's column widens to its name, so that board frames no longer cross
   their name or each other.
 * Multi-line diagrams: board frames keep clear of the switch blades and of the frames next to them.
+* Boards fed from the same board are drawn side by side on one line (single-line and multi-line): their frames,
+  names and first devices are aligned.
 * Inverters/chargers and UPS feeding both a DC side (batteries, PV, DC converters, DC boards, or a device feeding
   one of them alone) and an AC side: in single-line diagrams the DC side is drawn from a side terminal of the
   symbol, no longer from the busbar of the AC outputs; in multi-line diagrams the AC outputs keep the AC
