@@ -123,7 +123,7 @@ feeders = {g.get("data-uw-edge"): g.get("data-uw-parent") for g in svg.iter(NS +
 from uniwire.bom import bom, bom_csv
 from uniwire.graph import to_graph
 
-rows = bom(doc)        # [{"manufacturer", "part_number", "range", "description", "type", "quantity", "refs"}, ...]
+rows = bom(doc)        # [{"manufacturer", "part_number", "range", "description", "type", "spec", "quantity", "length_m", "refs"}, ...]
 csv_text = bom_csv(doc)
 graph = to_graph(doc)  # {"components": [...], "connectivity_nodes": [...], "signals": [...]}
 ```

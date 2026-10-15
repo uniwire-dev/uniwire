@@ -102,6 +102,34 @@ EN: dict[str, str] = {
     "nfc15100.ev_mode3": "{what}: mode 3 with type {rtype} RCD: the charger must include 6 mA DC fault "
                          "detection (RDC-DD, IEC 62955), otherwise type B",
     "nfc15100.selectivity": "non-selective (type S) incoming RCD upstream of other RCDs",
+    # enedis
+    "enedis.single_phase_max": "{kva:g} kVA in single-phase: a limited-power single-phase connection carries 12 kVA "
+                               "at most, a three-phase connection is needed",
+    "enedis.monitored": "{kva:g} kVA: monitored-power connection (37 to 250 kVA), the AGCP setting tiers of "
+                        "limited-power connections do not apply",
+    "enedis.mv": "{kva:g} kVA: beyond 250 kVA the connection is in medium voltage (HTA)",
+    "enedis.dwelling_min": "{kva:g} kVA in a dwelling: limited-power connections of dwellings start at 6 kVA",
+    "enedis.agcp_max": "service main breaker set to {in_a:g} A: a limited-power connection is set to 60 A at most",
+    "enedis.agcp_low": "service main breaker set to {in_a:g} A carries {pr:g} kVA, below the {kva:g} kVA "
+                       "subscribed: it would trip before the subscribed power",
+    "enedis.agcp_no_rcd": "service main breaker without residual-current protection: NF C 14-100 recommends 500 mA "
+                          "in new buildings (non-residual-current breaker on request to Enedis)",
+    "enedis.agcp_rcd_value": "service main breaker with {idn:g} mA residual-current protection: NF C 14-100 "
+                             "recommends 500 mA",
+    "enedis.prod_installed_1p": "{kva:g} kVA of production and storage in single-phase ({what}): above 18 kVA of "
+                                "installed power, a three-phase connection is needed",
+    "enedis.prod_injection_1p": "{kva:g} kVA of production and storage in single-phase ({what}): injection is "
+                                "limited to 6 kVA (limit the export or connect in three-phase)",
+    "enedis.prod_installed_3p": "{kva:g} kVA of production and storage ({what}): installed power is limited to "
+                                "250 kVA in low voltage",
+    "enedis.prod_above_36": "{kva:g} kVA of production and storage ({what}): an injection above 36 kVA follows "
+                            "the connection procedure of installations above 36 kVA",
+    "enedis.service_cable_length": "individual service cable of {length:g} m: limited-power connections allow 30 m "
+                                   "at most (voltage variation within 2 %)",
+    "enedis.service_cable_section": "individual service cable of {section:g} mm²: the standard section is 35 mm² "
+                                    "aluminium (2 x 35 single-phase, 4 x 35 three-phase)",
+    "enedis.decoupling": "{what}: give its decoupling protection, mandatory for production and storage "
+                         "(`protection`, e.g. NF EN 50549-1 / NF EN 50549-10)",
     # --- CLI
     "cli.description": "uniwire format: validation, rule checks and drawings of electrical diagrams (single-line and multi-line)",
     "cli.help.validate": "validate one or more documents",
@@ -292,6 +320,34 @@ FR: dict[str, str] = {
     "nfc15100.ev_mode3": "{what} : mode 3 avec DDR type {rtype}, la borne doit intégrer une détection de courant "
                          "continu 6 mA (DD-CDC, IEC 62955), sinon type B",
     "nfc15100.selectivity": "différentiel de branchement non sélectif (type S) en amont d'autres différentiels",
+    "enedis.single_phase_max": "{kva:g} kVA en monophasé : un branchement monophasé à puissance limitée porte "
+                               "12 kVA au plus, il faut un branchement triphasé",
+    "enedis.monitored": "{kva:g} kVA : branchement à puissance surveillée (37 à 250 kVA), les paliers de réglage "
+                        "de l'AGCP des branchements à puissance limitée ne s'appliquent pas",
+    "enedis.mv": "{kva:g} kVA : au-delà de 250 kVA, le raccordement se fait en HTA",
+    "enedis.dwelling_min": "{kva:g} kVA dans un logement : les branchements à puissance limitée des logements "
+                           "commencent à 6 kVA",
+    "enedis.agcp_max": "disjoncteur de branchement réglé à {in_a:g} A : un branchement à puissance limitée est "
+                       "réglé à 60 A au plus",
+    "enedis.agcp_low": "disjoncteur de branchement réglé à {in_a:g} A, soit {pr:g} kVA, sous les {kva:g} kVA "
+                       "souscrits : il déclencherait avant la puissance souscrite",
+    "enedis.agcp_no_rcd": "disjoncteur de branchement non différentiel : la NF C 14-100 préconise 500 mA dans le "
+                          "neuf (non différentiel sur demande écrite à Enedis)",
+    "enedis.agcp_rcd_value": "disjoncteur de branchement différentiel {idn:g} mA : la NF C 14-100 préconise 500 mA",
+    "enedis.prod_installed_1p": "{kva:g} kVA de production et de stockage en monophasé ({what}) : au-delà de "
+                                "18 kVA de puissance installée, il faut un branchement triphasé",
+    "enedis.prod_injection_1p": "{kva:g} kVA de production et de stockage en monophasé ({what}) : l'injection est "
+                                "limitée à 6 kVA (brider l'injection ou passer en triphasé)",
+    "enedis.prod_installed_3p": "{kva:g} kVA de production et de stockage ({what}) : la puissance installée est "
+                                "limitée à 250 kVA en basse tension",
+    "enedis.prod_above_36": "{kva:g} kVA de production et de stockage ({what}) : une injection au-delà de 36 kVA "
+                            "suit la procédure de raccordement des installations de plus de 36 kVA",
+    "enedis.service_cable_length": "dérivation individuelle de {length:g} m : un branchement à puissance limitée "
+                                   "admet 30 m au plus (variation de tension dans les 2 %)",
+    "enedis.service_cable_section": "dérivation individuelle en {section:g} mm² : la section normalisée est "
+                                    "35 mm² aluminium (2 x 35 en monophasé, 4 x 35 en triphasé)",
+    "enedis.decoupling": "{what} : préciser sa protection de découplage, obligatoire pour la production et le "
+                         "stockage (`protection`, par ex. NF EN 50549-1 / NF EN 50549-10)",
     "cli.description": "Format uniwire : validation, vérification des règles et dessin des schémas électriques (unifilaires et multifilaires)",
     "cli.help.validate": "valider un ou plusieurs documents",
     "cli.help.check": "valider puis appliquer les règles (profils)",

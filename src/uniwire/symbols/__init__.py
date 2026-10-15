@@ -367,11 +367,19 @@ def pv_array(node: Any = None) -> Symbol:
 
 
 def battery(node: Any = None) -> Symbol:
+    """Battery of cells (IEC 60617 S00899): two cells (long thin plate +, short thick plate -) joined by a dashed
+    line, with a lead below the last cell and the polarity marked, so that it never reads as an earth symbol."""
     y = 1.4 * M
-    items = [_lead(0, y), Line((-3.0, y), (3.0, y)), Line((-1.5, y + 1.2), (1.5, y + 1.2), Style(width=THICK)),
-             Line((-3.0, y + 2.4), (3.0, y + 2.4)), Line((-1.5, y + 3.6), (1.5, y + 3.6), Style(width=THICK)),
-             _text((3.8, y - 0.2), "+", 1.6)]
-    return Symbol("battery", items, y + 3.6, 3.0, 4.2, has_output=False)
+    gap = 2.2  # dashed link between the cells: the cells in between
+    y2 = y + 1.0 + gap
+    end = y2 + 1.0 + 0.8 * M
+    items = [_lead(0, y),
+             Line((-3.0, y), (3.0, y)), Line((-1.5, y + 1.0), (1.5, y + 1.0), Style(width=THICK)),
+             Line((0, y + 1.0), (0, y2), DASH),
+             Line((-3.0, y2), (3.0, y2)), Line((-1.5, y2 + 1.0), (1.5, y2 + 1.0), Style(width=THICK)),
+             _lead(y2 + 1.0, end),
+             _text((3.8, y - 0.2), "+", 1.6), _text((3.8, y2 + 1.6), "\u2212", 1.6)]
+    return Symbol("battery", items, end, 3.0, 4.2, has_output=False)
 
 
 def busbar(node: Any = None) -> Symbol:
@@ -422,8 +430,9 @@ def heating(node: Any = None) -> Symbol:
     w, h = 6.0, 4.0
     y0 = 0.8 * M
     items: list[Item] = [_lead(0, y0), Rect(-w / 2, y0, w, h)]
+    step = (w - 0.8 - 1.2) / 3  # four strokes 1.2 wide, 0.4 from the sides
     for i in range(4):
-        x = -w / 2 + 0.6 + i * 1.6
+        x = -w / 2 + 0.4 + i * step
         items.append(Line((x, y0 + h - 0.4), (x + 1.2, y0 + 0.4), Style(width=THIN)))
     return Symbol("heating", items, y0 + h, w / 2, w / 2, has_output=False)
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
   "uniwire": "1.0.0",
-  "profiles": ["nfc15100"],
+  "profiles": ["nfc15100", "enedis"],
   "meta": {
     "title": "Maison exemple : autoconsommation PV 6 kWc avec onduleur string",
     "project": "EX-35",

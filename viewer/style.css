@@ -1,7 +1,7 @@
 /* uniwire viewer: brand tokens below; fonts are served by uniwire.sh at /assets/fonts/ (system fallbacks when run alone) */
 :root {
-  /* uniwire brand tokens (docs/brand/BRAND.md): bright paper (light) and graphite (dark). The OS gives the default;
-     [data-theme] on <html> (toggle, localStorage "uniwire-theme", shared with the site and the docs) overrides it. */
+  /* uniwire brand tokens (docs/brand/BRAND.md): bright paper (light, the default) and graphite (dark,
+     [data-theme="dark"] on <html>: toggle, localStorage "uniwire-theme", shared with the site and the docs). */
   --bg: #f8f9fa;
   --surface: #ffffff;
   --surface-2: #eef1f4;
@@ -37,42 +37,6 @@
   --logo-l1: #8f3f12;
   --logo-l3: #7e848c;
   color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #2a2e33;
-    --surface: #33383e;
-    --surface-2: #3a3f46;
-    --fg: #f1f2f3;
-    --muted: #aab0b8;
-    --border: #474d55;
-    --accent: #f1f2f3;
-    --accent-fg: #2a2e33;
-    --accent-soft: #3a3f46;
-    --error: #ff9b8f;
-    --error-soft: #4a2f2d;
-    --warning: #f2c66d;
-    --warning-soft: #45392a;
-    --info: #a6caf7;
-    --info-soft: #2f3c4c;
-    --ok: #97d497;
-    --hl: #ff9248;
-    --flash: rgba(255, 146, 72, 0.25);
-    --canvas: #1e2125;
-    --editor-bg: #24282c;
-    --editor-gutter: #2a2e33;
-    --editor-active: rgba(240, 175, 128, 0.07);
-    --editor-selection: rgba(166, 202, 247, 0.25);
-    --syn-key: #9cc3ee;
-    --syn-string: #e2b48a;
-    --syn-number: #b6d99a;
-    --syn-keyword: #e7a0c0;
-    --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.35);
-    --frame: #78808a;
-    --logo-l1: #f0af80;
-    --logo-l3: #b5bbc2;
-    color-scheme: dark;
-  }
 }
 :root[data-theme="dark"] {
   --bg: #2a2e33;
@@ -218,6 +182,8 @@ select.control { padding-right: 28px; appearance: none; max-width: 100%;
 .viewport { flex: 1; min-height: 0; position: relative; overflow: hidden; background: var(--canvas); touch-action: none;
   cursor: grab; outline-offset: -2px; }
 .viewport.panning { cursor: grabbing; }
+.viewport > svg { -webkit-user-select: none; user-select: none; }
+.viewport.selecting > svg { -webkit-user-select: text; user-select: text; cursor: text; }
 .viewport > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .viewport > svg > rect:first-of-type { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25)); }
 .viewport :is([data-uw-id], .uw-ref, .uw-link, [data-uw-cond]) { cursor: pointer; }
@@ -282,6 +248,13 @@ select.control.small { padding-right: 26px; }
 .loader { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 5;
   background: color-mix(in srgb, var(--canvas) 70%, transparent); }
 .loader[hidden] { display: none; }
+/* while a preview drawing is shown: a small note in a corner instead of the card over the drawing */
+.loader.compact { inset: auto 12px 12px auto; background: none; pointer-events: none; }
+.loader.compact .loader-card { width: auto; padding: 8px 12px; display: flex; align-items: center; gap: 10px; }
+.loader.compact .loader-card img { width: 20px; height: 20px; }
+.loader.compact .loader-step { margin: 0; font-size: 13px; }
+.loader.compact .progress { width: 80px; }
+.loader.compact .loader-note { display: none; }
 .loader-card { width: min(360px, calc(100% - 32px)); padding: 24px; text-align: center; background: var(--surface);
   border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
 .loader-step { margin: 12px 0 10px; font-weight: 600; }

@@ -107,6 +107,26 @@ One rule, `iec60364.iz`: the rating of the protective device feeding a cable (`i
 
 See the [specification](SPEC.md) §10 for the data source and its limitations.
 
+## `enedis`: connection to the French public network
+
+Checks of the connection of a low-voltage installation to the public network operated by Enedis: service
+cable, meter and service main breaker (AGCP). They follow NF C 14-100 and the Enedis technical reference, not
+NF C 15-100, which starts downstream of the AGCP; combine the profile with `nfc15100` for the installation
+itself. It applies only when the installation is supplied in low voltage by a `grid` source (no transformer,
+`un_V` up to 1000 V). Enedis decides on each connection: these are consistency checks of the document.
+
+| Rule | Check | Level |
+|---|---|---|
+| `enedis.connection` | Limited-power connection: at most 12 kVA in single-phase (3 to 12 kVA, from 6 kVA in dwellings), 6 to 36 kVA in three-phase; monitored power from 37 to 250 kVA (info); medium voltage above 250 kVA (warning). Source: Enedis-NMO-RAC_001E §3.1 | error / warning / info |
+| `enedis.agcp-setting` | Limited power: the AGCP setting (`in_A` of the `main_breaker`, `range_A` being its range) carries the connection power, 60 A for 12 kVA single-phase or 36 kVA three-phase, so 0.2 kVA per ampere single-phase and 0.6 kVA per ampere three-phase. Error when it exceeds 60 A or carries less than `installation.subscribed_kVA`. Source: Enedis-NMO-RAC_001E §4.1 | error |
+| `enedis.agcp-rcd` | AGCP without residual-current protection, or other than 500 mA: NF C 14-100 recommends 500 mA in new buildings (SéQuélec fiche n°2). Type S is checked by `nfc15100.selectivity` | info |
+| `enedis.production` | Production and storage inverters (`p_kVA` × `count`: PV, hybrid and battery inverters; chargers, which only draw, are not counted): in single-phase, injection limited to 6 kVA (warning) and installed power to 18 kVA (error); in three-phase, 250 kVA (info above 36 kVA: injection beyond it follows another connection procedure). The installed power includes storage. Sources: Enedis-NMO-RAC_001E §3.2.1, Enedis-NMO-RES_032E §1.2.1.2 | error / warning |
+| `enedis.service-cable` | Individual service cable (the `cable` of the connection meter, from the CCPI): at most 30 m and 35 mm² aluminium (2 x 35 single-phase, 4 x 35 three-phase), for a voltage variation within 2 %. Source: Enedis-NMO-RAC_001E §4.1.3 | warning |
+| `enedis.decoupling` | Production or storage inverter without its decoupling protection (`protection`, e.g. NF EN 50549-1 / NF EN 50549-10), mandatory in every case. Sources: Enedis-NMO-RES_032E §1, Consuel, decoupling protections of PV inverters (2025) | info |
+
+With the Linky meter, the AGCP is set to the connection power and the meter follows the subscribed power:
+an AGCP set above the subscribed power is normal, one set below it is an error.
+
 ## Writing a rule
 
 Rules are plain generator functions registered on a profile:

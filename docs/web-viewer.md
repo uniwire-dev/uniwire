@@ -8,15 +8,18 @@ install. It runs the real `uniwire` Python library (the same code as the CLI) on
 materials are exactly those you get with `uniwire validate`, `check`, `render` and `bom`.
 
 Everything runs on your machine: documents are never uploaded. The first visit downloads the Python
-runtime (about 10 MB, then cached by the browser).
+runtime (about 10 MB, then cached by the browser). Meanwhile the drawing is already shown: the examples come with
+their first sheet drawn in advance, and the short links of the hosted server with the first sheet drawn by the
+server; the live drawing replaces it as soon as the editor is ready.
 
 ## Features
 
 - **Editor** with JSON syntax highlighting, error markers in the gutter and live re-rendering
   (400 ms after the last keystroke). Open a file with *Open*, drag and drop it onto the page, or paste
   a document.
-- **Drawing**: one tab per sheet, zoom with the mouse wheel or the +/− buttons, pan by dragging,
-  *Fit* to show the whole sheet. Switch between the document's views and between the *single-line*
+- **Drawing**: one tab per sheet, zoom with the mouse wheel or the +/− buttons, pan by dragging (dragging
+  never selects text: double-click a text to select it, or drag with `Alt`/`Option` held), *Fit* to show the
+  whole sheet. Switch between the document's views and between the *single-line*
   and *multi-line* diagrams. The drawing language follows `meta.lang` of the document.
 - **Exploring the drawing**:
     - hover a symbol to see its tag, type, ratings and cable, with its path up to the source

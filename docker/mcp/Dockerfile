@@ -7,16 +7,16 @@
 #     docker run --rm -p 8000:8000 --read-only --tmpfs /tmp --cap-drop ALL uniwire-mcp --allowed-host localhost
 # The endpoint is http://localhost:8000/mcp; GET /healthz answers 200.
 #
-# Base image: python:3.12-slim, pinned by digest (update both FROM lines together).
+# Base image: python:3.14-slim, pinned by digest (update both FROM lines together).
 
-FROM python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1 AS build
+FROM python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170 AS build
 WORKDIR /src
 COPY pyproject.toml README.md LICENSE NOTICE CHANGELOG.md ./
 COPY src/ src/
 COPY examples/ examples/
 RUN pip install --no-cache-dir "build>=1.2" && python -m build --wheel --outdir /dist
 
-FROM python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
+FROM python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170
 LABEL org.opencontainers.image.title="uniwire-mcp" \
       org.opencontainers.image.description="MCP server for uniwire documents (electrical installations)" \
       org.opencontainers.image.source="https://github.com/uniwire-dev/uniwire" \

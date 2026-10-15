@@ -80,7 +80,7 @@ See the [code-first API](build.md) for the full guide.
 * [Specification](SPEC.md): the format, field by field.
 * [Python API and CLI](api.md): load, check, render, bill of materials.
 * [Code-first API](build.md): schematics as Python code.
-* [Rules](rules.md): the `core`, `nfc15100` and `iec60364` profiles and the PLC checks.
+* [Rules](rules.md): the `core`, `nfc15100`, `iec60364` and `enedis` profiles and the PLC checks.
 * [Examples](examples.md): complete documents and their drawings.
 * [Contributing](contributing.md): development setup and the uniwire Enhancement Proposal process.
 * Source code: <https://github.com/uniwire-dev/uniwire>
