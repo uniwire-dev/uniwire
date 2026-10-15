@@ -9,6 +9,9 @@ technical reference, not by NF C 15-100, which starts downstream of the AGCP: th
   production installations (§3.2.1), connection power carried by the AGCP setting (§4.1);
 * **SéQuélec fiche n°2** (service main breaker): NF C 14-100 recommends a 500 mA residual-current service
   breaker in new and renovated-as-new buildings;
+* **Enedis-NMO-RES_032E** (version 1, 2025-09-15), connection of installations that may inject and draw: the
+  installed production power includes the power of a storage installation (§1.2.1.2, §1.2.1.4), and a
+  decoupling protection is mandatory in every case (§1);
 * **Consuel, decoupling protections of PV inverters** (2025): certificate of the protection built into the
   inverter, NF EN 50549-1 (or -2) and NF EN 50549-10.
 
@@ -24,6 +27,7 @@ from ..resolve import Index
 from . import describe, rule
 
 RAC = "Enedis-NMO-RAC_001E v2 (2025-03-24)"
+RES = "Enedis-NMO-RES_032E v1 (2025-09-15)"
 
 CONNECTION = describe(
     "enedis.connection",
@@ -43,12 +47,14 @@ AGCP_RCD = describe(
 PRODUCTION = describe(
     "enedis.production",
     f"{RAC} §3.2.1: single-phase production, injection up to 6 kVA and installed power up to 18 kVA; "
-    "three-phase, installed power up to 250 kVA",
+    f"three-phase, installed power up to 250 kVA; {RES} §1.2.1.2: the installed production power includes "
+    "storage",
     "high")
 DECOUPLING = describe(
     "enedis.decoupling",
-    "Consuel, decoupling protections of PV inverters (2025): the protection built into the inverter is certified "
-    "to NF EN 50549-1 (or -2), with NF EN 50549-10 for installations up to 36 kVA from 2026-01-01",
+    f"{RES} §1: a decoupling protection is mandatory for production and storage; Consuel, decoupling protections "
+    "of PV inverters (2025): the protection built into the inverter is certified to NF EN 50549-1 (or -2), with "
+    "NF EN 50549-10 for installations up to 36 kVA from 2026-01-01",
     "medium")
 
 LIMITED_MAX_KVA = {"1P+N": 12.0, "3P+N": 36.0, "3P": 36.0}
@@ -59,7 +65,8 @@ AGCP_MAX_A = 60.0
 KVA_PER_A = {"1P+N": 0.2, "3P+N": 0.6, "3P": 0.6}
 SINGLE_PHASE_INJECTION_KVA = 6.0
 SINGLE_PHASE_INSTALLED_KVA = 18.0
-PV_INVERTERS = (None, "string", "central", "micro", "hybrid")  # battery inverters and chargers are not counted
+# inverters that can inject: PV and storage (battery inverters, hybrids); a charger only draws
+INJECTING = (None, "string", "central", "micro", "hybrid", "battery")
 
 
 def _public_lv(doc: Document, idx: Index) -> bool:
@@ -130,32 +137,38 @@ def agcp_rcd(doc: Document, idx: Index):
             yield AGCP_RCD.finding("info", _t("enedis.agcp_rcd_value", idn=idn), q.id)
 
 
-def _pv_inverters(idx: Index) -> list:
+def _injecting(idx: Index) -> list:
     return [n for n in idx.nodes.values() if n.type == "inverter"  # type: ignore[attr-defined]
-            and getattr(n, "kind", None) in PV_INVERTERS]
+            and getattr(n, "kind", None) in INJECTING]
+
+
+def _name(n) -> str:
+    return n.ref or n.label or n.id or ""
 
 
 @rule("enedis")
 def production(doc: Document, idx: Index):
     if not _public_lv(doc, idx):
         return
-    invs = [n for n in _pv_inverters(idx) if getattr(n, "p_kVA", None)]
+    invs = [n for n in _injecting(idx) if getattr(n, "p_kVA", None)]
     if not invs:
         return
     installed = round(sum(n.p_kVA * (n.count or 1) for n in invs), 2)  # type: ignore[attr-defined]
+    what = ", ".join(f"{_name(n)} {n.p_kVA * (n.count or 1):g} kVA" for n in invs)  # type: ignore[attr-defined]
+    node = invs[0].id if len(invs) == 1 else None  # one inverter: the finding points at it
     if doc.installation.system == "1P+N":
         if installed > SINGLE_PHASE_INSTALLED_KVA:
-            yield PRODUCTION.finding("error", _t("enedis.prod_installed_1p", kva=installed))
+            yield PRODUCTION.finding("error", _t("enedis.prod_installed_1p", kva=installed, what=what), node)
         elif installed > SINGLE_PHASE_INJECTION_KVA:
-            yield PRODUCTION.finding("warning", _t("enedis.prod_injection_1p", kva=installed))
+            yield PRODUCTION.finding("warning", _t("enedis.prod_injection_1p", kva=installed, what=what), node)
     elif installed > MONITORED_MAX_KVA:
-        yield PRODUCTION.finding("error", _t("enedis.prod_installed_3p", kva=installed))
+        yield PRODUCTION.finding("error", _t("enedis.prod_installed_3p", kva=installed, what=what), node)
 
 
 @rule("enedis")
 def decoupling(doc: Document, idx: Index):
     if not _public_lv(doc, idx):
         return
-    for n in _pv_inverters(idx):
+    for n in _injecting(idx):
         if not getattr(n, "protection", None):
-            yield DECOUPLING.finding("info", _t("enedis.decoupling", what=n.ref or n.label or n.id), n.id)
+            yield DECOUPLING.finding("info", _t("enedis.decoupling", what=_name(n)), n.id)

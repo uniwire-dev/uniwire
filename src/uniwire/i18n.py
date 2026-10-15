@@ -116,13 +116,14 @@ EN: dict[str, str] = {
                           "in new buildings (non-residual-current breaker on request to Enedis)",
     "enedis.agcp_rcd_value": "service main breaker with {idn:g} mA residual-current protection: NF C 14-100 "
                              "recommends 500 mA",
-    "enedis.prod_installed_1p": "{kva:g} kVA of PV inverters in single-phase: above 18 kVA of installed power, a "
-                                "three-phase connection is needed",
-    "enedis.prod_injection_1p": "{kva:g} kVA of PV inverters in single-phase: injection is limited to 6 kVA "
-                                "(limit the export or connect in three-phase)",
-    "enedis.prod_installed_3p": "{kva:g} kVA of PV inverters: installed power is limited to 250 kVA in low voltage",
-    "enedis.decoupling": "{what}: give the built-in decoupling protection (`protection`, e.g. NF EN 50549-1 / "
-                         "NF EN 50549-10)",
+    "enedis.prod_installed_1p": "{kva:g} kVA of production and storage in single-phase ({what}): above 18 kVA of "
+                                "installed power, a three-phase connection is needed",
+    "enedis.prod_injection_1p": "{kva:g} kVA of production and storage in single-phase ({what}): injection is "
+                                "limited to 6 kVA (limit the export or connect in three-phase)",
+    "enedis.prod_installed_3p": "{kva:g} kVA of production and storage ({what}): installed power is limited to "
+                                "250 kVA in low voltage",
+    "enedis.decoupling": "{what}: give its decoupling protection, mandatory for production and storage "
+                         "(`protection`, e.g. NF EN 50549-1 / NF EN 50549-10)",
     # --- CLI
     "cli.description": "uniwire format: validation, rule checks and drawings of electrical diagrams (single-line and multi-line)",
     "cli.help.validate": "validate one or more documents",
@@ -327,14 +328,14 @@ FR: dict[str, str] = {
     "enedis.agcp_no_rcd": "disjoncteur de branchement non différentiel : la NF C 14-100 préconise 500 mA dans le "
                           "neuf (non différentiel sur demande écrite à Enedis)",
     "enedis.agcp_rcd_value": "disjoncteur de branchement différentiel {idn:g} mA : la NF C 14-100 préconise 500 mA",
-    "enedis.prod_installed_1p": "{kva:g} kVA d'onduleurs photovoltaïques en monophasé : au-delà de 18 kVA de "
-                                "puissance installée, il faut un branchement triphasé",
-    "enedis.prod_injection_1p": "{kva:g} kVA d'onduleurs photovoltaïques en monophasé : l'injection est limitée à "
-                                "6 kVA (brider l'injection ou passer en triphasé)",
-    "enedis.prod_installed_3p": "{kva:g} kVA d'onduleurs photovoltaïques : la puissance installée est limitée à "
-                                "250 kVA en basse tension",
-    "enedis.decoupling": "{what} : préciser la protection de découplage intégrée (`protection`, par ex. "
-                         "NF EN 50549-1 / NF EN 50549-10)",
+    "enedis.prod_installed_1p": "{kva:g} kVA de production et de stockage en monophasé ({what}) : au-delà de "
+                                "18 kVA de puissance installée, il faut un branchement triphasé",
+    "enedis.prod_injection_1p": "{kva:g} kVA de production et de stockage en monophasé ({what}) : l'injection est "
+                                "limitée à 6 kVA (brider l'injection ou passer en triphasé)",
+    "enedis.prod_installed_3p": "{kva:g} kVA de production et de stockage ({what}) : la puissance installée est "
+                                "limitée à 250 kVA en basse tension",
+    "enedis.decoupling": "{what} : préciser sa protection de découplage, obligatoire pour la production et le "
+                         "stockage (`protection`, par ex. NF EN 50549-1 / NF EN 50549-10)",
     "cli.description": "Format uniwire : validation, vérification des règles et dessin des schémas électriques (unifilaires et multifilaires)",
     "cli.help.validate": "valider un ou plusieurs documents",
     "cli.help.check": "valider puis appliquer les règles (profils)",

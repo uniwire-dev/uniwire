@@ -539,8 +539,9 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
      `nfc15100`, which starts downstream of the service main breaker. Rules `enedis.connection` (power tiers
      of the connection), `enedis.agcp-setting` (the setting `in_A` of the service `main_breaker` carries the
      connection power: 0.2 kVA per ampere single-phase, 0.6 kVA per ampere three-phase, 60 A at most),
-     `enedis.agcp-rcd` (500 mA residual-current service breaker recommended), `enedis.production` (PV
-     injection and installed power limits) and `enedis.decoupling` (decoupling protection of PV inverters).
+     `enedis.agcp-rcd` (500 mA residual-current service breaker recommended), `enedis.production` (injection
+     and installed power limits, storage included) and `enedis.decoupling` (decoupling protection of production
+     and storage inverters).
      Applies only to a low-voltage supply from a `grid` source. Details and levels:
      [Rules](rules.md#enedis-connection-to-the-french-public-network).
 

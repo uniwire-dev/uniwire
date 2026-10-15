@@ -55,7 +55,9 @@ def test_production_limits():
     assert "enedis.production" in _rules(_doc(kva=12, agcp=agcp, inverters=[("string", 8.2)]), "warning")
     assert "enedis.production" in _rules(_doc(kva=12, agcp=agcp, inverters=[("micro", 10), ("micro", 10)]), "error")
     assert "enedis.production" not in _rules(_doc(kva=12, agcp=agcp, inverters=[("string", 5)]))
-    assert "enedis.production" not in _rules(_doc(kva=12, agcp=agcp, inverters=[("battery", 10)]))  # not PV
+    # storage counts in the installed power (Enedis-NMO-RES_032E): 10 + 8.2 kVA > 18 kVA in single-phase
+    assert "enedis.production" in _rules(_doc(kva=12, agcp=agcp, inverters=[("battery", 10), ("string", 8.2)]), "error")
+    assert "enedis.production" not in _rules(_doc(kva=12, agcp=agcp, inverters=[("charger", 10)]))  # draws only
     assert "enedis.production" not in _rules(_doc(system="3P+N", kva=36, agcp=agcp, inverters=[("string", 30)]))
 
 
@@ -66,3 +68,9 @@ def test_decoupling_protection():
 
 def test_only_for_a_low_voltage_public_supply():
     assert _rules(_doc(kva=18, transformer=True)) == []
+
+
+def test_production_finding_points_at_a_single_inverter():
+    doc = _doc(kva=12, agcp={"in_A": 60, "idn_mA": 500}, inverters=[("string", 8.2)])
+    f = next(f for f in check(doc) if f.rule == "enedis.production")
+    assert f.node == "G0" and "8.2 kVA" in f.message

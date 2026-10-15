@@ -14,8 +14,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   single-phase, 36 kVA in three-phase for a limited-power connection; monitored power and medium voltage
   above), `enedis.agcp-setting` (the service main breaker setting carries the connection power and cannot be
   below the subscribed power or above 60 A), `enedis.agcp-rcd` (500 mA residual-current service breaker
-  recommended), `enedis.production` (PV injection and installed power limits in single-phase and three-phase)
-  and `enedis.decoupling` (decoupling protection of PV inverters). The French examples on a Tarif Bleu supply
+  recommended), `enedis.production` (injection and installed power limits in single-phase and three-phase,
+  storage included, Enedis-NMO-RES_032E) and `enedis.decoupling` (decoupling protection of production and
+  storage inverters). The French examples on a Tarif Bleu supply
   declare it.
 
 ## 0.1.2 (not released yet)

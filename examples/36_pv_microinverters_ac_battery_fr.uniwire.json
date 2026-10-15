@@ -62,7 +62,7 @@
              "poles": "1P+N", "icn_kA": 6, "circuit": "7",
              "cable": {"designation": "U1000R2V", "cores": "3G", "section_mm2": 2.5, "length_m": 8},
              "children": [
-              {"type": "inverter", "id": "CONV", "ref": "-T2", "label": "Conv. batt.", "kind": "battery", "p_kVA": 2.5,
+              {"type": "inverter", "id": "CONV", "ref": "-T2", "label": "Conv. batt.", "kind": "battery", "p_kVA": 2.5, "protection": "NF EN 50549-1",
                "children": [
                 {"type": "battery", "ref": "-G3", "label": "Batterie LFP", "capacity_kWh": 5, "technology": "LiFePO4", "un_V": 51.2}
               ]}
