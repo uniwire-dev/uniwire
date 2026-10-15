@@ -101,10 +101,12 @@ A document in JSON:
     { "type": "grid", "label": "Utility", "children": [
       { "type": "main_breaker", "ref": "-Q0", "range_A": "15-45", "in_A": 45, "idn_mA": 500, "selective": true,
         "children": [
-          { "type": "rcd", "ref": "-Q1", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "children": [
+          { "type": "rcd", "ref": "-Q1", "in_A": 40, "idn_mA": 30, "rcd_type": "AC", "children": [
             { "type": "breaker", "ref": "-Q11", "use": "C16", "cable": { "cores": "3G", "section_mm2": 1.5 },
-              "children": [ { "type": "lighting", "label": "Lighting", "points": 6 } ] },
-            { "type": "breaker", "ref": "-Q12", "in_A": 20, "curve": "C", "cable": { "cores": "3G", "section_mm2": 2.5 },
+              "children": [ { "type": "lighting", "label": "Lighting", "points": 6 } ] }
+          ] },
+          { "type": "rcd", "ref": "-Q2", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "children": [
+            { "type": "breaker", "ref": "-Q21", "in_A": 20, "curve": "C", "cable": { "cores": "3G", "section_mm2": 2.5 },
               "children": [ { "type": "socket", "label": "Sockets", "points": 8 } ] }
           ] }
       ] }
@@ -134,9 +136,10 @@ from uniwire.build import *
 
 with Installation("Small house", earthing="TT", system="1P+N", un="230 V", profiles=["nfc15100"]) as inst:
     with Grid("Utility"), MainBreaker("-Q0", "15-45 A", idn="500 mA", selective=True):
-        with RCD("-Q1", "40 A", "30 mA", type="A"):
+        with RCD("-Q1", "40 A", "30 mA", type="AC"):
             Breaker("-Q11", "C16", cable="3G1,5") >> Lighting("Lighting", points=6)
-            Breaker("-Q12", "C20", cable="3G2,5 18 m") >> Socket("Sockets", points=8)
+        with RCD("-Q2", "40 A", "30 mA", type="A"):
+            Breaker("-Q21", "C20", cable="3G2,5 18 m") >> Socket("Sockets", points=8)
 
 for finding in inst.check():
     print(finding)

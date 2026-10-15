@@ -68,26 +68,35 @@ Modular PLCs (`plc`) are checked whenever they appear in a document.
 
 ## `nfc15100`: French low-voltage installations
 
-Checks of a French low-voltage installation under NF C 15-100, which covers every kind of premises. The rules
-of part 7-771 (dwellings) apply when `installation.premises` is `dwelling` or not set. For other premises
-(`commercial`, `office`, `industrial`, `public`, `agricultural`, `other`) only the general rules apply: 30 mA
-protection of socket-outlet and charging circuits (part 4-41, 411.3.3), EV charging (part 7-722) and
-selectivity; the residential cable table becomes a warning to size the cable for its installation method
-(part 5-52, guide UTE C 15-105). Rules marked *dwelling* below are skipped for other premises.
+Checks of a French low-voltage installation under NF C 15-100, which covers every kind of premises. The version
+that gives presumption of conformity (order of 3 August 2016, art. 4) is the 2002 edition with its 2005 update
+and amendments A1 to A5; for dwellings, part 10-1 of amendment A5 (June 2015) replaces the former parts 7-771
+and 7-772. The rules of dwellings (marked *dwelling*) apply when `installation.premises` is `dwelling` or not
+set. For other premises (`commercial`, `office`, `industrial`, `public`, `agricultural`, `other`) only the
+general rules apply, and the residential cable table becomes a warning to size the cable for its installation
+method (part 5-52, guide UTE C 15-105).
 
 | Rule | Check | Level |
 |---|---|---|
-| `nfc15100.section` | Copper cross-section ↔ rating: 1.5 → 16 A, 2.5 → 20 A, 4 → 25 A, 6 → 32 A; outside dwellings, a warning to check the cable for its installation method | error (dwelling) / warning |
-| `nfc15100.points` | *Dwelling*. Lighting: at most 8 points. Sockets: at most 8 on 1.5 mm², at most 12 on 2.5 mm² | error |
-| `nfc15100.lighting-rating` | *Dwelling*. Lighting protected at 16 A at most | error |
-| `nfc15100.rcd-30mA` | 30 mA protection for sockets and EV charging (all premises) and for every dwelling circuit | error |
-| `nfc15100.rcd-type-A` | No type AC RCD for EV charging (all premises) and, in dwellings, for washing machine, dryer, hob / cooker | error |
-| `nfc15100.rcd-count` | *Dwelling*. At least 2 30 mA RCDs per dwelling, including 1 type A | warning |
-| `nfc15100.rcd-circuits` | *Dwelling*. At most 8 circuits per 30 mA RCD | error |
-| `nfc15100.heating` | *Dwelling*. Heating power per circuit: 3.5 / 4.5 / 5.75 / 7.25 kW at 16 / 20 / 25 / 32 A | warning |
-| `nfc15100.dedicated-circuit` | *Dwelling*. Dedicated circuits: washing machine, dishwasher, dryer, freezer, oven, hob, water heater, EV charging (one load per circuit), heating and shutters (circuit reserved for that use) | error |
-| `nfc15100.ev-rcd` | EV charging: type B in three-phase mode 2 (error); in mode 3 with a type A or F RCD, reminder of 6 mA DC fault detection (info) | error / info |
-| `nfc15100.selectivity` | Selective (type S) incoming RCD upstream of other RCDs | warning |
+| `nfc15100.section` | Copper cross-section ↔ rating: 1.5 → 16 A, 2.5 → 20 A, 4 → 25 A, 6 → 32 A (table 10-1F); outside dwellings, a warning to check the cable for its installation method | error (dwelling) / warning |
+| `nfc15100.circuit-section` | *Dwelling*. Minimum section and maximum protection of dedicated circuits (table 10-1F): washing machine, dishwasher, dryer, oven, water heater 2.5 mm² and 20 A; single-phase cooking 6 mm² and 32 A; three-phase cooking 2.5 mm² and 20 A; 16 A EV charging 2.5 mm² and 20 A; roller shutters 1.5 mm² and 16 A | error |
+| `nfc15100.points` | *Dwelling*. Points added up per circuit: lighting at most 8; 16 A sockets at most 8 on 1.5 mm², 12 on 2.5 mm² (10.1.3.2.3, 10.1.3.3.3) | error |
+| `nfc15100.lighting-rating` | *Dwelling*. Lighting protected at 16 A at most (table 10-1F) | error |
+| `nfc15100.rcd-30mA` | 30 mA protection of every final circuit of a dwelling, single-phase or three-phase (order of 3 August 2016, 10.1.4.7.3.1); in all premises, socket-outlets up to 32 A (411.3.3, A4) and EV charging points | error |
+| `nfc15100.rcd-type-A` | Type A (not AC) for cooker / hob, washing machine and EV charging circuits (table 10-1G rule 2) | error |
+| `nfc15100.rcd-count` | *Dwelling*. At least 2 30 mA RCDs, single-phase or three-phase (table 10-1G rule 1) | error |
+| `nfc15100.rcd-circuits` | *Dwelling*. At most 8 circuits per 30 mA RCD, counted down to the next RCD, through combs and boards (table 10-1G rule 3) | error |
+| `nfc15100.rcd-rating` | *Dwelling*. Rated current of a 30 mA RCD at least the current of the service breaker (from the subscribed power when known), or 1 × its heating, water heater and EV circuits + 0.5 × the others (table 10-1G rule 4) | warning |
+| `nfc15100.rcd-spread` | *Dwelling*. Lighting circuits on at least 2 RCDs, socket-outlet circuits too (table 10-1G rule 5) | error |
+| `nfc15100.heating` | *Dwelling*. Heating power per circuit: 3.5 / 4.5 / 5.75 / 7.25 kW at 16 / 20 / 25 / 32 A (table 10-1B) | warning |
+| `nfc15100.dedicated-circuit` | *Dwelling*. Dedicated circuits: washing machine, dishwasher, dryer, oven, hob, water heater, EV charging (one load per circuit), heating and shutters (circuit reserved for that use); freezer recommended (10.1.3.4) | error (freezer: warning) |
+| `nfc15100.neutral-pole` | *Dwelling*. No 1P breaker on a circuit with a neutral: every circuit is isolated on all its live conductors (10.1.4.7.1.1) | error |
+| `nfc15100.spd-rcd` | *Dwelling*. The surge protective device at the origin is not behind a 30 mA RCD (10.1.4.7.3.1) | error |
+| `nfc15100.agcp-rcd` | *Dwelling*, limited-power supply. Service breaker and intermediate RCDs at 500 mA at most, without adjustable sensitivity (10.1.2.2.1) | error |
+| `nfc15100.supply-section` | *Dwelling*. Copper link from the service breaker to the main board: 10 mm² at 30 and 45 A, 16 mm² at 60 A, 25 mm² at 90 A (table 10-1D) | error |
+| `nfc15100.selectivity` | A residual-current device with other RCDs downstream is selective (type S): error in a dwelling (10.1.2.2.1), warning elsewhere (535.4.3.1) | error / warning |
+| `nfc15100.earth-resistance` | TT: earth electrode resistance × highest RCD sensitivity ≤ 50 V, i.e. 100 Ω with a 500 mA service breaker (411.5.3) | error |
+| `nfc15100.ev-rcd` | EV charging: type B in three-phase mode 2 (error); in mode 3 with a type A or F, reminder of 6 mA DC detection (info). Source: IEC 60364-7-722 / guide UTE C 15-722, not part of the 2002 edition and its amendments | error / info |
 
 ## `iec60364`: current-carrying capacity
 

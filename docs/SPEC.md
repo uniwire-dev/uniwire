@@ -486,27 +486,15 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
      `core.interlock` (§4.1): **error** when more members of an interlock are closed in normal operation than it
      has keys (or when a key is declared twice), **warning** when a declared interlock is used by fewer than
      2 members, or when an undeclared `locks` key is used by a single member (it interlocks nothing);
-   * `nfc15100`: checks of a French low-voltage installation under NF C 15-100. The rules of part 7-771
-     (dwellings, marked *dwelling*) apply when `installation.premises` is `dwelling` or absent; for other
-     premises only the general rules apply (30 mA on socket-outlet and charging circuits, part 4-41 411.3.3;
-     EV charging, part 7-722; selectivity), and the cable table becomes a warning to size the cable for its
-     installation method (part 5-52, guide UTE C 15-105). Each rule carries a `source` (document and page) and
-     a `confidence` (`high` / `medium`), available in `uniwire.rules.RULE_INFO`. Each `Finding` repeats the
-     source.
-
-     | Rule | Check | Level |
-     |---|---|---|
-     | `nfc15100.section` | Copper cross-section ↔ rating: 1.5 → 16 A, 2.5 → 20 A, 4 → 25 A, 6 → 32 A; outside dwellings, a warning to check the cable for its installation method | error (dwelling) / warning |
-     | `nfc15100.points` | *Dwelling*. Lighting: at most 8 points. Sockets: at most 8 on 1.5 mm², at most 12 on 2.5 mm² | error |
-     | `nfc15100.lighting-rating` | *Dwelling*. Lighting protected at 16 A at most | error |
-     | `nfc15100.rcd-30mA` | 30 mA protection for sockets and EV charging (all premises) and for every dwelling circuit | error |
-     | `nfc15100.rcd-type-A` | No type AC RCD for EV charging (all premises) and, in dwellings, for washing machine, dryer, hob / cooker | error |
-     | `nfc15100.rcd-count` | *Dwelling*. At least 2 30 mA RCCBs (ID) per dwelling, including 1 type A | warning |
-     | `nfc15100.rcd-circuits` | *Dwelling*. At most 8 circuits per 30 mA RCCB | error |
-     | `nfc15100.heating` | *Dwelling*. Heating power per circuit: 3.5 / 4.5 / 5.75 / 7.25 kW at 16 / 20 / 25 / 32 A | warning |
-     | `nfc15100.dedicated-circuit` | *Dwelling*. Dedicated circuits: washing machine, dishwasher, dryer, freezer, oven, hob, water heater, EV charging (one load per circuit), heating and shutters (circuit reserved for that use) | error |
-     | `nfc15100.ev-rcd` | EV charging: type B in three-phase mode 2 (error). In mode 3 with a type A or F, reminder of 6 mA DC detection (info) | error / info |
-     | `nfc15100.selectivity` | Selective (S) incoming residual current device upstream of other RCDs | warning |
+   * `nfc15100`: checks of a French low-voltage installation under NF C 15-100 (2002 edition with its 2005
+     update and amendments A1 to A5, the version that gives presumption of conformity under the order of
+     3 August 2016). The rules of dwellings (part 10-1 of amendment A5, marked *dwelling*) apply when
+     `installation.premises` is `dwelling` or absent; for other premises only the general rules apply (30 mA
+     on socket-outlets up to 32 A and charging points, selectivity, earth electrode resistance in TT), and
+     the cable table becomes a warning to size the cable for its installation method (part 5-52, guide
+     UTE C 15-105). Each rule carries a `source` (document and clause) and a `confidence` (`high` /
+     `medium`), available in `uniwire.rules.RULE_INFO`; each `Finding` repeats the source. Rules, checks and
+     levels: [Rules](rules.md#nfc15100-french-low-voltage-installations).
 
    * `iec60364` *(optional, must be declared in `profiles`)*: current-carrying capacity of cables.
      * **Rule `iec60364.iz`**

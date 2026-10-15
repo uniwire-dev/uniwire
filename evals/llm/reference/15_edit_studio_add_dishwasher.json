@@ -10,7 +10,6 @@
   "project": "EX-01",
   "client": "Exemple de studio (T1)",
   "author": "uniwire examples",
-  
   "notes": [
    "Démontre : le plus petit tableau de logement NF C 15-100 (AGCP 30 A, 2 interrupteurs différentiels 30 mA dont 1 type A), modèles (templates), format A4",
    "Chauffe-eau 100 L commandé par contacteur heures creuses (relais du compteur communicant)"
@@ -215,7 +214,7 @@
               }
              ],
              "id": "Q21",
-             "in_A": 40
+             "in_A": 32
             },
             {
              "type": "breaker",

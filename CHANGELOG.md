@@ -20,6 +20,24 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   storage inverters). The French examples on a Tarif Bleu supply
   declare it.
 
+* `nfc15100` profile checked against the text that gives presumption of conformity (NF C 15-100 2002 with its
+  2005 update and amendments A1 to A5): the rules of dwellings now cite part 10-1 of amendment A5, which
+  replaces part 7-771.
+  * Fixes: the 30 mA protection of dwelling circuits and the minimum of 2 RCDs (now an error) are checked in
+    three-phase dwellings too; lighting and socket points are added up per circuit; the circuits behind an RCD
+    are counted through combs and boards, with `count`; the dryer no longer requires a type A RCD; a shared
+    freezer circuit is a warning; outside dwellings, socket-outlets above 32 A no longer require 30 mA; a
+    non-selective RCD upstream of other RCDs is an error in a dwelling.
+  * New rules: `nfc15100.circuit-section` (section and protection of dedicated circuits), `nfc15100.rcd-rating`
+    (rating of the 30 mA RCDs, warning), `nfc15100.rcd-spread` (lighting and sockets over at least 2 RCDs),
+    `nfc15100.spd-rcd` (surge protector at the origin not behind 30 mA), `nfc15100.agcp-rcd` (500 mA at most,
+    no adjustable sensitivity on a limited-power supply), `nfc15100.earth-resistance` (TT, 50 V),
+    `nfc15100.neutral-pole` (no 1P breaker in a dwelling) and `nfc15100.supply-section` (link from the
+    service breaker to the main board).
+  * EV charging rules cite IEC 60364-7-722 / guide UTE C 15-722, which are not part of that text.
+  * Examples 15 and 36: lighting and socket circuits spread over two RCDs; the reference card example and the
+    quickstart use two RCDs.
+
 ## 0.1.2 (not released yet)
 
 * Bill of materials: equipment without a product reference is grouped by type and main characteristics (new

@@ -84,11 +84,15 @@ def test_dedicated_circuits_and_ev():
     assert ev == {"error", "info"}
 
 
-def test_rcd_type_dryer_and_rcd_count():
+def test_rcd_type_washing_machine_and_rcd_count():
     d = doc([{"type": "rcd", "idn_mA": 30, "rcd_type": "AC", "children": [
-        {"type": "breaker", "in_A": 20, "children": [{"type": "appliance", "kind": "dryer"}]}]}])
+        {"type": "breaker", "in_A": 20, "children": [{"type": "appliance", "kind": "washing_machine"}]}]}])
     r = rules_of(check(d))
     assert {"nfc15100.rcd-type-A", "nfc15100.rcd-count"} <= r
+    # the dryer is not among the uses that need a type A RCD (table 10-1G rule 2)
+    d = doc([{"type": "rcd", "idn_mA": 30, "rcd_type": "AC", "children": [
+        {"type": "breaker", "in_A": 20, "children": [{"type": "appliance", "kind": "dryer"}]}]}])
+    assert "nfc15100.rcd-type-A" not in rules_of(check(d))
 
 
 # --- profil iec60364 ------------------------------------------------------------------------
@@ -254,3 +258,91 @@ def test_check_scope_premises():
     shop = tools.check({**base, "installation": {"premises": "commercial"}})["scope"]
     assert "premises 'commercial': only the general rules" in shop and "ERP" in shop
     assert "7-771" not in tools.check({**base, "profiles": ["iec60364"]})["scope"]
+
+
+# --- nfc15100: part 10-1 (amendment A5) ----------------------------------------------------------
+def _rcd(children, rtype="A", in_a=40, **kw):
+    return {"type": "rcd", "idn_mA": 30, "rcd_type": rtype, "in_A": in_a, **kw, "children": children}
+
+
+def _circuit(in_a, load, section=None, poles="1P+N", **kw):
+    b = {"type": "breaker", "in_A": in_a, "poles": poles, **kw, "children": [load]}
+    if section:
+        b["cable"] = {"section_mm2": section}
+    return b
+
+
+def test_30ma_and_rcd_count_in_three_phase_dwellings():
+    d = doc([_circuit(16, {"type": "lighting", "points": 2}, 1.5)], system="3P+N")
+    r = rules_of(check(d))
+    assert "nfc15100.rcd-30mA" in r  # no longer single-phase only
+    d = doc([_rcd([_circuit(16, {"type": "lighting", "points": 2}, 1.5)])], system="3P+N")
+    assert {f.level for f in check(d) if f.rule == "nfc15100.rcd-count"} == {"error"}
+
+
+def test_points_added_up_per_circuit():
+    d = doc([_rcd([{"type": "breaker", "in_A": 16, "poles": "1P+N", "cable": {"section_mm2": 1.5}, "children": [
+        {"type": "lighting", "points": 5}, {"type": "lighting", "points": 4}]}]),
+        _rcd([_circuit(16, {"type": "lighting", "points": 1}, 1.5)], rtype="AC")])
+    assert "nfc15100.points" in rules_of(check(d))  # 9 points on one circuit
+
+
+def test_circuits_per_rcd_counted_through_a_comb():
+    comb = {"type": "busbar", "children": [_circuit(16, {"type": "lighting", "points": 1}, 1.5) for _ in range(9)]}
+    d = doc([_rcd([comb]), _rcd([], rtype="AC")])
+    assert "nfc15100.rcd-circuits" in rules_of(check(d))
+
+
+def test_dedicated_circuit_sections_and_ratings():
+    d = doc([_rcd([_circuit(20, {"type": "appliance", "kind": "washing_machine"}, 1.5),
+                   _circuit(40, {"type": "cooking", "kind": "hob"}, 10)]), _rcd([], rtype="AC")])
+    msgs = [f for f in check(d) if f.rule == "nfc15100.circuit-section"]
+    assert len(msgs) == 2  # 1.5 mm² washing machine, 40 A hob
+    d = doc([_rcd([_circuit(20, {"type": "cooking", "kind": "hob"}, 2.5, poles="3P+N")]), _rcd([], rtype="AC")],
+            system="3P+N")
+    assert "nfc15100.circuit-section" not in rules_of(check(d))  # three-phase cooking: 2.5 mm², 20 A
+
+
+def test_lighting_and_sockets_spread_over_two_rcds():
+    one = doc([_rcd([_circuit(16, {"type": "lighting", "points": 2}, 1.5),
+                     _circuit(16, {"type": "lighting", "points": 2}, 1.5)]), _rcd([], rtype="AC")])
+    assert "nfc15100.rcd-spread" in rules_of(check(one))
+    two = doc([_rcd([_circuit(16, {"type": "lighting", "points": 2}, 1.5)]),
+               _rcd([_circuit(16, {"type": "lighting", "points": 2}, 1.5)], rtype="AC")])
+    assert "nfc15100.rcd-spread" not in rules_of(check(two))
+
+
+def test_rcd_rating_from_its_circuits():
+    heavy = [_circuit(32, {"type": "heating", "p_kW": 5}, 6), _circuit(32, {"type": "heating", "p_kW": 5}, 6)]
+    d = doc([_rcd(heavy, in_a=40), _rcd([], rtype="AC")])
+    assert {f.level for f in check(d) if f.rule == "nfc15100.rcd-rating"} == {"warning"}  # 64 A > 40 A
+
+
+def test_spd_at_the_origin_not_behind_30ma():
+    d = doc([_rcd([{"type": "spd"}, _circuit(16, {"type": "lighting", "points": 2}, 1.5)]), _rcd([], rtype="AC")])
+    assert "nfc15100.spd-rcd" in rules_of(check(d))
+
+
+def test_service_breaker_rcd_and_selectivity():
+    agcp = {"type": "main_breaker", "in_A": 45, "idn_mA": 650, "idn_range_mA": "30-1000", "children": [
+        _rcd([_circuit(16, {"type": "lighting", "points": 2}, 1.5)]), _rcd([], rtype="AC")]}
+    fs = check(doc([agcp]))
+    assert "nfc15100.agcp-rcd" in rules_of(fs)
+    assert {f.level for f in fs if f.rule == "nfc15100.selectivity"} == {"error"}  # dwelling: error
+
+
+def test_earth_resistance_in_tt():
+    def d(r):
+        return load({"profiles": ["nfc15100"], "installation": {"earthing": "TT", "earth_resistance_ohm": r},
+                     "sources": [{"type": "grid", "children": [{"type": "main_breaker", "in_A": 45, "idn_mA": 500,
+                                                                "selective": True}]}]})
+    assert "nfc15100.earth-resistance" in rules_of(check(d(150)))  # 150 Ω × 0.5 A = 75 V
+    assert "nfc15100.earth-resistance" not in rules_of(check(d(80)))
+
+
+def test_neutral_pole_and_supply_section():
+    d = doc([{"type": "main_breaker", "in_A": 60, "idn_mA": 500, "selective": True, "children": [
+        {"type": "board", "cable": {"section_mm2": 10}, "children": [
+            _rcd([_circuit(16, {"type": "lighting", "points": 2}, 1.5, poles="1P")]), _rcd([], rtype="AC")]}]}])
+    r = rules_of(check(d))
+    assert {"nfc15100.neutral-pole", "nfc15100.supply-section"} <= r  # 60 A needs 16 mm²

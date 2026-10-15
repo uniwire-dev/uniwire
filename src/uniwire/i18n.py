@@ -101,7 +101,21 @@ EN: dict[str, str] = {
     "nfc15100.ev_mode2_3ph": "{what}: three-phase mode 2, type B RCD required",
     "nfc15100.ev_mode3": "{what}: mode 3 with type {rtype} RCD: the charger must include 6 mA DC fault "
                          "detection (RDC-DD, IEC 62955), otherwise type B",
-    "nfc15100.selectivity": "non-selective (type S) incoming RCD upstream of other RCDs",
+    "nfc15100.selectivity": "residual-current device upstream of other RCDs and not selective (type S)",
+    "nfc15100.circuit_section": "{what}: {section:g} mm² (at least {need:g} mm² for this circuit)",
+    "nfc15100.circuit_rating": "{what}: protected by {in_a:g} A (at most {need:g} A for this circuit)",
+    "nfc15100.rcd_rating": "30 mA RCD rated {in_a:g} A, below the {need:g} A required by the circuits behind it",
+    "nfc15100.rcd_spread_lighting": "the {count} lighting circuits are all behind the same 30 mA RCD (spread them "
+                                    "over at least 2)",
+    "nfc15100.rcd_spread_socket": "the {count} socket-outlet circuits are all behind the same 30 mA RCD (spread "
+                                  "them over at least 2)",
+    "nfc15100.spd_rcd": "{what}: the surge protective device at the origin must not be behind a 30 mA RCD",
+    "nfc15100.agcp_rcd_adjustable": "{what}: adjustable sensitivity is not allowed on a limited-power supply",
+    "nfc15100.agcp_rcd_max": "{what}: {idn:g} mA, at most 500 mA on a limited-power supply",
+    "nfc15100.earth_resistance": "earth electrode of {r:g} Ω with a {idn:g} mA RCD: {limit:g} Ω at most (50 V)",
+    "nfc15100.neutral_pole": "{what}: 1P breaker on a circuit with a neutral, which it does not isolate (1P+N or 2P)",
+    "nfc15100.supply_section": "link to the main board in {section:g} mm² with a {in_a:g} A service breaker "
+                               "(at least {need:g} mm² copper)",
     # enedis
     "enedis.single_phase_max": "{kva:g} kVA in single-phase: a limited-power single-phase connection carries 12 kVA "
                                "at most, a three-phase connection is needed",
@@ -319,7 +333,23 @@ FR: dict[str, str] = {
     "nfc15100.ev_mode2_3ph": "{what} : mode 2 triphasé, DDR de type B requis",
     "nfc15100.ev_mode3": "{what} : mode 3 avec DDR type {rtype}, la borne doit intégrer une détection de courant "
                          "continu 6 mA (DD-CDC, IEC 62955), sinon type B",
-    "nfc15100.selectivity": "différentiel de branchement non sélectif (type S) en amont d'autres différentiels",
+    "nfc15100.selectivity": "différentiel en amont d'autres différentiels et non sélectif (type S)",
+    "nfc15100.circuit_section": "{what} : {section:g} mm² (au moins {need:g} mm² pour ce circuit)",
+    "nfc15100.circuit_rating": "{what} : protégé par {in_a:g} A (au plus {need:g} A pour ce circuit)",
+    "nfc15100.rcd_rating": "différentiel 30 mA de {in_a:g} A, sous les {need:g} A requis par les circuits en aval",
+    "nfc15100.rcd_spread_lighting": "les {count} circuits d'éclairage sont tous derrière le même différentiel "
+                                    "30 mA (les répartir sur au moins 2)",
+    "nfc15100.rcd_spread_socket": "les {count} circuits de prises sont tous derrière le même différentiel 30 mA "
+                                  "(les répartir sur au moins 2)",
+    "nfc15100.spd_rcd": "{what} : le parafoudre de tête ne doit pas être derrière un différentiel 30 mA",
+    "nfc15100.agcp_rcd_adjustable": "{what} : sensibilité réglable interdite en branchement à puissance limitée",
+    "nfc15100.agcp_rcd_max": "{what} : {idn:g} mA, au plus 500 mA en branchement à puissance limitée",
+    "nfc15100.earth_resistance": "prise de terre de {r:g} Ω avec un différentiel de {idn:g} mA : {limit:g} Ω au "
+                                 "plus (50 V)",
+    "nfc15100.neutral_pole": "{what} : disjoncteur 1P sur un circuit avec neutre, qu'il ne sectionne pas (1P+N "
+                             "ou 2P)",
+    "nfc15100.supply_section": "liaison vers le tableau principal en {section:g} mm² avec un AGCP de {in_a:g} A "
+                               "(au moins {need:g} mm² cuivre)",
     "enedis.single_phase_max": "{kva:g} kVA en monophasé : un branchement monophasé à puissance limitée porte "
                                "12 kVA au plus, il faut un branchement triphasé",
     "enedis.monitored": "{kva:g} kVA : branchement à puissance surveillée (37 à 250 kVA), les paliers de réglage "

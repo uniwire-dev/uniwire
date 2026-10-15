@@ -334,11 +334,12 @@ EXAMPLE_HOUSE: dict[str, Any] = {
     "sources": [{"type": "grid", "id": "grid", "children": [
         {"type": "main_breaker", "id": "Q0", "ref": "-Q0", "in_A": 45, "idn_mA": 500, "selective": True,
          "children": [{"type": "board", "id": "TD", "ref": "TD", "children": [
-             {"type": "rcd", "id": "F1", "ref": "-F1", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "children": [
+             {"type": "rcd", "id": "F1", "ref": "-F1", "in_A": 40, "idn_mA": 30, "rcd_type": "AC", "children": [
                  {"type": "breaker", "id": "Q11", "ref": "-Q11", "use": "C16",
                   "cable": {"cores": "3G", "section_mm2": 1.5},
-                  "children": [{"type": "lighting", "id": "L1", "label": "Lighting", "points": 6}]},
-                 {"type": "breaker", "id": "Q12", "ref": "-Q12", "in_A": 20, "curve": "C", "poles": "1P+N",
+                  "children": [{"type": "lighting", "id": "L1", "label": "Lighting", "points": 6}]}]},
+             {"type": "rcd", "id": "F2", "ref": "-F2", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "children": [
+                 {"type": "breaker", "id": "Q21", "ref": "-Q21", "in_A": 20, "curve": "C", "poles": "1P+N",
                   "cable": {"cores": "3G", "section_mm2": 2.5},
                   "children": [{"type": "socket", "id": "S1", "label": "Sockets", "points": 8}]}]}]}]}]}],
 }
