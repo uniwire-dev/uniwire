@@ -13,6 +13,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   `length_m` key with the total known length), instead of being left out. Rows with a reference are unchanged
   and come first; the CSV puts the characteristics in the description column. The utility's meter (fed directly
   by the grid) is not listed unless it carries a reference; sub-meters are.
+* MCP server: every tool parameter is described in the input schemas (document, language, view, rule profiles...),
+  and the descriptions say when to use each tool and which one to use instead (validate vs check, list_types
+  then type_info, bom vs wiring).
 * MCP server: tool descriptions say what each tool does, takes and returns; the guidance for assistants (which
   links to give, the conformity disclaimer, the workflow) lives in the server instructions only.
 * Web viewer: a link to an example that does not exist (`?example=98`) opens the first example with a message,

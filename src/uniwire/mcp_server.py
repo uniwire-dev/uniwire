@@ -17,12 +17,22 @@ import json
 import logging
 import sys
 import time
-from typing import Any, Optional, Union
+from typing import Annotated, Any, Optional, Union
+
+from pydantic import Field
 
 from . import __version__
 from .llm import tools as T
 
 Document = Union[dict[str, Any], str]
+
+# Parameters of the tools, described in their input schema for the assistants.
+Doc = Annotated[Document, Field(description=(
+    "The uniwire document of the electrical installation: a JSON object, or its JSON text, as returned by "
+    "get_example, apply_patch or normalize (a file path is accepted when the server runs locally)."))]
+Lang = Annotated[str, Field(description="Language of the returned texts: 'en' (English) or 'fr' (French).")]
+View = Annotated[Optional[str], Field(description=(
+    "Id of a view of the document (its 'views' list); default: the first view of the requested kind."))]
 
 log = logging.getLogger("uniwire.mcp")
 
@@ -198,32 +208,46 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
         return deco
 
     @tool("Reference card of the uniwire format")
-    def get_reference_card(level: str = "compact", lang: str = "en") -> str:
-        """Reference card of the uniwire format for electrical diagrams: document skeleton, node types (breakers,
-        RCDs, cables, loads, transformers, PV...) and fields, enums, links, pitfalls, examples. level: 'compact'
-        (~3k tokens) or 'full'; lang: 'en' or 'fr'."""
+    def get_reference_card(
+            level: Annotated[str, Field(description="'compact' (about 3k tokens) or 'full' (every field).")] = "compact",
+            lang: Lang = "en") -> str:
+        """Return the reference card of the uniwire format for electrical diagrams: document skeleton, node types
+        (breakers, RCDs, cables, loads, transformers, PV...) and their fields, enums, links, pitfalls, examples.
+        Read it once before writing a document; type_info gives the fields of one type in detail."""
         return T.get_reference_card(level, lang)
 
     @tool("List the node types")
-    def list_types(category: Optional[str] = None, lang: str = "en") -> list[dict[str, str]]:
-        """List node types (type, category, label), optionally for one category: source, measure,
-        protection, switching, control, converter, conductor, container, connector, load."""
+    def list_types(
+            category: Annotated[Optional[str], Field(description=(
+                "Only the types of this category: source, measure, protection, switching, control, converter, "
+                "conductor, container, connector or load; default: all."))] = None,
+            lang: Lang = "en") -> list[dict[str, str]]:
+        """List the node types of the format (type, category, label), optionally for one category. Use it to
+        find the type name of a device or load before writing a node; type_info then gives its fields."""
         return T.list_types(category, lang)
 
     @tool("Fields of a node type")
-    def type_info(type: str, lang: str = "en") -> dict[str, Any]:  # noqa: A002
-        """All fields of a node type with descriptions and allowed values (enums)."""
+    def type_info(
+            type: Annotated[str, Field(description="A node type name from list_types, e.g. 'breaker', 'rcd', 'socket'.")],  # noqa: A002
+            lang: Lang = "en") -> dict[str, Any]:
+        """Return every field of one node type with its description, unit and allowed values (enums). Use it
+        before writing or editing a node of that type; list_types gives the type names."""
         return T.type_info(type, lang)
 
     @tool("Validate an electrical diagram")
-    def validate(document: Document) -> dict[str, Any]:
-        """Validate a uniwire document (electrical diagram as JSON: object, JSON text or file path) against the
-        format. Returns valid + issues, each naming the node id and field when possible, plus viewer_url (the
-        document in the uniwire web editor) and pdf_url (the PDF drawn by uniwire)."""
+    def validate(document: Doc) -> dict[str, Any]:
+        """Validate a uniwire document (electrical diagram as JSON) against the format only: structure, types,
+        ids, references and links, without the electrical rules (use check for those). Returns valid + issues,
+        each naming the node id and field when possible, plus viewer_url (the document in the uniwire web
+        editor) and pdf_url (the PDF drawn by uniwire)."""
         return T.validate(document)
 
     @tool("Check an electrical installation (NF C 15-100, IEC 60364)")
-    def check(document: Document, profiles: Optional[list[str]] = None) -> dict[str, Any]:
+    def check(
+            document: Doc,
+            profiles: Annotated[Optional[list[str]], Field(description=(
+                "Rule profiles to apply, e.g. ['nfc15100'] (France) or ['iec60364']; default: the 'profiles' "
+                "of the document. 'core' always applies."))] = None) -> dict[str, Any]:
         """Check an electrical installation (single-line diagram, panel, schéma unifilaire, tableau électrique):
         validates the document, then applies the rule profiles (NF C 15-100 'nfc15100', IEC 60364 'iec60364', PLC;
         default: the document's 'profiles'; 'core' always applies): breaker ratings against cable sections, RCDs,
@@ -235,13 +259,20 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
         return T.check(document, profiles)
 
     @tool("Outline of an electrical diagram")
-    def describe(document: Document, lang: str = "en") -> str:
-        """Text outline of an electrical diagram: installation, full tree of the panel with stable ids, ratings
-        and cables, links, interlocks, boards and findings summary."""
+    def describe(document: Doc, lang: Lang = "en") -> str:
+        """Return a text outline of an electrical diagram: installation, full tree of the panel with stable ids,
+        ratings and cables, links, interlocks, boards and findings summary. Use it to read a document and find
+        the node ids before apply_patch."""
         return T.describe(document, lang)
 
     @tool("Edit an electrical diagram")
-    def apply_patch(document: Document, ops: Union[list[dict[str, Any]], str], validate: bool = True) -> dict[str, Any]:
+    def apply_patch(
+            document: Doc,
+            ops: Annotated[Union[list[dict[str, Any]], str], Field(description=(
+                "The edit operations, applied in order (list, or its JSON text): see the description for the "
+                "operation forms."))],
+            validate: Annotated[bool, Field(description="Validate the resulting document (default true).")] = True,
+    ) -> dict[str, Any]:
         """Edit an electrical diagram by node id (change a rating, add a circuit, move a load...) and return the
         new document. ops (applied in order):
         {"op":"set","id":ID,"path":"in_A","value":20} (null value removes; no id = document root, e.g.
@@ -253,9 +284,17 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
         return T.apply_patch(document, ops, validate)
 
     @tool("Draw the single-line or multi-line diagram")
-    def render(document: Document, kind: str = "single-line", format: str = "svg",  # noqa: A002
-               sheet: Optional[int] = None, view: Optional[str] = None, path: Optional[str] = None,
-               color: Optional[str] = None, conductor_colors: Optional[str] = None) -> dict[str, Any]:
+    def render(
+            document: Doc,
+            kind: Annotated[str, Field(description="'single-line' or 'multi-line' (one line per conductor).")] = "single-line",
+            format: Annotated[str, Field(description="'svg' or 'pdf'.")] = "svg",  # noqa: A002
+            sheet: Annotated[Optional[int], Field(description="Only this sheet (numbered from 1); default: all.")] = None,
+            view: View = None,
+            path: Annotated[Optional[str], Field(description="File to write the PDF to (local server only).")] = None,
+            color: Annotated[Optional[str], Field(description=(
+                "Colouring: 'none', 'conductors', 'phase', 'source', 'status' or 'voltage' (adds a legend)."))] = None,
+            conductor_colors: Annotated[Optional[str], Field(description=(
+                "Conductor colour convention: 'iec' (IEC 60445) or 'us'."))] = None) -> dict[str, Any]:
         """Draw the electrical diagram (schéma unifilaire / multifilaire). kind: 'single-line' or 'multi-line';
         view: a view id of the document (e.g. a
         wire-marking view). format 'svg' returns the SVG text of every sheet (or of 'sheet', numbered from 1);
@@ -266,7 +305,7 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
         return T.render(document, kind, format, sheet, view, path, color, conductor_colors)
 
     @tool("Links to open the diagram and its PDF")
-    def viewer_link(document: Document) -> dict[str, Any]:
+    def viewer_link(document: Doc) -> dict[str, Any]:
         """Links to a document: viewer_url opens it in the uniwire web editor (drawing, single-line and
         multi-line, rule findings, PDF and SVG downloads, nothing to install); pdf_url is the PDF drawn by
         uniwire. On the hosted server the document is kept 30 days so that the short links open it
@@ -274,7 +313,12 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
         return T.viewer_link(document)
 
     @tool("Wire list, wire markers and cable schedule")
-    def wiring(document: Document, what: str = "markers", view: Optional[str] = None) -> dict[str, Any]:
+    def wiring(
+            document: Doc,
+            what: Annotated[str, Field(description=(
+                "'markers' (one row per wire end, for label printers), 'wires' (wire list) or 'cables' (cable "
+                "schedule)."))] = "markers",
+            view: View = None) -> dict[str, Any]:
         """Wiring exports of an installation as rows with stable column names (repérage des fils, carnet de
         câbles): what='markers' (one row per wire end, for label
         printers), 'wires' (wire list) or 'cables' (cable schedule). Marks follow the wire_marking rules of
@@ -282,11 +326,12 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
         return T.wiring(document, what, view)
 
     @tool("Bill of materials")
-    def bom(document: Document) -> list[dict[str, Any]]:
-        """Bill of materials of an electrical installation (nomenclature): one row per manufacturer / part number
-        for the nodes with a product reference, then one row per kind of equipment without a reference (type and
-        main characteristics in 'spec', e.g. 'C16 1P+N') and per kind of cable, with quantities and the
-        reference designations involved."""
+    def bom(document: Doc) -> list[dict[str, Any]]:
+        """Compute the bill of materials (nomenclature) of an electrical installation from its document: one row
+        per manufacturer / part number for the nodes with a product reference, then one row per kind of
+        equipment without a reference (type and main characteristics in 'spec', e.g. 'C16 1P+N') and per kind of
+        cable (total length in 'length_m'), with quantities and the reference designations involved. Use it to
+        prepare a quote or an order; wiring gives the wire list and cable schedule."""
         return T.bom(document)
 
     @tool("List the example installations")
@@ -296,13 +341,18 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
         return T.list_examples()
 
     @tool("Get an example installation")
-    def get_example(name: str) -> dict[str, Any]:
-        """Return an example installation document by name (or number prefix, e.g. '02')."""
+    def get_example(
+            name: Annotated[str, Field(description="Example name from list_examples, or its number prefix (e.g. '02').")],
+    ) -> dict[str, Any]:
+        """Return an example installation document by name. Use it as a starting point for a similar
+        installation, then edit it with apply_patch; list_examples gives the names."""
         return T.get_example(name)
 
     @tool("Normalized document")
-    def normalize(document: Document) -> dict[str, Any]:
-        """Resolved document: templates applied, every id assigned, canonical numbers."""
+    def normalize(document: Doc) -> dict[str, Any]:
+        """Return the resolved form of a document: templates ('use') applied, every node and link id assigned,
+        numbers in canonical form. Use it to read a document exactly as the rules and drawings see it, or to get
+        stable ids before apply_patch; it does not apply the electrical rules (see check)."""
         return T.normalize(document)
 
     @server.resource("uniwire://schema", name="schema", mime_type="application/schema+json",
