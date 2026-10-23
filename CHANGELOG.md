@@ -11,6 +11,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Conductor-count marks of DC lines: a line behind a DC source, a DC box or a device declared `dc` is marked with
   its two poles, never with a "+N" neutral, whatever the poles of its devices (up to an inverter).
 
+* French messages write decimals with a comma ("disjoncteur 32 A sur 1,5 mm²"), like the drawings.
+
 * New rule profile `enedis` (opt-in): connection of a low-voltage installation to the French public network,
   following the Enedis technical reference (Enedis-NMO-RAC_001E) and NF C 14-100, separate from `nfc15100`,
   which starts downstream of the service main breaker. Rules: `enedis.connection` (12 kVA at most in

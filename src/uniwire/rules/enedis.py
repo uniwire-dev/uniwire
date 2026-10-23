@@ -22,6 +22,7 @@ medium-voltage supply). It checks the data of the document; Enedis decides on ea
 
 from __future__ import annotations
 
+from ..i18n import number
 from ..i18n import t as _t
 from ..model import Document
 from ..resolve import Index
@@ -164,7 +165,7 @@ def production(doc: Document, idx: Index):
     if not invs:
         return
     installed = round(sum(n.p_kVA * (n.count or 1) for n in invs), 2)  # type: ignore[attr-defined]
-    what = ", ".join(f"{_name(n)} {n.p_kVA * (n.count or 1):g} kVA" for n in invs)  # type: ignore[attr-defined]
+    what = ", ".join(f"{_name(n)} {number(n.p_kVA * (n.count or 1))} kVA" for n in invs)  # type: ignore[attr-defined]
     node = invs[0].id if len(invs) == 1 else None  # one inverter: the finding points at it
     if doc.installation.system == "1P+N":
         if installed > SINGLE_PHASE_INSTALLED_KVA:

@@ -519,6 +519,28 @@ def t(key: str, lang: Optional[str] = None, **kwargs: Any) -> str:
 
     ``lang`` defaults to :func:`current_lang` (environment); rendering code passes ``doc.meta.lang``.
     """
-    cat = CATALOGS[normalize_lang(lang) if lang is not None else current_lang()]
-    template = cat.get(key) or EN.get(key) or key
+    code = normalize_lang(lang) if lang is not None else current_lang()
+    template = CATALOGS[code].get(key) or EN.get(key) or key
+    if code in DECIMAL_COMMA:
+        kwargs = {k: _CommaFloat(v) if isinstance(v, float) else v for k, v in kwargs.items()}
     return template.format(**kwargs) if kwargs else template
+
+
+#: Languages whose messages write decimals with a comma ('1,5 mm²').
+DECIMAL_COMMA = {"fr"}
+
+
+def number(value: float, lang: Optional[str] = None) -> str:
+    """``value`` as a message writes it ('1.5', or '1,5' in French), for numbers built into message arguments."""
+    code = normalize_lang(lang) if lang is not None else current_lang()
+    return format(_CommaFloat(value) if code in DECIMAL_COMMA else float(value), "g")
+
+
+class _CommaFloat(float):
+    """A number formatted with a decimal comma, whatever the format spec ('{section:g}' -> '1,5')."""
+
+    def __format__(self, spec: str) -> str:
+        return float.__format__(self, spec).replace(".", ",")
+
+    def __str__(self) -> str:
+        return format(self, "")

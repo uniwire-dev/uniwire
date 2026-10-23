@@ -38,7 +38,7 @@ def test_rule_messages_follow_env(monkeypatch):
     fr = {f.rule: f.message for f in check(doc)}
     assert set(en) == set(fr)  # rule ids are language-independent
     assert "32 A breaker on 1.5 mm²" in en["nfc15100.section"]
-    assert "disjoncteur 32 A sur 1.5 mm²" in fr["nfc15100.section"]
+    assert "disjoncteur 32 A sur 1,5 mm²" in fr["nfc15100.section"]  # decimal comma
 
 
 def test_title_block_follows_meta_lang():
