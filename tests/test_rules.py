@@ -346,3 +346,36 @@ def test_neutral_pole_and_supply_section():
             _rcd([_circuit(16, {"type": "lighting", "points": 2}, 1.5, poles="1P")]), _rcd([], rtype="AC")]}]}])
     r = rules_of(check(d))
     assert {"nfc15100.neutral-pole", "nfc15100.supply-section"} <= r  # 60 A needs 16 mm²
+
+
+def test_control_scope():
+    def d(*children):
+        return load({"sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 2, "children": [
+            {"type": "power_supply", "u2_V": 24, "children": list(children)}]}]}]})
+
+    coil = {"type": "contactor", "ref": "-KA1"}  # a relay coil fed by the 24 V supply, switching nothing
+    lamp = {"type": "load", "ref": "-HL1", "label": "fault"}
+    stop = {"type": "load", "label": "Emergency stop"}
+    for c in (coil, lamp, stop):
+        fs = [f for f in check(d(c)) if f.rule == "core.scope"]
+        assert len(fs) == 1 and fs[0].level == "info"
+    assert len([f for f in check(d(coil, lamp, stop)) if f.rule == "core.scope"]) == 1  # said once
+    # power devices are not control: a contactor switching a load, a load shedding link, a DC load
+    shed = load({"sources": [{"type": "grid", "children": [
+        {"type": "controller", "id": "PDL", "function": "load shedder"},
+        {"type": "contactor", "id": "KM1", "ref": "-KM1", "children": [{"type": "water_heater"}]}]}],
+        "links": [{"kind": "control", "from": "PDL", "to": "KM1"}]})
+    assert "core.scope" not in rules_of(check(shed))
+    assert "core.scope" not in rules_of(check(d({"type": "contactor", "children": [{"type": "load"}]},
+                                                {"type": "load", "ref": "-E1", "label": "router"})))
+
+
+def test_main_breaker_symbol_follows_rcd():
+    from uniwire.symbols import symbol_for
+
+    def texts(**kw):
+        node = load({"sources": [{"type": "grid", "children": [{"type": "main_breaker", "id": "Q0", **kw}]}]})
+        return [i.text for i in symbol_for(node.sources[0].children[0]).items if hasattr(i, "text")]
+
+    assert "IΔ" in texts(idn_mA=500)
+    assert "IΔ" not in texts(in_A=45)  # no sensitivity: a plain circuit breaker

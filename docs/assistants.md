@@ -67,6 +67,14 @@ three-phase 400 V, 12 kW oven, 3 kW kneader, cold room, lighting, sockets.
 For private documents or offline work, run the server on your machine (`pip install "uniwire[mcp,pdf]"`, then
 `uniwire-mcp`). Setup for Claude Code, Claude Desktop and other clients: [MCP server](llm.md#mcp-server).
 
+## What it draws
+
+uniwire draws power distribution: single-line and multi-line diagrams, from the sources to the loads, with
+protections, cables and RCDs, plus rule checks, bills of materials and wire lists. It does not draw control
+schematics (relay coils and contacts, push buttons, signal lamps, current paths). Asked for one, the assistant
+should say so and offer the power side of the installation; when a document describes control circuits, `check`
+says so too (`core.scope`, see [Rules](rules.md)).
+
 ## Example requests
 
 - *Fais-moi le schéma unifilaire d'un appartement de 60 m² en monophasé, régime TT, et vérifie-le selon la NF C 15-100.*

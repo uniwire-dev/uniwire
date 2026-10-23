@@ -49,6 +49,7 @@ An unknown profile name produces a `profile` warning.
 | `core.transfer-target` | A `transfer` link ends on a `transfer_switch` | error |
 | `core.transfer-source` | A transfer switch receives a second source (`transfer` link) | warning |
 | `core.tie-device` | A `tie` link describes its coupling device | info |
+| `core.scope` | The document describes control circuits (contactors or relays fed by a control power supply and switching nothing, coils, push buttons or signal lamps entered as loads): uniwire draws power distribution, not control schematics, so they are only summarized | info |
 | `core.terminal-node` | PV arrays, batteries, SPDs and earth electrodes feed nothing | warning |
 | `core.normalized` | A near-miss value was read in its canonical form on load: `poles: 2` as `"2P"`, `cable.cores: 3` as `"3G"`, `"3G2.5"` as `"3G"` plus `section_mm2: 2.5`, a `[15, 45]` range as `"15-45"`, a view `type`/`single_line` as `kind`/`single-line`, `meta.description` as a note. Ambiguous values are not guessed: validation rejects them. `uniwire normalize` writes the canonical form | warning |
 | `core.interlock` | Nodes and links sharing a `locks` key: no more members closed in normal operation than the interlock has `keys` (SPEC §4.1); a declared interlock is used by at least 2 members; an undeclared lock is not alone | error / warning |

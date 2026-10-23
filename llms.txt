@@ -4,6 +4,10 @@
 
 For assistants: the reference card of the format (generated from the model) follows this file at https://uniwire.sh/llms.txt, so one read gives you everything needed. Locally, `uniwire card` prints the same card.
 
+## What uniwire draws
+
+uniwire draws power distribution: single-line and multi-line diagrams of installations and panels, from the sources to the loads, with their protections, cables and RCDs. It does not draw control schematics (relay coils and contacts, push buttons, signal lamps, current paths). When the user asks for a control schematic, tell them so before you start, offer to draw the power side of the installation instead, and write the control logic in `meta.notes`; never present a single-line diagram as the control schematic they asked for. `check` reports `core.scope` when a document describes control circuits: pass that message on to the user.
+
 ## How to produce a document
 
 Use the first way that works for you:

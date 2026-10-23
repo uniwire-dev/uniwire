@@ -61,6 +61,9 @@ EN: dict[str, str] = {
     "core.interlock_single": "lock {lock!r} is used by a single member and declared in no 'interlocks' entry: it interlocks nothing",
     "core.interlock_unused": "declared interlock {lock!r} is used by {count} member(s) ('locks'), at least 2 expected",
     "core.interlock_duplicate": "interlock {lock!r} declared twice",
+    "core.control_scope": "this document describes control circuits ({nodes}): uniwire draws power distribution "
+                          "(single-line and multi-line diagrams), not control schematics; coils, contacts, push "
+                          "buttons and current paths are only summarized here, not drawn as a control schematic",
     # plc
     "plc.duplicate_slots": "duplicate slots: {slots}",
     "plc.unsorted_slots": "modules not sorted by slot",
@@ -296,6 +299,9 @@ FR: dict[str, str] = {
     "core.interlock_single": "la serrure {lock!r} n'équipe qu'un seul membre et n'est déclarée dans aucune entrée 'interlocks' : elle ne verrouille rien",
     "core.interlock_unused": "le verrouillage déclaré {lock!r} n'équipe que {count} membre(s) ('locks'), 2 au moins attendus",
     "core.interlock_duplicate": "verrouillage {lock!r} déclaré deux fois",
+    "core.control_scope": "ce document décrit des circuits de commande ({nodes}) : uniwire dessine la distribution "
+                          "(schémas unifilaire et multifilaire), pas les schémas de commande ; bobines, contacts, "
+                          "boutons et chemins de courant n'y figurent qu'en résumé, pas en schéma développé",
     "plc.duplicate_slots": "slots en double : {slots}",
     "plc.unsorted_slots": "modules non rangés par ordre de slot",
     "plc.wago_end": "bus local WAGO sans module de fin (750-600) en dernière position",

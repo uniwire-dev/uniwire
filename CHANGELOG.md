@@ -8,6 +8,14 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* New `core.scope` finding (info): when a document describes control circuits (contactors or relays fed by a
+  control power supply and switching nothing, coils, push buttons or signal lamps entered as loads), `check` says
+  that uniwire draws power distribution and not control schematics, so that these circuits are only summarized.
+  `llms.txt` and the assistants page state the same scope.
+
+* A `main_breaker` without `idn_mA` is drawn as a circuit breaker, no longer with the residual-current toroid and
+  "IΔ" of a residual-current breaker (the multi-line view already did so).
+
 * Conductor-count marks of DC lines: a line behind a DC source, a DC box or a device declared `dc` is marked with
   its two poles, never with a "+N" neutral, whatever the poles of its devices (up to an inverter).
 

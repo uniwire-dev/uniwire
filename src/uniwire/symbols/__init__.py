@@ -145,7 +145,8 @@ def rcbo(node: Any = None) -> Symbol:
 
 
 def main_breaker(node: Any = None) -> Symbol:
-    s = rcbo()
+    """Main breaker: residual-current (as an RCBO) only when it has a sensitivity, else a plain circuit breaker."""
+    s = rcbo() if getattr(node, "idn_mA", None) else breaker()
     s.name = "main_breaker"
     return s
 
