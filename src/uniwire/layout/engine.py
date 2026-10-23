@@ -826,6 +826,22 @@ def _supply_system(ln: LNode, index: Index, doc: Document) -> Optional[str]:
     return doc.installation.system
 
 
+def _dc_node(n: NodeBase) -> bool:
+    """A node that starts a DC part: DC system, DC box, or a device declared ``dc``."""
+    return (getattr(n, "system", None) == "DC" or (n.type == "board" and getattr(n, "kind", None) == "dc_box")  # type: ignore[attr-defined]
+            or getattr(n, "dc", None) is True)
+
+
+def _dc_line(node: NodeBase, index: Index) -> bool:
+    """Whether ``node`` sits on a DC line: a DC node at or above it, before any inverter."""
+    for n in [node] + (index.ancestors(node.id) if node.id else []):
+        if _dc_node(n):
+            return True
+        if n.type == "inverter":  # type: ignore[attr-defined]
+            return False
+    return False
+
+
 def _needs_neutral(node: NodeBase) -> bool:
     """Whether a circuit below ``node`` (up to a transformer) uses the neutral."""
     stack = list(node.children)
@@ -868,16 +884,19 @@ def _line_marks(doc: Document) -> tuple[dict[int, Optional[Mark]], dict[int, Opt
     m_in: dict[int, Optional[Mark]] = {}
     m_out: dict[int, Optional[Mark]] = {}
 
-    def walk(n: NodeBase, up: Optional[Mark]) -> None:
+    def walk(n: NodeBase, up: Optional[Mark], dc: bool = False) -> None:
+        dc = _dc_node(n) or (dc and n.type != "inverter")  # type: ignore[attr-defined]
         m_in[id(n)] = up
         out = up
         if n.type == "transformer":  # type: ignore[attr-defined]
             out = system_mark(_system_of(n, doc)) or up
+        elif dc:  # a DC line has two poles and no neutral, whatever the devices cut
+            out = (2, False)
         elif n.type in SWITCHING and getattr(n, "poles", None):  # type: ignore[attr-defined]
             out = poles_mark(n.poles, _needs_neutral(n)) or up  # type: ignore[attr-defined]
         m_out[id(n)] = out
         for c in n.children:
-            walk(c, out)
+            walk(c, out, dc)
 
     for src in doc.sources:
         walk(src, None)
@@ -1001,7 +1020,7 @@ def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: 
         chain = _feeder_chain(ln, index)
         if not chain:
             continue
-        mark = feeder_mark(chain, _supply_system(ln, index, doc))
+        mark = feeder_mark(chain, "DC" if _dc_line(chain[0], index) else _supply_system(ln, index, doc))
         if not mark:
             continue
         phase = next((getattr(c, "phase", None) for c in chain if getattr(c, "phase", None)), None)

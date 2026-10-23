@@ -131,10 +131,12 @@ def poles_mark(poles: Optional[str], neutral_downstream: bool = False) -> Option
 
 def feeder_mark(chain: list[Any], system: Optional[str] = None) -> Optional[Mark]:
     """Mark of an outgoing cable: :func:`conductor_count`, with the neutral shown apart ('3+N', '1+N') when
-    the nearest switching device leaves it uncut."""
+    the nearest switching device leaves it uncut. A DC feeder has no neutral: its two poles are counted."""
     n = conductor_count(chain, system)
     if not n:
         return None
+    if system == "DC":
+        return (n, False)
     poles = next((_g(c, "poles") for c in chain if c.type in SWITCHING | {"spare"} and _g(c, "poles")), None)
     if poles in ("1P", "1P+N", "3P", "3P+N") and n == int(poles[0]) + 1:
         return (n - 1, True)
