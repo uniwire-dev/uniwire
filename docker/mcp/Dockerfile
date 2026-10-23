@@ -23,6 +23,8 @@ LABEL org.opencontainers.image.title="uniwire-mcp" \
       org.opencontainers.image.licenses="Apache-2.0"
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN useradd --create-home --uid 10001 app
+# Liberation Sans for the PDF output: Arial widths, with the Greek letters and symbols of the drawings (Ω, Δ, ≤, →)
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-liberation && rm -rf /var/lib/apt/lists/*
 COPY --from=build /dist/ /tmp/dist/
 RUN pip install --no-cache-dir "$(ls /tmp/dist/uniwire-*.whl)[mcp,pdf]" && rm -rf /tmp/dist
 USER 10001

@@ -13,6 +13,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 * French messages write decimals with a comma ("disjoncteur 32 A sur 1,5 mm²"), like the drawings.
 
+* PDF: Chinese, Japanese and Korean texts are drawn with the CID fonts every PDF reader knows (they were missing
+  before); Liberation Sans is used when installed (Linux), with the widths of Arial that the layout expects. The
+  MCP server images install it.
+
 * New rule profile `enedis` (opt-in): connection of a low-voltage installation to the French public network,
   following the Enedis technical reference (Enedis-NMO-RAC_001E) and NF C 14-100, separate from `nfc15100`,
   which starts downstream of the service main breaker. Rules: `enedis.connection` (12 kVA at most in

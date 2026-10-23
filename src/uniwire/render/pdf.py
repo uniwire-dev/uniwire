@@ -16,26 +16,81 @@ from .svg import xml_safe
 
 _FONT_CANDIDATES = [
     ("/System/Library/Fonts/Supplemental/Arial.ttf", "/System/Library/Fonts/Supplemental/Arial Bold.ttf"),
+    # Liberation Sans has the widths of Arial, which the layout estimates; DejaVu Sans is about 13 % wider
+    ("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"),
     ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
     ("/usr/share/fonts/TTF/DejaVuSans.ttf", "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf"),
     ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf"),
 ]
 _FALLBACK = {"Δ": "D", "→": "->", "←": "<-", "Ω": "ohm", "≤": "<=", "≥": ">=", "~": "~"}
+# Chinese, Japanese and Korean text: the Adobe CID fonts known to every PDF reader, referenced and not embedded
+# (no font file needed, on any system)
+_CJK_FONTS = {"zh": "STSong-Light", "ja": "HeiseiKakuGo-W5", "ko": "HYGothic-Medium"}
 
 
-def _fonts() -> tuple[str, str, bool]:
+def _fonts() -> tuple[str, str, bool, frozenset[int] | None]:
+    """Regular and bold font names, whether they cover Unicode, and the code points they have (None: Helvetica,
+    whose code points are those of cp1252)."""
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
 
     for regular, bold in _FONT_CANDIDATES:
         if Path(regular).exists() and Path(bold).exists():
             try:
-                pdfmetrics.registerFont(TTFont("UW", regular))
+                font = TTFont("UW", regular)
+                pdfmetrics.registerFont(font)
                 pdfmetrics.registerFont(TTFont("UW-Bold", bold))
-                return "UW", "UW-Bold", True
+                return "UW", "UW-Bold", True, frozenset(font.face.charToGlyph)
             except Exception:  # pragma: no cover - unreadable font
                 continue
-    return "Helvetica", "Helvetica-Bold", False
+    return "Helvetica", "Helvetica-Bold", False, None
+
+
+def _cjk(ch: str) -> bool:
+    o = ord(ch)
+    return (0x2E80 <= o <= 0x9FFF or 0xAC00 <= o <= 0xD7AF or 0xF900 <= o <= 0xFAFF or 0xFE30 <= o <= 0xFE4F
+            or 0xFF00 <= o <= 0xFFEF or 0x20000 <= o <= 0x3FFFF)
+
+
+def _cjk_font(text: str) -> str:
+    """CID font for the CJK characters of ``text``: Japanese when it has kana, Korean when it has hangul."""
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+
+    if any(0x3040 <= ord(ch) <= 0x30FF for ch in text):
+        name = _CJK_FONTS["ja"]
+    elif any(0xAC00 <= ord(ch) <= 0xD7AF or 0x1100 <= ord(ch) <= 0x11FF for ch in text):
+        name = _CJK_FONTS["ko"]
+    else:
+        name = _CJK_FONTS["zh"]
+    if name not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(UnicodeCIDFont(name))
+    return name
+
+
+def _runs(text: str, font: str, glyphs: frozenset[int] | None) -> list[tuple[str, str]]:
+    """``text`` cut into (font, part) runs: the CJK characters that ``font`` does not have go to a CID font."""
+    def has(ch: str) -> bool:
+        if glyphs is not None:
+            return ord(ch) in glyphs
+        try:
+            ch.encode("cp1252")
+            return True
+        except UnicodeEncodeError:
+            return False
+
+    cjk = None
+    runs: list[tuple[str, str]] = []
+    for ch in text:
+        f = font
+        if _cjk(ch) and not has(ch):
+            f = cjk = cjk or _cjk_font(text)
+        if runs and runs[-1][0] == f:
+            runs[-1] = (f, runs[-1][1] + ch)
+        else:
+            runs.append((f, ch))
+    return runs
 
 
 def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None, title: str | None = None) -> None:
@@ -47,7 +102,9 @@ def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None, 
     except ImportError as e:  # pragma: no cover
         raise RuntimeError(_t("render.pdf_missing")) from e
 
-    regular, bold, unicode_ok = _fonts()
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+
+    regular, bold, unicode_ok, glyphs = _fonts()
     pages = list(pages)
     c = canvas.Canvas(str(path))
     c.setTitle(xml_safe(title or (pages[0].title if pages else "") or "uniwire"))
@@ -112,13 +169,13 @@ def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None, 
             if it.rotate:
                 c.rotate(it.rotate)
             dy = {"middle": -0.35 * it.size, "hanging": -0.8 * it.size}.get(it.baseline, 0.0)
-            c.setFont(bold if it.bold else regular, it.size)
-            if it.anchor == "middle":
-                c.drawCentredString(0, dy, text)
-            elif it.anchor == "end":
-                c.drawRightString(0, dy, text)
-            else:
-                c.drawString(0, dy, text)
+            runs = _runs(text, bold if it.bold else regular, glyphs)
+            widths = [stringWidth(part, font, it.size) for font, part in runs]
+            x = {"middle": -sum(widths) / 2, "end": -sum(widths)}.get(it.anchor, 0.0)
+            for (font, part), w in zip(runs, widths):
+                c.setFont(font, it.size)
+                c.drawString(x, dy, part)
+                x += w
             c.restoreState()
 
     for n, page in enumerate(pages, 1):

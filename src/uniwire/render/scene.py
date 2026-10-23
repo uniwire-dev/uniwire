@@ -6,6 +6,7 @@ The SVG and PDF writers only know these primitives.
 from __future__ import annotations
 
 import math
+import unicodedata
 from dataclasses import dataclass, field
 from typing import Literal, Optional, Union
 
@@ -103,7 +104,8 @@ def text_width(text: str, size: float) -> float:
     """Width estimate (Helvetica/Arial) for layout."""
     narrow = sum(1 for ch in text if ch in "il.,:;'|!1 ()-/fjtrI")
     wide = sum(1 for ch in text if ch in "mwMWQGOD@%→←↔")
-    return size * (0.55 * (len(text) - narrow - wide) + 0.3 * narrow + 0.8 * wide)
+    full = sum(1 for ch in text if unicodedata.east_asian_width(ch) in "WF")  # CJK: one em each
+    return size * (0.55 * (len(text) - narrow - wide - full) + 0.3 * narrow + 0.8 * wide + 1.0 * full)
 
 
 def arc_points(c: Point, r: float, a0: float, a1: float, n: int = 16) -> list[Point]:
