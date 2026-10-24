@@ -86,7 +86,27 @@ def _cell(g: Group, x: float, y: float, w: float, h: float, label: str, value: s
     g.add(Rect(x, y, w, h, Style(width=THIN)))
     g.add(Text((x + 1.0, y + 2.4), label, 1.5, color="#555555"))
     if value:
-        g.add(Text((x + 1.0, y + h - 1.6), value, _fit(value, size, (w - 4.0) * (0.9 if bold else 1.0)), bold=bold))
+        lines, s = _fit_lines(value, size, (w - 4.0) * (0.9 if bold else 1.0), (h - 4.4) / 2.4)
+        for i, line in enumerate(reversed(lines)):
+            g.add(Text((x + 1.0, y + h - 1.6 - i * s * 1.2), line, s, bold=bold))
+
+
+def _fit_lines(text: str, size: float, width: float, two_line_size: float) -> tuple[list[str], float]:
+    """Lines and size of a title block value: one line, reduced down to a readable size, else two lines
+    (at most ``two_line_size``), else one line cut with an ellipsis; never wider than the cell."""
+    s = _fit(text, size, width)
+    words = text.split()
+    if s < min(size, 1.6) and len(words) > 1:
+        splits = [(" ".join(words[:i]), " ".join(words[i:])) for i in range(1, len(words))]
+        pair = min(splits, key=lambda p: max(text_width(p[0], 1.0), text_width(p[1], 1.0)))
+        s2 = min(two_line_size, size, *(_fit(t, size, width) for t in pair))
+        if s2 > s:
+            return list(pair), s2
+    if text_width(text, s) > width:
+        while len(text) > 1 and text_width(text + "…", s) > width:
+            text = text[:-1].rstrip()
+        text += "…"
+    return [text], s
 
 
 def _title_block(g: Group, doc: Document, x: float, y: float, w: float, h: float, folio: int, total: Optional[int],

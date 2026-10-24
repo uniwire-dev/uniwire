@@ -80,3 +80,14 @@ def test_bare_core_count_and_plc_family():
     from uniwire.render.scene import text_width
     assert head.w >= text_width(family.text, family.size)
 
+
+def test_long_title_block_value_stays_in_its_cell():
+    from uniwire.render.frame import _fit_lines
+    from uniwire.render.scene import text_width
+    name = "Jane Example, Senior Electrical Design Engineer and Reviewer"
+    lines, size = _fit_lines(name, 2.2, 26.0, 1.5)
+    assert len(lines) == 2 and " ".join(lines) == name
+    assert all(text_width(t, size) <= 26.0 for t in lines)
+    lines, size = _fit_lines("x" * 200, 2.2, 26.0, 1.5)  # no space to break on: cut
+    assert lines[0].endswith("…") and text_width(lines[0], size) <= 26.0
+    assert _fit_lines("Short", 2.2, 26.0, 1.5) == (["Short"], 2.2)
