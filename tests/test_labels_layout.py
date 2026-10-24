@@ -5,7 +5,7 @@ from uniwire import load, render_pages
 from uniwire.labels import annotation, cable_text, cell
 from uniwire.layout import layout_sheet, plan_sheets
 from uniwire.render import default_view
-from uniwire.render.scene import BUS, Group, Line, Polyline, Text
+from uniwire.render.scene import BUS, Group, Line, Polyline, Text, text_width
 
 
 def _items(item):
@@ -211,10 +211,32 @@ def _hybrid_doc():
     return load(ROOT / "examples" / "53_office_hybrid_inverter_pv_battery.uniwire.json")
 
 
+def _segments(group):
+    for i in _items(group):
+        if isinstance(i, Line):
+            yield i.a, i.b
+        elif isinstance(i, Polyline) and not i.closed:
+            yield from zip(i.points, i.points[1:])
+
+
 def test_inverter_dc_side_keeps_a_string_with_its_surge_protector():
     lay = _layout(_hybrid_doc())[0]
     inv = next(n for n in lay.lnodes if n.node is not None and n.node.id == "INV")
     assert [c.node.ref for c in inv.children[:inv.dc_side]] == ["-QS1", "-QS2", "-FB1"]
+
+
+def test_long_frame_label_wrapped_clear_of_conductors():
+    lay = _layout(_hybrid_doc())[0]
+    lines = [i for i in _items(lay.group) if isinstance(i, Text) and i.bold and i.text
+             and i.text.split()[0] in ("+R1", "Rooftop", "DC", "isolator", "enclosure")]
+    assert len(lines) >= 2  # too wide for the box: wrapped
+    for t in lines:
+        w = text_width(t.text, t.size)
+        x0 = t.p[0] - w if t.anchor == "end" else t.p[0]
+        box = (x0, t.p[1] - t.size * 0.8, x0 + w, t.p[1] + t.size * 0.2)
+        for (ax, ay), (bx, by) in _segments(lay.group):
+            seg = (min(ax, bx), min(ay, by), max(ax, bx), max(ay, by))
+            assert not _hit(box, seg, 0.05), (t.text, seg)
 
 
 def test_infeed_to_inverter_lands_on_its_input_away_from_the_busbars():

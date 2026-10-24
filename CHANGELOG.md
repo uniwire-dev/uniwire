@@ -13,6 +13,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   inverter or UPS at the head of the tree lands on its input, on top, the side being the DC terminal; a power link
   drawn as a plain line no longer runs along a busbar; links of different kinds no longer share one end point.
 
+* Frame labels (`enclosures`, view `frames`) too long for their frame are written on two or three lines between
+  the conductors that cross the frame, the frame widening over free room if need be, instead of crossing a
+  busbar or a conductor.
+
 * Circuit table: a `spare` way without its own rating, fed by its own breaker, shows that breaker (tag, rating,
   curve, poles); the columns were empty.
 

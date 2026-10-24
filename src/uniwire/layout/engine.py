@@ -1183,31 +1183,102 @@ def _framed(g: Group, obs: Obstacles, box: tuple[float, float, float, float], la
     """Frame ``box`` (content + padding) with its label, kept clear of busbars and of the frames already drawn.
 
     The label goes above the content when there is room below the nearest busbar / frame edge, otherwise
-    at the bottom of the frame; the frame and its label then become obstacles for the link routes."""
+    at the bottom of the frame; on one line, else on two or three lines and between the conductors crossing
+    the frame, slightly smaller if need be; the frame and its label then become obstacles for the link routes."""
     x0, top, x1, y1 = box
     content_top = top + gap
-    lh = size + 1.2 if label else 0.0
     # nearest busbar or frame edge crossing the frame above the content: the frame must start below it
     limit = max([y for y, h0, h1 in obs.hlines if h0 < x1 and x0 < h1 and y < content_top - 0.2] + [-1e9])
-    y0 = max(top - lh, limit + 0.8) if limit > top - lh - 0.8 else top - lh
-    y0 = min(y0, content_top - 0.6)
+
+    def frame_top(lh: float) -> float:
+        y0 = max(top - lh, limit + 0.8) if limit > top - lh - 0.8 else top - lh
+        return min(y0, content_top - 0.6)
+
+    y0 = frame_top(size + 1.2 if label else 0.0)
     if label:
-        w = text_width(label, size)
-        cands = []  # (x, baseline, anchor, frame grows at the bottom)
-        if content_top - y0 >= lh + 0.4:
-            cands += [(x0 + 1.0, y0 + size + 0.6, "start", False), (x1 - 1.0, y0 + size + 0.6, "end", False)]
-        cands += [(x0 + 1.0, y1 + lh - 0.9, "start", True), (x1 - 1.0, y1 + lh - 0.9, "end", True)]
-        lx, ly, anchor, grow = next((c for c in cands if obs.box_free(text_box(c[0], c[1], w, size, c[2]), 0.2, 0.1)),
-                                    cands[0])
-        if grow:
-            y1 += lh
-        g.add(Text((lx, ly), label, size, anchor, bold=True))
-        obs.add_box(text_box(lx, ly, w, size, anchor))
+        placed = None
+        for s, lines, widen in _frame_label_tries(label, size, x1 - x0 - 2.0):
+            lead = s * 1.25
+            lh = lead * (len(lines) - 1) + s + 1.2
+            ws = [text_width(t, s) for t in lines]
+            w = max(ws)
+            # the frame side, else just right of a conductor crossing the frame; widened: the frame grows
+            # over free room so that its label stays inside
+            lefts = [x0 + 1.0] + sorted(x + 1.0 for x, a, b in obs.vwires if x0 < x < x1 and a < y1 and top - lh < b)
+            xs = [(x, "start") for x in lefts if (x + w > x1 - 1.0) == widen]
+            if widen or x0 + 1.0 + w <= x1 - 1.0:  # right-aligned: in the frame, or widening it to the left
+                xs.insert(min(1, len(xs)), (x1 - 1.0, "end"))
+            ty0 = frame_top(lh)
+            slots = [(ty0 + s + 0.6, ty0)] if content_top - ty0 >= lh + 0.4 else []
+            slots.append((y1 + s + 0.3, None))
+            for base, fy0 in slots:
+                fy0 = y0 if fy0 is None else fy0
+                fy1 = y1 + (lh if base > y1 else 0.0)
+                for lx, anchor in xs:
+                    tbs = [text_box(lx, base + i * lead, wi, s, anchor) for i, wi in enumerate(ws)]
+                    nx0, nx1 = (min(x0, lx - w - 1.0), x1) if anchor == "end" else (x0, max(x1, lx + w + 1.0))
+                    grown = [r for r in ((nx0 - 0.4, fy0, x0, fy1), (x1, fy0, nx1 + 0.4, fy1)) if r[2] - r[0] > 0.41]
+                    if all(obs.box_free(t, 0.2, 0.1) for t in tbs) and all(obs.box_free(r) for r in grown):
+                        placed = (lines, s, lx, base, anchor, tbs, (nx0, fy0, nx1, fy1))
+                        break
+                if placed:
+                    break
+            if placed:
+                break
+        if placed is None:  # nothing free: one line above the content, as before
+            base = y0 + size + 0.6 if content_top - y0 >= size + 1.6 else y1 + size + 0.3
+            placed = ([label], size, x0 + 1.0, base, "start", [text_box(x0 + 1.0, base, text_width(label, size), size)],
+                      (x0, y0, x1, y1 + (size + 1.2 if base > y1 else 0.0)))
+        lines, s, lx, base, anchor, tbs, (x0, y0, x1, y1) = placed
+        for i, t in enumerate(lines):
+            g.add(Text((lx, base + i * s * 1.25), t, s, anchor, bold=True))
+        for b in tbs:
+            obs.add_box(b)
     g.add(Rect(x0, y0, x1 - x0, y1 - y0, style))
     obs.add_hline(y0, x0, x1)
     obs.add_hline(y1, x0, x1)
     obs.add_vline(x0, y0, y1)
     obs.add_vline(x1, y0, y1)
+
+
+def _frame_label_tries(label: str, size: float, width: float) -> Iterator[tuple[float, list[str], bool]]:
+    """Ways of writing a frame label, best first: (size, lines, the frame may widen). One line, then two
+    lines fitting ``width``, in the frame; the same widening the frame; then three lines or a smaller size."""
+    words = label.split()
+
+    def wrapped(n: int, s: float) -> Optional[list[str]]:
+        return _wrap_words(words, n, lambda t: text_width(t, s)) if len(words) >= n else None
+
+    two, three = wrapped(2, size), wrapped(3, size)
+    small = round(size * 0.85, 2)
+    tries = [(size, [label]), (size, two)]
+    for widen in (False, True):
+        for s, lines in tries:
+            if lines and (widen or max(text_width(t, s) for t in lines) <= width):
+                yield s, lines, widen
+    for s, lines in ((size, three), (small, wrapped(2, small)), (small, wrapped(3, small))):
+        for widen in (False, True):
+            if lines:
+                yield s, lines, widen
+
+
+def _wrap_words(words: list[str], n: int, width: Callable[[str], float]) -> list[str]:
+    """``words`` on ``n`` lines, the widest line as narrow as possible."""
+    best: Optional[list[str]] = None
+    for cuts in _cuts(len(words), n):
+        lines = [" ".join(words[a:b]) for a, b in zip((0,) + cuts, cuts + (len(words),))]
+        if best is None or max(map(width, lines)) < max(map(width, best)):
+            best = lines
+    return best or [" ".join(words)]
+
+
+def _cuts(m: int, n: int) -> Iterator[tuple[int, ...]]:
+    if n == 1:
+        yield ()
+        return
+    for i in range(1, m - n + 2):
+        for rest in _cuts(m - i, n - 1):
+            yield (i,) + tuple(i + r for r in rest)
 
 
 def _draw_view_frames(view: View, everything: list[LNode], g: Group, obs: Obstacles) -> None:
