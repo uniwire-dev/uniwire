@@ -8,6 +8,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Circuit table: a `spare` way without its own rating, fed by its own breaker, shows that breaker (tag, rating,
+  curve, poles); the columns were empty.
+
 * New `core.scope` finding (info): when a document describes control circuits (contactors or relays fed by a
   control power supply and switching nothing, coils, push buttons or signal lamps entered as loads), `check` says
   that uniwire draws power distribution and not control schematics, so that these circuits are only summarized.

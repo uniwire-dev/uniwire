@@ -83,6 +83,18 @@ def test_spare_imd_and_busway_taps_have_table_cells():
     assert "16A" in texts and "2P" in texts and "-B1" in texts
 
 
+def test_spare_fed_by_its_own_breaker_shows_the_breaker():
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "rcd", "ref": "-F1", "in_A": 40, "idn_mA": 30, "children": [
+            {"type": "breaker", "ref": "-Q7", "in_A": 20, "curve": "C", "poles": "2P", "children": [
+                {"type": "spare", "label": "Spare workshop"}]}]},
+        {"type": "socket", "label": "Sockets"}]}]}],
+        "views": [{"cartouche": ["ref", "label", "protection", "poles"]}]})
+    texts = _texts(render_pages(doc)[0].root)
+    assert texts.count("-Q7") == 2  # annotation + table cell
+    assert texts.count("C20") == 2
+
+
 def test_generator_symbol_follows_supply_system():
     def sub(system):
         doc = load({"installation": {"system": system}, "sources": [{"type": "generator", "id": "G", "children": [

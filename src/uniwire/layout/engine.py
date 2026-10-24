@@ -1825,8 +1825,9 @@ def _column_info(ln: LNode, index: Index, lang: str) -> dict[str, Any]:
     prots = [n for n in path if n.type in PROTECTIVE]  # type: ignore[attr-defined]
     rated = [n for n in prots if n.type != "motor_starter" and protection_short(n)]  # type: ignore[attr-defined]
     info["prot"] = (rated or prots or [None])[0]
-    if leaf.type == "spare":  # type: ignore[attr-defined]
-        info["prot"] = leaf  # pre-equipped spare way: its own rating and poles
+    if leaf.type == "spare" and (info["prot"] is None or leaf.ref or protection_short(leaf)  # type: ignore[attr-defined]
+                                 or getattr(leaf, "poles", None)):
+        info["prot"] = leaf  # pre-equipped spare way: its own rating and poles, else the device feeding it
     elif info["prot"] is None and len(path) < len(chain) and getattr(chain[len(path)], "kind", None) == "busway":
         # tap-off of a busbar trunking: protected by the device feeding the trunking
         for n in chain[len(path) + 1:]:
