@@ -81,6 +81,47 @@ def test_bare_core_count_and_plc_family():
     assert head.w >= text_width(family.text, family.size)
 
 
+def _targets(item) -> list[int]:
+    out = []
+    if isinstance(item, Group):
+        t = item.attrs.get("data-uw-target-sheet", "")
+        if t.isdigit():
+            out.append(int(t))
+        for c in item.items:
+            out += _targets(c)
+    return out
+
+
+def test_pdf_holds_every_view():
+    """A cabinet drawing set: the multi-line power diagram, then the single-line diagram with the links."""
+    import base64
+
+    from uniwire.llm import tools
+    from uniwire.render import render_views
+
+    doc = {**DOC, "views": [{"id": "ml", "kind": "multi-line"}, DOC["views"][0]]}
+    pages = render_views(load(doc))
+    assert [p.attrs["data-uw-view-kind"] for p in pages] == ["multi-line", "single-line"]
+    pdf = base64.b64decode(tools.pdf_file(doc)["pdf_base64"])
+    assert pdf.count(b"/Type /Page") - pdf.count(b"/Type /Pages") == 2  # one page per view
+    only = base64.b64decode(tools.pdf_file(doc, kind="single-line")["pdf_base64"])
+    assert only.count(b"/Type /Page") - only.count(b"/Type /Pages") == 1
+
+
+def test_cross_sheet_references_follow_their_view():
+    from uniwire.render import render_pages, render_views
+
+    from .conftest import ROOT
+
+    doc = load(ROOT / "examples" / "18_office_building_main_lv_switchboard.uniwire.json")
+    first = render_pages(doc)
+    both = render_views(doc, [doc.views[0], doc.views[0]])
+    assert len(both) == 2 * len(first)
+    n = len(first)
+    second = [t for p in both[n:] for t in _targets(p.root)]
+    assert second and all(n < t <= 2 * n for t in second)  # the second copy points at its own sheets
+
+
 def test_long_title_block_value_stays_in_its_cell():
     from uniwire.render.frame import _fit_lines
     from uniwire.render.scene import text_width

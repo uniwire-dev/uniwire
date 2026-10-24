@@ -62,6 +62,20 @@ def test_shorten_pdf_links(tmp_path):
     assert _pdf_base("http://localhost:8080/editor.html") is None
 
 
+def test_view_options_carry_over_to_short_links(tmp_path):
+    """render with kind multi-line / color: both links show that view (editor hash, ?query of the PDF)."""
+    store = DocStore(tmp_path)
+    d = json.loads(STUDIO.read_text("utf-8"))
+    long = tools.render(d, kind="multi-line", format="svg", color="phase")
+    assert long["viewer_url"].endswith("&kind=multi-line&color=phase")
+    res = _shorten(long, store, "https://uniwire.sh/viewer/", _pdf_base("https://uniwire.sh/viewer/"))
+    id_ = res["viewer_url"].partition("#d=")[2].partition("&")[0]
+    assert res["viewer_url"] == f"https://uniwire.sh/viewer/#d={id_}&kind=multi-line&color=phase"
+    assert res["pdf_url"] == f"https://uniwire.sh/pdf/{id_}?kind=multi-line&color=phase"
+    assert tools._view_params("multi-line", "rainbow", "us") == "&kind=multi-line&conductor_colors=us"  # unknown: dropped
+    assert "&kind=" not in tools.render(d, format="svg")["viewer_url"]  # the document's own view: no option
+
+
 def test_pdf_filename():
     assert tools.pdf_filename("Small bakery, 400 V") == "small-bakery-400-v.pdf"
     assert tools.pdf_filename("École: TGBT / TD-1") == "ecole-tgbt-td-1.pdf"
@@ -88,6 +102,10 @@ def test_pdf_route(tmp_path):
     bad_id = store.put('{"uniwire": "1.0.0"}')
     bad = client.get(f"/pdf/{bad_id}")
     assert bad.status_code == 422 and "cannot draw" in bad.text
+    ml = client.get(f"/pdf/{id_}?kind=multi-line&color=phase&x=1")
+    assert ml.status_code == 200 and abs(len(ml.content) - len(r.content)) > 1000  # another drawing
+    evil = client.get(f"/pdf/{id_}?kind=evil")  # unknown values are ignored: the document's own view
+    assert evil.status_code == 200 and abs(len(evil.content) - len(r.content)) < 100
 
 
 def test_svg_route(tmp_path):

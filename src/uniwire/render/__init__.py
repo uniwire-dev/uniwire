@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, Optional
 
@@ -12,7 +13,7 @@ from ..model import Document, View
 from ..resolve import build_index
 from .colors import colorize
 from .frame import compose_page
-from .scene import Page
+from .scene import Group, Item, Page
 from .svg import page_to_svg
 
 
@@ -48,6 +49,31 @@ def render_pages(doc: Document, view: Optional[View] = None) -> list[Page]:
     for i, page in enumerate(pages, 1):
         page.attrs.update({"data-uw-sheet": str(i), "data-uw-view-kind": view.kind})
     return pages
+
+
+def render_views(doc: Document, views: Optional[Iterable[View]] = None) -> list[Page]:
+    """Sheets of several views, one view after the other (default: every view of the document, or the default view
+    when it declares none): a drawing set such as the multi-line power diagram then the single-line diagram with the
+    auxiliary devices and links. The cross-sheet references of each view keep pointing at its own sheets."""
+    views = list(views) if views is not None else (list(doc.views) or [default_view(doc)])
+    out: list[Page] = []
+    for v in views:
+        pages = render_pages(doc, v)
+        if out:
+            for page in pages:
+                _shift_refs(page.root, len(out))
+        out += pages
+    return out
+
+
+def _shift_refs(item: Item, offset: int) -> None:
+    """Add ``offset`` to the target sheet of the cross-sheet references under ``item``."""
+    if isinstance(item, Group):
+        target = item.attrs.get("data-uw-target-sheet", "")
+        if target.isdigit():
+            item.attrs["data-uw-target-sheet"] = str(int(target) + offset)
+        for c in item.items:
+            _shift_refs(c, offset)
 
 
 #: Largest enlargement of a drawing that leaves most of its sheet empty (annotations 2 mm -> 2.5 mm).
@@ -153,12 +179,14 @@ def render_svg(doc: Document, out_dir: str | Path, stem: str = "sld", view: Opti
     return paths
 
 
-def render_pdf(doc: Document, path: str | Path, view: Optional[View] = None) -> Path:
+def render_pdf(doc: Document, path: str | Path, view: Optional[View] = None, all_views: bool = False) -> Path:
     """Render the sheets of ``view`` into one PDF at ``path`` (one page per sheet, bookmarks and clickable
-    cross-sheet references). Needs the ``pdf`` extra (reportlab). Returns the path."""
+    cross-sheet references); with ``all_views``, the sheets of every view of the document (:func:`render_views`).
+    Needs the ``pdf`` extra (reportlab). Returns the path."""
     from .pdf import write_pdf
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    write_pdf(render_pages(doc, view), path, normalize_lang(doc.meta.lang), doc.meta.title)
+    pages = render_views(doc) if all_views else render_pages(doc, view)
+    write_pdf(pages, path, normalize_lang(doc.meta.lang), doc.meta.title)
     return path
