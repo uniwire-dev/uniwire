@@ -27,6 +27,7 @@ from ..render.scene import (
     Style,
     Text,
     arc_points,
+    text_width,
 )
 
 M = 2.5  # IEC 60617 module
@@ -600,13 +601,15 @@ def plc(node: Any = None) -> Symbol:
     """PLC (automate): head + strip of modules (one rectangle per slot), ports addressed by slot."""
     modules = list(getattr(node, "modules", None) or [])
     h = 4.0 * M
-    head_w = 7.0
+    label = getattr(node, "family", None) or _abbr("plc")
+    if len(label) > 10:  # 'Automation Series 7' -> 'Automation': the head shows the family, the annotation the rest
+        label = label.split()[0][:12]
+    head_w = max(7.0, text_width(label, 1.5) * 1.1 + 1.2)  # wide enough for the family name (bold)
     n = len(modules)
     w = head_w + n * PLC_SLOT_W
     x0 = -head_w / 2  # the supply axis arrives at the centre of the head
     y0 = 0.8 * M
     body = h - 1.6 * M
-    label = (getattr(node, "family", None) or _abbr("plc"))[:8]
     head = {"coupler": "I/O", "expansion": "I/O", "hmi": "HMI"}.get(getattr(node, "role", None) or "", "CPU")
     items: list[Item] = [_lead(0, y0), Rect(x0, y0, head_w, body, Style(fill="#ffffff")),
                          _text((0, y0 + body / 2 - 0.9), label, 1.5, True), _text((0, y0 + body / 2 + 1.1), head, 1.2)]

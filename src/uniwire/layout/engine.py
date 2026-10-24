@@ -659,7 +659,9 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
 
     bottom_end = max([y_load + n.sym.height for n in everything if n.bottom] + [y_load + 2.0])
     if view.cartouche and columns:
-        _draw_table(g, columns, index, view, lang, bottom_end + 6.0)
+        # below everything drawn so far: auxiliary devices and link routes may go lower than the loads
+        drawn_box = bbox(g)
+        _draw_table(g, columns, index, view, lang, max(bottom_end, drawn_box[3] if drawn_box else 0.0) + 6.0)
     elif columns:
         for n in columns:
             if n.label or (n.node is not None and n.node.label):
@@ -764,6 +766,10 @@ def sheet_node_ids(doc: Document, spec: SheetSpec, index: Index) -> set[str]:
     return ids
 
 
+DEVICE_PAD_MM = 2.5  # free margin around an auxiliary device (symbol and text)
+DEVICE_AXIS_MM = 30.0  # length of the reserved axis below a load
+
+
 def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], view: View, lang: str,
                    obs: Obstacles, pitch: float) -> list[LNode]:
     """Auxiliary devices whose home node is on this sheet, each in the free space nearest its partner."""
@@ -771,6 +777,8 @@ def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], v
     placed: dict[str, LNode] = {n.node.id: n for n in everything if n.kind == "node" and n.node is not None and n.node.id}
     todo = [d for d in doc.devices if d.id and homes.get(d.id) in placed]
     annex: list[LNode] = []
+    # the axis under each load stays free: a device there would read as wired in series with the load
+    axes = [(n.x, n.y, n.y + n.sym.height + DEVICE_AXIS_MM) for n in everything if n.bottom]
     while todo:
         progress = False
         for dev in list(todo):
@@ -792,7 +800,8 @@ def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], v
             assert u is not None
             pab = partner.ann_box()
             pref_x = (pab[2] if pab else partner.x + partner.sym.right) + 4.0
-            x0, y0 = place_box(obs, u[2] - u[0], u[3] - u[1], (pref_x, partner.y))
+            free = Obstacles(obs.boxes, obs.vwires + axes, obs.hlines)
+            x0, y0 = place_box(free, u[2] - u[0], u[3] - u[1], (pref_x, partner.y), pad=DEVICE_PAD_MM)
             ln.x, ln.y = x0 - u[0], y0 - u[1]
             ln.x_left = ln.x - pitch / 2
             obs.add_box(ln.sym_box())

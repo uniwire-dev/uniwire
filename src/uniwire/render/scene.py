@@ -102,10 +102,12 @@ class Page:
 
 def text_width(text: str, size: float) -> float:
     """Width estimate (Helvetica/Arial) for layout."""
-    narrow = sum(1 for ch in text if ch in "il.,:;'|!1 ()-/fjtrI")
+    narrow = sum(1 for ch in text if ch in "il.,:;'|! ()-/fjtrI")  # digits are all one width in Arial
     wide = sum(1 for ch in text if ch in "mwMWQGOD@%→←↔")
     full = sum(1 for ch in text if unicodedata.east_asian_width(ch) in "WF")  # CJK: one em each
-    return size * (0.55 * (len(text) - narrow - wide - full) + 0.3 * narrow + 0.8 * wide + 1.0 * full)
+    upper = sum(1 for ch in text if ch.isupper() and ch not in "IJMWQGOD")  # capitals, Latin or Cyrillic
+    return size * (0.55 * (len(text) - narrow - wide - full - upper) + 0.3 * narrow + 0.8 * wide + 1.0 * full
+                   + 0.68 * upper)
 
 
 def arc_points(c: Point, r: float, a0: float, a1: float, n: int = 16) -> list[Point]:

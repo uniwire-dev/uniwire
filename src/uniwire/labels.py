@@ -151,6 +151,8 @@ def cable_text(c: Optional[Cable]) -> str:
     cores = c.cores or ""
     if c.section_mm2 is not None:
         sec = fmt(c.section_mm2)
+        if cores.isdigit():  # a bare count of conductors: '2' and 1.5 mm² -> '2x1.5', not '21.5'
+            cores += "x"
         s = f"{cores}{sec}" if cores and not cores.endswith(")") else (cores or sec)
     elif c.size_awg:
         size = awg_text(c.size_awg)
