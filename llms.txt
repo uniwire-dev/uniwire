@@ -51,7 +51,7 @@ When the user asks for a PDF, add `&download=pdf` at the end of the link: the ed
 
 - [JSON Schema](https://uniwire.sh/schema/v1/uniwire.schema.json): draft 2020-12
 - [Type registry](https://github.com/uniwire-dev/uniwire/blob/main/src/uniwire/registry/core.json): node types, categories, IEC 81346 letters, CIM / IFC mappings
-- [Examples](https://uniwire.sh/viewer/examples/index.json): 52 documents, each at `https://uniwire.sh/viewer/examples/<file>` (dwellings, commercial, industrial, PV, EV, UPS, MV/LV substations, PLCs)
+- [Examples](https://uniwire.sh/viewer/examples/index.json): 53 documents, each at `https://uniwire.sh/viewer/examples/<file>` (dwellings, commercial, industrial, PV, EV, UPS, MV/LV substations, PLCs)
 
 ## Optional
 

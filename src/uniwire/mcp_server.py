@@ -346,7 +346,7 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
 
     @tool("List the example installations")
     def list_examples() -> list[dict[str, Any]]:
-        """List the 52 example installations (dwellings, shops, offices, workshops, PV, EV charging, UPS, MV/LV
+        """List the 53 example installations (dwellings, shops, offices, workshops, PV, EV charging, UPS, MV/LV
         substations, PLCs): name, title, language, profiles, earthing, system."""
         return T.list_examples()
 

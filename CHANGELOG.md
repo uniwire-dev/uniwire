@@ -8,8 +8,15 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawing of inverters and links: a PV string or battery way that also carries its surge protector, meter or
+  insulation monitor stays on the DC side of the inverter (it was drawn on the AC busbar); an `infeed` link to an
+  inverter or UPS at the head of the tree lands on its input, on top, the side being the DC terminal; a power link
+  drawn as a plain line no longer runs along a busbar; links of different kinds no longer share one end point.
+
 * Circuit table: a `spare` way without its own rating, fed by its own breaker, shows that breaker (tag, rating,
   curve, poles); the columns were empty.
+
+* New example 53: office with a hybrid inverter, rooftop PV, battery and an essential loads board.
 
 * New `core.scope` finding (info): when a document describes control circuits (contactors or relays fed by a
   control power supply and switching nothing, coils, push buttons or signal lamps entered as loads), `check` says

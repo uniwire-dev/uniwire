@@ -71,7 +71,7 @@ review and diff.
 </tr>
 </table>
 
-All 52 examples are in [examples/](https://github.com/uniwire-dev/uniwire/tree/main/examples) and listed in the
+All 53 examples are in [examples/](https://github.com/uniwire-dev/uniwire/tree/main/examples) and listed in the
 [documentation](https://uniwire.sh/docs/examples/); open any of them in the [web viewer](https://uniwire.sh/viewer/).
 
 ## Install

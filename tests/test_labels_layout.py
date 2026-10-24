@@ -1,5 +1,6 @@
 """Displayed texts and placement of auxiliary devices, link routes, frames and notes."""
 
+from tests.conftest import ROOT
 from uniwire import load, render_pages
 from uniwire.labels import annotation, cable_text, cell
 from uniwire.layout import layout_sheet, plan_sheets
@@ -17,6 +18,13 @@ def _items(item):
 
 def _texts(item) -> list[str]:
     return [i.text for i in _items(item) if isinstance(i, Text)]
+
+
+def _items_groups(item):
+    if isinstance(item, Group):
+        yield item
+        for i in item.items:
+            yield from _items_groups(i)
 
 
 def _hit(a, b, pad=0.0):
@@ -195,6 +203,33 @@ def test_frame_label_kept_off_the_busbar():
     label = next(i for i in _items(lay.group) if isinstance(i, Text) and i.text == "Cell 1")
     top, bottom = label.p[1] - label.size * 0.8, label.p[1] + label.size * 0.2
     assert bus_ys and all(not (top - 0.5 < y < bottom + 0.5) for y in bus_ys)
+
+
+def _hybrid_doc():
+    """Example 53: hybrid inverter drawn as a source of its own, PV strings with their surge protectors and a
+    battery on the DC side, AC input fed from the main board by an infeed link, a narrow rooftop enclosure."""
+    return load(ROOT / "examples" / "53_office_hybrid_inverter_pv_battery.uniwire.json")
+
+
+def test_inverter_dc_side_keeps_a_string_with_its_surge_protector():
+    lay = _layout(_hybrid_doc())[0]
+    inv = next(n for n in lay.lnodes if n.node is not None and n.node.id == "INV")
+    assert [c.node.ref for c in inv.children[:inv.dc_side]] == ["-QS1", "-QS2", "-FB1"]
+
+
+def test_infeed_to_inverter_lands_on_its_input_away_from_the_busbars():
+    lay = _layout(_hybrid_doc())[0]
+    inv = next(g for g in _items_groups(lay.group) if g.id == "INV")
+    sym = [p for i in _items(inv) for p in ([i.a, i.b] if isinstance(i, Line) else getattr(i, "points", []))]
+    left, top, right = min(p[0] for p in sym), min(p[1] for p in sym), max(p[0] for p in sym)
+    link = next(g for g in _items_groups(lay.group) if g.attrs.get("data-uw-link") == "L_IN")
+    pts = next(i.points for i in _items(link) if isinstance(i, Polyline))
+    assert left < pts[-1][0] < right and pts[-1][1] <= top + 0.01  # on top: the side is the DC terminal
+    buses = [(i.a, i.b) for i in _items(lay.group) if isinstance(i, Line) and i.style.width == BUS]
+    for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+        if abs(ay - by) < 1e-9 and abs(ax - bx) > 20:  # long horizontal run: not along a busbar
+            assert all(not (abs(a[1] - ay) < 5.0 and min(max(a[0], b[0]), max(ax, bx))
+                            - max(min(a[0], b[0]), min(ax, bx)) > 20) for a, b in buses)
 
 
 def test_conductor_count():

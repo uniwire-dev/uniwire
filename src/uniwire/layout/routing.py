@@ -22,6 +22,7 @@ Point = tuple[float, float]
 
 CLEAR = 0.6  # minimum clearance between a route and a text / symbol box
 LANE = 1.2  # spacing between parallel link channels
+BUS_CLEAR, BUS_RUN = 5.0, 20.0  # minimum spacing between a link channel and a busbar it runs along for long
 
 
 def _hit(a: Box, b: Box, pad: float = 0.0) -> bool:
@@ -33,6 +34,7 @@ class Obstacles:
     boxes: list[Box] = field(default_factory=list)  # texts and symbols: nothing may cross them
     vwires: list[tuple[float, float, float]] = field(default_factory=list)  # (x, y0, y1) vertical conductors
     hlines: list[tuple[float, float, float]] = field(default_factory=list)  # (y, x0, x1) busbars, link channels
+    buses: list[tuple[float, float, float]] = field(default_factory=list)  # (y, x0, x1) the busbars alone
 
     def add_box(self, b: Optional[Box]) -> None:
         if b is not None:
@@ -41,8 +43,10 @@ class Obstacles:
     def add_vline(self, x: float, y0: float, y1: float) -> None:
         self.vwires.append((x, min(y0, y1), max(y0, y1)))
 
-    def add_hline(self, y: float, x0: float, x1: float) -> None:
+    def add_hline(self, y: float, x0: float, x1: float, bus: bool = False) -> None:
         self.hlines.append((y, min(x0, x1), max(x0, x1)))
+        if bus:
+            self.buses.append((y, min(x0, x1), max(x0, x1)))
 
     def box_free(self, b: Box, pad: float = 0.0, wire_pad: Optional[float] = None) -> bool:
         if any(_hit(b, o, pad) for o in self.boxes):
@@ -65,7 +69,8 @@ class Obstacles:
         """Subset of the obstacles intersecting the window ``w`` (speeds up the searches)."""
         return Obstacles([b for b in self.boxes if _hit(b, w)],
                          [v for v in self.vwires if w[0] <= v[0] <= w[2] and v[1] < w[3] and w[1] < v[2]],
-                         [h for h in self.hlines if w[1] <= h[0] <= w[3] and h[1] < w[2] and w[0] < h[2]])
+                         [h for h in self.hlines if w[1] <= h[0] <= w[3] and h[1] < w[2] and w[0] < h[2]],
+                         [h for h in self.buses if w[1] <= h[0] <= w[3] and h[1] < w[2] and w[0] < h[2]])
 
 
 def place_box(obs: Obstacles, w: float, h: float, pref: Point, step: float = 1.25, reach: float = 120.0,
@@ -99,10 +104,11 @@ class End:
     x: float
     y: float
     side: str = "left"
-    stubs: tuple[float, ...] = (1.5, 2.5, 3.5, 5.0)
+    stubs: tuple[float, ...] = (1.5, 2.5, 3.5, 5.0, 6.5, 8.0)  # the longer ones pass a frame edge or a symbol
 
 
-def _seg_cost(obs: Obstacles, a: Point, b: Point, lane: float = LANE) -> float:
+def _seg_cost(obs: Obstacles, a: Point, b: Point, lane: float = LANE, solid: bool = False) -> float:
+    """Cost of a straight route segment; ``solid``: a power link, which along a busbar would read as one."""
     (x0, y0), (x1, y1) = a, b
     if abs(x0 - x1) < 1e-9 and abs(y0 - y1) < 1e-9:
         return 0.0
@@ -112,6 +118,9 @@ def _seg_cost(obs: Obstacles, a: Point, b: Point, lane: float = LANE) -> float:
         cost += sum(40.0 for x, v0, v1 in obs.vwires if abs(x - x0) < lane / 2 and v0 < seg[3] and seg[1] < v1)
     else:  # horizontal: must not run along a busbar or another channel
         cost += sum(40.0 for y, h0, h1 in obs.hlines if abs(y - y0) < lane * 0.9 and h0 < seg[2] and seg[0] < h1)
+        if solid:  # a long run along a busbar, close enough to read as part of it or as a second busbar
+            cost += sum(300.0 for y, h0, h1 in obs.buses
+                        if abs(y - y0) < BUS_CLEAR and min(h1, seg[2]) - max(h0, seg[0]) > BUS_RUN)
     return cost
 
 
@@ -132,9 +141,10 @@ def _leg(obs: Obstacles, e: End, y: float, lane: float = LANE) -> tuple[float, l
 
 
 def route(obs: Obstacles, a: End, b: End, y_min: Optional[float] = None, y_max: Optional[float] = None,
-          step: float = 0.5, record: bool = True, lane: float = LANE) -> list[Point]:
+          step: float = 0.5, record: bool = True, lane: float = LANE, solid: bool = False) -> list[Point]:
     """Orthogonal route from ``a`` to ``b`` through a horizontal channel that avoids texts and symbols.
-    ``lane``: minimum spacing from parallel conductors (wider for a link that will carry a device symbol)."""
+    ``lane``: minimum spacing from parallel conductors (wider for a link that will carry a device symbol);
+    ``solid``: a power link drawn as a plain line, kept off the busbars it would run along."""
     lo = min(a.y, b.y) - 30.0 if y_min is None else y_min
     hi = max(a.y, b.y) + 30.0 if y_max is None else y_max
     sub = obs.window((min(a.x, b.x) - 8.0, lo - 2.0, max(a.x, b.x) + 2.0, hi + 2.0))
@@ -148,7 +158,7 @@ def route(obs: Obstacles, a: End, b: End, y_min: Optional[float] = None, y_max: 
         cb, pb = _leg(sub, b, y, lane)
         if cb >= 1e9:
             continue
-        ch = _seg_cost(sub, pa[-1], pb[-1], lane)
+        ch = _seg_cost(sub, pa[-1], pb[-1], lane, solid)
         length = abs(y - a.y) + abs(y - b.y)
         cost = ca + cb + ch + 0.08 * length
         if cost < best[0]:

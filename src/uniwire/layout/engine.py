@@ -209,6 +209,7 @@ def _build(node: NodeBase, spec: SheetSpec, is_root: bool) -> LNode:
 
 
 DC_PORT_TYPES = {"inverter", "ups"}
+DC_ACCESSORIES = {"spd", "meter", "insulation_monitor"}  # beside a DC way, they do not make it an AC feeder
 
 
 def _is_dc(node: NodeBase) -> bool:
@@ -221,7 +222,9 @@ def _is_dc(node: NodeBase) -> bool:
         if n.type in ("board", "busbar"):
             return getattr(n, "kind", None) == "dc_box" or getattr(n, "system", None) == "DC"
         if len(n.children) != 1:
-            return False
+            # a string or battery way with its own surge protector / meter is still on the DC side
+            kids = [c for c in n.children if c.type not in DC_ACCESSORIES]
+            return len(kids) == 1 and len(n.children) > 1 and _is_dc(kids[0])
         n = n.children[0]
 
 
@@ -700,7 +703,7 @@ def _obstacles(everything: list[LNode], main: list[LNode], y_load: float) -> Obs
         obs.add_box(n.ann_box())
         start = n.bus_y if n.bus_y is not None else n.out_y
         if n.bus_y is not None:
-            obs.add_hline(n.bus_y, n.bus_x0, max(n.bus_x1, n.bus_x0 + 4))
+            obs.add_hline(n.bus_y, n.bus_x0, max(n.bus_x1, n.bus_x0 + 4), bus=True)
             if n.kind != "bus_in":
                 obs.add_vline(n.x, n.out_y, n.bus_y)
         for c in n.children:
@@ -800,7 +803,7 @@ def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], v
             assert u is not None
             pab = partner.ann_box()
             pref_x = (pab[2] if pab else partner.x + partner.sym.right) + 4.0
-            free = Obstacles(obs.boxes, obs.vwires + axes, obs.hlines)
+            free = Obstacles(obs.boxes, obs.vwires + axes, obs.hlines, obs.buses)
             x0, y0 = place_box(free, u[2] - u[0], u[3] - u[1], (pref_x, partner.y), pad=DEVICE_PAD_MM)
             ln.x, ln.y = x0 - u[0], y0 - u[1]
             ln.x_left = ln.x - pitch / 2
@@ -1597,7 +1600,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         if not a.bus_x0 <= e.x <= a.bus_x1:
             x0, x1 = min(e.x, a.bus_x0), max(e.x, a.bus_x1)
             g.add(busbar_group(a.id, [Line((x0, e.y), (x1, e.y), Style(width=BUS))]))
-            obs.add_hline(e.y, x0, x1)
+            obs.add_hline(e.y, x0, x1, bus=True)
     groups: dict[int, Group] = {}
 
     def group_of(i: int) -> Group:
@@ -1607,6 +1610,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
 
     done = _draw_band(doc, band, roots, tap_end, group_of, obs, lang) if band is not None else set()
     labels: list[tuple[int, list[tuple[float, float]], str, float, str]] = []
+    side_ends: dict[tuple[str, float, float], list[str]] = {}
     for i in order:
         link = doc.links[i]
         a, b = _find(roots, link.from_), _find(roots, link.to)
@@ -1647,8 +1651,17 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             else:
                 lg.add(Line((x0, y), (x1, y), style if link.normally_open else Style(width=BUS)))
             continue
-        ends = [tap_end.get(i) or _end(a, link.kind),
-                _end(b, link.kind, fed=link.kind == "infeed" and link.to in fed_ok)]
+        # an inverter/charger at the head of the tree takes its AC input on top: its side is the DC terminal
+        fed = link.kind == "infeed" and (link.to in fed_ok or (b in roots and b.dc_side > 0))
+        ends = [tap_end.get(i) or _end(a, link.kind), _end(b, link.kind, fed=fed)]
+        for k, (n, e) in enumerate(zip((a, b), ends)):  # links of different kinds on the side of a node:
+            if e.side == "left":                         # one point per kind (a power feed, a data bus...)
+                kinds = side_ends.setdefault((n.id, round(e.x, 2), round(e.y, 2)), [])
+                if link.kind not in kinds:
+                    kinds.append(link.kind)
+                shift = kinds.index(link.kind)
+                if shift:
+                    ends[k] = End(e.x, e.y + 1.5 * shift)
         port_label: Optional[tuple[int, str]] = None
         for k, (n, _nid, port) in enumerate(((a, link.from_, link.from_port), (b, link.to, link.to_port))):
             slot = _port_slot(n, port)
@@ -1665,15 +1678,17 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         hi = max(max(e.y for e in ends) + 30.0, max(e.y for e in ends) + 2.0)
         if max(e.y for e in ends) < y_max:
             hi = min(hi, y_max)
-        if ends[1].y < b.y:  # infeed landing on an input conductor: never come back up from below the feeder
+        on_conductor = ends[1].y < b.y and link.to in fed_ok
+        if on_conductor:  # infeed landing on an input conductor: never come back up from below the feeder
             hi = min(hi, max(e.y for e in ends) + 0.5)
         carries = link.device is not None and link.kind in SWITCHED_LINKS
-        pts = route(obs, ends[0], ends[1], lo, hi, record=not carries, lane=3.5 if carries else LANE)
+        pts = route(obs, ends[0], ends[1], lo, hi, record=not carries, lane=3.5 if carries else LANE,
+                    solid=link.kind in POWER_LINKS and not style.dash)
         if carries:
             _draw_link_device(link, link.device, pts, style, lg, obs, lang)
         else:
             lg.add(Polyline(pts, style))
-        if ends[1].y < b.y:  # infeed landing on the input conductor: junction dot
+        if on_conductor:  # infeed landing on the input conductor: junction dot
             lg.add(Circle(pts[-1], 0.45, Style(width=THIN, fill="#000000")))
         seq = pts if port_label is None or port_label[0] == 0 else pts[::-1]  # oriented PLC -> other end
         if port_label is not None:

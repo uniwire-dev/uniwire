@@ -55,7 +55,7 @@ Every `document` argument accepts a JSON object, a JSON string or the path of a 
 | `viewer_link` | `document` | `{viewer_url, pdf_url}`: links that open the document in the web editor (drawing, findings, PDF and SVG downloads); `pdf_url` also downloads the PDF (on the hosted server, a plain PDF link: see [Short links](#short-links)) |
 | `bom` | `document` | bill-of-materials rows: referenced products, then equipment without a reference grouped by type and characteristics (`spec`), then cables |
 | `wiring` | `document`, `what` (`markers` / `wires` / `cables`), `view`? | wire marker list, wire list or cable schedule as rows (stable column names) |
-| `list_examples`, `get_example` | `name` (e.g. `02` or `02_house_3_bedrooms_tt`) | the 52 bundled examples |
+| `list_examples`, `get_example` | `name` (e.g. `02` or `02_house_3_bedrooms_tt`) | the 53 bundled examples |
 | `normalize` | `document` | resolved document (templates applied, ids assigned) |
 
 `validate`, `check`, `apply_patch` and `render` also return `viewer_url` and `pdf_url` (omitted beyond 60,000 characters). Chat apps cannot hand a base64 PDF to the user as a file: the links are how the user gets the drawing and the PDF, so in public mode `render` with `format: "pdf"` returns `pdf_url` rather than base64. The document travels in the part of the link after `#` and is stored nowhere.
