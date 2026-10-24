@@ -102,8 +102,8 @@ def Q(unit: str, description: str | None = None, **kw: Any) -> Any:
 
 
 def fmt(value: float | None, unit: str = "", sep: str = "") -> str:
-    """16.0 -> '16', 2.5 -> '2.5' (English) or '2,5' (French: decimal comma), following the render language."""
-    from .i18n import render_lang
+    """16.0 -> '16', 2.5 -> '2.5' (English) or '2,5' (French, Russian: decimal comma), following the render language."""
+    from .i18n import DECIMAL_COMMA, render_lang
 
     if value is None:
         return ""
@@ -111,7 +111,7 @@ def fmt(value: float | None, unit: str = "", sep: str = "") -> str:
         s = str(int(value))
     else:
         s = f"{value:.3f}".rstrip("0").rstrip(".")
-        if render_lang() == "fr":
+        if render_lang() in DECIMAL_COMMA:
             s = s.replace(".", ",")
     return f"{s}{sep}{unit}" if unit else s
 

@@ -1,5 +1,5 @@
 from uniwire import load, render_pages
-from uniwire.i18n import CATALOGS, EN, FR, normalize_lang, t
+from uniwire.i18n import CATALOGS, EN, FR, RU, normalize_lang, t
 from uniwire.render.scene import Group, Text
 from uniwire.rules import check
 
@@ -18,7 +18,20 @@ def _texts(item) -> list[str]:
 
 def test_catalogs_have_same_keys():
     assert set(EN) == set(FR)
-    assert set(CATALOGS) == {"en", "fr"}
+    assert set(CATALOGS) == {"en", "fr", "ru"}
+    assert set(RU) <= set(EN)  # Russian: the drawing texts, English for the other messages
+    drawing = {k for k in EN if k.split(".")[0] in ("tb", "notes", "legend", "ann", "cell")}
+    assert drawing <= set(RU)
+
+
+def test_russian_drawing_texts():
+    doc = load({**DOC, "meta": {"lang": "ru", "title": "Щит"}, "views": [{"id": "sld", "title_block": True,
+                                                                          "cartouche": ["ref", "cable"]}]})
+    texts = [s for p in render_pages(doc) for s in _texts(p.root)]
+    assert {"Примечания", "Обозначение", "Кабель (мм²)", "Лист"} <= set(texts)
+    assert "1,5" in " ".join(texts)  # decimal comma
+    assert t("tb.title", lang="ru-RU") == "Наименование"
+    assert t("validation.unknown_node_type", lang="ru", type="x") == t("validation.unknown_node_type", lang="en", type="x")
 
 
 def test_lang_selection(monkeypatch):

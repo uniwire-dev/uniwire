@@ -498,7 +498,81 @@ FR: dict[str, str] = {
     "symbols.heading": "Bibliothèque de symboles uniwire (grille M = 2,5 mm)",
 }
 
-CATALOGS: dict[str, dict[str, str]] = {"en": EN, "fr": FR}
+#: Russian: the texts printed on drawings (title block, notes, legends, view titles, annotations). Messages
+#: without a Russian text (CLI, validation, rules) fall back to English.
+RU: dict[str, str] = {
+    "render.unknown_view": "неизвестный вид: {id}",
+    "render.incoming_from": "от {ref}",
+    "render.incoming": "ввод",
+    "render.incoming_folio": "{what} (лист {folio})",
+    "render.default_title": "Схема электрическая однолинейная",
+    "render.multiline_title": "Схема электрическая многолинейная силовых цепей",
+    "render.continued_from": "{label} (продолжение с листа {folio})",
+    "render.continued_on": "продолжение на листе {folio}",
+    "render.continuation_name": "{name} (прод.)",
+    "render.to_folio": " → лист {folio}",
+    "render.auxiliary_devices": "Вспомогательные устройства",
+    "render.scale": "масштаб {scale}",
+    "render.sheet_bookmark": "Лист {number}: {title}",
+    "render.sheet_bookmark_untitled": "Лист {number}",
+    "legend.conductors": "Проводники ({standard})",
+    "legend.preset.iec": "IEC 60445",
+    "legend.preset.us": "практика NEC",
+    "legend.phase": "Фазы",
+    "legend.multi_phase": "многофазные",
+    "legend.source": "Источники питания",
+    "legend.status": "Состояние",
+    "legend.status.new": "новое",
+    "legend.status.existing": "существующее",
+    "legend.status.future": "перспективное",
+    "legend.status.temporary": "временное",
+    "legend.status.removed": "демонтируемое",
+    "legend.status.spare": "резерв",
+    "legend.voltage": "Напряжение",
+    "legend.voltage.mv": "ВН / СН (> 1 кВ перем.)",
+    "legend.voltage.lv": "НН",
+    "legend.voltage.elv": "СНН (≤ 50 В перем.)",
+    "legend.voltage.dc": "Постоянный ток",
+    "tb.title": "Наименование",
+    "tb.sheet_title": "Наименование листа",
+    "tb.default_sheet_title": "Схема однолинейная",
+    "tb.project": "Проект",
+    "tb.client": "Заказчик",
+    "tb.earthing": "Тип заземления",
+    "tb.voltage": "Напряжение",
+    "tb.power": "Мощность",
+    "tb.ik_max": "Iкз макс.",
+    "tb.earth_electrode": "Заземлитель",
+    "tb.standard": "Стандарт",
+    "tb.drawn_by": "Разработал",
+    "tb.checked_by": "Проверил",
+    "tb.company": "Организация",
+    "tb.date": "Дата",
+    "tb.revision": "Изм.",
+    "tb.sheet": "Лист",
+    "tb.generated_by": "Выполнено в",
+    "notes.title": "Примечания",
+    "notes.site": "Объект: {site}",
+    "notes.supply": "Питание: {supply}",
+    "notes.revision": "Изм. {index} {date} {description}",
+    "notes.more": "… (ещё строк примечаний: {count})",
+    "ann.frame": "корпус {frame} A",
+    "ann.off_peak": "день/ночь (льготный тариф)",
+    "ann.manual": "ручн.",
+    "ann.automatic": "авт.",
+    "ann.peak_power_unit": "Вт пик",
+    "ann.peak_power_kunit": "кВт пик",
+    "ann.modules": "модулей: {count}",
+    "ann.normally_open": "норм. разомкн.",
+    "ann.locks": "ключ {keys}",
+    "cell.points_one": "{count} т.",
+    "cell.points": "{count} т.",
+    "cell.upstream": "{value} (выше по цепи)",
+    "symbols.page_title": "Символы uniwire",
+    "symbols.heading": "Библиотека символов uniwire (сетка M = 2,5 мм)",
+}
+
+CATALOGS: dict[str, dict[str, str]] = {"en": EN, "fr": FR, "ru": RU}
 
 
 def normalize_lang(lang: Optional[str]) -> str:
@@ -533,7 +607,7 @@ def t(key: str, lang: Optional[str] = None, **kwargs: Any) -> str:
 
 
 #: Languages whose messages write decimals with a comma ('1,5 mm²').
-DECIMAL_COMMA = {"fr"}
+DECIMAL_COMMA = {"fr", "ru"}
 
 
 def number(value: float, lang: Optional[str] = None) -> str:

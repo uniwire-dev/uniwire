@@ -369,6 +369,14 @@ CARTOUCHE_TITLES = {
         "un_V": "Tension", "frame_A": "Boîtier", "cable_type": "Type de câble", "cable_ref": "Repère câble",
         "install": "Mode de pose",
     },
+    "ru": {
+        "label": "Наименование", "ref": "Обозначение", "protection": "Защита", "in_A": "Ном. ток", "curve": "Характеристика",
+        "icn_kA": "Откл. способн.", "idn_mA": "УЗО", "rcd_type": "Тип УЗО", "poles": "Полюса", "cable": "Кабель (мм²)", "cable_awg": "Кабель",
+        "section_mm2": "Сечение", "length_m": "Длина", "p_kW": "Мощность", "phase": "Фаза", "room": "Помещение",
+        "points": "Точки", "circuit": "Цепь", "ib_A": "Ib", "cos_phi": "cos φ", "count": "Кол-во",
+        "un_V": "Напряжение", "frame_A": "Корпус", "cable_type": "Марка кабеля", "cable_ref": "Обозн. кабеля",
+        "install": "Способ прокладки",
+    },
     "en": {
         "label": "Description", "ref": "Tag", "protection": "Protection", "in_A": "Rating", "curve": "Curve",
         "icn_kA": "Breaking cap.", "idn_mA": "RCD", "rcd_type": "RCD type", "poles": "Poles", "cable": "Cable (mm²)", "cable_awg": "Cable",
