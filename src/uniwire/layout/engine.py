@@ -2104,7 +2104,7 @@ def _column_info(ln: LNode, index: Index, lang: str) -> dict[str, Any]:
             info["rcd"] = n
             # marked "(upstream)" only when it is not a group RCD of the feeder's own board:
             # outside that board, or the incomer directly fed by a source
-            board = next((b for b in chain if b.type == "board"), None)  # type: ignore[attr-defined]
+            board = next((b for b in chain[1:] if b.type == "board"), None)  # type: ignore[attr-defined]  # not the leaf
             outside = board is not None and chain.index(n) > chain.index(board)
             parents = index.ancestors(n.id or "")
             incomer = bool(parents) and registry.category(parents[0].type) == "source"  # type: ignore[attr-defined]
@@ -2133,14 +2133,17 @@ def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: 
     for i in infos:
         i["rcd_type_column"] = "rcd_type" in (view.cartouche or [])
     # the same tag in two boards of one table: prefixed with the board's ("=PDU-A-Q1", "TD2 -Q1")
-    refs = [cell("ref", i, lang) for i in infos]
-    for i, r in zip(infos, refs):
+    def board_of(i: dict[str, Any]) -> Optional[NodeBase]:
         leaf = i.get("leaf")
-        if r and refs.count(r) > 1 and leaf is not None and leaf.id:
-            board = next((a for a in index.ancestors(leaf.id) if a.type == "board"), None)  # type: ignore[attr-defined]
-            b = (board.ref or board.label or "") if board is not None else ""
-            if b:
-                i["own_ref"] = f"{b}{r}" if b[0] in "=+" else f"{b} {r}"
+        return next((a for a in index.ancestors(leaf.id) if a.type == "board"), None) \
+            if leaf is not None and leaf.id else None  # type: ignore[attr-defined]
+    refs = [cell("ref", i, lang) for i in infos]
+    boards = [board_of(i) for i in infos]
+    for i, r, board in zip(infos, refs, boards):
+        others = {id(b) for b, r2 in zip(boards, refs) if r2 == r}
+        if r and len(others) > 1 and board is not None and (board.ref or board.label):
+            b = board.ref or board.label or ""
+            i["own_ref"] = f"{b}{r}" if b[0] in "=+" else f"{b} {r}"
     # column boundaries
     xs = [c.x for c in columns]
     bounds = [xs[0] - pitch / 2]

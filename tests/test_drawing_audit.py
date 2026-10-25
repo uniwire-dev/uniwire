@@ -9,7 +9,7 @@ from tests.conftest import ROOT
 from tests.drawing_audit import audit
 from uniwire import load, render_pages
 
-KNOWN = {"30": 1}  # a stray mark beside a label (example 30)
+KNOWN: dict[str, int] = {}  # findings tolerated per example (none today)
 EXAMPLES = sorted((ROOT / "examples").glob("*.uniwire.json"))
 
 

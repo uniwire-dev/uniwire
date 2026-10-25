@@ -551,6 +551,7 @@ def surge_limiter(node: Any = None) -> Symbol:
     s = spd(node)
     s.name = "surge_limiter"
     s.items.append(_text((2.8, 2.0 * M), "L", 1.5))
+    s.right = max(s.right, 3.6)  # the 'L' beside the box: the device text starts after it
     return s
 
 

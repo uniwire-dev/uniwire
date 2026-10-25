@@ -194,6 +194,8 @@ def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None, 
             for (font, part), w in zip(runs, widths):
                 c.setFont(font, it.size)
                 c.drawString(x, dy, part)
+                if it.bold and font in _CJK_FONTS.values():  # the CID fonts have no bold: drawn twice, a hair apart
+                    c.drawString(x + it.size * 0.04, dy, part)
                 x += w
             c.restoreState()
 

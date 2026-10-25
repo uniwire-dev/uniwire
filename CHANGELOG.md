@@ -8,6 +8,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Circuit table: "(upstream)" no longer marks the group RCD of a board on the columns of the boards it feeds on other
+  sheets; a tag is prefixed with its board only when the same tag comes from different boards.
+
+* The surge limiter's "L" no longer runs into its text; bold CJK text is drawn bold in PDFs.
+
 * Formats: thousands grouped from 10 000 ("20 000 V"); phases separated ("L1-L2-L3"); the RCD type not repeated
   in the RCD cell when the table has its own row for it.
 
