@@ -152,8 +152,9 @@ def main(argv: list[str] | None = None) -> int:
             out = Path(a.out or f"out/{stem}")
             for pth in render_svg(doc, out, stem, view):
                 print(pth)
-        else:
-            print(render_pdf(doc, a.out or f"out/{stem}.pdf", view))
+        else:  # every view of the document in one PDF, unless one is asked for
+            every = not a.view and not a.kind and len(doc.views) > 1
+            print(render_pdf(doc, a.out or f"out/{stem}.pdf", None if every else view, all_views=every))
         return 0
     if a.cmd == "schema":
         from .schema import schema_text

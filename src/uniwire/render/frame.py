@@ -165,7 +165,9 @@ def _title_block(g: Group, doc: Document, x: float, y: float, w: float, h: float
     _cell(tb, c3x, y, c3, rh, L("tb.company"), m.company or "")
     _cell(tb, c3x, y + rh, c3 / 2, rh, L("tb.date"), (rev.date if rev and rev.date else m.date) or "")
     _cell(tb, c3x + c3 / 2, y + rh, c3 / 2, rh, L("tb.revision"), rev.index if rev else "")
-    _cell(tb, c3x, y + rh * 2, c3, rh, L("tb.sheet"), f"{folio} / {total}" if total else str(folio), 3.0, True)
+    sheet = Group(cls="tb-sheet")  # the sheet number: renumbered when several views make one drawing set
+    _cell(sheet, c3x, y + rh * 2, c3, rh, L("tb.sheet"), f"{folio} / {total}" if total else str(folio), 3.0, True)
+    tb.add(sheet)
     _cell(tb, c3x, y + rh * 3, c3, rh, L("tb.generated_by"), _generator(), 1.8)
     g.add(tb)
 

@@ -15,6 +15,7 @@ from ..labels import (
     Mark,
     annotation,
     cable_in_awg,
+    cable_text,
     cell,
     feeder_mark,
     part_number,
@@ -55,6 +56,7 @@ from ..render.semantics import (
 )
 from ..resolve import Index, build_index, iter_nodes
 from ..symbols import BUSWAY_H, DASH, PLC_SLOT_W, Symbol, offpage, symbol_for
+from ..units import fmt
 from .routing import LANE, End, Obstacles, _hit, _seg_cost, boxes_union, place_box, place_label, route, text_box
 
 GAP = 5.0  # vertical gap between two symbols in series
@@ -325,7 +327,14 @@ def _ann_lines(ln: LNode, view: View, lang: str) -> list[str]:
         lines = [t for t in lines if t and (t == label or t not in label)]
     if tag:
         lines.insert(0, tag)
-    return lines[:5]
+    # the cable it feeds, when the circuit table does not show it (feeder of a sub-board, a transformer...), and
+    # the incoming cable of the board it feeds
+    in_table = _in_column(ln) and bool(view.cartouche) and "cable" in (view.cartouche or [])
+    cables = [] if in_table else [getattr(node, "cable", None)]
+    if len(ln.children) == 1 and ln.children[0].is_board and ln.children[0].node is not None:
+        cables.append(getattr(ln.children[0].node, "cable", None))
+    captions = [_cable_caption(c) for c in cables if c is not None]
+    return lines[:5 - len([c for c in captions if c])] + [c for c in captions if c]
 
 
 def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = None) -> None:
@@ -1080,6 +1089,21 @@ def _draw_line_marks(roots: list[LNode], everything: list[LNode], doc: Document,
         _put_mark(g, obs, ln.x, y0, y1, (y0 + y1) / 2 if pref is None else pref, mark, ln.id)
         drawn[id(node)] = mark
     return drawn
+
+
+def _in_column(n: LNode) -> bool:
+    """Whether the circuit table shows the cable of ``n``: its column runs down to a load, no board nor busbar
+    in between (the path :func:`_column_info` follows)."""
+    while n.children:
+        if len(n.children) != 1 or n.is_board or n.children[0].is_board:
+            return False
+        n = n.children[0]
+    return True
+
+
+def _cable_caption(c: Any) -> str:
+    """'W7 5x6 38 m': tag, composition and length of a cable written along its conductor."""
+    return " ".join(x for x in (c.ref, cable_text(c), fmt(c.length_m, " m") if c.length_m else "") if x)
 
 
 def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: Group, obs: Obstacles,

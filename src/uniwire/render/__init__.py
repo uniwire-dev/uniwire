@@ -16,7 +16,7 @@ from ..model import Document, View
 from ..resolve import build_index
 from .colors import colorize
 from .frame import compose_page
-from .scene import Group, Item, Page
+from .scene import Group, Item, Page, Text
 from .svg import page_to_svg
 
 
@@ -82,7 +82,23 @@ def render_views(doc: Document, views: Optional[Iterable[View]] = None) -> list[
             for page in pages:
                 _shift_refs(page.root, len(out))
         out += pages
+    if len(views) > 1:  # one drawing set: sheets numbered across the views
+        for i, page in enumerate(out, 1):
+            page.attrs["data-uw-sheet"] = str(i)
+            _renumber(page.root, i, len(out))
     return out
+
+
+def _renumber(item: Item, folio: int, total: int) -> None:
+    """Write ``folio / total`` in the sheet cell of a title block (the last text of its ``tb-sheet`` group)."""
+    if isinstance(item, Group):
+        if item.cls == "tb-sheet":
+            texts = [t for t in item.items if isinstance(t, Text)]
+            if texts:
+                texts[-1].text = f"{folio} / {total}"
+            return
+        for c in item.items:
+            _renumber(c, folio, total)
 
 
 def _shift_refs(item: Item, offset: int) -> None:

@@ -519,6 +519,10 @@ class MLNode:
             r = max(r, max(live) + 2.2)
         elif self.type not in CONTACT_TYPES:  # boxes drawn across the conductors
             r += 1.5
+        sets = _starter_sets(self.node) if self.type == "motor_starter" else 0
+        if sets:  # the other contactors of a reversing or star-delta starter, right of the line contactor
+            phases = [o for c, o in self.off_in.items() if c in PHASES] or [PAD]
+            r = max(r, max(phases) + sets * ((len(phases) - 1) * S + STARTER_GAP))
         return r + 0.8
 
     def block_h(self) -> float:
@@ -622,6 +626,56 @@ def _is_busway(ln: MLNode) -> bool:
 
 def _starter_contacts(node: Any) -> bool:
     return (getattr(node, "method", None) or "dol") not in ("vfd", "soft_starter")
+
+
+STARTER_GAP = 4.0  # between two contactors of a starter
+
+
+def _starter_sets(node: Any) -> int:
+    """Contactors of a starter beside its line contactor: 1 for reversing, 2 for star-delta (delta and star)."""
+    return {"reversing": 1, "star_delta": 2}.get(getattr(node, "method", None) or "", 0)
+
+
+def _starter_extra(node: Any, xs: list[float], y: float, h: float) -> list[Item]:
+    """The other contactors of a reversing or star-delta starter, right of the line contactor whose poles are at
+    ``xs``: a reverse contactor fed from the lines and returning with L1 and L3 swapped, mechanically interlocked;
+    or a delta contactor (lines to the motor's W2 U2 V2) and a star contactor shorting W2 U2 V2."""
+    method = getattr(node, "method", None)
+    xs = sorted(xs)
+    n = len(xs)
+    items: list[Item] = []
+    dot = lambda x, yy: Circle((x, yy), 0.35, Style(width=THIN, fill="#000000"))  # noqa: E731
+    yt, ht = y + 1.8, h - 3.4  # the extra poles: shorter, room above for the taps, below for the returns
+    x0 = xs[-1] + STARTER_GAP
+    first = [x0 + i * S for i in range(n)]
+    for i, (xl, xr) in enumerate(zip(xs, first)):  # taps on the lines, above the contacts
+        ty = y + 0.4 + i * 0.55
+        items += [Line((xl, ty), (xr, ty)), Line((xr, ty), (xr, yt)), dot(xl, ty)]
+        items += _contact(xr, yt, "arc", ht)
+    items += _link(first, yt)
+    bottom = yt + ht
+    if method == "reversing":
+        for i, xr in enumerate(first):  # back onto the lines, phases reversed (L1 <-> L3)
+            by = bottom + 0.4 + i * 0.4
+            xl = xs[n - 1 - i]
+            items += [Line((xr, bottom), (xr, by)), Line((xr, by), (xl, by)), dot(xl, by)]
+        lm = _blade_mid(xs[-1], y)
+        rm = _blade_mid(first[0], yt)
+        items += [Line((lm[0] + 0.4, lm[1]), (rm[0] - 0.4, rm[1]), DASH),
+                  Text(((lm[0] + rm[0]) / 2, min(lm[1], rm[1]) - 0.6), "▽", 1.4, "middle")]
+        return items
+    # star-delta: delta contactor outputs to W2 U2 V2, star contactor shorting them
+    x1 = first[-1] + STARTER_GAP
+    star = [x1 + i * S for i in range(n)]
+    names = ["W2", "U2", "V2"][:n]
+    for i, (xd, xy) in enumerate(zip(first, star)):  # W2 U2 V2 under the delta contactor, to the star contactor
+        jy = bottom + 0.6 + i * 0.5
+        items += [Line((xd, bottom), (xd, y + h + 1.5)), Text((xd, y + h + 3.4), names[i], 1.3, "middle"),
+                  Line((xd, jy), (xy, jy)), dot(xd, jy), Line((xy, bottom), (xy, jy))]
+        items += _contact(xy, yt, "arc", ht)
+    items += _link(star, yt)
+    items += [Line((star[0], yt), (star[-1], yt))]  # the star point, joining the tops of the star contactor
+    return items
 
 
 def _abbr(key: str) -> str:
@@ -993,7 +1047,7 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
             if len(prot) > 1:
                 g.add(Line((xs[prot[0]] + 1.0, y + 6.2), (xs[prot[-1]] - 1.0, y + 6.2), DASH))
         else:
-            mark = {"breaker": "cross", "rcbo": "cross", "main_breaker": "cross", "motor_starter": "cross",
+            mark = {"breaker": "cross", "rcbo": "cross", "main_breaker": "cross", "motor_starter": "arc",
                     "disconnector": "bar", "switch_disconnector": "switch", "fuse_switch": "switch",
                     "transfer_switch": "switch", "contactor": "arc", "impulse_relay": "arc", "spare": "cross"}.get(t, "")
             for c in prot:
@@ -1007,6 +1061,8 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
                             attrs={"data-uw-cond": c}))
                 drawn.add(c)
             g.add(*_link([xs[c] for c in prot + unprot], y))
+            if t == "motor_starter" and _starter_sets(node):
+                g.add(Group(_starter_extra(node, [xs[c] for c in prot if c in PHASES], y, h), cls="starter-contactors"))
             if t in ("rcd", "rcbo") or (t == "main_breaker" and getattr(node, "idn_mA", None)):
                 rl = [xs[c] for c in prot + unprot] or [xs[c] for c in live]
                 if rl:

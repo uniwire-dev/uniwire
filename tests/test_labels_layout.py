@@ -507,3 +507,28 @@ def test_long_cjk_note_stays_in_the_notes_cell():
     notes = next(g for g in _items_groups(page.root) if g.cls == "notes")
     texts = [t for t in _items(notes) if isinstance(t, Text)]
     assert len(texts) > 2 and all(t.size >= 1.6 for t in texts[1:])  # wrapped, not shrunk to fit one line
+
+
+def test_feeder_of_a_sub_board_shows_its_cable_and_the_board_incoming_cable():
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "id": "MB", "children": [
+        {"type": "breaker", "id": "QF", "ref": "-Q1", "in_A": 40, "cable": {"cores": "5G", "section_mm2": 10, "length_m": 15},
+         "children": [{"type": "board", "id": "SB", "ref": "SB", "cable": {"ref": "W7", "cores": "5x", "section_mm2": 6},
+                       "children": [{"type": "breaker", "ref": "-Q11", "in_A": 16, "children": [{"type": "load"}]},
+                                    {"type": "breaker", "ref": "-Q12", "in_A": 16, "children": [{"type": "load"}]}]}]},
+        {"type": "breaker", "ref": "-Q2", "in_A": 16, "children": [{"type": "load"}]}]}]}]})
+    texts = _texts(render_pages(doc)[0].root)
+    assert "5G10 15 m" in texts and "W7 5x6" in texts
+
+
+def test_reversing_and_star_delta_starters_drawn_with_their_contactors():
+    from uniwire.render.scene import Group as G
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "system": "3P", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 10, "poles": "3P", "children": [
+            {"type": "motor_starter", "ref": "-KM1", "method": "reversing", "children": [{"type": "motor", "phases": 3}]}]},
+        {"type": "breaker", "ref": "-Q2", "in_A": 63, "poles": "3P", "children": [
+            {"type": "motor_starter", "ref": "-KM2", "method": "star_delta", "children": [{"type": "motor", "phases": 3}]}]}]}]}],
+        "views": [{"kind": "multi-line"}]})
+    page = render_pages(doc)[0]
+    sets = [g for g in _items_groups(page.root) if isinstance(g, G) and g.cls == "starter-contactors"]
+    assert len(sets) == 2
+    assert {"W2", "U2", "V2"} <= set(_texts(sets[1]))

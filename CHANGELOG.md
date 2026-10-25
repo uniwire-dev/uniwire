@@ -8,6 +8,16 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Cables the circuit table does not show (feeder of a sub-board, a transformer or an inverter, incoming cable of a
+  board) are written in the text of the device feeding them ("5G10 15 m", "W7 5x6 38 m").
+
+* Multi-line view: a motor starter is drawn with contactor contacts; a reversing starter with its reverse contactor
+  (phases L1 and L3 swapped, mechanical interlock), a star-delta starter with its delta contactor (to W2 U2 V2) and
+  its star contactor.
+
+* `uniwire render -f pdf` writes every view of the document in one PDF unless `--view` or `--kind` is given; the
+  sheets of a drawing set are numbered across its views (1 / 3, 2 / 3, 3 / 3).
+
 * CJK text (Chinese, Japanese) is wrapped between characters, not only at spaces: notes, title block values, frame
   labels and off-drawing targets stay in their cells. A device text too wide for its column goes on two lines before
   being cut with an ellipsis.
