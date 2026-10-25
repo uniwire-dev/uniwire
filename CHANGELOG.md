@@ -8,6 +8,18 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Formats: thousands grouped from 10 000 ("20 000 V"); phases separated ("L1-L2-L3"); the RCD type not repeated
+  in the RCD cell when the table has its own row for it.
+
+* A busbar that has feeders is no longer drawn twice (a short bar on the incoming conductor and the busbar).
+
+* Circuit table: a tag found in two boards of the same table is prefixed with the board's ("PDU-A -Q1").
+  Chinese and Japanese descriptions are written upright, one character under another.
+
+* Information now shown: the drawing number (title block), the earth electrode resistance taken from an earth node,
+  the setting of an overload relay ("Ir 48.5 A"), "Safety circuit" on the feeder of a safety service, and the
+  protocol of a data link that has no label.
+
 * Cables the circuit table does not show (feeder of a sub-board, a transformer or an inverter, incoming cable of a
   board) are written in the text of the device feeding them ("5G10 15 m", "W7 5x6 38 m").
 

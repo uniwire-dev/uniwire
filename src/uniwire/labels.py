@@ -270,7 +270,7 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
     elif t == "impulse_relay":
         lines += [fmt(g("in_A"), " A") if g("in_A") else ""]
     elif t == "thermal_relay":
-        lines += [f"{g('range_A')} A" if g("range_A") else ""]
+        lines += [f"{g('range_A')} A" if g("range_A") else "", f"Ir {fmt(g('setting_A'))} A" if g("setting_A") else ""]
     elif t == "motor_starter":
         lines += [fmt(g("p_kW"), " kW") if g("p_kW") else "", fmt(g("in_A"), " A") if g("in_A") else ""]
     elif t == "transfer_switch":
@@ -340,7 +340,8 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
         src = prot if _g(prot, "idn_mA") else rcd_node
         if src is None or not _g(src, "idn_mA"):
             return ""
-        txt = fmt_sensitivity(_g(src, "idn_mA")) + (f" {_g(src, 'rcd_type')}" if _g(src, "rcd_type") else "")
+        rcd_type = _g(src, "rcd_type") if not column.get("rcd_type_column") else None  # else in its own row
+        txt = fmt_sensitivity(_g(src, "idn_mA")) + (f" {rcd_type}" if rcd_type else "")
         # residual-current protection carried by a device upstream of the feeder (incomer, group RCD): marked
         return _t("cell.upstream", lang, value=txt) if src is rcd_node and column.get("rcd_upstream") else txt
     if field == "rcd_type":
@@ -363,7 +364,7 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
         ph = _g(leaf, "phase") or _g(prot, "phase")
         if not ph and (_g(prot, "poles") in THREE_PHASE_POLES or _g(leaf, "phases") == 3):
             ph = "L1L2L3"  # three-phase feeder
-        return ph or ""
+        return re.sub(r"(?<=\d)(?=L)", "-", ph) if ph else ""  # 'L1-L2-L3'
     if field == "room":
         return _g(leaf, "room") or ""
     if field == "points":

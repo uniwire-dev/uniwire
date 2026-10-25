@@ -109,6 +109,8 @@ def fmt(value: float | None, unit: str = "", sep: str = "") -> str:
         return ""
     if float(value).is_integer():
         s = str(int(value))
+        if abs(int(value)) >= 10000:  # 20 000 V: thousands grouped (no-break space), as IEC 80000 writes them
+            s = f"{int(value):,}".replace(",", "\u00a0")
     else:
         s = f"{value:.3f}".rstrip("0").rstrip(".")
         if render_lang() in DECIMAL_COMMA:

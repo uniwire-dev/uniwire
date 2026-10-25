@@ -277,7 +277,7 @@ def _sld(view=None, **inst):
 def test_conductor_marks_and_phase_on_feeders():
     texts = _texts(render_pages(_sld({"cartouche": ["label", "phase"]}))[0].root)
     assert "L2+N" in texts and "+N" in texts  # phase + uncut neutral (1P+N), uncut neutral of the 3P+N feeder
-    assert "L1L2L3" in texts  # phase cell of the three-phase feeder
+    assert "L1-L2-L3" in texts  # phase cell of the three-phase feeder
     marks = [g for g in _items_groups(render_pages(_sld())[0].root) if g.cls == "conductors"]
     assert marks and len(marks[0].items) > 0
     off = [g for g in _items_groups(render_pages(_sld({"conductor_marks": False}))[0].root) if g.cls == "conductors"]

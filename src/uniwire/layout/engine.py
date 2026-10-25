@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
@@ -217,7 +218,10 @@ def _build(node: NodeBase, spec: SheetSpec, is_root: bool) -> LNode:
         dev = NODE_TYPES["breaker"].model_validate({"type": "breaker", "id": f"{node.id}.breaker", "ref": node.ref,
                                                     "in_A": node.in_A, "poles": getattr(node, "poles", None)})
         return LNode(dev, "node", symbol_for(dev), [LNode(node, "node", symbol_for(node), [])])
-    ln = LNode(node, "node", symbol_for(node), [_build(c, spec, False) for c in children], bus_out=bus_out)
+    sym = symbol_for(node)
+    if node.type == "busbar" and children and getattr(node, "kind", None) != "busway":
+        sym = Symbol("busbar", [], 0.0, sym.left, sym.right)  # its busbar is the one its feeders hang from
+    ln = LNode(node, "node", sym, [_build(c, spec, False) for c in children], bus_out=bus_out)
     if node.type in DC_PORT_TYPES:  # an inverter/charger feeding both a DC side (batteries...) and an AC side
         dc = [c for c in ln.children if c.node is not None and _is_dc(c.node)]
         if dc and len(dc) < len(ln.children):
@@ -333,8 +337,13 @@ def _ann_lines(ln: LNode, view: View, lang: str) -> list[str]:
     cables = [] if in_table else [getattr(node, "cable", None)]
     if len(ln.children) == 1 and ln.children[0].is_board and ln.children[0].node is not None:
         cables.append(getattr(ln.children[0].node, "cable", None))
-    captions = [_cable_caption(c) for c in cables if c is not None]
-    return lines[:5 - len([c for c in captions if c])] + [c for c in captions if c]
+    captions = [c for c in (_cable_caption(c) for c in cables if c is not None) if c]
+    leaf = ln
+    while len(leaf.children) == 1:
+        leaf = leaf.children[0]
+    if "safety" in (getattr(node, "priority", None), getattr(leaf.node, "priority", None) if leaf.bottom else None):
+        captions.insert(0, _t("label.safety", lang))  # a safety service circuit (fire alarm, emergency lighting...)
+    return lines[:5 - len(captions)] + captions
 
 
 def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = None) -> None:
@@ -1913,8 +1922,9 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         seq = pts if port_label is None or port_label[0] == 0 else pts[::-1]  # oriented PLC -> other end
         if port_label is not None:
             labels.append((i, seq, port_label[1], 1.3, "#1565c0"))
-        if link.label and link.device is None:  # a carried device is annotated: the label would repeat it
-            labels.append((i, seq, link.label, 1.6, "#000000"))
+        text = link.label or (link.protocol if link.kind == "data" else None)  # a data link: its protocol
+        if text and link.device is None:  # a carried device is annotated: the label would repeat it
+            labels.append((i, seq, text, 1.6, "#000000"))
     # labels once every route is known, near the far end of their link (port labels: near the controlled device)
     for i, seq, txt, size, color in labels:
         x, y, anchor = place_label(obs, seq, text_width(txt, size), size, from_end=True)
@@ -2120,6 +2130,17 @@ def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: 
     pitch = view.pitch_mm
     titles = CARTOUCHE_TITLES.get(lang, CARTOUCHE_TITLES["en"])
     infos = [_column_info(c, index, lang) for c in columns]
+    for i in infos:
+        i["rcd_type_column"] = "rcd_type" in (view.cartouche or [])
+    # the same tag in two boards of one table: prefixed with the board's ("=PDU-A-Q1", "TD2 -Q1")
+    refs = [cell("ref", i, lang) for i in infos]
+    for i, r in zip(infos, refs):
+        leaf = i.get("leaf")
+        if r and refs.count(r) > 1 and leaf is not None and leaf.id:
+            board = next((a for a in index.ancestors(leaf.id) if a.type == "board"), None)  # type: ignore[attr-defined]
+            b = (board.ref or board.label or "") if board is not None else ""
+            if b:
+                i["own_ref"] = f"{b}{r}" if b[0] in "=+" else f"{b} {r}"
     # column boundaries
     xs = [c.x for c in columns]
     bounds = [xs[0] - pitch / 2]
@@ -2156,7 +2177,16 @@ def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: 
             cols[i].add(cg)
             if not v:
                 continue
-            if field_ == "label":
+            wide = sum(1 for ch in v if unicodedata.east_asian_width(ch) in "WF")
+            if field_ == "label" and wide * 2 >= len(v.replace(" ", "")):  # CJK: upright, one character under another
+                chars = [ch for ch in v if not ch.isspace()]
+                size = max(1.2, min(2.0, (h - 2.0) / (len(chars) * 1.05)))
+                fit = int((h - 2.0) / (size * 1.05))
+                if len(chars) > fit:
+                    chars = chars[:max(1, fit - 1)] + ["…"]
+                for k, ch in enumerate(chars):
+                    cg.add(Text(((cx0 + cx1) / 2, y + 1.0 + (k + 0.85) * size * 1.05), ch, size, "middle"))
+            elif field_ == "label":
                 size = 2.0
                 tw = text_width(v, size)
                 if tw > h - 2:

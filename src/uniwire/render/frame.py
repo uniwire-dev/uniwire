@@ -18,6 +18,7 @@ from ..layout.engine import (
     notes_beside,
 )
 from ..model import Document, View
+from ..resolve import iter_nodes
 from ..units import fmt
 from .colors import Legend
 from .scene import (
@@ -142,7 +143,7 @@ def _title_block(g: Group, doc: Document, x: float, y: float, w: float, h: float
     c1 = w * 0.48
     _cell(tb, x, y, c1, rh * 2, L("tb.title"), m.title or "", 3.2, True)
     _cell(tb, x, y + rh * 2, c1, rh, L("tb.sheet_title"), sheet_title or L("tb.default_sheet_title"), 2.2)
-    _cell(tb, x, y + rh * 3, c1 / 2, rh, L("tb.project"), m.project or "")
+    _cell(tb, x, y + rh * 3, c1 / 2, rh, L("tb.project"), " · ".join(v for v in (m.project, m.drawing_number) if v))
     _cell(tb, x + c1 / 2, y + rh * 3, c1 / 2, rh, L("tb.client"), m.client or "")
     # middle column: installation
     c2x, c2 = x + c1, w * 0.30
@@ -155,7 +156,9 @@ def _title_block(g: Group, doc: Document, x: float, y: float, w: float, h: float
     pw = inst.subscribed_kVA or inst.planned_kVA
     _cell(tb, c2x, y + rh, half, rh, L("tb.power"), fmt(pw, " kVA") if pw else "")
     _cell(tb, c2x + half, y + rh, half, rh, L("tb.ik_max"), fmt(ik, " kA") if ik else "")
-    _cell(tb, c2x, y + rh * 2, half, rh, L("tb.earth_electrode"), fmt(inst.earth_resistance_ohm, " Ω") if inst.earth_resistance_ohm else "")
+    earth = inst.earth_resistance_ohm or next((getattr(n, "resistance_ohm", None) for n, _, _ in iter_nodes(doc)
+                                                if n.type == "earth" and getattr(n, "resistance_ohm", None)), None)
+    _cell(tb, c2x, y + rh * 2, half, rh, L("tb.earth_electrode"), fmt(earth, " Ω") if earth else "")
     _cell(tb, c2x + half, y + rh * 2, half, rh, L("tb.standard"),
           inst.standard or ", ".join(_PROFILE_NAMES.get(p, p) for p in doc.profiles))
     _cell(tb, c2x, y + rh * 3, half, rh, L("tb.drawn_by"), m.author or "")
