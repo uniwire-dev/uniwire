@@ -14,13 +14,16 @@ from ..labels import (
     SWITCHING,
     Mark,
     annotation,
+    cable_in_awg,
     cell,
     feeder_mark,
     part_number,
     poles_mark,
     protection_short,
+    ref_label,
     state_text,
     system_mark,
+    without_ref,
 )
 from ..model import NODE_TYPES, Document, NodeBase, View
 from ..render.scene import (
@@ -37,6 +40,7 @@ from ..render.scene import (
     Style,
     Text,
     bbox,
+    text_units,
     text_width,
     transform,
 )
@@ -208,8 +212,8 @@ def _build(node: NodeBase, spec: SheetSpec, is_root: bool) -> LNode:
         bus_out = e < len(children)
         children = children[s:e]
     if node.type == "spare" and getattr(node, "in_A", None):  # an equipped spare way: its breaker, then the free end
-        dev = NODE_TYPES["breaker"].model_validate(
-            {"type": "breaker", "ref": node.ref, "in_A": node.in_A, "poles": getattr(node, "poles", None)})
+        dev = NODE_TYPES["breaker"].model_validate({"type": "breaker", "id": f"{node.id}.breaker", "ref": node.ref,
+                                                    "in_A": node.in_A, "poles": getattr(node, "poles", None)})
         return LNode(dev, "node", symbol_for(dev), [LNode(node, "node", symbol_for(node), [])])
     ln = LNode(node, "node", symbol_for(node), [_build(c, spec, False) for c in children], bus_out=bus_out)
     if node.type in DC_PORT_TYPES:  # an inverter/charger feeding both a DC side (batteries...) and an AC side
@@ -279,7 +283,7 @@ def _needs(ln: LNode, view: View, lang: str) -> None:
     """Widths the columns need so that no annotation is cut and the names of the boards keep their size."""
     for n in ln.walk():
         if n.is_board and n.node is not None:
-            name = " ".join(x for x in (n.node.ref, n.node.label) if x)
+            name = ref_label(n.node.ref, n.node.label)
             # the name starts above the first column, 1.5 right of its axis
             n.need = BOARD_PAD + view.pitch_mm / 2 + 1.5 + 1.1 * text_width(name, 2.4) + 1.5 if name else 0.0
         elif len(n.children) <= 1:  # a load, or a device feeding one load: its text has the column to itself
@@ -315,6 +319,10 @@ def _ann_lines(ln: LNode, view: View, lang: str) -> list[str]:
     lines = annotation(node, lang, show_label=feeds_bus)
     pn = part_number(node)
     tag = pn if view.tag_field == "part_number" and pn else node.ref
+    if node.label and node.label in lines:  # the label: not repeating the tag above it, nor the lines below it
+        label = without_ref(node.label, node.ref) if tag == node.ref else node.label
+        lines = [label if t == node.label else t for t in lines]
+        lines = [t for t in lines if t and (t == label or t not in label)]
     if tag:
         lines.insert(0, tag)
     return lines[:5]
@@ -347,7 +355,13 @@ def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = N
     ln.ann_size = size
     if widest * size / ANN_SIZE > avail:
         out = []
-        for t in ln.ann:
+        for i, t in enumerate(ln.ann):
+            units = text_units(t)
+            if i and text_width(t, size) > avail and len(units) > 1 and len(ln.ann) + len(out) - i < 5:
+                two = _wrap_words(units, 2, lambda u: text_width(u, size))  # on two lines rather than cut
+                if max(text_width(u, size) for u in two) <= avail:
+                    out += two
+                    continue
             while len(t) > 3 and text_width(t, size) > avail:
                 t = t[:-2] + "…"
             out.append(t)
@@ -705,7 +719,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                 bottom_end = max(bottom_end, y + 0.5)
             elif n.node is not None and n.node.type == "offpage" and getattr(n.node, "target", None):
                 t = str(n.node.target)  # type: ignore[attr-defined]  # another drawing: on up to 3 lines
-                words, room = t.split(), view.pitch_mm * 0.95
+                words, room = text_units(t), view.pitch_mm * 0.95
                 lines = next((ls for k in (1, 2, 3) if len(words) >= k
                               for ls in [_wrap_words(words, k, lambda u: text_width(u, 1.8))]
                               if max(text_width(u, 1.8) for u in ls) <= room), None) \
@@ -739,7 +753,7 @@ def _board_texts(b: LNode) -> list[tuple[tuple[float, float], str, float, str]]:
     node = b.node
     assert node is not None
     out = []
-    name = " ".join(x for x in (node.ref, node.label) if x)
+    name = ref_label(node.ref, node.label)
     if name:
         out.append(((b.x + 1.5 if b.x - x0 < 30 else x0 + 1.0, y0 + 3.6), name, 2.4, "start"))
     extra = [t for t in annotation(node) if t != node.label]
@@ -1286,7 +1300,7 @@ def _framed(g: Group, obs: Obstacles, box: tuple[float, float, float, float], la
 def _frame_label_tries(label: str, size: float, width: float) -> Iterator[tuple[float, list[str], bool]]:
     """Ways of writing a frame label, best first: (size, lines, the frame may widen). One line, then two
     lines fitting ``width``, in the frame; the same widening the frame; then three lines or a smaller size."""
-    words = label.split()
+    words = text_units(label)
 
     def wrapped(n: int, s: float) -> Optional[list[str]]:
         return _wrap_words(words, n, lambda t: text_width(t, s)) if len(words) >= n else None
@@ -1305,13 +1319,13 @@ def _frame_label_tries(label: str, size: float, width: float) -> Iterator[tuple[
 
 
 def _wrap_words(words: list[str], n: int, width: Callable[[str], float]) -> list[str]:
-    """``words`` on ``n`` lines, the widest line as narrow as possible."""
+    """``words`` (:func:`text_units`: words, CJK characters) on ``n`` lines, the widest line as narrow as possible."""
     best: Optional[list[str]] = None
     for cuts in _cuts(len(words), n):
-        lines = [" ".join(words[a:b]) for a, b in zip((0,) + cuts, cuts + (len(words),))]
+        lines = ["".join(words[a:b]).strip() for a, b in zip((0,) + cuts, cuts + (len(words),))]
         if best is None or max(map(width, lines)) < max(map(width, best)):
             best = lines
-    return best or [" ".join(words)]
+    return best or ["".join(words).strip()]
 
 
 def _cuts(m: int, n: int) -> Iterator[tuple[int, ...]]:
@@ -2105,8 +2119,7 @@ def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: 
         else:
             h = 5.5
         title = titles.get(field_, field_)
-        if field_ == "cable" and any(i["cable"] is not None and i["cable"].section_mm2 is None and i["cable"].size_awg
-                                     for i in infos):
+        if field_ == "cable" and any(cable_in_awg(i["cable"]) for i in infos):
             title = titles["cable_awg"]  # North-American sizes: no "(mm²)" unit in the header
         tg.add(Rect(x_start, y, header_w, h, small))
         tg.add(Text((x_start + 1.2, y + h / 2), title, 1.9, "start", "middle", bold=True))
@@ -2183,7 +2196,7 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
     forced = {n.id for n in index.nodes.values() if n.type == "board" and getattr(n, "own_sheet", False)}  # type: ignore[attr-defined]
 
     def name_of(n: NodeBase) -> str:
-        return " ".join(x for x in (n.ref, n.label) if x) or (n.id or "")
+        return ref_label(n.ref, n.label) or (n.id or "")
 
     def process(spec: SheetSpec, allow_bus_split: bool = True) -> list[SheetSpec]:
         root_ids = {r.id for r in spec.roots}

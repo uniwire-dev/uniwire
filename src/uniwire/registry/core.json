@@ -8,7 +8,8 @@
    "iec81346_class": null,
    "label": {
     "fr": "Réseau",
-    "en": "Utility grid"
+    "en": "Utility grid",
+    "ru": "Электросеть"
    },
    "symbol": "grid",
    "map": {
@@ -22,7 +23,8 @@
    "iec81346_class": "TAA",
    "label": {
     "fr": "Transformateur",
-    "en": "Transformer"
+    "en": "Transformer",
+    "ru": "Трансформатор"
    },
    "symbol": "transformer",
    "map": {
@@ -37,7 +39,8 @@
    "iec81346_class": "GAA",
    "label": {
     "fr": "Groupe électrogène",
-    "en": "Generator"
+    "en": "Generator",
+    "ru": "Генератор"
    },
    "symbol": "generator",
    "map": {
@@ -52,7 +55,8 @@
    "iec81346_class": "RBA",
    "label": {
     "fr": "ASI",
-    "en": "UPS"
+    "en": "UPS",
+    "ru": "ИБП"
    },
    "symbol": "ups",
    "map": {
@@ -65,7 +69,8 @@
    "iec81346_class": "GC",
    "label": {
     "fr": "Champ PV",
-    "en": "PV array"
+    "en": "PV array",
+    "ru": "Солнечные панели"
    },
    "symbol": "pv_array",
    "map": {
@@ -79,7 +84,8 @@
    "iec81346_class": "GBA",
    "label": {
     "fr": "Batterie",
-    "en": "Battery"
+    "en": "Battery",
+    "ru": "Аккумуляторная батарея"
    },
    "symbol": "battery",
    "map": {
@@ -94,7 +100,8 @@
    "iec81346_class": "TBB",
    "label": {
     "fr": "Onduleur",
-    "en": "Inverter"
+    "en": "Inverter",
+    "ru": "Инвертор"
    },
    "symbol": "inverter",
    "map": {
@@ -108,7 +115,8 @@
    "iec81346_class": "PGH",
    "label": {
     "fr": "Compteur",
-    "en": "Meter"
+    "en": "Meter",
+    "ru": "Счётчик"
    },
    "symbol": "meter",
    "map": {
@@ -122,7 +130,8 @@
    "iec81346_class": "QAB",
    "label": {
     "fr": "Disjoncteur",
-    "en": "Circuit breaker"
+    "en": "Circuit breaker",
+    "ru": "Автоматический выключатель"
    },
    "symbol": "breaker",
    "map": {
@@ -137,7 +146,8 @@
    "iec81346_class": "FBA",
    "label": {
     "fr": "Interrupteur différentiel",
-    "en": "Residual current switch"
+    "en": "Residual current switch",
+    "ru": "УЗО"
    },
    "symbol": "rcd",
    "map": {
@@ -151,7 +161,8 @@
    "iec81346_class": "FBA",
    "label": {
     "fr": "Disjoncteur différentiel",
-    "en": "RCBO"
+    "en": "RCBO",
+    "ru": "Дифференциальный автомат"
    },
    "symbol": "rcbo",
    "map": {
@@ -166,7 +177,8 @@
    "iec81346_class": "QAB",
    "label": {
     "fr": "Disjoncteur de branchement / AGCP",
-    "en": "Main breaker"
+    "en": "Main breaker",
+    "ru": "Вводной автомат"
    },
    "symbol": "main_breaker",
    "map": {
@@ -181,7 +193,8 @@
    "iec81346_class": "FCA",
    "label": {
     "fr": "Fusible",
-    "en": "Fuse"
+    "en": "Fuse",
+    "ru": "Предохранитель"
    },
    "symbol": "fuse",
    "map": {
@@ -195,7 +208,8 @@
    "iec81346_class": "QBB",
    "label": {
     "fr": "Interrupteur-sectionneur fusibles",
-    "en": "Fuse switch-disconnector"
+    "en": "Fuse switch-disconnector",
+    "ru": "Выключатель-разъединитель с предохранителями"
    },
    "symbol": "fuse_switch",
    "map": {
@@ -209,7 +223,8 @@
    "iec81346_class": "QBA",
    "label": {
     "fr": "Interrupteur-sectionneur",
-    "en": "Switch-disconnector"
+    "en": "Switch-disconnector",
+    "ru": "Выключатель нагрузки"
    },
    "symbol": "switch_disconnector",
    "map": {
@@ -224,7 +239,8 @@
    "iec81346_class": "QBA",
    "label": {
     "fr": "Sectionneur",
-    "en": "Disconnector"
+    "en": "Disconnector",
+    "ru": "Разъединитель"
    },
    "symbol": "disconnector",
    "map": {
@@ -239,7 +255,8 @@
    "iec81346_class": "QAA",
    "label": {
     "fr": "Contacteur",
-    "en": "Contactor"
+    "en": "Contactor",
+    "ru": "Контактор"
    },
    "symbol": "contactor",
    "map": {
@@ -253,7 +270,8 @@
    "iec81346_class": "KFA",
    "label": {
     "fr": "Télérupteur",
-    "en": "Impulse relay"
+    "en": "Impulse relay",
+    "ru": "Импульсное реле"
    },
    "symbol": "impulse_relay",
    "map": {
@@ -267,7 +285,8 @@
    "iec81346_class": "FC",
    "label": {
     "fr": "Relais thermique",
-    "en": "Overload relay"
+    "en": "Overload relay",
+    "ru": "Тепловое реле"
    },
    "symbol": "thermal_relay",
    "map": {
@@ -280,7 +299,8 @@
    "iec81346_class": "QA",
    "label": {
     "fr": "Départ moteur",
-    "en": "Motor starter"
+    "en": "Motor starter",
+    "ru": "Пускатель двигателя"
    },
    "symbol": "motor_starter",
    "map": {
@@ -293,7 +313,8 @@
    "iec81346_class": "QA",
    "label": {
     "fr": "Inverseur de source",
-    "en": "Transfer switch"
+    "en": "Transfer switch",
+    "ru": "Переключатель источников (АВР)"
    },
    "symbol": "transfer_switch",
    "map": {
@@ -307,7 +328,8 @@
    "iec81346_class": "FAD",
    "label": {
     "fr": "Parafoudre",
-    "en": "Surge protective device"
+    "en": "Surge protective device",
+    "ru": "УЗИП"
    },
    "symbol": "spd",
    "map": {
@@ -321,7 +343,8 @@
    "iec81346_class": "KEB",
    "label": {
     "fr": "Appareil de commande",
-    "en": "Controller"
+    "en": "Controller",
+    "ru": "Устройство управления"
    },
    "symbol": "controller",
    "map": {
@@ -334,7 +357,8 @@
    "iec81346_class": "WDA",
    "label": {
     "fr": "Jeu de barres",
-    "en": "Busbar"
+    "en": "Busbar",
+    "ru": "Шина"
    },
    "symbol": "busbar",
    "map": {
@@ -348,7 +372,8 @@
    "iec81346_class": "UC",
    "label": {
     "fr": "Tableau",
-    "en": "Distribution board"
+    "en": "Distribution board",
+    "ru": "Щит"
    },
    "symbol": "board",
    "map": {
@@ -362,7 +387,8 @@
    "iec81346_class": "XEE",
    "label": {
     "fr": "Prise de terre",
-    "en": "Earth electrode"
+    "en": "Earth electrode",
+    "ru": "Заземлитель"
    },
    "symbol": "earth",
    "map": {
@@ -376,7 +402,8 @@
    "iec81346_class": "EAA",
    "label": {
     "fr": "Éclairage",
-    "en": "Lighting"
+    "en": "Lighting",
+    "ru": "Освещение"
    },
    "symbol": "lighting",
    "map": {
@@ -390,7 +417,8 @@
    "iec81346_class": "XDB",
    "label": {
     "fr": "Prises de courant",
-    "en": "Socket outlets"
+    "en": "Socket outlets",
+    "ru": "Розетки"
    },
    "symbol": "socket",
    "map": {
@@ -404,7 +432,8 @@
    "iec81346_class": "EB",
    "label": {
     "fr": "Chauffage",
-    "en": "Heating"
+    "en": "Heating",
+    "ru": "Отопление"
    },
    "symbol": "heating",
    "map": {
@@ -418,7 +447,8 @@
    "iec81346_class": "EB",
    "label": {
     "fr": "Chauffe-eau",
-    "en": "Water heater"
+    "en": "Water heater",
+    "ru": "Водонагреватель"
    },
    "symbol": "water_heater",
    "map": {
@@ -432,7 +462,8 @@
    "iec81346_class": "EB",
    "label": {
     "fr": "Cuisson",
-    "en": "Cooking"
+    "en": "Cooking",
+    "ru": "Плита"
    },
    "symbol": "cooking",
    "map": {
@@ -446,7 +477,8 @@
    "iec81346_class": null,
    "label": {
     "fr": "Appareil électroménager",
-    "en": "Appliance"
+    "en": "Appliance",
+    "ru": "Бытовой прибор"
    },
    "symbol": "appliance",
    "map": {
@@ -460,7 +492,8 @@
    "iec81346_class": "MAA",
    "label": {
     "fr": "Moteur",
-    "en": "Motor"
+    "en": "Motor",
+    "ru": "Двигатель"
    },
    "symbol": "motor",
    "map": {
@@ -475,7 +508,8 @@
    "iec81346_class": null,
    "label": {
     "fr": "Borne de recharge (IRVE)",
-    "en": "EV charger"
+    "en": "EV charger",
+    "ru": "Зарядная станция электромобилей"
    },
    "symbol": "ev_charger",
    "map": {
@@ -489,7 +523,8 @@
    "iec81346_class": "GQB",
    "label": {
     "fr": "Ventilation (VMC)",
-    "en": "Ventilation"
+    "en": "Ventilation",
+    "ru": "Вентиляция"
    },
    "symbol": "ventilation",
    "map": {
@@ -503,7 +538,8 @@
    "iec81346_class": "RQG",
    "label": {
     "fr": "Volets roulants",
-    "en": "Shutters"
+    "en": "Shutters",
+    "ru": "Рольставни"
    },
    "symbol": "shutter",
    "map": {
@@ -517,7 +553,8 @@
    "iec81346_class": null,
    "label": {
     "fr": "Récepteur",
-    "en": "Load"
+    "en": "Load",
+    "ru": "Нагрузка"
    },
    "symbol": "load",
    "map": {
@@ -531,7 +568,8 @@
    "iec81346_class": null,
    "label": {
     "fr": "Réserve",
-    "en": "Spare"
+    "en": "Spare",
+    "ru": "Резерв"
    },
    "symbol": "spare",
    "map": {}
@@ -542,7 +580,8 @@
    "iec81346_class": null,
    "label": {
     "fr": "Renvoi de folio",
-    "en": "Off-page reference"
+    "en": "Off-page reference",
+    "ru": "Ссылка на лист"
    },
    "symbol": "offpage",
    "map": {}
@@ -552,7 +591,8 @@
    "iec81346": "B",
    "label": {
     "fr": "Transformateur de mesure (TC/TT)",
-    "en": "Instrument transformer"
+    "en": "Instrument transformer",
+    "ru": "Измерительный трансформатор (ТТ/ТН)"
    },
    "symbol": "instrument_transformer",
    "map": {
@@ -566,7 +606,8 @@
    "iec81346": "K",
    "label": {
     "fr": "Relais de protection",
-    "en": "Protection relay"
+    "en": "Protection relay",
+    "ru": "Реле защиты"
    },
    "symbol": "protection_relay",
    "map": {
@@ -580,7 +621,8 @@
    "iec81346": "Q",
    "label": {
     "fr": "Sectionneur de terre",
-    "en": "Earthing switch"
+    "en": "Earthing switch",
+    "ru": "Заземляющий разъединитель"
    },
    "symbol": "earthing_switch",
    "map": {
@@ -594,7 +636,8 @@
    "iec81346": "P",
    "label": {
     "fr": "Indicateur de présence de tension",
-    "en": "Voltage presence indicator"
+    "en": "Voltage presence indicator",
+    "ru": "Указатель наличия напряжения"
    },
    "symbol": "voltage_indicator",
    "map": {
@@ -607,7 +650,8 @@
    "iec81346": "B",
    "label": {
     "fr": "Contrôleur permanent d'isolement",
-    "en": "Insulation monitoring device"
+    "en": "Insulation monitoring device",
+    "ru": "Устройство контроля изоляции"
    },
    "symbol": "insulation_monitor",
    "map": {
@@ -620,7 +664,8 @@
    "iec81346": "F",
    "label": {
     "fr": "Limiteur de surtension",
-    "en": "Surge limiter"
+    "en": "Surge limiter",
+    "ru": "Ограничитель перенапряжений"
    },
    "symbol": "surge_limiter",
    "map": {
@@ -634,7 +679,8 @@
    "iec81346": "R",
    "label": {
     "fr": "Impédance de neutre",
-    "en": "Neutral earthing impedance"
+    "en": "Neutral earthing impedance",
+    "ru": "Сопротивление заземления нейтрали"
    },
    "symbol": "neutral_impedance",
    "map": {
@@ -647,7 +693,8 @@
    "iec81346": "X",
    "label": {
     "fr": "Bornier",
-    "en": "Terminal block"
+    "en": "Terminal block",
+    "ru": "Клеммник"
    },
    "symbol": "terminal_block",
    "map": {
@@ -661,7 +708,8 @@
    "iec81346": "X",
    "label": {
     "fr": "Boîte de jonction",
-    "en": "Junction box"
+    "en": "Junction box",
+    "ru": "Распределительная коробка"
    },
    "symbol": "junction_box",
    "map": {
@@ -675,7 +723,8 @@
    "iec81346": "X",
    "label": {
     "fr": "Connecteur",
-    "en": "Connector"
+    "en": "Connector",
+    "ru": "Разъём"
    },
    "symbol": "connector",
    "map": {
@@ -689,7 +738,8 @@
    "iec81346": "T",
    "label": {
     "fr": "Convertisseur DC (optimiseur, MPPT)",
-    "en": "DC converter"
+    "en": "DC converter",
+    "ru": "DC-преобразователь (оптимизатор, MPPT)"
    },
    "symbol": "dc_converter",
    "map": {
@@ -703,7 +753,8 @@
    "iec81346": "X",
    "label": {
     "fr": "Barrette de terre / barre PE",
-    "en": "Earth bar"
+    "en": "Earth bar",
+    "ru": "Шина заземления (PE)"
    },
    "symbol": "earth_bar",
    "map": {
@@ -717,7 +768,8 @@
    "iec81346_class": null,
    "label": {
     "fr": "Automate programmable",
-    "en": "Programmable controller"
+    "en": "Programmable controller",
+    "ru": "Программируемый контроллер (ПЛК)"
    },
    "symbol": "plc",
    "map": {
@@ -731,7 +783,8 @@
    "iec81346_class": null,
    "label": {
     "fr": "Alimentation (AC/DC)",
-    "en": "Power supply"
+    "en": "Power supply",
+    "ru": "Блок питания (AC/DC)"
    },
    "symbol": "power_supply",
    "map": {

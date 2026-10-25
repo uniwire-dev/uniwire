@@ -8,6 +8,26 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* CJK text (Chinese, Japanese) is wrapped between characters, not only at spaces: notes, title block values, frame
+  labels and off-drawing targets stay in their cells. A device text too wide for its column goes on two lines before
+  being cut with an ellipsis.
+
+* Russian: device type names (circuit table and elsewhere) and "тип" for the RCD type.
+
+* Small texts: an RCBO without a curve reads "20A 5mA"; transformer ratios in one unit where possible ("20 kV/400 V",
+  "400/230 V"); a name whose label starts with its tag shows the tag once ("TGBT", not "TGBT TGBT"), and a device
+  text no longer repeats its tag or a line already in its label; rule profiles named in the title block ("IEC 60364").
+
+* PDF: characters the font lacks are replaced (subscript digits by digits, clocks by a circle) or left out, never
+  drawn as empty boxes.
+
+* North-American cables are written with their AWG / kcmil size when given, even with a section in mm² for the
+  checks (unless the composition is written the IEC way, "3G" + mm²).
+
+* The title block of a board drawn on its own sheet shows that board's voltage and short-circuit current.
+
+* Fix: the breaker drawn for an equipped spare way has a stable id in the SVG (`<spare id>.breaker`).
+
 * Link routes: control, data and measure links keep clear of dashed frames and busbars, no longer share
   segments or run along a conductor, and leave a device by its left or right side, whichever gives the clearer
   route; boards get room at the bottom of their frame for these links. Several links landing on one input

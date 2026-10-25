@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from typing import Any, Optional
 
 from . import registry
-from .i18n import normalize_lang
+from .i18n import normalize_lang, render_lang
 from .i18n import t as _t
 from .model import Cable, NodeBase
 from .units import fmt, fmt_sensitivity
@@ -25,7 +25,7 @@ def _rcd_text(node: Any) -> str:
     if _g(node, "idn_mA") is not None:
         parts.append(fmt_sensitivity(node.idn_mA))
     if _g(node, "rcd_type"):
-        parts.append(f"type {node.rcd_type}")
+        parts.append(_t("label.rcd_type", render_lang(), type=node.rcd_type))
     delay = str(_g(node, "delay") or "").strip()
     if delay.upper() == "S" or _g(node, "selective"):
         parts.append("S")
@@ -47,8 +47,9 @@ def protection_short(node: Any) -> str:
     in_a = _g(node, "in_A")
     if t == "breaker":
         return f"{node.curve or ''}{fmt(in_a)}" if node.curve else (fmt(in_a, "A") if in_a else "")
-    if t == "rcbo":
-        return f"{node.curve or ''}{fmt(in_a)} {fmt_sensitivity(node.idn_mA)}".strip()
+    if t == "rcbo":  # 'C16 30mA', or '20A 5mA' without a curve (the rating alone would read as part of the mA)
+        rating = f"{node.curve}{fmt(in_a)}" if node.curve else (fmt(in_a, "A") if in_a else "")
+        return f"{rating} {fmt_sensitivity(node.idn_mA)}".strip()
     if t == "main_breaker":
         r = node.range_A or fmt(in_a)
         return f"{r}A {fmt_sensitivity(node.idn_mA)}".strip()
@@ -65,6 +66,29 @@ def protection_short(node: Any) -> str:
     if t == "spare":
         return fmt(in_a, "A") if in_a else ""
     return ""
+
+
+def _ratio(u1: float, u2: float) -> str:
+    """Voltage ratio of a transformer, in one unit when both sides allow it: '22/11 kV', '400/230 V', '20 kV/400 V'."""
+    if u1 >= 1000 and u2 >= 1000:
+        return f"{fmt(u1 / 1000)}/{fmt(u2 / 1000)} kV"
+    if u1 < 1000 and u2 < 1000:
+        return f"{fmt(u1)}/{fmt(u2)} V"
+    return f"{fmt(u1 / 1000)} kV/{fmt(u2)} V" if u1 >= 1000 else f"{fmt(u1)} V/{fmt(u2 / 1000)} kV"
+
+
+def ref_label(ref: Optional[str], label: Optional[str]) -> str:
+    """Name of a node from its tag and label, the tag once when the label already starts with it."""
+    if ref and label and (label == ref or label.startswith(ref + " ")):
+        return label
+    return " ".join(x for x in (ref, label) if x)
+
+
+def without_ref(label: str, ref: Optional[str]) -> str:
+    """``label`` without a leading copy of the tag printed above it ('TX-A 3150 kVA' under 'TX-A')."""
+    if ref and label.startswith(ref) and (len(label) == len(ref) or label[len(ref)] in " -:,/"):
+        return label[len(ref):].strip(" -:,/")
+    return label
 
 
 def awg_text(size: str) -> str:
@@ -143,13 +167,23 @@ def feeder_mark(chain: list[Any], system: Optional[str] = None) -> Optional[Mark
     return (n, False)
 
 
+def cable_in_awg(c: Optional[Cable]) -> bool:
+    """Whether a cable is written with its North-American size: an AWG / kcmil size, unless the composition is
+    written the IEC way with a section in mm² ('3G' + 2.5)."""
+    if c is None or not c.size_awg:
+        return False
+    cores = (c.cores or "").rstrip()
+    return c.section_mm2 is None or not (cores and cores[-1] in "Gx×")
+
+
 def cable_text(c: Optional[Cable]) -> str:
-    """'3G2,5', '4x(2x1x240)', '2x(5G16)'; North-American sizes when no section is given: '2-#12', '3x(4-600 kcmil)'."""
+    """'3G2,5', '4x(2x1x240)', '2x(5G16)'; North-American sizes when given, unless the composition is written the
+    IEC way ('3G' + mm²): '2-#12', '3x(4-600 kcmil)' (the section in mm² then only serves the checks)."""
     if c is None:
         return ""
     s = ""
     cores = c.cores or ""
-    if c.section_mm2 is not None:
+    if c.section_mm2 is not None and not cable_in_awg(c):
         sec = fmt(c.section_mm2)
         if cores.isdigit():  # a bare count of conductors: '2' and 1.5 mm² -> '2x1.5', not '21.5'
             cores += "x"
@@ -190,7 +224,7 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
         lines.append(node.label)
     if t == "transformer":
         lines += [fmt(g("sn_kVA"), " kVA") if g("sn_kVA") else "",
-                  f"{fmt(g('u1_V') / 1000 if g('u1_V') else None)}kV/{fmt(g('u2_V'))}V" if g("u1_V") and g("u2_V") else "",
+                  _ratio(g("u1_V"), g("u2_V")) if g("u1_V") and g("u2_V") else "",
                   " ".join(x for x in (g("coupling"), f"ucc {fmt(g('ucc_pct'))}%" if g("ucc_pct") else "") if x)]
     elif t == "generator":
         lines += [fmt(g("sn_kVA"), " kVA") if g("sn_kVA") else fmt(g("p_kW"), " kW") if g("p_kW") else "",

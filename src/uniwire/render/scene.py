@@ -6,6 +6,7 @@ The SVG and PDF writers only know these primitives.
 from __future__ import annotations
 
 import math
+import re
 import unicodedata
 from dataclasses import dataclass, field
 from typing import Literal, Optional, Union
@@ -108,6 +109,26 @@ def text_width(text: str, size: float) -> float:
     upper = sum(1 for ch in text if ch.isupper() and ch not in "IJMWQGOD")  # capitals, Latin or Cyrillic
     return size * (0.55 * (len(text) - narrow - wide - full - upper) + 0.3 * narrow + 0.8 * wide + 1.0 * full
                    + 0.68 * upper)
+
+
+def text_units(text: str) -> list[str]:
+    """Pieces a text may be broken between, each with the space before it: the words, and each CJK character
+    (Chinese and Japanese break between characters, without spaces). ``"".join(units).strip()`` gives the text."""
+    out: list[str] = []
+    for sp, word in re.findall(r"(\s*)(\S+)", text):
+        lead, buf = " " if sp else "", ""
+        for ch in word:
+            if unicodedata.east_asian_width(ch) in "WF":
+                if buf:
+                    out.append(lead + buf)
+                    lead, buf = "", ""
+                out.append(lead + ch)
+                lead = ""
+            else:
+                buf += ch
+        if buf:
+            out.append(lead + buf)
+    return out
 
 
 def arc_points(c: Point, r: float, a0: float, a1: float, n: int = 16) -> list[Point]:

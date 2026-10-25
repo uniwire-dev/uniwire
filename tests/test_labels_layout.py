@@ -482,3 +482,28 @@ def test_link_to_a_board_lands_on_the_nearer_end_of_its_busbar():
     label = next(t for t in _items(link) if isinstance(t, Text) and t.text == "UPS parallel")
     buses = [(i.a, i.b) for i in _items(lay.group) if isinstance(i, Line) and i.style.width == BUS]
     assert all(abs(a[1] - label.p[1]) > 1.0 or not min(a[0], b[0]) < label.p[0] < max(a[0], b[0]) for a, b in buses)
+
+
+def test_small_texts_rcbo_rating_transformer_ratio_and_tag_once():
+    from uniwire.labels import _ratio, protection_short, ref_label, without_ref
+    d = load({"sources": [{"type": "grid", "children": [
+        {"type": "rcbo", "in_A": 20, "idn_mA": 5}, {"type": "rcbo", "in_A": 16, "curve": "C", "idn_mA": 30}]}]})
+    assert [protection_short(n) for n in d.sources[0].children] == ["20A 5mA", "C16 30mA"]
+    assert [_ratio(20000, 400), _ratio(400, 230), _ratio(22000, 11000)] == ["20 kV/400 V", "400/230 V", "22/11 kV"]
+    assert ref_label("TGBT", "TGBT") == "TGBT" and ref_label("MSB", "Main board") == "MSB Main board"
+    assert without_ref("TX-A 3150 kVA", "TX-A") == "3150 kVA" and without_ref("-QA12 x", "-QA1") == "-QA12 x"
+
+
+def test_text_units_break_cjk_between_characters():
+    from uniwire.render.scene import text_units
+    units = text_units("TD 公寓配电箱 28 m²")
+    assert units[:3] == ["TD", " 公", "寓"] and "".join(units).strip() == "TD 公寓配电箱 28 m²"
+
+
+def test_long_cjk_note_stays_in_the_notes_cell():
+    doc = load({"meta": {"lang": "zh", "notes": ["这是一个非常长的没有任何空格的中文注释" * 6]},
+                "sources": [{"type": "grid", "children": [{"type": "breaker", "children": [{"type": "load"}]}]}]})
+    page = render_pages(doc)[0]
+    notes = next(g for g in _items_groups(page.root) if g.cls == "notes")
+    texts = [t for t in _items(notes) if isinstance(t, Text)]
+    assert len(texts) > 2 and all(t.size >= 1.6 for t in texts[1:])  # wrapped, not shrunk to fit one line

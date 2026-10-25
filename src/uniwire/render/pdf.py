@@ -24,6 +24,23 @@ _FONT_CANDIDATES = [
     ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf"),
 ]
 _FALLBACK = {"Δ": "D", "→": "->", "←": "<-", "Ω": "ohm", "≤": "<=", "≥": ">=", "~": "~"}
+# characters a Unicode font may lack: subscript and superscript digits as plain digits (CO₂ -> CO2), clocks
+# (a time switch's symbol text) as a circle; anything else missing is left out rather than drawn as a box
+_MISSING = {**{chr(0x2080 + i): str(i) for i in range(10)}, **{c: d for c, d in zip("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789")},
+            **{c: "○" for c in "⏱⏲⌚⌛⏰🕐🕑🕒🕓🕔🕕🕖🕗🕘🕙🕚🕛"}}
+
+
+def _drawable(text: str, glyphs: frozenset[int]) -> str:
+    """``text`` with the characters the font lacks (CJK aside, drawn with a CID font) replaced or left out."""
+    out = []
+    for ch in text:
+        if ord(ch) in glyphs or _cjk(ch) or ch.isspace():
+            out.append(ch)
+        elif ch in _MISSING and all(ord(c) in glyphs for c in _MISSING[ch]):
+            out.append(_MISSING[ch])
+        elif ch in _FALLBACK:
+            out.append(_FALLBACK[ch])
+    return "".join(out)
 # Chinese, Japanese and Korean text: the Adobe CID fonts known to every PDF reader, referenced and not embedded
 # (no font file needed, on any system)
 _CJK_FONTS = {"zh": "STSong-Light", "ja": "HeiseiKakuGo-W5", "ko": "HYGothic-Medium"}
@@ -161,6 +178,8 @@ def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None, 
             if not unicode_ok:
                 for k, v in _FALLBACK.items():
                     text = text.replace(k, v)
+            elif glyphs is not None:
+                text = _drawable(text, glyphs)
             r, g, b = (int(it.color[i:i + 2], 16) / 255 for i in (1, 3, 5))
             c.saveState()
             c.setFillColorRGB(r, g, b)
