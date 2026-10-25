@@ -9,7 +9,9 @@
    "label": {
     "fr": "Réseau",
     "en": "Utility grid",
-    "ru": "Электросеть"
+    "ru": "Электросеть",
+    "zh": "电网",
+    "es": "Red de distribución"
    },
    "symbol": "grid",
    "map": {
@@ -24,7 +26,9 @@
    "label": {
     "fr": "Transformateur",
     "en": "Transformer",
-    "ru": "Трансформатор"
+    "ru": "Трансформатор",
+    "zh": "变压器",
+    "es": "Transformador"
    },
    "symbol": "transformer",
    "map": {
@@ -40,7 +44,9 @@
    "label": {
     "fr": "Groupe électrogène",
     "en": "Generator",
-    "ru": "Генератор"
+    "ru": "Генератор",
+    "zh": "发电机组",
+    "es": "Grupo electrógeno"
    },
    "symbol": "generator",
    "map": {
@@ -56,7 +62,9 @@
    "label": {
     "fr": "ASI",
     "en": "UPS",
-    "ru": "ИБП"
+    "ru": "ИБП",
+    "zh": "不间断电源（UPS）",
+    "es": "SAI / UPS"
    },
    "symbol": "ups",
    "map": {
@@ -70,7 +78,9 @@
    "label": {
     "fr": "Champ PV",
     "en": "PV array",
-    "ru": "Солнечные панели"
+    "ru": "Солнечные панели",
+    "zh": "光伏方阵",
+    "es": "Generador fotovoltaico"
    },
    "symbol": "pv_array",
    "map": {
@@ -85,7 +95,9 @@
    "label": {
     "fr": "Batterie",
     "en": "Battery",
-    "ru": "Аккумуляторная батарея"
+    "ru": "Аккумуляторная батарея",
+    "zh": "蓄电池",
+    "es": "Batería"
    },
    "symbol": "battery",
    "map": {
@@ -101,7 +113,9 @@
    "label": {
     "fr": "Onduleur",
     "en": "Inverter",
-    "ru": "Инвертор"
+    "ru": "Инвертор",
+    "zh": "逆变器",
+    "es": "Inversor"
    },
    "symbol": "inverter",
    "map": {
@@ -116,7 +130,9 @@
    "label": {
     "fr": "Compteur",
     "en": "Meter",
-    "ru": "Счётчик"
+    "ru": "Счётчик",
+    "zh": "电能表",
+    "es": "Contador / medidor"
    },
    "symbol": "meter",
    "map": {
@@ -131,7 +147,9 @@
    "label": {
     "fr": "Disjoncteur",
     "en": "Circuit breaker",
-    "ru": "Автоматический выключатель"
+    "ru": "Автоматический выключатель",
+    "zh": "断路器",
+    "es": "Interruptor automático"
    },
    "symbol": "breaker",
    "map": {
@@ -147,7 +165,9 @@
    "label": {
     "fr": "Interrupteur différentiel",
     "en": "Residual current switch",
-    "ru": "УЗО"
+    "ru": "УЗО",
+    "zh": "剩余电流动作断路器（RCCB）",
+    "es": "Interruptor diferencial"
    },
    "symbol": "rcd",
    "map": {
@@ -162,7 +182,9 @@
    "label": {
     "fr": "Disjoncteur différentiel",
     "en": "RCBO",
-    "ru": "Дифференциальный автомат"
+    "ru": "Дифференциальный автомат",
+    "zh": "带过电流保护的剩余电流动作断路器（RCBO）",
+    "es": "Interruptor automático diferencial (RCBO)"
    },
    "symbol": "rcbo",
    "map": {
@@ -178,7 +200,9 @@
    "label": {
     "fr": "Disjoncteur de branchement / AGCP",
     "en": "Main breaker",
-    "ru": "Вводной автомат"
+    "ru": "Вводной автомат",
+    "zh": "总断路器",
+    "es": "Interruptor automático general"
    },
    "symbol": "main_breaker",
    "map": {
@@ -194,7 +218,9 @@
    "label": {
     "fr": "Fusible",
     "en": "Fuse",
-    "ru": "Предохранитель"
+    "ru": "Предохранитель",
+    "zh": "熔断器",
+    "es": "Fusible"
    },
    "symbol": "fuse",
    "map": {
@@ -209,7 +235,9 @@
    "label": {
     "fr": "Interrupteur-sectionneur fusibles",
     "en": "Fuse switch-disconnector",
-    "ru": "Выключатель-разъединитель с предохранителями"
+    "ru": "Выключатель-разъединитель с предохранителями",
+    "zh": "熔断器式隔离开关",
+    "es": "Interruptor-seccionador con fusibles"
    },
    "symbol": "fuse_switch",
    "map": {
@@ -224,7 +252,9 @@
    "label": {
     "fr": "Interrupteur-sectionneur",
     "en": "Switch-disconnector",
-    "ru": "Выключатель нагрузки"
+    "ru": "Выключатель нагрузки",
+    "zh": "负荷隔离开关",
+    "es": "Interruptor-seccionador"
    },
    "symbol": "switch_disconnector",
    "map": {
@@ -240,7 +270,9 @@
    "label": {
     "fr": "Sectionneur",
     "en": "Disconnector",
-    "ru": "Разъединитель"
+    "ru": "Разъединитель",
+    "zh": "隔离器",
+    "es": "Seccionador"
    },
    "symbol": "disconnector",
    "map": {
@@ -256,7 +288,9 @@
    "label": {
     "fr": "Contacteur",
     "en": "Contactor",
-    "ru": "Контактор"
+    "ru": "Контактор",
+    "zh": "接触器",
+    "es": "Contactor"
    },
    "symbol": "contactor",
    "map": {
@@ -271,7 +305,9 @@
    "label": {
     "fr": "Télérupteur",
     "en": "Impulse relay",
-    "ru": "Импульсное реле"
+    "ru": "Импульсное реле",
+    "zh": "脉冲继电器",
+    "es": "Telerruptor"
    },
    "symbol": "impulse_relay",
    "map": {
@@ -286,7 +322,9 @@
    "label": {
     "fr": "Relais thermique",
     "en": "Overload relay",
-    "ru": "Тепловое реле"
+    "ru": "Тепловое реле",
+    "zh": "热过载继电器",
+    "es": "Relé térmico"
    },
    "symbol": "thermal_relay",
    "map": {
@@ -300,7 +338,9 @@
    "label": {
     "fr": "Départ moteur",
     "en": "Motor starter",
-    "ru": "Пускатель двигателя"
+    "ru": "Пускатель двигателя",
+    "zh": "电动机起动器",
+    "es": "Arrancador de motor"
    },
    "symbol": "motor_starter",
    "map": {
@@ -314,7 +354,9 @@
    "label": {
     "fr": "Inverseur de source",
     "en": "Transfer switch",
-    "ru": "Переключатель источников (АВР)"
+    "ru": "Переключатель источников (АВР)",
+    "zh": "转换开关电器（TSE）",
+    "es": "Conmutador de transferencia"
    },
    "symbol": "transfer_switch",
    "map": {
@@ -329,7 +371,9 @@
    "label": {
     "fr": "Parafoudre",
     "en": "Surge protective device",
-    "ru": "УЗИП"
+    "ru": "УЗИП",
+    "zh": "电涌保护器（SPD）",
+    "es": "Protección contra sobretensiones (DPS)"
    },
    "symbol": "spd",
    "map": {
@@ -344,7 +388,9 @@
    "label": {
     "fr": "Appareil de commande",
     "en": "Controller",
-    "ru": "Устройство управления"
+    "ru": "Устройство управления",
+    "zh": "控制装置",
+    "es": "Controlador"
    },
    "symbol": "controller",
    "map": {
@@ -358,7 +404,9 @@
    "label": {
     "fr": "Jeu de barres",
     "en": "Busbar",
-    "ru": "Шина"
+    "ru": "Шина",
+    "zh": "母线",
+    "es": "Barras colectoras"
    },
    "symbol": "busbar",
    "map": {
@@ -373,7 +421,9 @@
    "label": {
     "fr": "Tableau",
     "en": "Distribution board",
-    "ru": "Щит"
+    "ru": "Щит",
+    "zh": "配电箱",
+    "es": "Cuadro / tablero"
    },
    "symbol": "board",
    "map": {
@@ -388,7 +438,9 @@
    "label": {
     "fr": "Prise de terre",
     "en": "Earth electrode",
-    "ru": "Заземлитель"
+    "ru": "Заземлитель",
+    "zh": "接地极",
+    "es": "Electrodo de tierra"
    },
    "symbol": "earth",
    "map": {
@@ -403,7 +455,9 @@
    "label": {
     "fr": "Éclairage",
     "en": "Lighting",
-    "ru": "Освещение"
+    "ru": "Освещение",
+    "zh": "照明",
+    "es": "Iluminación"
    },
    "symbol": "lighting",
    "map": {
@@ -418,7 +472,9 @@
    "label": {
     "fr": "Prises de courant",
     "en": "Socket outlets",
-    "ru": "Розетки"
+    "ru": "Розетки",
+    "zh": "插座",
+    "es": "Tomas de corriente"
    },
    "symbol": "socket",
    "map": {
@@ -433,7 +489,9 @@
    "label": {
     "fr": "Chauffage",
     "en": "Heating",
-    "ru": "Отопление"
+    "ru": "Отопление",
+    "zh": "采暖",
+    "es": "Calefacción"
    },
    "symbol": "heating",
    "map": {
@@ -448,7 +506,9 @@
    "label": {
     "fr": "Chauffe-eau",
     "en": "Water heater",
-    "ru": "Водонагреватель"
+    "ru": "Водонагреватель",
+    "zh": "热水器",
+    "es": "Calentador de agua"
    },
    "symbol": "water_heater",
    "map": {
@@ -463,7 +523,9 @@
    "label": {
     "fr": "Cuisson",
     "en": "Cooking",
-    "ru": "Плита"
+    "ru": "Плита",
+    "zh": "烹饪",
+    "es": "Cocción"
    },
    "symbol": "cooking",
    "map": {
@@ -478,7 +540,9 @@
    "label": {
     "fr": "Appareil électroménager",
     "en": "Appliance",
-    "ru": "Бытовой прибор"
+    "ru": "Бытовой прибор",
+    "zh": "家用电器",
+    "es": "Electrodoméstico"
    },
    "symbol": "appliance",
    "map": {
@@ -493,7 +557,9 @@
    "label": {
     "fr": "Moteur",
     "en": "Motor",
-    "ru": "Двигатель"
+    "ru": "Двигатель",
+    "zh": "电动机",
+    "es": "Motor"
    },
    "symbol": "motor",
    "map": {
@@ -509,7 +575,9 @@
    "label": {
     "fr": "Borne de recharge (IRVE)",
     "en": "EV charger",
-    "ru": "Зарядная станция электромобилей"
+    "ru": "Зарядная станция электромобилей",
+    "zh": "电动汽车充电桩",
+    "es": "Cargador de vehículo eléctrico"
    },
    "symbol": "ev_charger",
    "map": {
@@ -524,7 +592,9 @@
    "label": {
     "fr": "Ventilation (VMC)",
     "en": "Ventilation",
-    "ru": "Вентиляция"
+    "ru": "Вентиляция",
+    "zh": "通风",
+    "es": "Ventilación"
    },
    "symbol": "ventilation",
    "map": {
@@ -539,7 +609,9 @@
    "label": {
     "fr": "Volets roulants",
     "en": "Shutters",
-    "ru": "Рольставни"
+    "ru": "Рольставни",
+    "zh": "电动卷帘",
+    "es": "Persianas motorizadas"
    },
    "symbol": "shutter",
    "map": {
@@ -554,7 +626,9 @@
    "label": {
     "fr": "Récepteur",
     "en": "Load",
-    "ru": "Нагрузка"
+    "ru": "Нагрузка",
+    "zh": "负荷",
+    "es": "Carga"
    },
    "symbol": "load",
    "map": {
@@ -569,7 +643,9 @@
    "label": {
     "fr": "Réserve",
     "en": "Spare",
-    "ru": "Резерв"
+    "ru": "Резерв",
+    "zh": "备用",
+    "es": "Reserva"
    },
    "symbol": "spare",
    "map": {}
@@ -581,7 +657,9 @@
    "label": {
     "fr": "Renvoi de folio",
     "en": "Off-page reference",
-    "ru": "Ссылка на лист"
+    "ru": "Ссылка на лист",
+    "zh": "跨页连接",
+    "es": "Referencia a otra hoja"
    },
    "symbol": "offpage",
    "map": {}
@@ -592,7 +670,9 @@
    "label": {
     "fr": "Transformateur de mesure (TC/TT)",
     "en": "Instrument transformer",
-    "ru": "Измерительный трансформатор (ТТ/ТН)"
+    "ru": "Измерительный трансформатор (ТТ/ТН)",
+    "zh": "互感器",
+    "es": "Transformador de medida"
    },
    "symbol": "instrument_transformer",
    "map": {
@@ -607,7 +687,9 @@
    "label": {
     "fr": "Relais de protection",
     "en": "Protection relay",
-    "ru": "Реле защиты"
+    "ru": "Реле защиты",
+    "zh": "保护继电器",
+    "es": "Relé de protección"
    },
    "symbol": "protection_relay",
    "map": {
@@ -622,7 +704,9 @@
    "label": {
     "fr": "Sectionneur de terre",
     "en": "Earthing switch",
-    "ru": "Заземляющий разъединитель"
+    "ru": "Заземляющий разъединитель",
+    "zh": "接地开关",
+    "es": "Seccionador de puesta a tierra"
    },
    "symbol": "earthing_switch",
    "map": {
@@ -637,7 +721,9 @@
    "label": {
     "fr": "Indicateur de présence de tension",
     "en": "Voltage presence indicator",
-    "ru": "Указатель наличия напряжения"
+    "ru": "Указатель наличия напряжения",
+    "zh": "带电显示装置",
+    "es": "Indicador de presencia de tensión"
    },
    "symbol": "voltage_indicator",
    "map": {
@@ -651,7 +737,9 @@
    "label": {
     "fr": "Contrôleur permanent d'isolement",
     "en": "Insulation monitoring device",
-    "ru": "Устройство контроля изоляции"
+    "ru": "Устройство контроля изоляции",
+    "zh": "绝缘监控装置",
+    "es": "Dispositivo de vigilancia de aislamiento"
    },
    "symbol": "insulation_monitor",
    "map": {
@@ -665,7 +753,9 @@
    "label": {
     "fr": "Limiteur de surtension",
     "en": "Surge limiter",
-    "ru": "Ограничитель перенапряжений"
+    "ru": "Ограничитель перенапряжений",
+    "zh": "过电压限制器（击穿保险器）",
+    "es": "Limitador de sobretensión"
    },
    "symbol": "surge_limiter",
    "map": {
@@ -680,7 +770,9 @@
    "label": {
     "fr": "Impédance de neutre",
     "en": "Neutral earthing impedance",
-    "ru": "Сопротивление заземления нейтрали"
+    "ru": "Сопротивление заземления нейтрали",
+    "zh": "中性点接地阻抗",
+    "es": "Impedancia de puesta a tierra del neutro"
    },
    "symbol": "neutral_impedance",
    "map": {
@@ -694,7 +786,9 @@
    "label": {
     "fr": "Bornier",
     "en": "Terminal block",
-    "ru": "Клеммник"
+    "ru": "Клеммник",
+    "zh": "端子排",
+    "es": "Bornera / regleta de bornes"
    },
    "symbol": "terminal_block",
    "map": {
@@ -709,7 +803,9 @@
    "label": {
     "fr": "Boîte de jonction",
     "en": "Junction box",
-    "ru": "Распределительная коробка"
+    "ru": "Распределительная коробка",
+    "zh": "接线盒",
+    "es": "Caja de derivación"
    },
    "symbol": "junction_box",
    "map": {
@@ -724,7 +820,9 @@
    "label": {
     "fr": "Connecteur",
     "en": "Connector",
-    "ru": "Разъём"
+    "ru": "Разъём",
+    "zh": "连接器",
+    "es": "Conector"
    },
    "symbol": "connector",
    "map": {
@@ -739,7 +837,9 @@
    "label": {
     "fr": "Convertisseur DC (optimiseur, MPPT)",
     "en": "DC converter",
-    "ru": "DC-преобразователь (оптимизатор, MPPT)"
+    "ru": "DC-преобразователь (оптимизатор, MPPT)",
+    "zh": "直流变换器",
+    "es": "Convertidor CC"
    },
    "symbol": "dc_converter",
    "map": {
@@ -754,7 +854,9 @@
    "label": {
     "fr": "Barrette de terre / barre PE",
     "en": "Earth bar",
-    "ru": "Шина заземления (PE)"
+    "ru": "Шина заземления (PE)",
+    "zh": "接地排",
+    "es": "Barra de tierra"
    },
    "symbol": "earth_bar",
    "map": {
@@ -769,7 +871,9 @@
    "label": {
     "fr": "Automate programmable",
     "en": "Programmable controller",
-    "ru": "Программируемый контроллер (ПЛК)"
+    "ru": "Программируемый контроллер (ПЛК)",
+    "zh": "可编程控制器",
+    "es": "Controlador lógico programable"
    },
    "symbol": "plc",
    "map": {
@@ -784,7 +888,9 @@
    "label": {
     "fr": "Alimentation (AC/DC)",
     "en": "Power supply",
-    "ru": "Блок питания (AC/DC)"
+    "ru": "Блок питания (AC/DC)",
+    "zh": "电源装置",
+    "es": "Fuente de alimentación"
    },
    "symbol": "power_supply",
    "map": {

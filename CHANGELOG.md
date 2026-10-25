@@ -8,6 +8,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings in Spanish (`meta.lang` "es") and Simplified Chinese ("zh"): title block, notes, legends, table
+  headings, type names and the short texts in symbols, with IEC 60050 terms (GB/T terms for Chinese; neutral terms
+  where Spain and Argentina differ). Spanish numbers take a decimal comma. Messages stay in English.
+
 * A cable written in a device text comes after the device's own lines (settings, poles, vector group) and never
   replaces one; a composition ending with its section ("4x35+PE16") is not followed by the section again.
   "Safety circuit" is not repeated on every feeder of a safety board, nor a data link protocol already in a device

@@ -69,7 +69,8 @@ uniwire.render_svg(doc, "out/house-ml", stem="house-ml", view=view)
 ```
 
 The language of the drawing (title block, table headings, type labels) follows `meta.lang` of the
-document: `"en"` (default) or `"fr"`.
+document: `"en"` (default), `"fr"`, `"es"`, `"ru"` or `"zh"` (Simplified Chinese). Another language falls back to
+English for the texts uniwire writes; the texts of the document are drawn as written.
 
 Colours: a view with `color` set (`conductors`, `phase`, `source`, `status`, `voltage`, SPEC §7) recolours
 the strokes and adds a legend on each sheet, in SVG and PDF alike:
@@ -189,7 +190,7 @@ uniwire marks mcc.uniwire.json --view marks --write              # freeze the ge
 ```
 
 CLI output, validation errors and rule findings follow the `UNIWIRE_LANG` environment variable
-(`en` by default, `fr` available):
+(`en` by default, `fr` available; the other drawing languages use English here):
 
 ```bash
 UNIWIRE_LANG=fr uniwire check house.uniwire.json

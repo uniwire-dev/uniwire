@@ -1,5 +1,7 @@
+import re
+
 from uniwire import load, render_pages
-from uniwire.i18n import CATALOGS, EN, FR, RU, normalize_lang, t
+from uniwire.i18n import CATALOGS, EN, ES, FR, RU, ZH, normalize_lang, t
 from uniwire.render.scene import Group, Text
 from uniwire.rules import check
 
@@ -18,10 +20,13 @@ def _texts(item) -> list[str]:
 
 def test_catalogs_have_same_keys():
     assert set(EN) == set(FR)
-    assert set(CATALOGS) == {"en", "fr", "ru"}
-    assert set(RU) <= set(EN)  # Russian: the drawing texts, English for the other messages
+    assert set(CATALOGS) == {"en", "fr", "ru", "zh", "es"}
     drawing = {k for k in EN if k.split(".")[0] in ("tb", "notes", "legend", "ann", "cell")}
-    assert drawing <= set(RU)
+    for cat in (RU, ZH, ES):  # the drawing texts, English for the other messages
+        assert drawing <= set(cat) <= set(EN)
+        assert set(cat) == set(RU)
+        for k, v in cat.items():  # same placeholders as the English text
+            assert re.findall(r"{\w+}", v) == re.findall(r"{\w+}", EN[k]), k
 
 
 def test_russian_drawing_texts():
@@ -32,6 +37,23 @@ def test_russian_drawing_texts():
     assert "1,5" in " ".join(texts)  # decimal comma
     assert t("tb.title", lang="ru-RU") == "Наименование"
     assert t("validation.unknown_node_type", lang="ru", type="x") == t("validation.unknown_node_type", lang="en", type="x")
+
+
+def test_chinese_and_spanish_drawing_texts():
+    view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
+    zh = [s for p in render_pages(load({**DOC, "meta": {"lang": "zh-CN"}, "views": [view]})) for s in _texts(p.root)]
+    assert {"说明", "编号", "电缆（mm²）", "张次"} <= set(zh)
+    assert "1.5" in " ".join(zh)
+    es = [s for p in render_pages(load({**DOC, "meta": {"lang": "es-AR"}, "views": [view]})) for s in _texts(p.root)]
+    assert {"Notas", "Designación", "Cable (mm²)", "Hoja"} <= set(es)
+    assert "1,5" in " ".join(es)  # decimal comma
+
+
+def test_type_labels_in_every_language():
+    from uniwire import registry
+
+    for type_, info in registry.registry()["types"].items():
+        assert set(info["label"]) == {"en", "fr", "ru", "zh", "es"}, type_
 
 
 def test_lang_selection(monkeypatch):

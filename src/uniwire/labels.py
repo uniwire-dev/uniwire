@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from typing import Any, Optional
 
 from . import registry
-from .i18n import normalize_lang, render_lang
+from .i18n import DECIMAL_COMMA, normalize_lang, render_lang
 from .i18n import t as _t
 from .model import Cable, NodeBase
 from .units import fmt, fmt_sensitivity
@@ -275,7 +275,7 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
         lines += [fmt(g("in_A"), " A") if g("in_A") else ""]
     elif t == "thermal_relay":
         rng = str(g("range_A") or "")
-        if normalize_lang(lang) in ("fr", "ru"):  # the decimal comma of the rest of the text
+        if normalize_lang(lang) in DECIMAL_COMMA:  # the decimal comma of the rest of the text
             rng = re.sub(r"(?<=\d)\.(?=\d)", ",", rng)
         lines += [f"{rng} A" if rng else "", f"Ir {fmt(g('setting_A'))} A" if g("setting_A") else ""]
     elif t == "motor_starter":
@@ -422,6 +422,21 @@ CARTOUCHE_TITLES = {
         "points": "Точки", "circuit": "Цепь", "ib_A": "Ib", "cos_phi": "cos φ", "count": "Кол-во",
         "un_V": "Напряжение", "frame_A": "Корпус", "cable_type": "Марка кабеля", "cable_ref": "Обозн. кабеля",
         "install": "Способ прокладки",
+    },
+    "zh": {
+        "label": "名称", "ref": "编号", "protection": "保护", "in_A": "额定电流", "curve": "脱扣曲线", "icn_kA": "分断能力",
+        "idn_mA": "剩余动作电流", "rcd_type": "剩余电流类型", "poles": "极数", "cable": "电缆（mm²）", "cable_awg": "电缆",
+        "section_mm2": "截面", "length_m": "长度", "p_kW": "功率", "phase": "相别", "room": "房间", "points": "点数",
+        "circuit": "回路", "ib_A": "Ib", "cos_phi": "功率因数", "count": "数量", "un_V": "电压", "frame_A": "壳架",
+        "cable_type": "电缆型号", "cable_ref": "电缆编号", "install": "敷设方式",
+    },
+    "es": {
+        "label": "Descripción", "ref": "Designación", "protection": "Protección", "in_A": "Calibre", "curve": "Curva",
+        "icn_kA": "Poder de corte", "idn_mA": "Diferencial", "rcd_type": "Tipo dif.", "poles": "Polos",
+        "cable": "Cable (mm²)", "cable_awg": "Cable", "section_mm2": "Sección", "length_m": "Longitud",
+        "p_kW": "Potencia", "phase": "Fase", "room": "Local", "points": "Puntos", "circuit": "Circuito", "ib_A": "Ib",
+        "cos_phi": "cos φ", "count": "Cant.", "un_V": "Tensión", "frame_A": "Bastidor", "cable_type": "Tipo de cable",
+        "cable_ref": "Ref. cable", "install": "Método de instalación",
     },
     "en": {
         "label": "Description", "ref": "Tag", "protection": "Protection", "in_A": "Rating", "curve": "Curve",
