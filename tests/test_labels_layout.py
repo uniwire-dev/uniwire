@@ -344,3 +344,76 @@ def test_pen_split_marker():
             {"type": "board", "pen_split": True, "children": [{"type": "breaker"}, {"type": "breaker"}]}]}]}]}]})
     lay = _layout(doc)[0]
     assert _texts(lay.group).count("PEN") == 1
+
+
+def _standby_doc():
+    """A board on a generator, also reachable from the main board through a normally open infeed."""
+    return load({"sources": [
+        {"type": "grid", "children": [{"type": "board", "id": "MB", "children": [
+            {"type": "breaker", "id": "Q1", "ref": "-Q1", "in_A": 63, "children": [{"type": "load", "label": "Workshop"}]},
+            {"type": "breaker", "id": "Q2", "ref": "-Q2", "in_A": 100, "poles": "4P"}]}]},
+        {"type": "generator", "id": "G1", "ref": "G1", "children": [
+            {"type": "breaker", "id": "QG", "ref": "-QG", "in_A": 100, "poles": "4P", "children": [
+                {"type": "board", "id": "SB", "ref": "SB", "label": "Standby board", "children": [
+                    {"type": "breaker", "ref": "-Q21", "in_A": 16, "children": [{"type": "load", "label": "Pumps"}]}]}]}]}],
+        "links": [{"id": "L_SB", "kind": "infeed", "from": "Q2", "to": "SB", "normally_open": True}]})
+
+
+def test_infeed_without_a_channel_above_its_feeder_still_drawn(monkeypatch):
+    import uniwire.layout.engine as engine
+    route, capped = engine.route, []
+
+    def no_channel_above(obs, a, b, y_min=None, y_max=None, **kw):
+        if y_max is not None and y_max < max(a.y, b.y) + 1.0:  # channel kept above the feeder: none free
+            capped.append(1)
+            return []
+        return route(obs, a, b, y_min, y_max, **kw)
+
+    monkeypatch.setattr(engine, "route", no_channel_above)
+    lay = _layout(_standby_doc())[0]
+    assert capped
+    link = next(g for g in _items_groups(lay.group) if g.attrs.get("data-uw-link") == "L_SB")
+    assert any(isinstance(i, Polyline) and len(i.points) >= 2 for i in _items(link))
+
+
+def test_link_without_any_channel_left_out_not_fatal(monkeypatch):
+    import uniwire.layout.engine as engine
+    monkeypatch.setattr(engine, "route", lambda *a, **kw: [])
+    assert render_pages(_standby_doc(), default_view(_standby_doc()))
+
+
+def _wings_doc(n, own_sheet=None):
+    """Building wings, each on a transfer switch with its own standby generator."""
+    def wing(c):
+        board = {"type": "board", "id": f"SB{c}", "ref": f"SB-{c}", "children": [
+            {"type": "transfer_switch", "id": f"ATS{c}", "ref": f"-QA{c}", "in_A": 250, "poles": "4P", "children": [
+                {"type": "breaker", "ref": f"-Q{c}1", "in_A": 32, "children": [{"type": "load", "label": f"Wing {c} loads"}]}]}]}
+        if c == own_sheet:
+            board["own_sheet"] = True
+        return {"type": "breaker", "id": f"Q{c}", "ref": f"-Q{c}", "in_A": 250, "poles": "4P", "children": [board]}
+    cs = "ABCD"[:n]
+    return load({"sources": [{"type": "grid", "children": [{"type": "board", "id": "MSB", "ref": "MSB",
+                                                             "children": [wing(c) for c in cs]}]}]
+                 + [{"type": "generator", "id": f"G{c}", "ref": f"-G{c}", "children": [
+                     {"type": "breaker", "id": f"QG{c}", "ref": f"-QG{c}", "in_A": 250, "poles": "4P"}]} for c in cs],
+                 "links": [{"kind": "transfer", "from": f"QG{c}", "to": f"ATS{c}"} for c in cs]})
+
+
+def _bbox(g):
+    pts = [p for i in _items(g) for p in ([i.a, i.b] if isinstance(i, Line) else getattr(i, "points", []))]
+    return min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts)
+
+
+def test_standby_generators_of_several_transfer_switches_side_by_side():
+    lay = _layout(_wings_doc(3))[0]
+    gens = sorted(_bbox(g) for g in _items_groups(lay.group) if g.id in ("GA", "GB", "GC"))
+    assert len(gens) == 3
+    assert all(b[0] >= a[2] + 3.0 for a, b in zip(gens, gens[1:]))  # no two drawn on top of each other
+
+
+def test_standby_generator_follows_its_board_to_another_sheet():
+    doc = _wings_doc(2, own_sheet="B")
+    sheets = _layout(doc)
+    ids = [{g.id for g in _items_groups(lay.group)} for lay in sheets]
+    assert "GA" in ids[0] and "GB" not in ids[0]
+    assert any("GB" in s and "ATSB" in s for s in ids[1:])

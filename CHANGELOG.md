@@ -8,6 +8,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Standby sources on several transfer switches (one generator per switch) are drawn side by side instead of on
+  top of each other, and on the sheet of their switch when its board has a sheet of its own; a link with no free
+  route no longer makes the drawing fail (internal error, PDF refused): it is routed below its feeder, or left out.
+
 * Drawing of inverters and links: a PV string or battery way that also carries its surge protector, meter or
   insulation monitor stays on the DC side of the inverter (it was drawn on the AC busbar); an `infeed` link to an
   inverter or UPS at the head of the tree lands on its input, on top, the side being the DC terminal; a power link

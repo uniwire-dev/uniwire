@@ -167,6 +167,7 @@ class SheetSpec:
     name: str = ""
     prev: Optional[SheetSpec] = field(default=None, repr=False)  # previous sheet of a continuation
     next: Optional[SheetSpec] = field(default=None, repr=False)  # next sheet of a continuation
+    moved: set[str] = field(default_factory=set)  # roots drawn on the sheet of a detached board (standby sources)
 
 
 @dataclass
@@ -237,7 +238,7 @@ def _build_sheet_roots(spec: SheetSpec, index: Index) -> list[LNode]:
         root = LNode(None, "bus_in", bus_sym, [_build(c, spec, False) for c in kids],
                      label=parent.ref or parent.label or nid, target=nid, bus_out=e < len(parent.children))
         return [root]
-    return [_build(r, spec, True) for r in spec.roots]
+    return [_build(r, spec, True) for r in spec.roots if r.id not in spec.moved]
 
 
 # ---------------------------------------------------------------- computation
@@ -548,6 +549,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
     band = _alt_band(doc, main, lang)
 
     # secondary sources on a transfer switch
+    placed: list[LNode] = []  # several standby sources: each one beside the ones already placed
     for r in roots:
         if id(r) not in anchored:
             continue
@@ -562,12 +564,13 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         sx = target.x + target.sym.side_input[0]
         sy = target.y + target.sym.side_input[1]
         top = sy - 3.5 - height
-        boxes = [b for m in main for b in _boxes(m)]
-        boxes += [_frame_box(n) for m in main for n in m.walk() if n.is_board]
+        boxes = [b for m in main + placed for b in _boxes(m)]
+        boxes += [_frame_box(n) for m in main + placed for n in m.walk() if n.is_board]
         obstacles = [b for b in boxes if b[3] > top - 1 and b[1] < sy - 2 and b[2] > target.x - 3]
         right = max([b[2] for b in obstacles] + [sx])
         new_x = max(sx, right + 3.0 + r.sym.left)
         _translate(r, new_x - last.x, top)
+        placed.append(r)
 
     everything = [n for r in roots for n in r.walk()]
 
@@ -1753,8 +1756,13 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         if on_conductor:  # infeed landing on an input conductor: never come back up from below the feeder
             hi = min(hi, max(e.y for e in ends) + 0.5)
         carries = link.device is not None and link.kind in SWITCHED_LINKS
-        pts = route(obs, ends[0], ends[1], lo, hi, record=not carries, lane=3.5 if carries else LANE,
-                    solid=link.kind in POWER_LINKS and not style.dash)
+        opts = {"record": not carries, "lane": 3.5 if carries else LANE,
+                "solid": link.kind in POWER_LINKS and not style.dash}
+        pts = route(obs, ends[0], ends[1], lo, hi, **opts)
+        if not pts and on_conductor:  # e.g. a feeder leaving downwards: the channel must go below it after all
+            pts = route(obs, ends[0], ends[1], lo, max(e.y for e in ends) + 30.0, **opts)
+        if not pts:  # no free channel: leave this link out rather than fail the whole drawing
+            continue
         if carries:
             _draw_link_device(link, link.device, pts, style, lg, obs, lang)
         else:
@@ -2064,6 +2072,7 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
         spec.detached |= {f for f in forced if f not in root_ids and _in_spec(spec, f, index)}
         conts: list[SheetSpec] = []
         for _ in range(50):
+            spec.moved = {s.id for nid in spec.detached for s in standby(nid) if s.id and s in spec.roots}
             lay = layout_sheet(doc, view, spec, index)
             if view.folio_split == "none" or fit_scale(lay, view) >= view.min_scale:
                 break
@@ -2080,8 +2089,15 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
         for c in conts:
             out += process(c, allow_bus_split=False)
         for nid in _ordered(spec, index):
-            out += process(SheetSpec([index.nodes[nid]], name=name_of(index.nodes[nid])))
+            out += process(SheetSpec([index.nodes[nid]] + standby(nid), name=name_of(index.nodes[nid])))
         return out
+
+    def standby(nid: str) -> list[NodeBase]:
+        """Sources linked by a 'transfer' to a switch inside board ``nid``: drawn on that board's sheet."""
+        inside = {l.from_ for l in doc.links if l.kind == "transfer" and l.to in index.nodes
+                  and (l.to == nid or any(a.id == nid for a in index.ancestors(l.to)))}
+        return [s for s in doc.sources if s.id not in (None, nid) and any(
+            f == s.id or any(a.id == s.id for a in index.ancestors(f)) for f in inside if f in index.nodes)]
 
     first = SheetSpec(_sheet_roots(doc, view, index), name="")
     return process(first)
