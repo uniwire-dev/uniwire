@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import re
 from collections import OrderedDict
 from collections.abc import Iterable
 from pathlib import Path
@@ -102,11 +103,15 @@ def _renumber(item: Item, folio: int, total: int) -> None:
 
 
 def _shift_refs(item: Item, offset: int) -> None:
-    """Add ``offset`` to the target sheet of the cross-sheet references under ``item``."""
+    """Add ``offset`` to the target sheet of the cross-sheet references under ``item``, in their link and in the
+    sheet number written in their text ('=RA → sheet 2', 'from -P3 (sheet 1)')."""
     if isinstance(item, Group):
         target = item.attrs.get("data-uw-target-sheet", "")
         if target.isdigit():
             item.attrs["data-uw-target-sheet"] = str(int(target) + offset)
+            for t in item.items:
+                if isinstance(t, Text):
+                    t.text = re.sub(rf"(?<!\d){target}(?!\d)(?!.*(?<!\d){target}(?!\d))", str(int(target) + offset), t.text)
         for c in item.items:
             _shift_refs(c, offset)
 

@@ -8,6 +8,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* A cable written in a device text comes after the device's own lines (settings, poles, vector group) and never
+  replaces one; a composition ending with its section ("4x35+PE16") is not followed by the section again.
+  "Safety circuit" is not repeated on every feeder of a safety board, nor a data link protocol already in a device
+  text. Sheet references between the views of one PDF point to the right sheet numbers.
+
 * Circuit table: "(upstream)" no longer marks the group RCD of a board on the columns of the boards it feeds on other
   sheets; a tag is prefixed with its board only when the same tag comes from different boards.
 

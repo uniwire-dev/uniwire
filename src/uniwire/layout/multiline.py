@@ -520,9 +520,9 @@ class MLNode:
         elif self.type not in CONTACT_TYPES:  # boxes drawn across the conductors
             r += 1.5
         sets = _starter_sets(self.node) if self.type == "motor_starter" else 0
-        if sets:  # the other contactors of a reversing or star-delta starter, right of the line contactor
+        if sets:  # the other contactors of a reversing or star-delta starter, right of all its conductors
             phases = [o for c, o in self.off_in.items() if c in PHASES] or [PAD]
-            r = max(r, max(phases) + sets * ((len(phases) - 1) * S + STARTER_GAP))
+            r = max(r, self.lanes_max() + sets * ((len(phases) - 1) * S + STARTER_GAP))
         return r + 0.8
 
     def block_h(self) -> float:
@@ -636,7 +636,7 @@ def _starter_sets(node: Any) -> int:
     return {"reversing": 1, "star_delta": 2}.get(getattr(node, "method", None) or "", 0)
 
 
-def _starter_extra(node: Any, xs: list[float], y: float, h: float) -> list[Item]:
+def _starter_extra(node: Any, xs: list[float], y: float, h: float, last: float = 0.0) -> list[Item]:
     """The other contactors of a reversing or star-delta starter, right of the line contactor whose poles are at
     ``xs``: a reverse contactor fed from the lines and returning with L1 and L3 swapped, mechanically interlocked;
     or a delta contactor (lines to the motor's W2 U2 V2) and a star contactor shorting W2 U2 V2."""
@@ -646,7 +646,7 @@ def _starter_extra(node: Any, xs: list[float], y: float, h: float) -> list[Item]
     items: list[Item] = []
     dot = lambda x, yy: Circle((x, yy), 0.35, Style(width=THIN, fill="#000000"))  # noqa: E731
     yt, ht = y + 1.8, h - 3.4  # the extra poles: shorter, room above for the taps, below for the returns
-    x0 = xs[-1] + STARTER_GAP
+    x0 = max(xs[-1], last) + STARTER_GAP  # right of every conductor of the column (the PE too)
     first = [x0 + i * S for i in range(n)]
     for i, (xl, xr) in enumerate(zip(xs, first)):  # taps on the lines, above the contacts
         ty = y + 0.4 + i * 0.55
@@ -1062,7 +1062,8 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
                 drawn.add(c)
             g.add(*_link([xs[c] for c in prot + unprot], y))
             if t == "motor_starter" and _starter_sets(node):
-                g.add(Group(_starter_extra(node, [xs[c] for c in prot if c in PHASES], y, h), cls="starter-contactors"))
+                g.add(Group(_starter_extra(node, [xs[c] for c in prot if c in PHASES], y, h, max(xs.values())),
+                            cls="starter-contactors"))
             if t in ("rcd", "rcbo") or (t == "main_breaker" and getattr(node, "idn_mA", None)):
                 rl = [xs[c] for c in prot + unprot] or [xs[c] for c in live]
                 if rl:

@@ -187,7 +187,11 @@ def cable_text(c: Optional[Cable]) -> str:
         sec = fmt(c.section_mm2)
         if cores.isdigit():  # a bare count of conductors: '2' and 1.5 mm² -> '2x1.5', not '21.5'
             cores += "x"
-        s = f"{cores}{sec}" if cores and not cores.endswith(")") else (cores or sec)
+        glue = "" if cores[-1:] in ("G", "x", "×", "-") else " "  # '5G2.5', '2x1.5'; 'busbar 2000'
+        if cores and (cores.endswith(")") or re.search(r"\d$", cores)):
+            s = cores  # the composition already has its sections ('3x150+70', '4x(1x240)')
+        else:
+            s = f"{cores}{glue}{sec}" if cores else sec
     elif c.size_awg:
         size = awg_text(c.size_awg)
         if not cores:
@@ -270,7 +274,10 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
     elif t == "impulse_relay":
         lines += [fmt(g("in_A"), " A") if g("in_A") else ""]
     elif t == "thermal_relay":
-        lines += [f"{g('range_A')} A" if g("range_A") else "", f"Ir {fmt(g('setting_A'))} A" if g("setting_A") else ""]
+        rng = str(g("range_A") or "")
+        if normalize_lang(lang) in ("fr", "ru"):  # the decimal comma of the rest of the text
+            rng = re.sub(r"(?<=\d)\.(?=\d)", ",", rng)
+        lines += [f"{rng} A" if rng else "", f"Ir {fmt(g('setting_A'))} A" if g("setting_A") else ""]
     elif t == "motor_starter":
         lines += [fmt(g("p_kW"), " kW") if g("p_kW") else "", fmt(g("in_A"), " A") if g("in_A") else ""]
     elif t == "transfer_switch":

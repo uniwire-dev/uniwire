@@ -97,6 +97,7 @@ class LNode:
     lead: float = 0.0  # extra length of the input conductor, for several links landing on it
     pad_bottom: float = 0.0  # room at the bottom of a board frame for the control links of its devices
     ann_off: tuple[float, float] = (0.0, 0.0)  # the view's label_offset for this node: where its text really is
+    in_safety_board: bool = False  # inside a board that is itself a safety service: its feeders are not marked
     bus_y: Optional[float] = None
     bus_x0: float = 0.0
     bus_x1: float = 0.0
@@ -341,9 +342,10 @@ def _ann_lines(ln: LNode, view: View, lang: str) -> list[str]:
     leaf = ln
     while len(leaf.children) == 1:
         leaf = leaf.children[0]
-    if "safety" in (getattr(node, "priority", None), getattr(leaf.node, "priority", None) if leaf.bottom else None):
+    if node.type in PROTECTIVE and not ln.in_safety_board and "safety" in (getattr(node, "priority", None),
+                                                                    getattr(leaf.node, "priority", None) if leaf.bottom else None):
         captions.insert(0, _t("label.safety", lang))  # a safety service circuit (fire alarm, emergency lighting...)
-    return lines[:5 - len(captions)] + captions
+    return lines[:5] + captions  # the cable and the safety mark come on top of the usual lines, never instead
 
 
 def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = None) -> None:
@@ -404,7 +406,7 @@ def _place_y(ln: LNode, y: float) -> None:
     else:
         child_y = y + ln.sym.height + (GAP if ln.sym.height > 0 else 0.0)
         ab = ln.ann_box()
-        if ab and ln.children and ln.children[0].ann:
+        if ab and ln.children and (ln.children[0].ann or ln.children[0].is_board):  # a board's frame too
             child_y = max(child_y, ab[3] + 1.5)
     for c in ln.children:
         _place_y(c, child_y)
@@ -570,6 +572,11 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         _measure(r, pitch)
         _place_x(r, x, pitch)
         x += r.width + pitch * (ROOT_GAP_COLS + (1.0 if i in wide_gap else 0.0))
+    for r in roots:  # the feeders of a safety board are safety circuits by themselves: not marked one by one
+        for b in r.walk():
+            if b.is_board and b.node is not None and getattr(b.node, "priority", None) == "safety":
+                for n in list(b.walk())[1:]:
+                    n.in_safety_board = True
     # several infeeds on one input conductor: room for one landing point each
     fed_ok = _fed_ok(roots)
     feeds = Counter(l.to for l in doc.links if l.kind == "infeed" and l.to in fed_ok)
@@ -1111,8 +1118,10 @@ def _in_column(n: LNode) -> bool:
 
 
 def _cable_caption(c: Any) -> str:
-    """'W7 5x6 38 m': tag, composition and length of a cable written along its conductor."""
-    return " ".join(x for x in (c.ref, cable_text(c), fmt(c.length_m, " m") if c.length_m else "") if x)
+    """'W7 5x6 38 m': tag, composition and length of a cable written in the text of its device ('' without a
+    composition: a bare length says nothing)."""
+    comp = cable_text(c)
+    return " ".join(x for x in (c.ref, comp, fmt(c.length_m, " m") if c.length_m else "") if x) if comp else ""
 
 
 def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: Group, obs: Obstacles,
@@ -1922,7 +1931,10 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         seq = pts if port_label is None or port_label[0] == 0 else pts[::-1]  # oriented PLC -> other end
         if port_label is not None:
             labels.append((i, seq, port_label[1], 1.3, "#1565c0"))
-        text = link.label or (link.protocol if link.kind == "data" else None)  # a data link: its protocol
+        text = link.label  # a data link without a label: its protocol, unless a device text already gives it
+        if not text and link.kind == "data" and link.protocol \
+                and not any(link.protocol in t for t in (a.ann or []) + (b.ann or [])):
+            text = link.protocol
         if text and link.device is None:  # a carried device is annotated: the label would repeat it
             labels.append((i, seq, text, 1.6, "#000000"))
     # labels once every route is known, near the far end of their link (port labels: near the controlled device)
