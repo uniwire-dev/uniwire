@@ -417,3 +417,68 @@ def test_standby_generator_follows_its_board_to_another_sheet():
     ids = [{g.id for g in _items_groups(lay.group)} for lay in sheets]
     assert "GA" in ids[0] and "GB" not in ids[0]
     assert any("GB" in s and "ATSB" in s for s in ids[1:])
+
+
+def _audit_kinds(doc):
+    from tests.drawing_audit import audit
+    return [f for pg in render_pages(doc, default_view(doc)) for f in audit(pg.root)]
+
+
+def test_transfer_links_of_aligned_switches_each_on_their_own_channel():
+    assert not [f for f in _audit_kinds(_wings_doc(3)) if f.kind == "shared_run"]
+
+
+def _test_bench_doc(own_sheet=False):
+    """Three trains, each able to feed a common test bench through a normally open infeed."""
+    def train(c):
+        board = {"type": "board", "id": f"TB{c}", "ref": f"TB-{c}", "label": f"Train {c} board", "children": [
+            {"type": "busbar", "id": f"BB{c}", "children": [
+                {"type": "breaker", "ref": f"-Q{c}1", "in_A": 400, "children": [{"type": "load", "label": f"Train {c} loads"}]},
+                {"type": "breaker", "id": f"QT{c}", "ref": f"-QT{c}", "in_A": 800, "poles": "4P"}]}]}
+        if own_sheet:
+            board["own_sheet"] = True
+        return {"type": "breaker", "ref": f"-QM{c}", "in_A": 800, "poles": "4P", "children": [board]}
+    return load({"sources": [
+        {"type": "grid", "children": [{"type": "board", "id": "MB", "ref": "MB", "children": [
+            {"type": "busbar", "id": "MBB", "children": [train(c) for c in "ABC"] + [
+                {"type": "breaker", "id": "QB", "ref": "-QB", "in_A": 800, "poles": "4P", "children": [
+                    {"type": "board", "id": "BENCH", "ref": "TEST", "label": "Test bench board", "children": [
+                        {"type": "breaker", "ref": "-QB1", "in_A": 800, "children": [{"type": "load", "label": "Test bench"}]}]}]}]}]}]}],
+        "links": [{"kind": "infeed", "from": f"QT{c}", "to": "BENCH", "normally_open": True, "label": "to bench"}
+                  for c in "ABC"]})
+
+
+def test_several_infeeds_on_one_input_land_one_above_the_other():
+    lay = _layout(_test_bench_doc())[0]
+    ends = [next(i.points[-1] for i in _items(g) if isinstance(i, Polyline))
+            for g in _items_groups(lay.group) if g.attrs.get("data-uw-link") in ("0", "1", "2")]
+    assert len(ends) == 3 and len({round(p[1], 1) for p in ends}) == 3
+    assert not [f for f in _audit_kinds(_test_bench_doc()) if f.kind == "text_overlap"]
+
+
+def test_off_sheet_stubs_on_one_node_drawn_side_by_side():
+    findings = _audit_kinds(_test_bench_doc(own_sheet=True))
+    assert not [f for f in findings if f.kind == "text_overlap"], findings
+
+
+def test_link_to_a_board_lands_on_the_nearer_end_of_its_busbar():
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "id": "MB", "ref": "MB", "children": [
+        {"type": "busbar", "id": "MBB", "children": [
+            {"type": "breaker", "ref": "-Q1", "in_A": 400, "poles": "4P", "children": [
+                {"type": "board", "id": "DB", "ref": "DB", "children": [
+                    {"type": "busbar", "id": "DBB", "ref": "W2", "children": [
+                        {"type": "breaker", "ref": f"-Q1{k}", "in_A": 63, "children": [{"type": "load", "label": f"Load {k}"}]}
+                        for k in range(1, 4)]}]}]},
+            {"type": "breaker", "ref": "-Q2", "in_A": 400, "poles": "4P", "children": [
+                {"type": "ups", "ref": "-U1", "children": [
+                    {"type": "breaker", "id": "QU", "ref": "-Q3", "in_A": 400, "poles": "4P"}]}]}]}]}]}],
+        "links": [{"id": "L_PAR", "kind": "parallel", "from": "QU", "to": "DBB", "label": "UPS parallel"}]})
+    lay = _layout(doc)[0]
+    link = next(g for g in _items_groups(lay.group) if g.attrs.get("data-uw-link") == "L_PAR")
+    pts = next(i.points for i in _items(link) if isinstance(i, Polyline))
+    start, end = pts[0], pts[-1]
+    assert start[0] > end[0]
+    assert sum(abs(q[0] - p[0]) for p, q in zip(pts, pts[1:])) <= abs(start[0] - end[0]) + 6.0  # no detour
+    label = next(t for t in _items(link) if isinstance(t, Text) and t.text == "UPS parallel")
+    buses = [(i.a, i.b) for i in _items(lay.group) if isinstance(i, Line) and i.style.width == BUS]
+    assert all(abs(a[1] - label.p[1]) > 1.0 or not min(a[0], b[0]) < label.p[0] < max(a[0], b[0]) for a, b in buses)

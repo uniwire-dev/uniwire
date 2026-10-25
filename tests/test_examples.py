@@ -72,7 +72,8 @@ def _layouts(path):
 
 def test_every_node_placed_once(example):
     doc, lays = _layouts(example)
-    placed = [n.node.id for lay in lays for n in lay.lnodes + lay.annex if n.kind == "node" and n.node is not None]
+    placed = [n.node.id for lay in lays for n in lay.lnodes + lay.annex  # (the breaker of an equipped spare has no id)
+              if n.kind == "node" and n.node is not None and n.node.id is not None]
     assert len(placed) == len(set(placed)), "node drawn twice"
     from uniwire.resolve import iter_nodes
     expected = {n.id for n, _, _ in iter_nodes(doc) if not any(n is l.device for l in doc.links)}

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import copy
+import hashlib
+from collections import OrderedDict
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, Optional
@@ -36,10 +39,22 @@ def default_view(doc: Document, view_id: Optional[str] = None, kind: Optional[st
     return base.model_copy(update={"kind": kind, "title": None, "id": "ml" if kind == "multi-line" else base.id})
 
 
+_PAGES: OrderedDict[str, list[Page]] = OrderedDict()  # recent layouts: the same document is often drawn
+_PAGES_MAX = 16                                        # several times in a row (check, render, then its PDF)
+
+
 def render_pages(doc: Document, view: Optional[View] = None) -> list[Page]:
     """Plan the sheets, lay them out and compose each page."""
     view = view or default_view(doc)
     lang = normalize_lang(doc.meta.lang)
+    try:
+        key: Optional[str] = hashlib.sha256((doc.model_dump_json() + "\0" + view.model_dump_json() + "\0" + lang)
+                                            .encode()).hexdigest()
+    except ValueError:  # text that cannot be encoded (lone surrogates): drawn, not cached
+        key = None
+    if key in _PAGES:
+        _PAGES.move_to_end(key)
+        return copy.deepcopy(_PAGES[key])
     from ..i18n import RENDER_LANG
     token = RENDER_LANG.set(lang)
     try:
@@ -48,6 +63,10 @@ def render_pages(doc: Document, view: Optional[View] = None) -> list[Page]:
         RENDER_LANG.reset(token)
     for i, page in enumerate(pages, 1):
         page.attrs.update({"data-uw-sheet": str(i), "data-uw-view-kind": view.kind})
+    if key is not None:
+        _PAGES[key] = copy.deepcopy(pages)
+    while len(_PAGES) > _PAGES_MAX:
+        _PAGES.popitem(last=False)
     return pages
 
 

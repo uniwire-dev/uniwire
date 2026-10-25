@@ -291,6 +291,8 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
         return column.get("label") or ""
     if field == "ref":
         # tag of the feeder protection, else of the final node itself (spare way, IMD, busway tap-off...)
+        if column.get("own_ref"):  # protected from upstream (sub-busbar way, busway tap-off): its own tag
+            return column["own_ref"]
         return (prot.ref if prot is not None and prot.ref else _g(leaf, "ref")) or ""
     if field == "protection":
         return protection_short(prot) if prot is not None else ""

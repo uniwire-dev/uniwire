@@ -8,6 +8,22 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Link routes: control, data and measure links keep clear of dashed frames and busbars, no longer share
+  segments or run along a conductor, and leave a device by its left or right side, whichever gives the clearer
+  route; boards get room at the bottom of their frame for these links. Several links landing on one input
+  conductor get one point each.
+
+* An equipped spare way (`spare` with a rating) is drawn with its breaker, tag and rating.
+
+* Circuit table: a feeder shows its overcurrent protection (breaker, fuse) rather than an RCD or switch below it;
+  a way of a small sub-busbar shows the breaker or fuse feeding it, with its own tag.
+
+* Off-sheet arrows carry their sheet reference or target drawing on the drawing itself.
+
+* Fix: a node text moved by a view's `label_offset` is now avoided by link routes and labels.
+
+* Rendering the same document again reuses its layout (a PDF after a check is drawn at once).
+
 * Standby sources on several transfer switches (one generator per switch) are drawn side by side instead of on
   top of each other, and on the sheet of their switch when its board has a sheet of its own; a link with no free
   route no longer makes the drawing fail (internal error, PDF refused): it is routed below its feeder, or left out.
