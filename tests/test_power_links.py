@@ -153,9 +153,9 @@ def test_multiline_link_conductors_and_poles():
     poles = [g for g in _groups(dev) if (g.cls or "").split()[:1] == ["pole"]]
     assert len(poles) == 4  # 4P removable links: one open contact per conductor (L1 L2 L3 N)
     dashed = [i for i in _items(link) if isinstance(i, Polyline) and i.style.dash and len(i.points) >= 2]
-    assert len(dashed) == 2 * 4  # each conductor routed (split around its pole), long-dashed: normally open
+    assert not dashed  # the open contacts show the normal state: the conductors stay solid
     dots = [i for i in _items(link) if isinstance(i, Circle)]
-    assert len(dots) == 2 * 4  # taps on the source rails + junctions on the target input conductors
+    assert len(dots) == 2 * 5  # taps on the source rails + junctions on the target input conductors (PE too)
 
 
 def test_multiline_tie_and_parallel_links_drawn():

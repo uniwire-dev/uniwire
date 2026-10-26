@@ -58,7 +58,19 @@ from ..render.semantics import (
 from ..resolve import Index, build_index, iter_nodes
 from ..symbols import BUSWAY_H, DASH, PLC_SLOT_W, Symbol, offpage, symbol_for
 from ..units import fmt
-from .routing import LANE, End, Obstacles, _hit, _seg_cost, boxes_union, place_box, place_label, route, text_box
+from .routing import (
+    LANE,
+    End,
+    Obstacles,
+    _hit,
+    _seg_cost,
+    boxes_union,
+    place_box,
+    place_label,
+    route,
+    route_grid,
+    text_box,
+)
 
 GAP = 5.0  # vertical gap between two symbols in series
 BUS_GAP = 3.75  # between a symbol and its busbar
@@ -862,8 +874,9 @@ DEVICE_AXIS_MM = 30.0  # length of the reserved axis below a load
 
 
 def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], view: View, lang: str,
-                   obs: Obstacles, pitch: float) -> list[LNode]:
-    """Auxiliary devices whose home node is on this sheet, each in the free space nearest its partner."""
+                   obs: Obstacles, pitch: float, left_of: Callable[[LNode], bool] | None = None) -> list[LNode]:
+    """Auxiliary devices whose home node is on this sheet, each in the free space nearest its partner
+    (``left_of(partner)``: on its left, the side its links can reach)."""
     homes = _device_homes(doc)
     placed: dict[str, LNode] = {n.node.id: n for n in everything if n.kind == "node" and n.node is not None and n.node.id}
     todo = [d for d in doc.devices if d.id and homes.get(d.id) in placed]
@@ -891,6 +904,8 @@ def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], v
             assert u is not None
             pab = partner.ann_box()
             pref_x = (pab[2] if pab else partner.x + partner.sym.right) + 4.0
+            if left_of is not None and left_of(partner):
+                pref_x = partner.x - partner.sym.left - 4.0 - (u[2] - u[0])
             free = Obstacles(obs.boxes, obs.vwires + axes, obs.hlines, obs.buses)
             x0, y0 = place_box(free, u[2] - u[0], u[3] - u[1], (pref_x, partner.y), pad=DEVICE_PAD_MM)
             ln.x, ln.y = x0 - u[0], y0 - u[1]
@@ -1490,6 +1505,14 @@ SWITCHED_LINKS = ("transfer", "tie", "bypass", "parallel", "infeed")  # power li
 OPEN_POWER = Style(dash=(3.0, 1.2))  # normally-open power link: long dash (control links: short dash)
 
 
+def interlock_mark(x: float, y: float, horizontal: bool = True) -> Polyline:
+    """Mechanical interlock (IEC 60617): a triangle pointing at the dashed link, at (x, y) on it (drawn, not a
+    character: the PDF fonts have no triangle)."""
+    if horizontal:
+        return Polyline([(x - 0.6, y - 1.1), (x + 0.6, y - 1.1), (x, y)], Style(width=THIN), closed=True)
+    return Polyline([(x + 1.1, y - 0.6), (x + 1.1, y + 0.6), (x, y)], Style(width=THIN), closed=True)
+
+
 def _link_style(kind: str, normally_open: Optional[bool] = None) -> Style:
     # control / other links: dashed; earth: dash-dot; data: fine dotted; normally-open power link: long dash
     if normally_open and kind in SWITCHED_LINKS:
@@ -1533,14 +1556,17 @@ def _end(n: LNode, kind: str, fed: bool = False, toward: Optional[float] = None,
         return End(n.x, n.y - 1.2)
     if kind in POWER_LINKS and not n.children and n.sym.has_output:
         return End(n.x, n.out_y + 0.7, "down")
-    return End(n.x - n.sym.left - 0.8, n.y + max(n.sym.height, 1) / 2)
+    return End(n.x - n.sym.left - n.sym.extra.get("end_gap", 0.8), n.y + n.sym.extra.get("end_y", max(n.sym.height, 1) / 2))
 
 
 def _right_end(n: LNode) -> Optional[End]:
     """The right side of a device, below its text (never through it), if the symbol is tall enough."""
     ab = n.ann_box()
-    y = max(n.y + max(n.sym.height, 1) / 2, ab[3] + 0.8 if ab else 0.0)
-    return End(n.x + n.sym.right + 0.8, y, "right") if y < n.y + n.sym.height - 0.4 else None
+    if "right_end" in n.sym.extra:  # a given point (multi-line: right end of the operating line of the poles)
+        x, y = n.sym.extra["right_end"]
+        return End(x, y, "right") if not ab or ab[3] + n.sym.extra.get("text_gap", 0.8) < y or ab[0] > x + 3.0 else None
+    y = max(n.y + max(n.sym.height, 1) / 2, ab[3] + n.sym.extra.get("text_gap", 0.8) if ab else 0.0)
+    return End(n.x + n.sym.right + n.sym.extra.get("end_gap", 0.8), y, "right") if y < n.y + n.sym.height - 0.4 else None
 
 
 def _port_slot(n: LNode, port: Optional[str]) -> Optional[int]:
@@ -1738,7 +1764,34 @@ def _band_device(link: Any, dev: NodeBase, pts: list[tuple[float, float]], style
 
 def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, view: View, obs: Obstacles,
                 y_load: float, lang: str = "en", node_folio: Callable[[str], Optional[int]] | None = None,
-                band: Optional[AltBand] = None) -> None:
+                band: Optional[AltBand] = None, only: Optional[set[int]] = None,
+                sides: Optional[dict[int, tuple[str, str]]] = None) -> dict[int, tuple[str, str]]:
+    """``only``: indexes of the links to draw (the multi-line view draws its power links itself).
+
+    Multi-line (grid routing): returns the side by which each link leaves its two ends; given back as
+    ``sides`` for a second drawing, the links sharing a side of a device get their points in the order of
+    the devices they go to (no crossing at the device)."""
+    chosen: dict[int, tuple[str, str]] = {}
+    slots: dict[tuple[str, str], list[int]] = {}  # (node, side) -> links, in the order of their other ends
+    if sides:
+        pos = {n.id: (n.x, n.y + n.sym.height / 2) for r in roots for n in r.walk()}
+        for i, (sa, sb) in sides.items():
+            link = doc.links[i]
+            for nid, side in ((link.from_, sa), (link.to, sb)):
+                slots.setdefault((nid, side), []).append(i)
+        for (nid, side), ids in slots.items():
+            nx_, ny_ = pos.get(nid, (0.0, 0.0))
+
+            def key(j: int, nid: str = nid, side: str = side, nx_: float = nx_, ny_: float = ny_) -> tuple:
+                """No crossing at the device: the exit nearest the turn takes the inner lane (below a device:
+                the targets on the left first, farthest outermost; beside it: the targets above first)."""
+                other = doc.links[j].to if doc.links[j].from_ == nid else doc.links[j].from_
+                x, y = pos.get(other, (0.0, 0.0))
+                if side == "down":
+                    return (0, x) if x < nx_ else (1, -x)
+                d = abs(x - nx_)  # targets above: nearest on top; below: nearest at the bottom
+                return (0, -round(y), d) if y < ny_ - 0.5 else (1, -round(y), -d)
+            ids.sort(key=key)
     # links leaving a PLC channel ('slot.channel') fan out under their module, one lane per channel
     # (farthest target on the outer lane, nearest target routed first on the upper channel: no crossings)
     lanes: dict[tuple[str, int], list[tuple[float, int]]] = {}
@@ -1756,7 +1809,22 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         for j, (dist, i) in enumerate(right):
             lane_of[i] = (j, len(group))
             first[i] = abs(dist)
-    order = sorted(range(len(doc.links)), key=lambda i: (i in first, first.get(i, 0.0)))
+    order = sorted((i for i in range(len(doc.links)) if only is None or i in only),
+                   key=lambda i: (i in first, first.get(i, 0.0)))
+    if obs.grid:  # the straight drop under every PLC port is kept for its own link
+        for i in order:
+            link = doc.links[i]
+            for nid, port in ((link.from_, link.from_port), (link.to, link.to_port)):
+                n = _find(roots, nid)
+                slot = _port_slot(n, port) if n is not None else None
+                if slot is not None:
+                    j, count = lane_of.get(i, (0, 1))
+                    room = (7.0 if slot == 0 else PLC_SLOT_W) - 1.2
+                    gap = min(max(1.0, 0.9 * obs.min_lane), room / max(count - 1, 1))
+                    px = n.x + n.sym.extra["ports"][slot] + (j - (count - 1) / 2) * gap
+                    py = n.y + n.sym.extra.get("port_y", n.sym.height)
+                    obs.add_vline(px, py, py + 3.0)
+                    break
     nodes = {n.id: n for n, _, _ in iter_nodes(doc)}
     fed_ok = _fed_ok(roots)
     y_max = y_load - 1.5
@@ -1790,6 +1858,9 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
     done = _draw_band(doc, band, roots, tap_end, group_of, obs, lang) if band is not None else set()
     labels: list[tuple[int, list[tuple[float, float]], str, float, str]] = []
     side_ends: dict[tuple[str, float, float], list[str]] = {}
+    right_used: dict[str, int] = {}  # multi-line: links already leaving each node by its right side
+    bottom_used: dict[str, int] = {}  # ... and by the bottom of a final device
+    turns: dict[tuple[float, float], float] = {}  # ends turning down out of an operating line -> x of that line
     offpage: dict[str, float] = {}  # offset taken by the off-sheet stubs of each node
     landings: dict[str, list[int]] = {}  # infeeds landing on the input conductor of each node, in drawing order
     for i in order:
@@ -1870,6 +1941,14 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         for k, (n, e) in enumerate(zip((a, b), ends)):  # links of different kinds on the side of a node:
             if e.side == "left":                         # one point per kind (a power feed, a data bus...)
                 kinds = side_ends.setdefault((n.id, round(e.x, 2), round(e.y, 2)), [])
+                if obs.min_lane > 0:  # multi-line: one point per link, spread over the side (see below)
+                    if str(i) not in kinds:
+                        kinds.append(str(i))
+                    count = sum(1 for j in order if (doc.links[j].from_ == n.id and not doc.links[j].from_port)
+                                or (doc.links[j].to == n.id and not doc.links[j].to_port))
+                    step = min(max(1.5, obs.min_lane), max(n.sym.height - 1.0, 0.0) / max(count - 1, 1))
+                    ends[k] = End(e.x, e.y + step * (kinds.index(str(i)) - (count - 1) / 2))
+                    continue
                 if link.kind not in kinds:
                     kinds.append(link.kind)
                 shift = kinds.index(link.kind)
@@ -1884,7 +1963,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 continue
             j, count = lane_of.get(i, (0, 1))
             room = (7.0 if slot == 0 else PLC_SLOT_W) - 1.2
-            gap = min(1.0, room / max(count - 1, 1))
+            gap = min(max(1.0, 0.9 * obs.min_lane), room / max(count - 1, 1))  # multi-line: drawn reduced
             px = n.x + n.sym.extra["ports"][slot] + (j - (count - 1) / 2) * gap
             ends[k] = End(px, n.y + n.sym.extra.get("port_y", n.sym.height), "down")
             port_label = (k, str(port))
@@ -1897,13 +1976,81 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         if on_conductor:  # infeed landing on an input conductor: never come back up from below the feeder
             hi = min(hi, max(e.y for e in ends) + 0.5)
         carries = link.device is not None and link.kind in SWITCHED_LINKS
-        opts = {"record": not carries, "lane": 3.5 if carries else LANE if link.kind in POWER_LINKS else SIGNAL_LANE,
+        opts = {"record": not carries,
+                "lane": max(3.5 if carries else LANE if link.kind in POWER_LINKS else SIGNAL_LANE, obs.min_lane),
                 "solid": link.kind in POWER_LINKS and not style.dash}
-        if link.kind not in SWITCHED_LINKS + ("earth",) and port_label is None and i not in tap_end:
+        pts: list[tuple[float, float]] = []
+        ml = obs.min_lane > 0  # multi-line: also beside a PLC port and for earth links, right ends spread
+        if link.kind not in SWITCHED_LINKS and i not in tap_end and (
+                ml or (link.kind != "earth" and port_label is None)):
             # a control, data or measure link leaves each device by the side that gives the clearest route
-            alts = [[e] + ([r] if e.side == "left" and (r := _right_end(n)) is not None else [])
-                    for n, e in zip((a, b), ends)]
-            if len(alts[0]) > 1 or len(alts[1]) > 1:
+            alts = []
+            for k, (n, e) in enumerate(zip((a, b), ends)):
+                if ml and link.kind == "earth" and "pe_end" in n.sym.extra:  # on the PE conductor of the feeder
+                    alts.append([End(*n.sym.extra["pe_end"], "right")])
+                    continue
+                if ml and n.sym.name in ("earth", "earth_bar"):  # an earth electrode / bar: on its terminal, the
+                    alts.append([End(n.x, n.y, s) for s in ("up", "left", "right")])  # conductor turning down
+                    continue
+                r = _right_end(n) if e.side == "left" and (port_label is None or port_label[0] != k) else None
+                if r is not None and ml:  # the links already leaving by this side: one point each, below
+                    count = sum(1 for j in order if n.id in (doc.links[j].from_, doc.links[j].to))
+                    step = min(obs.min_lane, max(n.y + n.sym.height - 0.4 - r.y, 0.0) / count)
+                    shift = step * right_used.get(n.id, 0)
+                    if n.sym.extra.get("turn") and r is not None:  # out of the operating line, then straight
+                        tx = r.x + 2.0 + right_used.get(n.id, 0) * obs.min_lane  # down: never its continuation
+                        turns[(round(tx, 6), round(r.y, 6))] = r.x
+                        r = End(tx, r.y, "down")
+                    else:
+                        r = End(r.x, r.y + shift, "right") if step >= 0.6 else None
+                bottom = []
+                if ml and n.sym.extra.get("free_below") and (port_label is None or port_label[0] != k):
+                    count = sum(1 for j in order if n.id in (doc.links[j].from_, doc.links[j].to))
+                    w = n.sym.left + n.sym.right
+                    bottom = [End(n.x - n.sym.left + w * (bottom_used.get(n.id, 0) + 1) / (count + 1),
+                                  n.y + n.sym.extra.get("bottom_y", n.sym.height) + 0.5, "down")]
+                alts.append([e] + ([r] if r is not None else []) + bottom)
+            if obs.grid and sides and i in sides:  # second drawing: each end on its side, in its slot
+                for k, (n, side) in enumerate(zip((a, b), sides[i])):
+                    pick = next((e for e in alts[k] if e.side == side), alts[k][0])
+                    if n.sym.name in ("earth", "earth_bar"):  # one point, whatever the side
+                        alts[k] = [pick]
+                        continue
+                    ids = slots.get((n.id, side), [i])
+                    idx, count = ids.index(i) if i in ids else 0, len(ids)
+                    h = max(n.sym.height, 1.0)
+                    if side == "left" and count > 1 and (port_label is None or port_label[0] != k):
+                        base = _end(n, link.kind)  # middle of the side (before any spreading)
+                        top = n.y + n.sym.extra.get("body_top", 0.5)
+                        step = min(obs.min_lane, (n.y + h - 0.5 - top) / (count - 1))
+                        y = min(max(base.y + step * (idx - (count - 1) / 2), top), n.y + h - 0.5)
+                        pick = End(base.x, y, "left")
+                    elif side == "right":
+                        top = _right_end(n)
+                        if top is not None:
+                            step = min(obs.min_lane, max(n.y + h - 0.4 - top.y, 0.0) / count)
+                            pick = End(top.x, top.y + step * idx, "right")
+                    elif side == "down" and pick in alts[k] and n.sym.extra.get("free_below"):
+                        w = n.sym.left + n.sym.right
+                        pick = End(n.x - n.sym.left + w * (idx + 1) / (count + 1), pick.y, "down")
+                    alts[k] = [pick]
+            if obs.grid:  # multi-line: the route and the ends it uses chosen together, any number of corners
+                xs_ = [e.x for e in alts[0] + alts[1]]
+                ys_ = [e.y for e in alts[0] + alts[1]]
+                window = (min(xs_) - 25.0, min(ys_) - 25.0, max(xs_) + 25.0, max(ys_) + 25.0)
+                pts, ka, kb = route_grid(obs, alts[0], alts[1], window, opts["lane"], record=not carries)
+                ends = [alts[0][ka], alts[1][kb]]
+                chosen[i] = (ends[0].side, ends[1].side)
+                for k, e in enumerate(ends):  # an end turning out of an operating line: its first stretch
+                    ox = turns.get((round(e.x, 6), round(e.y, 6)))
+                    if ox is not None and pts:
+                        pts = [(ox, e.y)] + pts if k == 0 else pts + [(ox, e.y)]
+                for n, e in zip((a, b), ends):
+                    if e.side == "right" or (round(e.x, 6), round(e.y, 6)) in turns:
+                        right_used[n.id] = right_used.get(n.id, 0) + 1
+                    elif e.side == "down":
+                        bottom_used[n.id] = bottom_used.get(n.id, 0) + 1
+            elif len(alts[0]) > 1 or len(alts[1]) > 1:
                 scored = []
                 for ea in alts[0]:
                     for eb in alts[1]:
@@ -1913,11 +2060,17 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                               step=1.0, record=False, lane=opts["lane"], cost_out=c)  # coarse: only to compare
                         scored.append((c[0], [ea, eb]))
                 ends = min(scored, key=lambda t: t[0])[1]
+                for n, e in zip((a, b), ends):
+                    if e.side == "right":
+                        right_used[n.id] = right_used.get(n.id, 0) + 1
+                    elif e.side == "down" and ml:
+                        bottom_used[n.id] = bottom_used.get(n.id, 0) + 1
                 lo = min(e.y for e in ends) - 30.0
                 hi = max(e.y for e in ends) + 30.0
                 if max(e.y for e in ends) < y_max:
                     hi = min(hi, y_max)
-        pts = route(obs, ends[0], ends[1], lo, hi, **opts)
+        if not obs.grid or not pts:
+            pts = route(obs, ends[0], ends[1], lo, hi, **opts)
         if not pts and on_conductor:  # e.g. a feeder leaving downwards: the channel must go below it after all
             pts = route(obs, ends[0], ends[1], lo, max(e.y for e in ends) + 30.0, **opts)
         if not pts:  # no free channel: leave this link out rather than fail the whole drawing
@@ -1926,6 +2079,12 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             _draw_link_device(link, link.device, pts, style, lg, obs, lang)
         else:
             lg.add(Polyline(pts, style))
+            if ml and link.kind == "interlock":  # a mechanical interlock (IEC 60617): a triangle on its link,
+                segs = sorted(zip(pts, pts[1:]), key=lambda s: (abs(s[0][1] - s[1][1]) > 1e-6,  # not a linkage
+                                                                -abs(s[0][0] - s[1][0]) - abs(s[0][1] - s[1][1])))
+                (p, q) = segs[0]
+                mx, my = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
+                lg.add(interlock_mark(mx, my, abs(p[1] - q[1]) < 1e-6))
         if on_conductor:  # infeed landing on the input conductor: junction dot
             lg.add(Circle(pts[-1], 0.45, Style(width=THIN, fill="#000000")))
         seq = pts if port_label is None or port_label[0] == 0 else pts[::-1]  # oriented PLC -> other end
@@ -1939,11 +2098,15 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             labels.append((i, seq, text, 1.6, "#000000"))
     # labels once every route is known, near the far end of their link (port labels: near the controlled device)
     for i, seq, txt, size, color in labels:
-        x, y, anchor = place_label(obs, seq, text_width(txt, size), size, from_end=True)
-        group_of(i).add(Text((x, y), txt, size, anchor, color=color))
+        # multi-line: a link label with no free place along its route is left out (the single-line has it)
+        at = place_label(obs, seq, text_width(txt, size), size, from_end=True,
+                         optional=obs.label_channel and color == "#000000")
+        if at is not None:
+            group_of(i).add(Text((at[0], at[1]), txt, size, at[2], color=color))
     for i in sorted(groups):
         if groups[i].items:
             g.add(finish_link_group(groups[i]))
+    return chosen
 
 
 def _device_text(link: Any, dev: NodeBase, lang: str, compact: bool = True) -> list[str]:

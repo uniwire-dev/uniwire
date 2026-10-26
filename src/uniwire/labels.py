@@ -207,6 +207,17 @@ def cable_text(c: Optional[Cable]) -> str:
     return s
 
 
+def _protocols(names: list[str], width: int = 24) -> str:
+    """The protocols of a PLC on one short line: whole names only, an ellipsis for the ones left out."""
+    text = ""
+    for name in names:
+        joined = f"{text}, {name}" if text else name
+        if len(joined) > width and text:
+            return text + " …"
+        text = joined
+    return text
+
+
 def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> list[str]:
     """Text lines to the right of the symbol (without the tag, which the renderer adds in bold).
 
@@ -302,7 +313,7 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
     elif t == "plc":
         mods = g("modules") or []
         lines += [part_number(node) or "", _t("ann.modules", lang, count=len(mods)) if mods else "",
-                  ", ".join(g("protocols") or [])[:24]]
+                  _protocols(g("protocols") or [])]
     elif t == "power_supply":
         u = f"{fmt(g('u1_V'))}/{fmt(g('u2_V'))} V {g('output') or ''}".strip() if g("u1_V") and g("u2_V") else ""
         lines += [u, fmt(g("in_A"), " A") if g("in_A") else ""]

@@ -8,6 +8,36 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Multi-line view: the auxiliary devices (`devices`) and the control, interlock, trip, measure, data, key and earth
+  links are drawn, placed and routed as in the single-line view (beside the node they are linked to, clear of the
+  conductor bundles and the symbols), with a band above the feeder cables for their channels; a PLC is drawn with
+  its modules, its links leaving from the module they use (port label); a link whose other end is on another sheet
+  ends on a sheet reference.
+
+* Multi-line view fixes: an earth or equipotential bar in a board is on the PE only (it took every conductor), drawn
+  with its symbol; a single-phase transformer has a single-phase secondary (two unearthed conductors at 50 V or
+  less); a power link from a source with a PEN feeds the neutral of a target with N and PE (the genset neutral of a
+  4-pole changeover was missing); a current transformer is a ring on each phase, a connector a socket and plug on
+  each conductor (no box repeating the tag); a mechanical interlock carries its triangle (it was missing in PDFs),
+  between the delta and star contactors of a star-delta starter too. Split-phase (120/240 V): a "2P" breaker
+  switches L1 and L2, the neutral going straight through, and a 240 V motor takes L1 L2 (L2 was lost). The PEN
+  splits into N and PE at the entry of a board declared TN-S or TN-C-S (residual-current devices took the PEN). A
+  genset of a TN-C-S installation has its own N and PE (its 4-pole breaker was drawn with 3 poles). An inverter or
+  UPS at the head of the tree takes its AC input on top (it landed on its backup outputs). A power link carries the
+  PE of its cable (solid, never drawn open) and its label, runs below the bars of a sub-board beside its source, and
+  reaches the outputs of the last device of a board from its right (it wound round the device). An equipped spare
+  way is its grey device with its rating, not a load fed straight from the bars. A control link leaves the operating
+  line of a contactor by turning down at once, never as its continuation. A drive fed in single phase delivers the
+  three phases of its three-phase motor (U V W, it delivered one phase and the neutral); a DC motor is marked "=";
+  the PE passes beside a transformer to its earthed secondary side, or ends on the earthed enclosure when no PE
+  leaves it (it ran into the windings); the cable of a feeder is no longer written on the run behind a drive or
+  converter; the conductors of a power link stay solid when its device shows the normally open contacts.
+
+* PLC annotation: the protocols are cut on whole names, with an ellipsis ("Modbus TC" was printed).
+
+* Examples 21 and 29: the feeders of the refrigeration board and of the smoke-control board carry a neutral
+  (their 1P+N circuits need one).
+
 * Drawings in Spanish (`meta.lang` "es") and Simplified Chinese ("zh"): title block, notes, legends, table
   headings, type names and the short texts in symbols, with IEC 60050 terms (GB/T terms for Chinese; neutral terms
   where Spain and Argentina differ). Spanish numbers take a decimal comma. Messages stay in English.

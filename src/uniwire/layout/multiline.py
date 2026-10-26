@@ -68,10 +68,11 @@ from ..render.semantics import (
     ref_group,
 )
 from ..resolve import Index, build_index, iter_nodes
-from ..symbols import ABBREVIATIONS, symbol_for
+from ..symbols import ABBREVIATIONS, M, Symbol, symbol_for
 from ..symbols import grid as grid_symbol
 from ..units import fmt
-from .engine import DC_PORT_TYPES, SheetLayout, SheetSpec, _is_dc, drawing_area
+from .engine import DC_PORT_TYPES, LNode, SheetLayout, SheetSpec, _is_dc, drawing_area, interlock_mark, sheet_node_ids
+from .routing import FRAME_CROSS, Box, Obstacles, boxes_union
 
 S = 3.0  # spacing of the conductors of a bundle (mm)
 PAD = 3.0  # first conductor of a column, from the column's left edge
@@ -150,6 +151,9 @@ class _Assigner:
             self.split = {id(b) for b in _first_boards(doc)}
         else:
             self.split = set()
+        # North American split-phase (120/240 V): a "2P" breaker switches L1 and L2, a 3-wire cable is L1 L2 G
+        self.split_phase = doc.installation.system == "split-phase" or any(
+            getattr(n, "system", None) == "split-phase" for n in nodes)
         for src in doc.sources:
             self._walk(src, None, False)
 
@@ -169,6 +173,9 @@ class _Assigner:
             k, n = SOCKET_POLES[poles]
             ks.append(k)
             ns.append(n)
+        elif poles == "2P" and self.split_phase:
+            ks.append(2)
+            ns.append(None)
         elif poles in POLES:
             k, n = POLES[poles]
             ks.append(k)
@@ -179,13 +186,18 @@ class _Assigner:
             if m:
                 total = int(m[1])
                 live = total - 1 if (m[2] in "Gg" or (total % 2 == 1 and not cable.pen)) else total
-                k, n = {2: (1, True), 3: (3, False), 4: (3, True)}.get(live, (None, None))
+                k, n = ({2: (2, False), 3: (2, True)} if self.split_phase else
+                        {2: (1, True), 3: (3, False), 4: (3, True)}).get(live, (None, None))
                 ks.append(k)
                 ns.append(n)
         if t == "motor":
             phases = getattr(node, "phases", None)
-            ks.append(1 if phases == 1 else 3)
-            ns.append(True if phases == 1 else False)
+            if phases == 1 and self.split_phase:  # 240 V on L1 L2 (no neutral), or 120 V on a phase and N
+                ks.append(None)
+                ns.append(False)
+            else:
+                ks.append(1 if phases == 1 else 3)
+                ns.append(True if phases == 1 else False)
         system = getattr(node, "system", None)
         if t in ("board", "busbar") and system in SYSTEMS:
             k, n = SYSTEMS[system]
@@ -224,7 +236,9 @@ class _Assigner:
 
     def select(self, node: Any, parent: list[str], parent_node: Any = None) -> list[str]:
         t = node.type
-        if t == "earth":
+        if t == "earth_bar" and getattr(node, "kind", None) == "neutral_bar":
+            return [c for c in parent if c in ("N", "PEN")][-1:] or parent[-1:]
+        if t in ("earth", "earth_bar"):  # an earth electrode or bar is on the protective conductor only
             pe = [c for c in parent if c in ("PE", "PEN")]
             return pe[-1:] or parent[-1:]
         if any(c in DC for c in parent):
@@ -296,10 +310,14 @@ class _Assigner:
             stack.extend(n.children)
         return self.doc.installation.earthing
 
-    def _transformer_out(self, node: Any) -> tuple[list[str], bool]:
+    def _transformer_out(self, node: Any, inp: Optional[list[str]] = None) -> tuple[list[str], bool]:
         u2 = getattr(node, "u2_V", None)
         if u2 is not None and u2 > 1000:
             return list(PHASES), False
+        if inp is not None and len([c for c in inp if c in PHASES]) == 1:  # single-phase transformer
+            if u2 is not None and u2 <= 50:  # safety extra-low voltage: two conductors, never earthed
+                return ["L1", "N"], False
+            return self.lv("1P+N", self._downstream_earthing(node))
         m = _VECTOR.match(getattr(node, "coupling", None) or "")
         neutral = m is None or m[2].endswith("n")
         system = next((getattr(n, "system", None) for n in node.children if getattr(n, "system", None)), None)
@@ -330,7 +348,10 @@ class _Assigner:
             return list(PHASES), out, pending
         if t == "grid" and self._is_mv(node):
             return list(PHASES), list(PHASES), False
-        conds, pending = self.lv(getattr(node, "system", None) or inst.system, inst.earthing)
+        earthing = inst.earthing
+        if t == "generator" and earthing == "TN-C-S":  # the PEN is the utility's: a genset has its N and PE
+            earthing = "TN-S"
+        conds, pending = self.lv(getattr(node, "system", None) or inst.system, earthing)
         return conds, conds, pending
 
     def _walk(self, node: Any, parent: Optional[list[str]], pending: bool, parent_node: Any = None) -> None:
@@ -343,10 +364,14 @@ class _Assigner:
             src = {c: (c if c in parent else "PEN" if c in ("N", "PE") and "PEN" in parent else None) for c in inp}
             out = list(inp)
             if t == "transformer":
-                out, pending = self._transformer_out(node)
+                out, pending = self._transformer_out(node, inp)
             elif t in CONVERTERS and not any(c in DC for c in inp) and not _dc_side(node):
                 out = list(DC)
-        if "PEN" in inp and id(node) in self.split:
+            elif _vfd_to_three_phase(node, inp):  # a drive fed in single phase makes the motor's three phases
+                out = list(PHASES) + (["PE"] if "PE" in inp else [])
+        # the PEN splits into N and PE where asked, or at the entry of a board declared TN-S / TN-C-S
+        if "PEN" in inp and (id(node) in self.split or (t in ("board", "busbar") and
+                                                         getattr(node, "earthing", None) in ("TN-S", "TN-C-S"))):
             inp = _sorted([c for c in inp if c != "PEN"] + ["N"] + (["PE"] if self.show_pe else []))
             src = {c: src.get(c, "PEN") if c not in ("N", "PE") else "PEN" for c in inp}
             out = list(inp)
@@ -370,6 +395,12 @@ class _Assigner:
                 self._walk(c, list(DC), False, node)
             else:
                 self._walk(c, out, pending, node)
+
+
+def _vfd_to_three_phase(node: Any, inp: list[str]) -> bool:
+    return (node.type == "motor_starter" and getattr(node, "method", None) == "vfd"
+            and len([c for c in inp if c in PHASES]) < 3
+            and any(c.type == "motor" and getattr(c, "phases", None) == 3 for c in node.children))
 
 
 def _board_below(node: Any) -> bool:
@@ -406,12 +437,15 @@ def switched(node: Any, conds: list[str]) -> tuple[list[str], list[str]]:
     """Poles of a switching device: (protected / switched conductors, unprotected neutral pole).
 
     ``1P`` / ``3P``: the phases only (the neutral, if any, goes straight through); ``1P+N`` / ``3P+N``: the
-    phases plus a neutral pole without protection; ``2P`` / ``4P``: identical poles on every live conductor.
+    phases plus a neutral pole without protection; ``2P`` / ``4P``: identical poles on every live conductor
+    (a ``2P`` on two phases, split-phase 240 V: those two, the neutral straight through).
     A PEN conductor is never switched."""
     phases = [c for c in conds if c in PHASES or c in DC]
     has_n = "N" in conds
     poles = getattr(node, "poles", None)
     t = node.type
+    if poles == "2P" and len([c for c in phases if c in PHASES]) == 2 and t != "rcd":
+        return phases, []  # split-phase 2P: L1 and L2 (240 V), the neutral goes straight through
     if t in ("rcd",) or poles in ("2P", "4P") or (poles is None and t != "fuse"):
         return phases + (["N"] if has_n else []), []
     if poles in ("1P+N", "3P+N") and has_n:
@@ -453,6 +487,9 @@ class MLNode:
     extra_taps: dict[str, list[float]] = field(default_factory=dict)  # link taps on the rails, per conductor
     dc_side: int = 0  # last children: the DC side of an inverter/charger, fed from its DC pair, not the AC outputs
     dc_at: float = 0.0  # where the columns of the DC side start, from the column's left edge
+    pad_bottom: float = 0.0  # room at the bottom of a board frame for the signal links of its devices
+    link_gap: float = 0.0  # room between the poles and the text, for the control links of the operating line
+    below: float = 0.0  # room under a final device for the landings of a power link (inside its board frame)
 
     @property
     def id(self) -> str:
@@ -488,8 +525,9 @@ class MLNode:
         """Drawn on the common baseline of the loads."""
         if self.kind == "stub":
             return True
-        return self.kind == "node" and not self.children and not self.root and \
-            (registry.is_load(self.type) or self.type in BOTTOM_TYPES)
+        equipped = self.type == "spare" and (getattr(self.node, "in_A", None) or getattr(self.node, "poles", None))
+        return self.kind == "node" and not self.children and not self.root and not equipped and \
+            (registry.is_load(self.type) or self.type in BOTTOM_TYPES)  # an equipped spare way: its (grey) device
 
     def xi(self, c: str) -> float:
         return self.x_left + self.off_in[c]
@@ -515,15 +553,19 @@ class MLNode:
         if self.type in ("transformer", "generator") or (self.type == "motor" and self.bottom):
             cx, rad = _circle(self)
             r = max(r, cx + rad)
+            if self.type == "transformer" and "PE" in self.off_in:  # the PE beside it, or its earth symbol
+                r = max(r, cx + rad + (1.0 if "PE" in self.out else 3.5))
         elif self.type in CONTACT_TYPES and self.type in ("rcd", "rcbo", "main_breaker"):
             r = max(r, max(live) + 2.2)
+        elif self.type == "plc":  # the single-line PLC symbol: head on the supply, then its modules
+            r = max(r, _plc_axis(self) + symbol_for(self.node).right)
         elif self.type not in CONTACT_TYPES:  # boxes drawn across the conductors
             r += 1.5
         sets = _starter_sets(self.node) if self.type == "motor_starter" else 0
         if sets:  # the other contactors of a reversing or star-delta starter, right of all its conductors
             phases = [o for c, o in self.off_in.items() if c in PHASES] or [PAD]
             r = max(r, self.lanes_max() + sets * ((len(phases) - 1) * S + STARTER_GAP))
-        return r + 0.8
+        return r + 0.8 + self.link_gap
 
     def block_h(self) -> float:
         return max(self.h, len(self.ann) * ANN_LINE * self.ann_size / ANN_SIZE + 0.6 if self.ann else 0.0)
@@ -533,7 +575,7 @@ class MLNode:
         return self.rail_y0 + (len(self.out) - 1) * S
 
     def content_bottom(self) -> float:
-        b = self.y + self.block_h()
+        b = max(self.y + self.block_h(), self.y + self.h + self.below)
         if self.rail_y0 is not None:
             b = max(b, self.rails_bottom())
         return b
@@ -542,7 +584,7 @@ class MLNode:
 def _circle(ln: MLNode) -> tuple[float, float]:
     """Centre (relative x) and radius of a machine / transformer drawn across its conductors."""
     if ln.type == "transformer":
-        offs = [o for c, o in ln.off_out.items() if c != "PE"] + list(ln.off_in.values())
+        offs = [o for c, o in ln.off_out.items() if c != "PE"] + [o for c, o in ln.off_in.items() if c != "PE"]
     else:
         offs = [o for c, o in ln.off_in.items() if c != "PE"]
     offs = offs or [PAD]
@@ -551,6 +593,21 @@ def _circle(ln: MLNode) -> tuple[float, float]:
 
 
 # ------------------------------------------------------------ construction
+def _plc_axis(ln: MLNode) -> float:
+    """x of the head of a PLC (relative to the column's left edge): the middle of its supply conductors."""
+    xs = [o for c, o in ln.off_in.items() if c != "PE"] or [PAD]
+    return (min(xs) + max(xs)) / 2
+
+
+PLC_TOP = 1.5  # supply conductors above the body of a PLC
+
+
+def _plc_origin(ln: MLNode) -> tuple[float, float]:
+    """Origin of the single-line PLC symbol drawn on ``ln``: its head on the supply conductors, its body
+    ``PLC_TOP`` below the top of the node (the symbol's own lead, 0.8 M long, is replaced by the conductors)."""
+    return ln.x_left + _plc_axis(ln), ln.y + PLC_TOP - 0.8 * M
+
+
 def _build(node: NodeBase, spec: SheetSpec, info: dict[int, Conductors], is_root: bool) -> MLNode:
     c = info[id(node)]
     if not is_root and node.id in spec.detached:
@@ -615,6 +672,8 @@ def _height(ln: MLNode) -> float:
         return 11.0
     if t == "earth":
         return 6.0
+    if t == "earth_bar":
+        return symbol_for(ln.node).height
     if ln.root and t in SOURCE_TYPES:
         return 11.0
     return 11.0
@@ -661,8 +720,10 @@ def _starter_extra(node: Any, xs: list[float], y: float, h: float, last: float =
             items += [Line((xr, bottom), (xr, by)), Line((xr, by), (xl, by)), dot(xl, by)]
         lm = _blade_mid(xs[-1], y)
         rm = _blade_mid(first[0], yt)
-        items += [Line((lm[0] + 0.4, lm[1]), (rm[0] - 0.4, rm[1]), DASH),
-                  Text(((lm[0] + rm[0]) / 2, min(lm[1], rm[1]) - 0.6), "▽", 1.4, "middle")]
+        # level with the line contactor's linkage, down between the last conductor (PE) and the reverse contactor
+        mx = (x0 - STARTER_GAP + first[0]) / 2
+        items += [Polyline([(lm[0] + 0.4, lm[1]), (mx, lm[1]), (mx, rm[1]), (rm[0] - 0.4, rm[1])], DASH),
+                  interlock_mark((lm[0] + x0 - STARTER_GAP) / 2, lm[1])]
         return items
     # star-delta: delta contactor outputs to W2 U2 V2, star contactor shorting them
     x1 = first[-1] + STARTER_GAP
@@ -675,6 +736,9 @@ def _starter_extra(node: Any, xs: list[float], y: float, h: float, last: float =
         items += _contact(xy, yt, "arc", ht)
     items += _link(star, yt)
     items += [Line((star[0], yt), (star[-1], yt))]  # the star point, joining the tops of the star contactor
+    # the delta and star contactors never close together: mechanically interlocked (the triangle between them)
+    dm, sm = _blade_mid(first[-1], yt), _blade_mid(star[0], yt)
+    items += [Line((dm[0] + 0.4, dm[1]), (sm[0] - 1.0, sm[1]), DASH), interlock_mark((dm[0] + sm[0] - 0.6) / 2, dm[1])]
     return items
 
 
@@ -703,6 +767,8 @@ def _feeder_cable(ln: MLNode, parent: dict[int, MLNode]) -> Optional[MLNode]:
             return n
         p = parent.get(id(n))
         if p is None or p.rails or p.is_board or p.type == "busbar":
+            return None
+        if {c for c in p.inp if c in LIVE} != {c for c in p.out if c in LIVE}:  # a drive or converter between
             return None
         n = p
     return None
@@ -745,6 +811,10 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
             node = ln.node
             feeds_bus = any(len(d.children) >= 2 for d in ln.walk())
             lines = [x for x in annotation(node, lang, show_label=feeds_bus) if x]
+            if ln.type == "spare":  # a spare way: what it is kept for, its rating
+                in_a = getattr(node, "in_A", None)
+                lines = [x for x in (node.label or registry.label("spare", lang), f"{fmt(in_a)}A" if in_a else "",
+                                     getattr(node, "poles", None) or "") if x]
             pn = part_number(node)
             tag = pn if view.tag_field == "part_number" and pn else node.ref
             if tag:
@@ -774,6 +844,11 @@ def _assign_offsets(ln: MLNode, parent: Optional[MLNode]) -> None:
                 ln.off_in[c] = top
     if not set(ln.out) & set(ln.off_in):
         ln.off_out = {c: PAD + i * S for i, c in enumerate(ln.out)}
+    elif ln.type == "transformer":  # new windings: the outputs in their own order, the PE last
+        ln.off_out = {c: PAD + i * S for i, c in enumerate(ln.out)}
+    elif ln.node is not None and _vfd_to_three_phase(ln.node, ln.inp):  # U V W from under the drive, the PE beside
+        a = min(o for c, o in ln.off_in.items() if c != "PE")
+        ln.off_out = {c: a + i * S for i, c in enumerate(ln.out)}
     else:
         ln.off_out = {}
         top = max(ln.off_in.values()) if ln.off_in else PAD - S
@@ -901,7 +976,7 @@ def _sub_boards(board: MLNode) -> list[MLNode]:
 
 def _frame_bottom(board: MLNode) -> float:
     return max([board.frame_top + BOARD_TOP] + [n.content_bottom() for n in _owned(board)]
-               + ([board.rails_bottom()] if board.rail_y0 is not None else [])) + 3.0
+               + ([board.rails_bottom()] if board.rail_y0 is not None else [])) + 3.0 + board.pad_bottom
 
 
 def _separate_boards(ln: MLNode) -> None:
@@ -1085,6 +1160,16 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
             g.add(Text((cx, c1[1] - 0.3 * r), sym[m[1]], 2.2, "middle", "middle"),
                   Text((cx, c2[1] + 0.3 * r), sym[m[2].upper().rstrip("N")], 2.2, "middle", "middle"))
         for c, x in lanes:
+            if c == "PE":  # the protective conductor passes beside the windings to the earthed secondary side
+                # (no PE out, SELV or IT: it ends on the earthed enclosure)
+                xp = max(ln.xo("PE") if "PE" in ln.out else x, cx + r + (1.0 if "PE" in ln.out else 2.0))
+                yb = y + h - 2.0 if "PE" in ln.out else c2[1]
+                pts = [(x, y), (x, y + 1.0), (xp, y + 1.0), (xp, yb)]
+                if "PE" in ln.out and ln.xo("PE") != xp:
+                    pts.append((ln.xo("PE"), yb))
+                g.add(cond_group(c, Polyline(pts)))
+                g.add(_dot(ln.xo("PE"), yb) if "PE" in ln.out else Group(_earth(xp, yb)))
+                continue
             dx = min(abs(x - cx), r * 0.95)
             g.add(cond_group(c, Line((x, y), (x, c1[1] - math.sqrt(r * r - dx * dx)))))
         _draw_out_from_circle(g, ln, c2, r, y + h)
@@ -1153,6 +1238,12 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
                 g.add(_dot(xs[c], yj))
         return g
 
+    if t == "earth_bar":  # the single-line symbol, on its conductor
+        sym = symbol_for(node)
+        for c, x in lanes:
+            g.add(cond_group(c, *[transform(i, x, y) for i in sym.items]))
+        return g
+
     if t == "earth":
         for _c, x in lanes:
             g.add(Line((x, y), (x, y + 2.0)), *_earth(x, y + 2.0)[1:])
@@ -1166,10 +1257,47 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
                   _lane_label(x - 0.2, y + h - 0.5, c, 1.0))
         return g
 
+    if t == "plc":  # the single-line symbol (head and modules): its links leave from the module they use
+        sym = symbol_for(node)
+        ox, oy = _plc_origin(ln)
+        g.add(*[transform(i, ox, oy) for i in sym.items[1:]])
+        for c in ln.inp:
+            if c != "PE":
+                g.add(cond_group(c, Line((xs[c], y), (xs[c], y + PLC_TOP))))
+        if ln.children:
+            for c in ln.out:
+                g.add(cond_group(c, Line((ln.xo(c), oy + sym.extra["port_y"]), (ln.xo(c), y + h))))
+        head = ox - sym.left + 0.2  # the PE ends on the head (never between its modules)
+        for c in ln.inp:
+            if c == "PE":
+                x, ym = xs[c], y + PLC_TOP + 1.5
+                g.add(cond_group(c, Polyline([(x, y), (x, ym), (head if x < head else ox + sym.left - 0.2, ym)])))
+        return g
+
+    if t == "instrument_transformer" and getattr(node, "kind", None) in (None, "ct"):  # a ring on each live conductor
+        through()
+        for c in [c for c in live if c.startswith("L")] or live:  # the phases (never the PEN)
+            g.add(Circle((xs[c], y + h / 2), 1.0))
+        return g
+
+    if t == "connector":  # socket and plug on each conductor, as in the single-line symbol
+        ym = y + h / 2
+        for c, x in lanes:
+            g.add(cond_group(c, Line((x, y), (x, ym - 0.6)), Line((x, ym + 0.6), (x, y + h))),
+                  Polyline([(x - 0.7, ym - 1.3), (x, ym - 0.6), (x + 0.7, ym - 1.3)]),
+                  Polyline([(x - 0.7, ym - 0.1), (x, ym + 0.6), (x + 0.7, ym - 0.1)]))
+        return g
+
     # meter and any other device: a box across the live conductors, the PE passing beside it
     boxed = [c for c in ln.inp if c not in ("PE",)] or list(ln.inp)
     x0 = min(xs[c] for c in boxed) - 1.5
     x1 = max(xs[c] for c in boxed) + 1.5
+    if node is not None and _vfd_to_three_phase(node, ln.inp):  # wide enough for U V W, the PE jogging past
+        x1 = max(ln.xo(c) for c in ln.out if c != "PE") + 1.5
+        if "PE" in xs and "PE" in ln.out:
+            x, xo = xs["PE"], ln.xo("PE")
+            g.add(cond_group("PE", Polyline([(x, y), (x, y + 0.75), (xo, y + 0.75), (xo, y + h)])))
+            drawn.add("PE")
     if t == "meter":
         g.add(*_box(x0, y + 1.5, x1, y + 9.5))
         g.add(Line((x0, y + 3.5), (x1, y + 3.5), Style(width=THIN)),
@@ -1182,7 +1310,12 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
         for c in ln.out:
             if c in boxed or c not in xs:
                 g.add(cond_group(c, Line((ln.xo(c), y + 9.5), (ln.xo(c), y + h))))
-    through([c for c in ln.inp if c not in boxed])
+        through([c for c in ln.inp if c not in boxed])
+    else:  # a final device: its PE ends on its enclosure
+        for c in ln.inp:
+            if c not in boxed:
+                x = xs[c]
+                g.add(cond_group(c, Polyline([(x, y), (x, y + 3.0), (x1 if x > x1 else x0, y + 3.0)])))  # high: links below
     return g
 
 
@@ -1200,7 +1333,7 @@ def _box_text(ln: MLNode) -> str:
         return node.ref or node.label or ""
     if t == "power_supply":
         return "~/="
-    return _abbr(t) or (node.ref or t[:4].upper())
+    return _abbr(t)  # never the tag: it is written beside the device
 
 
 def _draw_out_from_circle(g: Group, ln: MLNode, c: tuple[float, float], r: float, y_end: float) -> None:
@@ -1236,8 +1369,10 @@ def _draw_load(ln: MLNode, lang: str) -> Group:
     if t == "motor":
         cxr, r = _circle(ln)
         c = (ln.x_left + cxr, y + 3.0 + r)
+        dc = any(cd in DC for cd in ln.inp)
+        kind = "=" if dc else "1~" if getattr(node, "phases", None) == 1 else "3~"
         g.add(Circle(c, r), Text((c[0], c[1] - 0.7), "M", 2.6, "middle", "middle", bold=True),
-              Text((c[0], c[1] + 2.0), "1~" if getattr(node, "phases", None) == 1 else "3~", 1.5, "middle", "middle"))
+              Text((c[0], c[1] + 2.0), kind, 1.5, "middle", "middle"))
         terms = iter(("U", "V", "W"))
         for cond, x in lanes:
             if cond == "PE":
@@ -1247,7 +1382,7 @@ def _draw_load(ln: MLNode, lang: str) -> Group:
             dx = min(abs(x - c[0]), r * 0.95)
             g.add(cond_group(cond, Line((x, y), (x, c[1] - math.sqrt(r * r - dx * dx)))))
             name = next(terms, "") if cond in PHASES else cond
-            if getattr(node, "phases", None) == 1:
+            if getattr(node, "phases", None) == 1 or dc:
                 name = cond
             g.add(_lane_label(x, y + 2.6, name, 1.3))
         return g
@@ -1535,6 +1670,8 @@ class _Link:
     a_head: bool = False  # taps on the source rails before its first feeder (else after the last one)
     b_head: bool = False  # same on the target rails
     text: list[str] = field(default_factory=list)
+    alias: dict[str, str] = field(default_factory=dict)  # target conductor -> source conductor (N from a PEN)
+    from_right: bool = False  # landing under a final device from its right (nothing beside it there)
     # routed
     sx: dict[str, float] = field(default_factory=dict)  # x of the source tap / output conductor
     sy: dict[str, float] = field(default_factory=dict)
@@ -1575,22 +1712,30 @@ def _plan_links(doc: Document, roots: list[MLNode], lang: str) -> list[_Link]:
             dst = "side"
         elif link.kind in ("infeed", "transfer") and id(b) in parent:
             dst = "inp"
+        elif link.kind == "infeed" and b.root and b.type in CONVERTERS | {"ups"}:
+            dst = "top"  # an inverter / UPS at the head of the tree: its AC input on top, never on its outputs
         elif b.rails:
             dst = "rails"
         else:
             dst = "out"
         have = a.out
-        want = b.inp if dst in ("inp", "side") else b.out
-        conds = [c for c in sorted(want, key=lambda c: (b.off_in if dst in ("inp", "side") else b.off_out).get(c, 0))
-                 if c in have and c != "PE"]
+        want = b.inp if dst in ("inp", "side", "top") else b.out
+        # a source with a PEN (TN-C) feeds the neutral of a target that has N and PE (the PEN is split there)
+        alias = {"N": "PEN"} if "PEN" in have and "N" in want and "N" not in have else {}
+        conds = [c for c in sorted(want, key=lambda c: (b.off_in if dst in ("inp", "side", "top") else b.off_out).get(c, 0))
+                 if alias.get(c, c) in have and (c != "PE" or dst != "side")]  # the PE goes with the cable
         if not conds:
             continue
         last = max([order[id(d)] for d in a.walk()])
         left = order[id(b)] < order[id(a)] or (order[id(b)] <= last and a.rails and
                                                _column_index(a, b, parent) < len(a.children) / 2)
-        lk = _Link(link, a, b, conds, src, dst, left)
+        lk = _Link(link, a, b, conds, src, dst, left, alias=alias)
+        p = parent.get(id(b))
+        lk.from_right = dst == "out" and not b.children and left and p is not None and p.children[-1] is b
         if link.device is not None:
             lk.text = _device_text(link, link.device, lang)[:4]
+        elif link.label:  # written above the bundle, where its conductors run side by side
+            lk.text = [link.label]
         need = lk.n * S + TAP
         lk.a_head = left
         # on target rails coming from above (from a final device), the taps go after the last feeder: clear of
@@ -1606,7 +1751,7 @@ def _plan_links(doc: Document, roots: list[MLNode], lang: str) -> list[_Link]:
                 b.head += need
             else:
                 b.tail += need
-        else:  # the conductors come down beside the target column
+        elif not lk.from_right:  # the conductors come down beside the target column
             col = b
             while id(col) in parent and not parent[id(col)].rails:
                 col = parent[id(col)]
@@ -1629,22 +1774,30 @@ def _make_room(links: list[_Link], roots: list[MLNode]) -> None:
         return
     for lk in links:
         room = lk.n * LAND + 2.5
-        if lk.dst == "inp":
+        if lk.dst in ("inp", "top"):
             _shift(lk.b, room)
         elif lk.dst == "out":
             for c in lk.b.children:
                 _shift(c, room)
+            if not lk.b.children:
+                lk.b.below = max(lk.b.below, room)
     y0 = max(lk.a.rails_bottom() if lk.src == "rails" else lk.a.y + lk.a.h for lk in links)
     height = 2.0 + sum(lk.block_h() for lk in links)
     under = [n for r in roots for n in r.walk() if n.y > y0 + 1e-6]
-    if under:
-        dy = y0 + height + CHILD_GAP - min(n.frame_top if n.is_board else n.y for n in under)
+    # rails hanging below the band from a device above it (a sub-busbar beside the source): moved down too,
+    # or the lanes would run between its bars
+    rails = [n for r in roots for n in r.walk() if n.y <= y0 + 1e-6 and n.rail_y0 is not None and n.rail_y0 > y0 - 1e-6]
+    if under or rails:
+        tops = [n.frame_top if n.is_board else n.y for n in under] + [n.rail_y0 for n in rails]
+        dy = y0 + height + CHILD_GAP - min(tops)
         if dy > 0:
             for n in under:
                 n.y += dy
                 n.frame_top += dy
                 if n.rail_y0 is not None:
                     n.rail_y0 += dy
+            for n in rails:
+                n.rail_y0 += dy
     for lk in links:
         lk.top = y0 + 2.0  # provisional: set per lane in _route_links
     links[0].top = y0 + 2.0
@@ -1679,11 +1832,11 @@ def _route_links(links: list[_Link], roots: list[MLNode]) -> None:
         if lk.src == "rails":
             ry = {c: a.rail_y0 + i * S for i, c in enumerate(a.out)}  # type: ignore[operator]
             lk.sx = taps(a, lk, lk.a_head)
-            lk.sy = {c: ry[c] for c in lk.conds}
+            lk.sy = {c: ry[lk.alias.get(c, c)] for c in lk.conds}
             for c, x in lk.sx.items():
-                a.extra_taps.setdefault(c, []).append(x)
+                a.extra_taps.setdefault(lk.alias.get(c, c), []).append(x)
         else:
-            lk.sx = {c: a.xo(c) for c in lk.conds}
+            lk.sx = {c: a.xo(lk.alias.get(c, c)) for c in lk.conds}
             lk.sy = {c: a.y + a.h for c in lk.conds}
         if lk.dst == "rails":
             ry = {c: b.rail_y0 + i * S for i, c in enumerate(b.out)}  # type: ignore[operator]
@@ -1693,14 +1846,19 @@ def _route_links(links: list[_Link], roots: list[MLNode]) -> None:
             for c, x in xs.items():
                 b.extra_taps.setdefault(c, []).append(x)
         else:
-            offs = b.off_in if lk.dst in ("inp", "side") else b.off_out
+            offs = b.off_in if lk.dst in ("inp", "side", "top") else b.off_out
             right = b.x_left + min(offs[c] for c in lk.conds) - 2.5
             lk.dx = {c: right - k * S for k, c in enumerate(lk.conds)}
+            if lk.from_right:  # down beyond the device's text, then under the device: never across its inputs
+                base = b.x_left + b.right() + 1.0 + max([text_width(t, b.ann_size) for t in b.ann], default=0.0) + 2.5
+                lk.dx = {c: base + (lk.n - 1 - k) * S for k, c in enumerate(lk.conds)}
             for k, c in enumerate(lk.conds):
                 if lk.dst == "inp":
                     y = b.y - 1.5 - (lk.n - 1 - k) * LAND
-                elif lk.dst == "out":
-                    y = b.y + b.h + 1.5 + k * LAND
+                elif lk.dst == "top":  # the first conductor nearest to the top: no crossing on the way down
+                    y = b.y - 1.5 - k * LAND
+                elif lk.dst == "out":  # (from the right: the first conductor lowest, no crossing)
+                    y = b.y + b.h + 1.5 + ((lk.n - 1 - k) if lk.from_right else k) * LAND
                 else:  # side input of a transfer switch: arrows toward its blades
                     y = b.y + 3.0 + k * LAND
                 lk.land[c] = (b.x_left + offs[c], y)
@@ -1774,6 +1932,8 @@ def _draw_links(doc: Document, links: list[_Link], g: Group, lang: str) -> None:
                 cands = [lo + 0.5 * i for i in range(int((hi - lo - DEV_H) / 0.5) + 1)]
                 s0 = min(cands, key=lambda s: sum(1 for x in walls if s - 1.5 < x < max(s + DEV_H, s + tw) + 1.5) * 10
                          + 0.01 * abs(s + DEV_H / 2 - near_target))
+        if s0 is not None:  # the open contacts of the device show the normal state: the conductors stay solid
+            style = Style()
         for c in lk.conds:
             sx, sy, ly, dx = lk.sx[c], lk.sy[c], lk.lane[c], lk.dx[c]
             lx, lyy = lk.land[c]
@@ -1782,21 +1942,28 @@ def _draw_links(doc: Document, links: list[_Link], g: Group, lang: str) -> None:
                 end = min(x for x, _ in lk.land.values()) - 2.4 if lk.dst == "side" else lx  # beside the blades
                 pts.append((min(end, lx) if dx < lx else max(end, lx), lyy))
             cg = cond_group(c)
+            cs = Style() if c == "PE" else style  # the PE is never switched: never drawn as open
             if s0 is not None:
                 fwd = dx > sx
                 a, b = ((s0, ly), (s0 + DEV_H, ly)) if fwd else ((s0 + DEV_H, ly), (s0, ly))
-                cg.add(Polyline(pts[:2] + [a], style), Polyline([b] + pts[2:], style))
+                cg.add(Polyline(pts[:2] + [a], cs), Polyline([b] + pts[2:], cs))
             else:
-                cg.add(Polyline(pts, style))
+                cg.add(Polyline(pts, cs))
             if lk.dst == "side":
                 tip = pts[-1]
                 cg.add(Polyline([(tip[0] - 1.4, tip[1] - 0.7), tip, (tip[0] - 1.4, tip[1] + 0.7)],
                                 Style(fill="#000000"), closed=True))
+            elif lk.dst == "top":  # turning down into the top of the inverter / UPS
+                cg.add(Line((lx, lyy), (lx, lk.b.y), cs))
             else:
                 cg.add(_dot(lx, lyy))
             if lk.src == "rails":
                 cg.add(_dot(sx, sy))
             lg.add(cg)
+        if dev is None and lk.text:  # the link's label above its top lane, in the middle of the longest run
+            c0 = min(lk.conds, key=lambda c: lk.lane[c])
+            x0, x1 = sorted((lk.sx[c0], lk.dx[c0]))
+            lg.add(Text(((x0 + x1) / 2, lk.lane[c0] - 0.8), lk.text[0], ANN_SIZE, "middle"))
         if lk.dst == "out" and not lk.b.children:  # output conductors of a final device: extended to the landings
             for c in lk.conds:
                 x = lk.b.xo(c)
@@ -1832,13 +1999,226 @@ def _draw_links(doc: Document, links: list[_Link], g: Group, lang: str) -> None:
         g.add(finish_link_group(lg))
 
 
+# ------------------------------------------- auxiliary devices, signal links
+def _scene_obstacles(g: Group) -> tuple[Obstacles, dict[str, Box]]:
+    """What the sheet already shows, for placing the auxiliary devices and routing the links: texts and
+    symbols (boxes), conductors and rails (lines), board frames. Also returns the box of every drawn node
+    (its symbol, or the frame of a board), by id."""
+    obs = Obstacles()
+    boxes: dict[str, Box] = {}
+
+    def walk(item: Item) -> None:
+        if isinstance(item, Group):
+            cls = (item.cls or "").split()
+            if "uw-hit" in cls:  # invisible copy of a link's strokes
+                return
+            if item.id and "ml-sym" in cls:
+                # the protective conductor passing beside a device is not part of it: a link leaving beyond
+                # it would read as the PE carried on
+                pe = [i for i in item.items if isinstance(i, Group) and i.attrs.get("data-uw-cond") in ("PE", "PEN")
+                      and "pole" not in (i.cls or "")]
+                for i in pe:
+                    walk(i)
+                shape = [b for i in item.items if not isinstance(i, Text) and i not in pe and (b := bbox(i)) is not None]
+                box = boxes_union(shape) or bbox(item)
+                if box is not None:
+                    boxes.setdefault(item.id, box)
+                    obs.add_box(box)
+                for i in item.items:
+                    if isinstance(i, Text):
+                        obs.add_box(bbox(i))
+                return
+            if item.id and "board" in cls:
+                frame = next((i for i in item.items if isinstance(i, Rect)), None)
+                if frame is not None:
+                    boxes[item.id] = (frame.x, frame.y, frame.x + frame.w, frame.y + frame.h)
+            for i in item.items:
+                walk(i)
+        elif isinstance(item, Text):
+            obs.add_box(bbox(item))
+        elif isinstance(item, Rect):
+            if item.style.dash:
+                obs.add_frame((item.x, item.y, item.x + item.w, item.y + item.h))
+            else:
+                obs.add_box((item.x, item.y, item.x + item.w, item.y + item.h))
+        elif isinstance(item, (Line, Polyline)) and not getattr(item, "closed", False):
+            pts = [item.a, item.b] if isinstance(item, Line) else item.points
+            for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+                if abs(y0 - y1) < 1e-9:
+                    obs.add_hline(y0, x0, x1, bus=item.style.width >= THICK)
+                    obs.conductors.append(("h", y0, min(x0, x1), max(x0, x1)))
+                elif abs(x0 - x1) < 1e-9:
+                    obs.add_vline(x0, y0, y1)
+                    obs.conductors.append(("v", x0, min(y0, y1), max(y0, y1)))
+
+    walk(g)
+    return obs, boxes
+
+
+SIGNAL_PITCH = 2.2  # per link in the band reserved for the signal links above the feeder cables
+ML_FRAME_CLEAR = 6.0  # a link beside a frame: the multi-line sheet is often drawn reduced
+ML_LANE = 3.0  # between two parallel links (same reason; room for a label between them)
+
+
+def _signal_band(doc: Document, roots: list[MLNode]) -> float:
+    """Room above the feeder cables for the channels of the links drawn by ``_draw_annex``."""
+    from .engine import _device_homes
+
+    ids = {n.node.id for r in roots for n in r.walk() if n.node is not None and n.node.id}
+    ids |= {d for d, h in _device_homes(doc).items() if h in ids}
+    n = sum(1 for link in doc.links if link.kind not in ML_LINKS and link.from_ in ids and link.to in ids)
+    return n * SIGNAL_PITCH + 2.0 * ML_FRAME_CLEAR if n else 0.0  # clear of the board frames above
+
+
+def _pad_boards(doc: Document, roots: list[MLNode]) -> None:
+    """Room at the bottom of each board frame for the channels of the signal links of the devices inside it
+    (as in the single-line diagram): the frame does not hug the devices the links run under."""
+    ends: dict[str, int] = {}
+    for link in doc.links:
+        if link.kind not in ML_LINKS:
+            for nid in (link.from_, link.to):
+                ends[nid] = ends.get(nid, 0) + 1
+    for r in roots:
+        for b in r.walk():
+            if b.is_board:
+                n = sum(ends.get(m.node.id, 0) for m in _owned(b) if m.node is not None and m.node.id)
+                b.pad_bottom = ML_FRAME_CLEAR + n * ML_LANE if n else 0.0
+            elif b.kind == "node" and b.type not in ("fuse", "plc") and not b.bottom and b.node is not None \
+                    and ends.get(b.node.id) and (b.type in CONTACT_TYPES or not b.root):
+                # a channel between the device and its text: a link comes to its right side and runs down there
+                # (as the link of a residual-current toroid), not round the device through its conductors
+                b.link_gap = 3.5 + (ends[b.node.id] - 1) * ML_LANE
+
+
+def _proxy(n: MLNode, box: Box) -> LNode:
+    """A drawn node seen as a single-line node of the same footprint (for the shared placement and routing);
+    its text on the right, so that no link leaves through it."""
+    x0, y0, x1, y1 = box
+    # a link to a board ends on its PE bar (or on the PE bar of the busbar it holds)
+    bars = next((m for m in n.walk() if m.rail_y0 is not None and "PE" in m.out), None) if n.is_board else None
+    if bars is not None:
+        ype = bars.rail_y0 + [c for c in bars.out if not (bars.dc_side and c in DC)].index("PE") * S
+        x0, y0, x1, y1 = bars.xo("PE") - 0.5, ype - 0.5, bars.xo("PE") + 0.5, ype + 0.5
+    if n.type == "plc":  # drawn with its single-line symbol: the ports of its modules are where they are there
+        ln = LNode(n.node, "node", symbol_for(n.node))
+        ln.sym.extra.update(end_gap=0.0, body_top=0.8 * M + 0.5)  # links beside its body, not above it
+        (ln.x, ln.y), ln.bottom = _plc_origin(n), n.bottom
+        ln.ann, ln.ann_size = n.ann, n.ann_size  # a protocol it already names is not repeated on its links
+        ln.ann_off = (n.x_left + n.right() + 1.0 - (ln.x + ln.sym.right) - 1.0, n.y - ln.y)
+        return ln
+    extra: dict = {"text_gap": 1.5, "end_gap": 0.0,  # a link leaving below the device's text keeps clear of it
+             # a final device (not a switching one, whose conductors go on below it): links may leave below it
+             "free_below": not n.children and not n.bottom and not n.is_board and n.type not in CONTACT_TYPES}
+    if n.type in CONTACT_TYPES and n.type != "fuse":  # a control or trip link acts on the operating line of the
+        live = sorted(n.xi(c) for c in n.inp if c != "PE")  # poles (their dashed mechanical linkage), at its left end
+        if live:
+            mx, my = _blade_mid(live[0], n.y)
+            x0 = min(x0, mx - 0.6)
+            extra["end_y"] = my - y0
+            extra["right_end"] = (_blade_mid(live[-1], n.y)[0] + 0.6, my)
+            extra["turn"] = True  # a link there turns down at once (see engine._draw_links)
+    elif n.link_gap and not n.is_board:  # a boxed device with a channel beside it (see _pad_boards)
+        extra["right_end"] = (x1, (y0 + y1) / 2)
+    if "PE" in n.inp and n.kind == "node" and not n.is_board:  # an earth link leaves from the feeder's PE,
+        extra["pe_end"] = (n.xi("PE"), n.y - 1.5)  # just above the device: clear of its text
+    ln = LNode(n.node, "node", Symbol("ml-proxy", [], y1 - y0, (x1 - x0) / 2, (x1 - x0) / 2, has_output=False,
+                                      extra=extra))
+    ln.x, ln.y, ln.bottom = (x0 + x1) / 2, y0, n.bottom
+    if n.ann and not n.is_board:
+        ln.ann, ln.ann_size = n.ann, n.ann_size
+        ln.ann_off = (n.x_left + n.right() + 1.0 - x1 - 1.0, n.y - y0)
+    return ln
+
+
+def _draw_annex(doc: Document, roots: list[MLNode], g: Group, view: View, spec: SheetSpec, lang: str,
+                node_folio: Callable[[str], Optional[int]] | None) -> None:
+    """Auxiliary devices (``devices``) beside the node they are linked to, and the links the power drawing
+    leaves out (control, interlock, trip, measure, data, key, earth, and the ends of links whose other end
+    is on another sheet), routed as in the single-line diagram."""
+    from .engine import ANN_LINE as SL_LINE
+    from .engine import ANN_SIZE as SL_SIZE
+    from .engine import _annotate as sl_annotate
+    from .engine import _device_homes, _draw_links, _place_devices
+
+    obs, boxes = _scene_obstacles(g)
+    obs.box_cross = obs.run_along = 1000.0  # a bundle of conductors is crossed freely, a symbol never, nor a line run on
+    obs.frame_clear, obs.frame_along = ML_FRAME_CLEAR, 3 * FRAME_CROSS  # out of a frame and back: better
+    obs.min_lane, obs.label_pad = ML_LANE, 1.5  # a label close to a device's text would read as part of it
+    obs.label_channel = obs.grid = True
+    obs.near_wire = S - 0.5  # between two conductors of a bundle is never a place for a link
+    proxies = [_proxy(n, boxes[n.node.id]) for r in roots for n in r.walk()
+               if n.kind == "node" and n.node is not None and n.node.id in boxes]
+    # devices kept off the frames by the room a link needs to pass between them (edges as boxes, placing only)
+    c = ML_FRAME_CLEAR
+    edges = [b for f in obs.frames for b in ((f[0] - c, f[1], f[0] + c, f[3]), (f[2] - c, f[1], f[2] + c, f[3]),
+                                             (f[0], f[1] - c, f[2], f[1] + c), (f[0], f[3] - c, f[2], f[3] + c))]
+    obs.boxes += edges
+    from .engine import _right_end
+
+    # a node whose right side is all text takes its links on the left: its devices are put there
+    annex = _place_devices(doc, proxies, proxies, view, lang, obs, view.pitch_mm,
+                           lambda n: n.sym.name == "ml-proxy" and _right_end(n) is None and not n.sym.extra.get("free_below"))
+    obs.boxes = [b for b in obs.boxes if b not in edges]
+    by_id = {p.node.id: p for p in proxies if p.node is not None}
+    for ln in annex:  # an earth electrode level with the PE its link leaves from: no jog in a short link
+        ends = [lk for lk in doc.links if lk.kind == "earth" and ln.node is not None and ln.node.id in (lk.from_, lk.to)]
+        other = by_id.get(ends[0].to if ends[0].from_ == ln.node.id else ends[0].from_) if len(ends) == 1 else None
+        pe = other.sym.extra.get("pe_end") if other is not None and ln.sym.name in ("earth", "earth_bar") else None
+        if pe is not None and 0 < abs(pe[1] - ln.y) <= 2.5:
+            old = [ln.sym_box(), ln.ann_box()]
+            ln.y = pe[1]
+            obs.boxes = [b for b in obs.boxes if b not in old] + [b for b in (ln.sym_box(), ln.ann_box()) if b]
+    homes = _device_homes(doc)
+    unlinked = [d for d in doc.devices if homes.get(d.id or "") is None]
+    if unlinked and not spec.continuation and (not spec.roots or spec.roots == list(doc.sources) or view.root):
+        box = boxes_union(obs.boxes)
+        ax0 = (box[2] if box else 0) + 12.0
+        g.add(Text((ax0 - 2.0, -3.0), _t("render.auxiliary_devices", lang), 2.0, bold=True))
+        for i, dev in enumerate(unlinked):
+            ln = LNode(dev, "node", symbol_for(dev))
+            ln.x, ln.y, ln.width, ln.x_left = ax0 + ln.sym.left, 1.0 + i * 16.0, view.pitch_mm, ax0 - 2
+            sl_annotate(ln, view, lang, avail_override=60.0)
+            annex.append(ln)
+            obs.add_box(ln.sym_box())
+            obs.add_box(ln.ann_box())
+    for ln in annex:  # without the leads of their symbol, which would read as conductors of a feeder
+        ln.sym.extra.update(end_gap=0.0, free_below=True)  # links touch the symbol, may leave below it
+        earth = ln.sym.name in ("earth", "earth_bar")  # (an electrode keeps its conductor: the link ends on it)
+        items = [i for i in ln.sym.items if earth or not (isinstance(i, Line) and i.a[0] == i.b[0] == 0.0
+                                                 and (min(i.a[1], i.b[1]) <= 0.0 or max(i.a[1], i.b[1]) >= ln.sym.height))]
+        vis = bbox(Group(items))
+        if vis is not None and not earth:  # links leaving below start from what is drawn, not the lead taken off
+            ln.sym.extra["bottom_y"] = vis[3]
+        g.add(node_group(Group([transform(i, ln.x, ln.y) for i in items], ln.id, f"sym sym-{ln.sym.name}")))
+        if ln.ann:
+            ab = ln.ann_box()
+            assert ab is not None
+            for i, t in enumerate(ln.ann):
+                g.add(Text((ab[0], ln.y + 0.3 + (i + 0.8) * SL_LINE * ln.ann_size / SL_SIZE), t, ln.ann_size,
+                           bold=(i == 0 and ln.tagged)))
+    drawn = {ln.node.id for ln in proxies + annex if ln.node is not None}
+    only = {i for i, link in enumerate(doc.links)
+            if link.kind not in ML_LINKS or not (link.from_ in drawn and link.to in drawn)}
+    if not only:
+        return
+    tops = [ln.y for ln in proxies if ln.bottom]
+    y_load = min(tops) if tops else (bbox(g) or (0.0, 0.0, 0.0, 0.0))[3] + 40.0
+    # first drawing on copies: the side each link takes; then the links drawn with their ends in order
+    import copy
+
+    sides = _draw_links(doc, proxies + annex, {}, Group(), view, copy.deepcopy(obs), y_load, lang, node_folio,
+                        None, only)
+    _draw_links(doc, proxies + annex, {}, g, view, obs, y_load, lang, node_folio, None, only, sides)
+
+
 # -------------------------------------------------------------- sheet layout
 def _layout(doc: Document, view: View, spec: SheetSpec, index: Index, info: dict[int, Conductors],
             folio_of: Callable[[str], Optional[int]] | None = None,
             continuation: tuple[Optional[int], Optional[int]] = (None, None),
             incoming: Optional[str] = None,
             incoming_ref: tuple[Optional[int], Optional[str]] = (None, None),
-            marks: Optional[dict[str, dict[str, str]]] = None) -> SheetLayout:
+            marks: Optional[dict[str, dict[str, str]]] = None,
+            node_folio: Callable[[str], Optional[int]] | None = None, annex: bool = True) -> SheetLayout:
     lang = normalize_lang(doc.meta.lang)
     roots = _build_roots(spec, index, info)
     for r in roots:
@@ -1848,6 +2228,7 @@ def _layout(doc: Document, view: View, spec: SheetSpec, index: Index, info: dict
         for n in r.walk():
             n.h = _height(n)
     links = _plan_links(doc, roots, lang)
+    _pad_boards(doc, roots)
     x = 0.0
     for r in roots:
         _measure(r)
@@ -1864,7 +2245,7 @@ def _layout(doc: Document, view: View, spec: SheetSpec, index: Index, info: dict
     bottoms = [n for n in everything if n.bottom]
     others = [n for n in everything if not n.bottom]
     y_base = max([n.content_bottom() for n in others] + [_frame_bottom(n) for n in others if n.is_board] + [0.0])
-    y_load = y_base + CABLE_BAND
+    y_load = y_base + CABLE_BAND + _signal_band(doc, roots)
     for n in bottoms:
         n.y = max(n.y, y_load)
     g = Group(cls="multiline")
@@ -1874,6 +2255,8 @@ def _layout(doc: Document, view: View, spec: SheetSpec, index: Index, info: dict
         _draw(r, g, lang, view, sheet_left, folio_of or (lambda _: None), continuation, incoming, incoming_ref)
     _draw_links(doc, links, g, lang)
     _draw_frames(roots, g)
+    if annex:  # (left out while the sheets are being planned: the band for its links is reserved anyway)
+        _draw_annex(doc, roots, g, view, spec, lang, node_folio)
     if marks:
         tops = {n.id: (n.frame_top if n.is_board else n.y) for r in roots for n in r.walk()}
         # a cable carried by a device above a load is drawn as the load's feeder cable: marked there too
@@ -2000,7 +2383,7 @@ def plan_multiline(doc: Document, view: View, index: Index | None = None,
         spec.detached |= {f for f in forced if f not in root_ids and _in_spec(spec, f, index)}
         conts: list[SheetSpec] = []
         for _ in range(60):
-            lay = _layout(doc, view, spec, index, info)
+            lay = _layout(doc, view, spec, index, info, annex=False)
             if view.folio_split == "none" or _fit(lay, view) >= view.min_scale:
                 break
             roots = _build_roots(spec, index, info)
@@ -2082,6 +2465,10 @@ def multiline_layouts(doc: Document, view: View, index: Index | None = None) -> 
         if s.roots and not s.continuation and i > 1:
             folio_by_root[s.roots[0].id or ""] = i
     number = {id(s): i for i, s in enumerate(specs, 1)}
+    sheet_of: dict[str, int] = {}  # sheet of every node and auxiliary device (its first sheet)
+    for i, s in enumerate(specs, 1):
+        for nid in sheet_node_ids(doc, s, index):
+            sheet_of.setdefault(nid, i)
     out = []
     for i, spec in enumerate(specs, 1):
         prev_f = number.get(id(spec.prev)) if spec.prev is not None else None
@@ -2096,5 +2483,5 @@ def multiline_layouts(doc: Document, view: View, index: Index | None = None) -> 
             what = _t("render.incoming_from", lang, ref=feeder.ref) if feeder is not None else _t("render.incoming", lang)
             incoming = _t("render.incoming_folio", lang, what=what, folio=src) if src else what
         out.append(_layout(doc, view, spec, index, info, folio_of=folio_by_root.get, continuation=(prev_f, next_f),
-                           incoming=incoming, incoming_ref=incoming_ref, marks=marks))
+                           incoming=incoming, incoming_ref=incoming_ref, marks=marks, node_folio=sheet_of.get))
     return out
