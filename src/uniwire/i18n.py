@@ -48,6 +48,12 @@ EN: dict[str, str] = {
     "units.incompatible": "unit {unit!r} is incompatible with {target!r}",
     # --- rules engine
     "rules.unknown_profile": "unknown profile: {profile!r}",
+    "rules.no_profile": "no rule profile applied: only the consistency of the document was checked (tags, links, "
+                        "interlocks, ratings in cascade), not the protections, cables and RCDs; profiles: 'nfc15100' "
+                        "(France), 'iec60364'",
+    "rules.standard_not_covered": "no rule profile covers {standard}: only the consistency of the document was "
+                                  "checked (tags, links, interlocks, ratings in cascade); the protections, cables, "
+                                  "residual-current devices and earthing were not checked against {standard}",
     # core
     "core.ref_unique": "tag {ref!r} already used by {other!r}",
     "core.normalized": "{where}: {field} {old!r} read as {new!r}; write it in this form",
@@ -289,6 +295,12 @@ FR: dict[str, str] = {
     "units.unknown_unit": "unité inconnue : {unit!r}",
     "units.incompatible": "unité {unit!r} incompatible avec {target!r}",
     "rules.unknown_profile": "profil inconnu : {profile!r}",
+    "rules.no_profile": "aucun profil de règles appliqué : seule la cohérence du document a été vérifiée (repères, "
+                        "liens, verrouillages, calibres en cascade), pas les protections, câbles et différentiels ; "
+                        "profils : 'nfc15100' (France), 'iec60364'",
+    "rules.standard_not_covered": "aucun profil de règles ne couvre {standard} : seule la cohérence du document a été "
+                                  "vérifiée (repères, liens, verrouillages, calibres en cascade) ; les protections, "
+                                  "câbles, différentiels et la mise à la terre n'ont pas été vérifiés selon {standard}",
     "core.ref_unique": "repère {ref!r} déjà utilisé par {other!r}",
     "core.normalized": "{where} : {field} {old!r} lu comme {new!r} ; écrire cette forme",
     "core.normalized_field": "{where} : champ inconnu {old!r} lu comme {new!r} ; utiliser {new!r}",

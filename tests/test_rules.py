@@ -379,3 +379,12 @@ def test_main_breaker_symbol_follows_rcd():
 
     assert "IΔ" in texts(idn_mA=500)
     assert "IΔ" not in texts(in_A=45)  # no sensitivity: a plain circuit breaker
+
+
+def test_no_profile_said_so():
+    base = {"sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 16, "children": [{"type": "load"}]}]}]}
+    f = [x for x in check(load(base)) if x.rule == "core.no-profile"]
+    assert len(f) == 1 and f[0].level == "info" and "'iec60364'" in f[0].message
+    us = [x for x in check(load({**base, "installation": {"standard": "NEC 2023"}})) if x.rule == "core.no-profile"]
+    assert "no rule profile covers NEC 2023" in us[0].message and "'iec60364'" not in us[0].message
+    assert "core.no-profile" not in rules_of(check(load({**base, "profiles": ["iec60364"]})))

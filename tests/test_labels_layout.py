@@ -532,3 +532,62 @@ def test_reversing_and_star_delta_starters_drawn_with_their_contactors():
     sets = [g for g in _items_groups(page.root) if isinstance(g, G) and g.cls == "starter-contactors"]
     assert len(sets) == 2
     assert {"W2", "U2", "V2"} <= set(_texts(sets[1]))
+
+
+def _us_board(**inst):
+    return load({"installation": {"system": "split-phase", **inst}, "sources": [
+        {"type": "grid", "children": [{"type": "board", "id": "P", "children": [
+            {"type": "breaker", "id": "PV", "ref": "PV", "in_A": 30, "poles": "2P"},
+            {"type": "breaker", "in_A": 30, "poles": "2P",
+             "cable": {"cores": "2x", "section_mm2": 5.26, "size_awg": "10"}, "children": [{"type": "water_heater"}]},
+            {"type": "rcbo", "id": "G", "in_A": 20, "idn_mA": 5, "rcd_type": "A", "poles": "1P+N",
+             "cable": {"cores": "3G", "section_mm2": 3.31, "size_awg": "12"}, "children": [{"type": "socket"}]}]}]},
+        {"type": "inverter", "id": "INV", "label": "Rooftop solar array string inverter (south roof)"}],
+        "links": [{"id": "L_PV", "from": "INV", "kind": "infeed", "to": "PV"}]})
+
+
+def test_nec_document_written_with_awg_sizes_and_gfci():
+    texts = [t for p in render_pages(_us_board(standard="NEC 2023")) for t in _texts(p.root)]
+    assert "2x#10" in texts and "2-#12+G" in texts and "5mA GFCI" in texts
+    assert not any("type A" in t for t in texts)
+    iec = [t for p in render_pages(_us_board()) for t in _texts(p.root)]  # same data, IEC practice
+    assert "2x#10" in iec and "3G3.31" in iec and "type A" in iec
+
+
+def test_infeed_to_a_breaker_feeding_nothing_lands_on_its_output():
+    lay = _layout(_us_board())[0]
+    pv = next(g for g in _items_groups(lay.group) if g.id == "PV")
+    ys = [p[1] for i in _items(pv) for p in ([i.a, i.b] if isinstance(i, Line) else getattr(i, "points", []))]
+    link = next(g for g in _items_groups(lay.group) if g.attrs.get("data-uw-link") == "L_PV")
+    end = next(i.points for i in _items(link) if isinstance(i, Polyline))[-1]
+    assert end[1] >= max(ys) - 0.01  # below the contact (load side), not on the busbar side
+
+
+def test_untagged_label_wrapped_rather_than_cut():
+    texts = [t for p in render_pages(_us_board()) for t in _texts(p.root)]
+    assert not any(t.endswith("…") and t.startswith("Rooftop") for t in texts)
+    assert any(t.startswith("Rooftop") for t in texts)
+
+
+def test_multiline_infeed_to_a_breaker_feeding_nothing_lands_on_its_outputs():
+    doc = _us_board()
+    page = render_pages(doc, default_view(doc).model_copy(update={"kind": "multi-line"}))[0]
+    pv = next(g for g in _items_groups(page.root) if g.id == "PV")
+    ys = [p[1] for i in _items(pv) for p in ([i.a, i.b] if isinstance(i, Line) else getattr(i, "points", []))]
+    link = next(g for g in _items_groups(page.root) if g.attrs.get("data-uw-link") == "L_PV")
+    ends = [i.points[-1] for i in _items(link) if isinstance(i, Polyline)]
+    assert ends and all(e[1] > max(ys) - 0.01 for e in ends)  # below the contacts: the load side
+
+
+def test_gfci_not_repeated_when_already_shown():
+    from uniwire.labels import NORTH_AMERICAN
+    d = load({"sources": [{"type": "grid", "children": [
+        {"type": "rcbo", "ref": "3", "range": "GFCI", "in_A": 20, "idn_mA": 5, "children": [{"type": "socket"}]},
+        {"type": "rcbo", "ref": "5", "label": "Kitchen GFCI", "in_A": 20, "idn_mA": 5, "children": [{"type": "socket"}]}]}]})
+    token = NORTH_AMERICAN.set(True)
+    try:
+        shown, hidden = (annotation(n) for n in d.sources[0].children)
+    finally:
+        NORTH_AMERICAN.reset(token)
+    assert shown.count("GFCI") == 1  # the range says it
+    assert "GFCI" in hidden  # the label is not drawn beside a breaker: the kind is

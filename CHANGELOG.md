@@ -35,6 +35,19 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 * PLC annotation: the protocols are cut on whole names, with an ellipsis ("Modbus TC" was printed).
 
+* Rule checks: when no rule profile applies, an info finding `core.no-profile` says that only the consistency of the
+  document was checked (an empty result read as a checked installation); for a standard no profile covers (NEC,
+  for example) it says that the protections, cables, residual-current devices and earthing were not checked
+  against it.
+
+* North-American documents (NEC / CEC): cables are written with their AWG / kcmil size whenever it is given
+  ("2x#6", "3G" with #12 written "2-#12+G"; the section in mm² was printed), and residual-current protection is
+  written "GFCI" (6 mA or less) or "GFPE" instead of an IEC type ("5mA type A" was printed for a GFCI).
+
+* An `infeed` link to a device that feeds nothing (the back-feed breaker of a PV inverter) lands on its output
+  terminals, in both views (it arrived on the busbar side). A label without a tag goes on two lines rather than
+  being cut when the room beside the symbol is short.
+
 * Examples 21 and 29: the feeders of the refrigeration board and of the smoke-control board carry a neutral
   (their 1P+N circuits need one).
 

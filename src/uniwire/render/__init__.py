@@ -57,11 +57,13 @@ def render_pages(doc: Document, view: Optional[View] = None) -> list[Page]:
         _PAGES.move_to_end(key)
         return copy.deepcopy(_PAGES[key])
     from ..i18n import RENDER_LANG
-    token = RENDER_LANG.set(lang)
+    from ..labels import NORTH_AMERICAN, north_american
+    token, na_token = RENDER_LANG.set(lang), NORTH_AMERICAN.set(north_american(doc))
     try:
         pages = _render_pages(doc, view, lang)
     finally:
         RENDER_LANG.reset(token)
+        NORTH_AMERICAN.reset(na_token)
     for i, page in enumerate(pages, 1):
         page.attrs.update({"data-uw-sheet": str(i), "data-uw-view-kind": view.kind})
     if key is not None:

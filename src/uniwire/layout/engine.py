@@ -389,7 +389,7 @@ def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = N
         out = []
         for i, t in enumerate(ln.ann):
             units = text_units(t)
-            if i and text_width(t, size) > avail and len(units) > 1 and len(ln.ann) + len(out) - i < 5:
+            if (i or not ln.tagged) and text_width(t, size) > avail and len(units) > 1 and len(ln.ann) + len(out) - i < 5:
                 two = _wrap_words(units, 2, lambda u: text_width(u, size))  # on two lines rather than cut
                 if max(text_width(u, size) for u in two) <= avail:
                     out += two
@@ -1592,9 +1592,11 @@ def _is_alternative(link: Any) -> bool:
 
 
 def _fed_ok(roots: list[LNode]) -> set[str]:
-    """Nodes drawn below a parent (a conductor arrives on their input): an infeed lands on that conductor."""
+    """Nodes drawn below a parent (a conductor arrives on their input): an infeed lands on that conductor. A
+    device feeding nothing (back-feed breaker of a PV inverter) is fed on its output terminal instead."""
     return {c.node.id for r in roots for n in r.walk() for c in n.children
-            if c.kind == "node" and c.node is not None and n.kind in ("node", "bus_in")}
+            if c.kind == "node" and c.node is not None and n.kind in ("node", "bus_in")
+            and (c.children or not c.sym.has_output)}
 
 
 @dataclass

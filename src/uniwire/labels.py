@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextvars
 import re
 from collections.abc import Iterable
 from typing import Any, Optional
@@ -20,12 +21,31 @@ def _g(node: Any, name: str) -> Any:
     return getattr(node, name, None)
 
 
+#: Whether the document being drawn follows North-American practice (NEC / CEC): set by the renderer.
+NORTH_AMERICAN: contextvars.ContextVar[bool] = contextvars.ContextVar("uniwire_north_american", default=False)
+
+
+def north_american(doc: Any) -> bool:
+    """A document following the NEC / CEC (installation standard or rule profile)."""
+    std = (doc.installation.standard or "").upper()
+    return any(k in std for k in ("NEC", "NFPA", "CEC", "CSA")) or any(p.lower().startswith("nec") for p in doc.profiles)
+
+
+def rcd_kind(node: Any) -> str:
+    """The kind of residual-current protection as written: 'type A' (IEC), or under North-American practice
+    'GFCI' (personnel protection, 6 mA or less) and 'GFPE' (equipment), where the IEC types do not apply."""
+    if NORTH_AMERICAN.get():
+        idn = _g(node, "idn_mA")
+        return "" if idn is None else "GFCI" if idn <= 6 else "GFPE"
+    return _t("label.rcd_type", render_lang(), type=node.rcd_type) if _g(node, "rcd_type") else ""
+
+
 def _rcd_text(node: Any) -> str:
     parts = []
     if _g(node, "idn_mA") is not None:
         parts.append(fmt_sensitivity(node.idn_mA))
-    if _g(node, "rcd_type"):
-        parts.append(_t("label.rcd_type", render_lang(), type=node.rcd_type))
+    if rcd_kind(node):
+        parts.append(rcd_kind(node))
     delay = str(_g(node, "delay") or "").strip()
     if delay.upper() == "S" or _g(node, "selective"):
         parts.append("S")
@@ -169,11 +189,14 @@ def feeder_mark(chain: list[Any], system: Optional[str] = None) -> Optional[Mark
 
 def cable_in_awg(c: Optional[Cable]) -> bool:
     """Whether a cable is written with its North-American size: an AWG / kcmil size, unless the composition is
-    written the IEC way with a section in mm² ('3G' + 2.5)."""
+    written the IEC way with a section in mm² ('3G' + 2.5; a count of conductors '2x' takes the AWG size). A
+    document following the NEC is always written with its AWG sizes."""
     if c is None or not c.size_awg:
         return False
+    if NORTH_AMERICAN.get():
+        return True
     cores = (c.cores or "").rstrip()
-    return c.section_mm2 is None or not (cores and cores[-1] in "Gx×")
+    return c.section_mm2 is None or not cores.endswith("G")
 
 
 def cable_text(c: Optional[Cable]) -> str:
@@ -198,6 +221,8 @@ def cable_text(c: Optional[Cable]) -> str:
             s = size
         elif c.size_awg.strip().lstrip("#") in cores:  # composition already spells the size: '2-#12+G'
             return cores
+        elif re.fullmatch(r"\d+G", cores.strip()) and int(cores.strip()[:-1]) > 1:  # '3G' + #12: '2-#12+G'
+            s = f"{int(cores.strip()[:-1]) - 1}-{size}+G"
         else:
             s = f"{cores}{size}" if cores[-1] in "-x×" else f"{cores} {size}"
     elif cores:
@@ -264,7 +289,10 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
         if extra:
             lines.append(" ".join(extra))
         if t == "rcbo":
-            lines.append(_rcd_text(node).replace(fmt_sensitivity(g("idn_mA")), "").strip())
+            kind = _rcd_text(node).replace(fmt_sensitivity(g("idn_mA")), "").strip()
+            shown = " ".join([*lines, node.ref or "", g("range") or ""]).split()
+            if not (kind == rcd_kind(node) and kind in shown):
+                lines.append(kind)  # not when the text shown (label, tag, range) already says it
             if g("idn_range_mA"):
                 lines.append(f"IΔn {g('idn_range_mA')} mA")
         if g("ir_A"):
@@ -359,10 +387,15 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
         if src is None or not _g(src, "idn_mA"):
             return ""
         rcd_type = _g(src, "rcd_type") if not column.get("rcd_type_column") else None  # else in its own row
+        if NORTH_AMERICAN.get():
+            rcd_type = rcd_kind(src)
         txt = fmt_sensitivity(_g(src, "idn_mA")) + (f" {rcd_type}" if rcd_type else "")
         # residual-current protection carried by a device upstream of the feeder (incomer, group RCD): marked
         return _t("cell.upstream", lang, value=txt) if src is rcd_node and column.get("rcd_upstream") else txt
     if field == "rcd_type":
+        if NORTH_AMERICAN.get():
+            src = prot if _g(prot, "idn_mA") else rcd_node
+            return rcd_kind(src) if src is not None else ""
         src = prot if _g(prot, "rcd_type") else rcd_node
         return _g(src, "rcd_type") or ""
     if field == "poles":

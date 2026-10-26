@@ -1710,8 +1710,8 @@ def _plan_links(doc: Document, roots: list[MLNode], lang: str) -> list[_Link]:
         src = "rails" if a.rails else "out"
         if link.kind == "transfer" and b.type == "transfer_switch":
             dst = "side"
-        elif link.kind in ("infeed", "transfer") and id(b) in parent:
-            dst = "inp"
+        elif link.kind in ("infeed", "transfer") and id(b) in parent and (link.kind == "transfer" or b.children):
+            dst = "inp"  # a device feeding nothing (back-feed breaker of a PV inverter) is fed on its outputs
         elif link.kind == "infeed" and b.root and b.type in CONVERTERS | {"ups"}:
             dst = "top"  # an inverter / UPS at the head of the tree: its AC input on top, never on its outputs
         elif b.rails:
