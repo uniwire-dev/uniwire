@@ -13,7 +13,10 @@
     "zh": "电网",
     "es": "Red de distribución",
     "de": "Netz",
-    "pt": "Rede de distribuição"
+    "pt": "Rede de distribuição",
+    "it": "Rete di distribuzione",
+    "pl": "Sieć zasilająca",
+    "tr": "Dağıtım şebekesi"
    },
    "symbol": "grid",
    "map": {
@@ -32,7 +35,10 @@
     "zh": "变压器",
     "es": "Transformador",
     "de": "Transformator",
-    "pt": "Transformador"
+    "pt": "Transformador",
+    "it": "Trasformatore",
+    "pl": "Transformator",
+    "tr": "Transformatör"
    },
    "symbol": "transformer",
    "map": {
@@ -52,7 +58,10 @@
     "zh": "发电机组",
     "es": "Grupo electrógeno",
     "de": "Stromerzeuger",
-    "pt": "Gerador"
+    "pt": "Gerador",
+    "it": "Gruppo elettrogeno",
+    "pl": "Zespół prądotwórczy",
+    "tr": "Jeneratör"
    },
    "symbol": "generator",
    "map": {
@@ -72,7 +81,10 @@
     "zh": "不间断电源（UPS）",
     "es": "SAI / UPS",
     "de": "USV",
-    "pt": "Nobreak (UPS)"
+    "pt": "Nobreak (UPS)",
+    "it": "UPS (gruppo di continuità)",
+    "pl": "UPS (zasilacz bezprzerwowy)",
+    "tr": "Kesintisiz güç kaynağı (KGK)"
    },
    "symbol": "ups",
    "map": {
@@ -90,7 +102,10 @@
     "zh": "光伏方阵",
     "es": "Generador fotovoltaico",
     "de": "PV-Generator",
-    "pt": "Gerador fotovoltaico"
+    "pt": "Gerador fotovoltaico",
+    "it": "Generatore fotovoltaico",
+    "pl": "Generator fotowoltaiczny",
+    "tr": "Fotovoltaik dizi"
    },
    "symbol": "pv_array",
    "map": {
@@ -109,7 +124,10 @@
     "zh": "蓄电池",
     "es": "Batería",
     "de": "Batterie",
-    "pt": "Bateria"
+    "pt": "Bateria",
+    "it": "Batteria",
+    "pl": "Bateria akumulatorów",
+    "tr": "Akü"
    },
    "symbol": "battery",
    "map": {
@@ -129,7 +147,10 @@
     "zh": "逆变器",
     "es": "Inversor",
     "de": "Wechselrichter",
-    "pt": "Inversor"
+    "pt": "Inversor",
+    "it": "Inverter",
+    "pl": "Falownik",
+    "tr": "İnvertör"
    },
    "symbol": "inverter",
    "map": {
@@ -148,7 +169,10 @@
     "zh": "电能表",
     "es": "Contador / medidor",
     "de": "Zähler",
-    "pt": "Medidor"
+    "pt": "Medidor",
+    "it": "Contatore",
+    "pl": "Licznik",
+    "tr": "Sayaç"
    },
    "symbol": "meter",
    "map": {
@@ -167,7 +191,10 @@
     "zh": "断路器",
     "es": "Interruptor automático",
     "de": "Leitungsschutzschalter",
-    "pt": "Disjuntor"
+    "pt": "Disjuntor",
+    "it": "Interruttore automatico",
+    "pl": "Wyłącznik nadprądowy",
+    "tr": "Otomatik sigorta"
    },
    "symbol": "breaker",
    "map": {
@@ -187,7 +214,10 @@
     "zh": "剩余电流动作断路器（RCCB）",
     "es": "Interruptor diferencial",
     "de": "Fehlerstrom-Schutzschalter (RCD)",
-    "pt": "Interruptor diferencial-residual (DR)"
+    "pt": "Interruptor diferencial-residual (DR)",
+    "it": "Interruttore differenziale",
+    "pl": "Wyłącznik różnicowoprądowy",
+    "tr": "Kaçak akım rölesi"
    },
    "symbol": "rcd",
    "map": {
@@ -206,7 +236,10 @@
     "zh": "带过电流保护的剩余电流动作断路器（RCBO）",
     "es": "Interruptor automático diferencial (RCBO)",
     "de": "FI/LS-Schalter (RCBO)",
-    "pt": "Disjuntor diferencial (DR)"
+    "pt": "Disjuntor diferencial (DR)",
+    "it": "Interruttore magnetotermico differenziale",
+    "pl": "Wyłącznik różnicowonadprądowy (RCBO)",
+    "tr": "Kaçak akım korumalı otomatik sigorta (RCBO)"
    },
    "symbol": "rcbo",
    "map": {
@@ -226,7 +259,10 @@
     "zh": "总断路器",
     "es": "Interruptor automático general",
     "de": "Hauptschalter / selektiver Hauptleitungsschutzschalter",
-    "pt": "Disjuntor geral"
+    "pt": "Disjuntor geral",
+    "it": "Interruttore generale",
+    "pl": "Wyłącznik główny",
+    "tr": "Ana şalter"
    },
    "symbol": "main_breaker",
    "map": {
@@ -246,7 +282,10 @@
     "zh": "熔断器",
     "es": "Fusible",
     "de": "Sicherung",
-    "pt": "Fusível"
+    "pt": "Fusível",
+    "it": "Fusibile",
+    "pl": "Bezpiecznik",
+    "tr": "Sigorta"
    },
    "symbol": "fuse",
    "map": {
@@ -265,7 +304,10 @@
     "zh": "熔断器式隔离开关",
     "es": "Interruptor-seccionador con fusibles",
     "de": "Sicherungslasttrennschalter",
-    "pt": "Seccionador-fusível"
+    "pt": "Seccionador-fusível",
+    "it": "Interruttore di manovra-sezionatore con fusibili",
+    "pl": "Rozłącznik bezpiecznikowy",
+    "tr": "Sigortalı yük ayırıcı"
    },
    "symbol": "fuse_switch",
    "map": {
@@ -284,7 +326,10 @@
     "zh": "负荷隔离开关",
     "es": "Interruptor-seccionador",
     "de": "Lasttrennschalter",
-    "pt": "Interruptor-seccionador"
+    "pt": "Interruptor-seccionador",
+    "it": "Interruttore di manovra-sezionatore",
+    "pl": "Rozłącznik izolacyjny",
+    "tr": "Yük ayırıcı"
    },
    "symbol": "switch_disconnector",
    "map": {
@@ -304,7 +349,10 @@
     "zh": "隔离器",
     "es": "Seccionador",
     "de": "Trennschalter",
-    "pt": "Seccionador"
+    "pt": "Seccionador",
+    "it": "Sezionatore",
+    "pl": "Odłącznik",
+    "tr": "Ayırıcı"
    },
    "symbol": "disconnector",
    "map": {
@@ -324,7 +372,10 @@
     "zh": "接触器",
     "es": "Contactor",
     "de": "Schütz",
-    "pt": "Contator"
+    "pt": "Contator",
+    "it": "Contattore",
+    "pl": "Stycznik",
+    "tr": "Kontaktör"
    },
    "symbol": "contactor",
    "map": {
@@ -343,7 +394,10 @@
     "zh": "脉冲继电器",
     "es": "Telerruptor",
     "de": "Stromstoßschalter",
-    "pt": "Relé de impulso"
+    "pt": "Relé de impulso",
+    "it": "Relè passo-passo",
+    "pl": "Przekaźnik bistabilny",
+    "tr": "İmpuls röle"
    },
    "symbol": "impulse_relay",
    "map": {
@@ -362,7 +416,10 @@
     "zh": "热过载继电器",
     "es": "Relé térmico",
     "de": "Motorschutzrelais",
-    "pt": "Relé de sobrecarga"
+    "pt": "Relé de sobrecarga",
+    "it": "Relè termico",
+    "pl": "Przekaźnik termiczny",
+    "tr": "Termik röle"
    },
    "symbol": "thermal_relay",
    "map": {
@@ -380,7 +437,10 @@
     "zh": "电动机起动器",
     "es": "Arrancador de motor",
     "de": "Motorabgang",
-    "pt": "Partida de motor"
+    "pt": "Partida de motor",
+    "it": "Avviatore motore",
+    "pl": "Układ rozruchowy silnika",
+    "tr": "Motor yol verici"
    },
    "symbol": "motor_starter",
    "map": {
@@ -398,7 +458,10 @@
     "zh": "转换开关电器（TSE）",
     "es": "Conmutador de transferencia",
     "de": "Netzumschalter",
-    "pt": "Chave de transferência"
+    "pt": "Chave de transferência",
+    "it": "Commutatore di rete",
+    "pl": "Przełącznik zasilania (SZR)",
+    "tr": "Transfer şalteri"
    },
    "symbol": "transfer_switch",
    "map": {
@@ -417,7 +480,10 @@
     "zh": "电涌保护器（SPD）",
     "es": "Protección contra sobretensiones (DPS)",
     "de": "Überspannungsschutzgerät (SPD)",
-    "pt": "Dispositivo de proteção contra surtos (DPS)"
+    "pt": "Dispositivo de proteção contra surtos (DPS)",
+    "it": "Scaricatore di sovratensione (SPD)",
+    "pl": "Ogranicznik przepięć (SPD)",
+    "tr": "Parafudr (SPD)"
    },
    "symbol": "spd",
    "map": {
@@ -436,7 +502,10 @@
     "zh": "控制装置",
     "es": "Controlador",
     "de": "Steuergerät",
-    "pt": "Controlador"
+    "pt": "Controlador",
+    "it": "Apparecchio di comando",
+    "pl": "Sterownik",
+    "tr": "Kontrol cihazı"
    },
    "symbol": "controller",
    "map": {
@@ -454,7 +523,10 @@
     "zh": "母线",
     "es": "Barras colectoras",
     "de": "Sammelschiene",
-    "pt": "Barramento"
+    "pt": "Barramento",
+    "it": "Sbarre",
+    "pl": "Szyny zbiorcze",
+    "tr": "Bara"
    },
    "symbol": "busbar",
    "map": {
@@ -473,7 +545,10 @@
     "zh": "配电箱",
     "es": "Cuadro / tablero",
     "de": "Verteiler",
-    "pt": "Quadro de distribuição"
+    "pt": "Quadro de distribuição",
+    "it": "Quadro elettrico",
+    "pl": "Rozdzielnica",
+    "tr": "Dağıtım panosu"
    },
    "symbol": "board",
    "map": {
@@ -492,7 +567,10 @@
     "zh": "接地极",
     "es": "Electrodo de tierra",
     "de": "Erder",
-    "pt": "Eletrodo de aterramento"
+    "pt": "Eletrodo de aterramento",
+    "it": "Dispersore",
+    "pl": "Uziom",
+    "tr": "Topraklama elektrodu"
    },
    "symbol": "earth",
    "map": {
@@ -511,7 +589,10 @@
     "zh": "照明",
     "es": "Iluminación",
     "de": "Beleuchtung",
-    "pt": "Iluminação"
+    "pt": "Iluminação",
+    "it": "Illuminazione",
+    "pl": "Oświetlenie",
+    "tr": "Aydınlatma"
    },
    "symbol": "lighting",
    "map": {
@@ -530,7 +611,10 @@
     "zh": "插座",
     "es": "Tomas de corriente",
     "de": "Steckdosen",
-    "pt": "Tomadas"
+    "pt": "Tomadas",
+    "it": "Prese",
+    "pl": "Gniazda wtyczkowe",
+    "tr": "Prizler"
    },
    "symbol": "socket",
    "map": {
@@ -549,7 +633,10 @@
     "zh": "采暖",
     "es": "Calefacción",
     "de": "Heizung",
-    "pt": "Aquecimento"
+    "pt": "Aquecimento",
+    "it": "Riscaldamento",
+    "pl": "Ogrzewanie",
+    "tr": "Isıtma"
    },
    "symbol": "heating",
    "map": {
@@ -568,7 +655,10 @@
     "zh": "热水器",
     "es": "Calentador de agua",
     "de": "Warmwasserbereiter",
-    "pt": "Aquecedor de água"
+    "pt": "Aquecedor de água",
+    "it": "Scaldacqua",
+    "pl": "Podgrzewacz wody",
+    "tr": "Termosifon"
    },
    "symbol": "water_heater",
    "map": {
@@ -587,7 +677,10 @@
     "zh": "烹饪",
     "es": "Cocción",
     "de": "Kochen",
-    "pt": "Cocção"
+    "pt": "Cocção",
+    "it": "Cottura",
+    "pl": "Gotowanie",
+    "tr": "Pişirme"
    },
    "symbol": "cooking",
    "map": {
@@ -606,7 +699,10 @@
     "zh": "家用电器",
     "es": "Electrodoméstico",
     "de": "Haushaltsgerät",
-    "pt": "Eletrodoméstico"
+    "pt": "Eletrodoméstico",
+    "it": "Elettrodomestico",
+    "pl": "Urządzenie AGD",
+    "tr": "Ev aleti"
    },
    "symbol": "appliance",
    "map": {
@@ -625,7 +721,10 @@
     "zh": "电动机",
     "es": "Motor",
     "de": "Motor",
-    "pt": "Motor"
+    "pt": "Motor",
+    "it": "Motore",
+    "pl": "Silnik",
+    "tr": "Motor"
    },
    "symbol": "motor",
    "map": {
@@ -645,7 +744,10 @@
     "zh": "电动汽车充电桩",
     "es": "Cargador de vehículo eléctrico",
     "de": "Ladepunkt (E-Fahrzeug)",
-    "pt": "Carregador de veículo elétrico"
+    "pt": "Carregador de veículo elétrico",
+    "it": "Stazione di ricarica (EV)",
+    "pl": "Stacja ładowania pojazdów (EV)",
+    "tr": "Elektrikli araç şarj ünitesi"
    },
    "symbol": "ev_charger",
    "map": {
@@ -664,7 +766,10 @@
     "zh": "通风",
     "es": "Ventilación",
     "de": "Lüftung",
-    "pt": "Ventilação"
+    "pt": "Ventilação",
+    "it": "Ventilazione",
+    "pl": "Wentylacja",
+    "tr": "Havalandırma"
    },
    "symbol": "ventilation",
    "map": {
@@ -683,7 +788,10 @@
     "zh": "电动卷帘",
     "es": "Persianas motorizadas",
     "de": "Rollläden",
-    "pt": "Persianas"
+    "pt": "Persianas",
+    "it": "Tapparelle",
+    "pl": "Rolety",
+    "tr": "Panjurlar"
    },
    "symbol": "shutter",
    "map": {
@@ -702,7 +810,10 @@
     "zh": "负荷",
     "es": "Carga",
     "de": "Verbraucher",
-    "pt": "Carga"
+    "pt": "Carga",
+    "it": "Utilizzatore",
+    "pl": "Odbiornik",
+    "tr": "Yük"
    },
    "symbol": "load",
    "map": {
@@ -721,7 +832,10 @@
     "zh": "备用",
     "es": "Reserva",
     "de": "Reserve",
-    "pt": "Reserva"
+    "pt": "Reserva",
+    "it": "Riserva",
+    "pl": "Rezerwa",
+    "tr": "Yedek"
    },
    "symbol": "spare",
    "map": {}
@@ -737,7 +851,10 @@
     "zh": "跨页连接",
     "es": "Referencia a otra hoja",
     "de": "Blattverweis",
-    "pt": "Referência de folha"
+    "pt": "Referência de folha",
+    "it": "Rimando ad altro foglio",
+    "pl": "Odsyłacz do arkusza",
+    "tr": "Sayfa bağlantısı"
    },
    "symbol": "offpage",
    "map": {}
@@ -752,7 +869,10 @@
     "zh": "互感器",
     "es": "Transformador de medida",
     "de": "Messwandler (Strom-/Spannungswandler)",
-    "pt": "Transformador de instrumento (TC / TP)"
+    "pt": "Transformador de instrumento (TC / TP)",
+    "it": "Trasformatore di misura (TA/TV)",
+    "pl": "Przekładnik (prądowy/napięciowy)",
+    "tr": "Ölçü transformatörü (AT/GT)"
    },
    "symbol": "instrument_transformer",
    "map": {
@@ -771,7 +891,10 @@
     "zh": "保护继电器",
     "es": "Relé de protección",
     "de": "Schutzrelais",
-    "pt": "Relé de proteção"
+    "pt": "Relé de proteção",
+    "it": "Relè di protezione",
+    "pl": "Przekaźnik zabezpieczeniowy",
+    "tr": "Koruma rölesi"
    },
    "symbol": "protection_relay",
    "map": {
@@ -790,7 +913,10 @@
     "zh": "接地开关",
     "es": "Seccionador de puesta a tierra",
     "de": "Erdungsschalter",
-    "pt": "Chave de aterramento"
+    "pt": "Chave de aterramento",
+    "it": "Sezionatore di terra",
+    "pl": "Uziemnik",
+    "tr": "Topraklama ayırıcısı"
    },
    "symbol": "earthing_switch",
    "map": {
@@ -809,7 +935,10 @@
     "zh": "带电显示装置",
     "es": "Indicador de presencia de tensión",
     "de": "Spannungsanzeige",
-    "pt": "Indicador de presença de tensão"
+    "pt": "Indicador de presença de tensão",
+    "it": "Indicatore di presenza tensione",
+    "pl": "Wskaźnik obecności napięcia",
+    "tr": "Gerilim varlık göstergesi"
    },
    "symbol": "voltage_indicator",
    "map": {
@@ -827,7 +956,10 @@
     "zh": "绝缘监控装置",
     "es": "Dispositivo de vigilancia de aislamiento",
     "de": "Isolationsüberwachungsgerät",
-    "pt": "Dispositivo supervisor de isolamento (DSI)"
+    "pt": "Dispositivo supervisor de isolamento (DSI)",
+    "it": "Dispositivo di controllo dell'isolamento",
+    "pl": "Urządzenie do monitorowania stanu izolacji",
+    "tr": "İzolasyon izleme cihazı"
    },
    "symbol": "insulation_monitor",
    "map": {
@@ -845,7 +977,10 @@
     "zh": "过电压限制器（击穿保险器）",
     "es": "Limitador de sobretensión",
     "de": "Überspannungsbegrenzer",
-    "pt": "Limitador de sobretensão"
+    "pt": "Limitador de sobretensão",
+    "it": "Limitatore di sovratensione",
+    "pl": "Ogranicznik przepięć (IT)",
+    "tr": "Aşırı gerilim sınırlayıcı"
    },
    "symbol": "surge_limiter",
    "map": {
@@ -864,7 +999,10 @@
     "zh": "中性点接地阻抗",
     "es": "Impedancia de puesta a tierra del neutro",
     "de": "Sternpunkterdungsimpedanz",
-    "pt": "Impedância de aterramento do neutro"
+    "pt": "Impedância de aterramento do neutro",
+    "it": "Impedenza di neutro",
+    "pl": "Impedancja uziemiająca punkt neutralny",
+    "tr": "Nötr topraklama empedansı"
    },
    "symbol": "neutral_impedance",
    "map": {
@@ -882,7 +1020,10 @@
     "zh": "端子排",
     "es": "Bornera / regleta de bornes",
     "de": "Klemmleiste",
-    "pt": "Régua de bornes"
+    "pt": "Régua de bornes",
+    "it": "Morsettiera",
+    "pl": "Listwa zaciskowa",
+    "tr": "Klemens grubu"
    },
    "symbol": "terminal_block",
    "map": {
@@ -901,7 +1042,10 @@
     "zh": "接线盒",
     "es": "Caja de derivación",
     "de": "Abzweigdose",
-    "pt": "Caixa de passagem"
+    "pt": "Caixa de passagem",
+    "it": "Cassetta di derivazione",
+    "pl": "Puszka połączeniowa",
+    "tr": "Buat"
    },
    "symbol": "junction_box",
    "map": {
@@ -920,7 +1064,10 @@
     "zh": "连接器",
     "es": "Conector",
     "de": "Steckverbinder",
-    "pt": "Conector"
+    "pt": "Conector",
+    "it": "Connettore",
+    "pl": "Złącze",
+    "tr": "Konnektör"
    },
    "symbol": "connector",
    "map": {
@@ -939,7 +1086,10 @@
     "zh": "直流变换器",
     "es": "Convertidor CC",
     "de": "DC-Wandler (Optimierer, MPPT)",
-    "pt": "Conversor CC (otimizador, MPPT)"
+    "pt": "Conversor CC (otimizador, MPPT)",
+    "it": "Convertitore DC (ottimizzatore, MPPT)",
+    "pl": "Przekształtnik DC (optymalizator, MPPT)",
+    "tr": "DC dönüştürücü (optimizer, MPPT)"
    },
    "symbol": "dc_converter",
    "map": {
@@ -958,7 +1108,10 @@
     "zh": "接地排",
     "es": "Barra de tierra",
     "de": "Potentialausgleichsschiene / PE-Schiene",
-    "pt": "Barramento de equipotencialização (BEP)"
+    "pt": "Barramento de equipotencialização (BEP)",
+    "it": "Collettore di terra",
+    "pl": "Szyna uziemiająca (PE)",
+    "tr": "Topraklama barası"
    },
    "symbol": "earth_bar",
    "map": {
@@ -977,7 +1130,10 @@
     "zh": "可编程控制器",
     "es": "Controlador lógico programable",
     "de": "Speicherprogrammierbare Steuerung (SPS)",
-    "pt": "Controlador lógico programável (CLP)"
+    "pt": "Controlador lógico programável (CLP)",
+    "it": "Controllore programmabile (PLC)",
+    "pl": "Sterownik programowalny (PLC)",
+    "tr": "Programlanabilir kontrolör (PLC)"
    },
    "symbol": "plc",
    "map": {
@@ -996,7 +1152,10 @@
     "zh": "电源装置",
     "es": "Fuente de alimentación",
     "de": "Stromversorgung (AC/DC)",
-    "pt": "Fonte de alimentação (CA/CC)"
+    "pt": "Fonte de alimentação (CA/CC)",
+    "it": "Alimentatore (AC/DC)",
+    "pl": "Zasilacz (AC/DC)",
+    "tr": "Güç kaynağı (AC/DC)"
    },
    "symbol": "power_supply",
    "map": {

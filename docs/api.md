@@ -69,8 +69,9 @@ uniwire.render_svg(doc, "out/house-ml", stem="house-ml", view=view)
 ```
 
 The language of the drawing (title block, table headings, type labels) follows `meta.lang` of the
-document: `"en"` (default), `"fr"`, `"de"`, `"es"`, `"pt"`, `"ru"` or `"zh"` (Simplified Chinese). Another language
-falls back to English for the texts uniwire writes; the texts of the document are drawn as written.
+document: `"en"` (default), `"fr"`, `"de"`, `"es"`, `"pt"`, `"it"`, `"pl"`, `"tr"`, `"ru"` or `"zh"` (Simplified
+Chinese). Another language falls back to English for the texts uniwire writes; the texts of the document are drawn
+as written.
 
 Colours: a view with `color` set (`conductors`, `phase`, `source`, `status`, `voltage`, SPEC §7) recolours
 the strokes and adds a legend on each sheet, in SVG and PDF alike:
