@@ -99,6 +99,26 @@ method (part 5-52, guide UTE C 15-105).
 | `nfc15100.earth-resistance` | TT: earth electrode resistance × highest RCD sensitivity ≤ 50 V, i.e. 100 Ω with a 500 mA service breaker (411.5.3) | error |
 | `nfc15100.ev-rcd` | EV charging: type B in three-phase mode 2 (error); in mode 3 with a type A or F, reminder of 6 mA DC detection (info). Source: IEC 60364-7-722 / guide UTE C 15-722, not part of the 2002 edition and its amendments | error / info |
 
+## `vde0100`: German low-voltage installations
+
+DIN VDE 0100 is the German adoption of IEC 60364, with the same part numbers. The profile checks the German
+requirements that go beyond the general rules; combine it with `iec60364` for the current-carrying capacity of
+cables. Dwelling rules apply when `installation.premises` is `"dwelling"` or not set.
+
+| Rule | Check | Level |
+|---|---|---|
+| `vde0100.rcd-30mA` | Socket-outlet circuits up to 32 A protected by an RCD of at most 30 mA, all premises (DIN VDE 0100-410:2018, 411.3.3); lighting circuits of dwellings, the same (411.3.4) | error |
+| `vde0100.bathroom` | Every circuit of a room with a bath or a shower protected by an RCD of at most 30 mA, except a circuit supplying only a permanently connected water heater (DIN VDE 0100-701). The room is read from the load's `room` or `label` (Bad, Badezimmer, Dusche...) | error |
+| `vde0100.ev-circuit` | Each charging point supplied by its own final circuit and protected by its own RCD of at most 30 mA (DIN VDE 0100-722) | error |
+| `vde0100.ev-rcd` | RCD of a charging point: type AC or not stated (error); type A or F, reminder that the charging point must include 6 mA DC fault detection, RDC-DD, IEC 62955 (info) | error / info |
+| `vde0100.spd` | No surge protective device in the installation: required for most buildings (DIN VDE 0100-443 and -534, 2016) | warning |
+| `vde0100.pen-section` | A cable whose `conductors` include a PEN: at least 10 mm² copper or 16 mm² aluminium (DIN VDE 0100-540, 543.4) | warning |
+
+Not checked: arc fault detection devices (DIN VDE 0100-420, required in some premises only), the connection
+rules of VDE-AR-N 4100 (meter cabinet, selective main circuit breaker) and the minimum equipment of dwellings
+(DIN 18015-2). The rules were written from the structure of the standard, without its text: report any
+difference with the edition you apply.
+
 ## `iec60364`: current-carrying capacity
 
 One rule, `iec60364.iz`: the rating of the protective device feeding a cable (`ir_A`, otherwise

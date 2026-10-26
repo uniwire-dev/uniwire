@@ -50,7 +50,7 @@ EN: dict[str, str] = {
     "rules.unknown_profile": "unknown profile: {profile!r}",
     "rules.no_profile": "no rule profile applied: only the consistency of the document was checked (tags, links, "
                         "interlocks, ratings in cascade), not the protections, cables and RCDs; profiles: 'nfc15100' "
-                        "(France), 'iec60364'",
+                        "(France), 'vde0100' (Germany), 'iec60364'",
     "rules.standard_not_covered": "no rule profile covers {standard}: only the consistency of the document was "
                                   "checked (tags, links, interlocks, ratings in cascade); the protections, cables, "
                                   "residual-current devices and earthing were not checked against {standard}",
@@ -126,6 +126,18 @@ EN: dict[str, str] = {
     "nfc15100.supply_section": "link to the main board in {section:g} mm² with a {in_a:g} A service breaker "
                                "(at least {need:g} mm² copper)",
     # enedis
+    "vde0100.rcd_30mA_socket": "{what}: socket-outlet circuit up to 32 A not protected by an RCD of at most 30 mA",
+    "vde0100.rcd_30mA_lighting": "{what}: lighting circuit of a dwelling not protected by an RCD of at most 30 mA",
+    "vde0100.bathroom": "{what}: circuit of a room with a bath or a shower not protected by an RCD of at most 30 mA",
+    "vde0100.ev_own_circuit": "{what}: a charging point needs its own final circuit (other loads on its protection)",
+    "vde0100.ev_no_rcd": "{what}: charging point not protected by an RCD of at most 30 mA",
+    "vde0100.ev_own_rcd": "{what}: a charging point needs its own RCD (the RCD also protects other loads)",
+    "vde0100.ev_rcd_type": "{what}: RCD type {rtype}: type B, or type A / F with 6 mA DC fault detection in the "
+                           "charging point, required",
+    "vde0100.ev_rdc_dd": "{what}: type {rtype} RCD: the charging point must include 6 mA DC fault detection "
+                         "(RDC-DD, IEC 62955), otherwise a type B RCD",
+    "vde0100.spd": "no surge protective device: required for most buildings (DIN VDE 0100-443 / -534)",
+    "vde0100.pen_section": "PEN conductor of {section:g} mm² {material}: at least {minimum:g} mm² required",
     "enedis.single_phase_max": "{kva:g} kVA in single-phase: a limited-power single-phase connection carries 12 kVA "
                                "at most, a three-phase connection is needed",
     "enedis.monitored": "{kva:g} kVA: monitored-power connection (37 to 250 kVA), the AGCP setting tiers of "
@@ -297,7 +309,7 @@ FR: dict[str, str] = {
     "rules.unknown_profile": "profil inconnu : {profile!r}",
     "rules.no_profile": "aucun profil de règles appliqué : seule la cohérence du document a été vérifiée (repères, "
                         "liens, verrouillages, calibres en cascade), pas les protections, câbles et différentiels ; "
-                        "profils : 'nfc15100' (France), 'iec60364'",
+                        "profils : 'nfc15100' (France), 'vde0100' (Allemagne), 'iec60364'",
     "rules.standard_not_covered": "aucun profil de règles ne couvre {standard} : seule la cohérence du document a été "
                                   "vérifiée (repères, liens, verrouillages, calibres en cascade) ; les protections, "
                                   "câbles, différentiels et la mise à la terre n'ont pas été vérifiés selon {standard}",
@@ -370,6 +382,20 @@ FR: dict[str, str] = {
                              "ou 2P)",
     "nfc15100.supply_section": "liaison vers le tableau principal en {section:g} mm² avec un AGCP de {in_a:g} A "
                                "(au moins {need:g} mm² cuivre)",
+    "vde0100.rcd_30mA_socket": "{what} : circuit de prises jusqu'à 32 A non protégé par un différentiel de 30 mA au plus",
+    "vde0100.rcd_30mA_lighting": "{what} : circuit d'éclairage d'un logement non protégé par un différentiel de 30 mA au plus",
+    "vde0100.bathroom": "{what} : circuit d'une pièce avec baignoire ou douche non protégé par un différentiel de 30 mA "
+                        "au plus",
+    "vde0100.ev_own_circuit": "{what} : un point de recharge a son propre circuit terminal (d'autres charges sur sa "
+                              "protection)",
+    "vde0100.ev_no_rcd": "{what} : point de recharge non protégé par un différentiel de 30 mA au plus",
+    "vde0100.ev_own_rcd": "{what} : un point de recharge a son propre différentiel (celui-ci protège d'autres charges)",
+    "vde0100.ev_rcd_type": "{what} : différentiel type {rtype} : type B, ou type A / F avec détection de courant continu "
+                           "6 mA dans le point de recharge, requis",
+    "vde0100.ev_rdc_dd": "{what} : différentiel type {rtype} : le point de recharge doit intégrer une détection de "
+                         "courant continu 6 mA (RDC-DD, IEC 62955), sinon un différentiel type B",
+    "vde0100.spd": "aucun parafoudre : requis pour la plupart des bâtiments (DIN VDE 0100-443 / -534)",
+    "vde0100.pen_section": "conducteur PEN de {section:g} mm² {material} : {minimum:g} mm² au moins requis",
     "enedis.single_phase_max": "{kva:g} kVA en monophasé : un branchement monophasé à puissance limitée porte "
                                "12 kVA au plus, il faut un branchement triphasé",
     "enedis.monitored": "{kva:g} kVA : branchement à puissance surveillée (37 à 250 kVA), les paliers de réglage "

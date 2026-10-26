@@ -51,7 +51,7 @@ The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are to be interpret
 |---|---|---|
 | `$schema` | no | Schema URL (the major version appears in the path: `/v1/`) |
 | `uniwire` | no (default `1.0.0`) | Format version, semver `1.x.y` |
-| `profiles` | no | Business rule profiles to apply (`nfc15100`, `iec60364`, `enedis`…) |
+| `profiles` | no | Business rule profiles to apply (`nfc15100`, `vde0100`, `iec60364`, `enedis`…) |
 | `meta` | no | Title, project, client, author, date, `revisions[]`, `notes[]`, `lang` |
 | `installation` | no | `earthing` (TT, TN-C, TN-S, TN-C-S, IT), `system` (1P+N, 3P+N…), `un_V`, `f_Hz`, `supply`, `subscribed_kVA`, `planned_kVA`, `ik3_kA`, `earth_resistance_ohm`, `surface_m2`, `standard`, `premises` (dwelling, commercial, office, industrial, public, agricultural, other: dwelling rules apply to `dwelling` or when absent) |
 | `templates` | no | Named attribute templates |
@@ -495,6 +495,10 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
      UTE C 15-105). Each rule carries a `source` (document and clause) and a `confidence` (`high` /
      `medium`), available in `uniwire.rules.RULE_INFO`; each `Finding` repeats the source. Rules, checks and
      levels: [Rules](rules.md#nfc15100-french-low-voltage-installations).
+
+   * `vde0100` *(optional, must be declared in `profiles`)*: German installations (DIN VDE 0100): 30 mA RCDs
+     for socket-outlets, the lighting of dwellings and bathrooms, charging points, surge protection, PEN
+     cross-section. Rules, checks and levels: [Rules](rules.md#vde0100-german-low-voltage-installations).
 
    * `iec60364` *(optional, must be declared in `profiles`)*: current-carrying capacity of cables.
      * **Rule `iec60364.iz`**

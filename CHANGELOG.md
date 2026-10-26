@@ -64,6 +64,12 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   "Stromkreis"), type names and the short texts in symbols ("FU", "SPS", "USV"), with the terms of DIN EN 60617 and
   IEC 60050-826 practice. German numbers take a decimal comma. Messages stay in English.
 
+* Rule profile `vde0100` (German installations, DIN VDE 0100): 30 mA RCD for socket-outlets up to 32 A and for
+  the lighting of dwellings (410), circuits of bathrooms (701, a fixed water heater exempt), charging points with
+  their own circuit and RCD of type B or A/F with 6 mA DC detection (722), surge protection (443/534) and PEN
+  cross-section (540). Combine it with `iec60364`. Example 06 uses it. A document following DIN VDE 0100 without
+  a profile is pointed to it.
+
 * Drawings in Portuguese (`meta.lang` "pt", "pt-BR", "pt-PT"): title block, notes, legends, table headings
   ("Identificação", "Circuito"), type names and the short texts in symbols ("DR", "DPS", "CLP"), with the terms of
   ABNT NBR 5410 practice. Portuguese numbers take a decimal comma. Messages stay in English.

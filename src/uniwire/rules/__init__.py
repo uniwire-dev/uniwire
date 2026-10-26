@@ -95,7 +95,7 @@ def check(doc: Document, profiles: Iterable[str] | None = None) -> list[Finding]
 
 
 #: Standards the rule profiles derive from.
-COVERED_STANDARDS = ("NF C", "NFC", "IEC", "CEI", "60364")
+COVERED_STANDARDS = ("NF C", "NFC", "IEC", "CEI", "60364", "VDE")
 
 
 def _no_profile(doc: Document) -> Finding:
@@ -106,4 +106,4 @@ def _no_profile(doc: Document) -> Finding:
     return Finding("info", "core.no-profile", _t("rules.no_profile"))
 
 
-from . import core, enedis, iec60364, nfc15100, plc  # noqa: E402,F401  (rule registration)
+from . import core, enedis, iec60364, nfc15100, plc, vde0100  # noqa: E402,F401  (rule registration)

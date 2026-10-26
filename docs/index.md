@@ -5,8 +5,8 @@ multi-line drawings, compliance checks, bills of materials and wire lists, from 
 
 uniwire is an open JSON exchange format for electrical installations, drawn as single-line and multi-line
 diagrams, and a reference Python
-library that validates documents, checks them against rule profiles (NF C 15-100, IEC 60364, PLC
-consistency), produces bills of materials and draws SVG / PDF sheets. You describe the
+library that validates documents, checks them against rule profiles (NF C 15-100, DIN VDE 0100, IEC 60364,
+PLC consistency), produces bills of materials and draws SVG / PDF sheets. You describe the
 **installation** (sources, protective devices, cables, loads) and uniwire computes the drawing.
 
 * **Format**: `*.uniwire.json`, validated by a published [JSON Schema](https://uniwire.sh/schema/v1/uniwire.schema.json)
@@ -83,7 +83,7 @@ See the [code-first API](build.md) for the full guide.
 * [Specification](SPEC.md): the format, field by field.
 * [Python API and CLI](api.md): load, check, render, bill of materials.
 * [Code-first API](build.md): schematics as Python code.
-* [Rules](rules.md): the `core`, `nfc15100`, `iec60364` and `enedis` profiles and the PLC checks.
+* [Rules](rules.md): the `core`, `nfc15100`, `vde0100`, `iec60364` and `enedis` profiles and the PLC checks.
 * [Examples](examples.md): complete documents and their drawings.
 * [Contributing](contributing.md): development setup and the uniwire Enhancement Proposal process.
 * Source code: <https://github.com/uniwire-dev/uniwire>
