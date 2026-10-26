@@ -482,6 +482,14 @@ CARTOUCHE_TITLES = {
         "cos_phi": "cos φ", "count": "Cant.", "un_V": "Tensión", "frame_A": "Bastidor", "cable_type": "Tipo de cable",
         "cable_ref": "Ref. cable", "install": "Método de instalación",
     },
+    "de": {
+        "label": "Bezeichnung", "ref": "BMK", "protection": "Schutzorgan", "in_A": "Nennstrom", "curve": "Charakteristik",
+        "icn_kA": "Schaltvermögen", "idn_mA": "RCD", "rcd_type": "RCD-Typ", "poles": "Pole",
+        "cable": "Kabel (mm²)", "cable_awg": "Kabel", "section_mm2": "Querschnitt", "length_m": "Länge",
+        "p_kW": "Leistung", "phase": "Außenleiter", "room": "Raum", "points": "Auslässe", "circuit": "Stromkreis",
+        "ib_A": "Ib", "cos_phi": "cos φ", "count": "Anz.", "un_V": "Spannung", "frame_A": "Baugröße",
+        "cable_type": "Kabeltyp", "cable_ref": "Kabel-BMK", "install": "Verlegeart",
+    },
     "en": {
         "label": "Description", "ref": "Tag", "protection": "Protection", "in_A": "Rating", "curve": "Curve",
         "icn_kA": "Breaking cap.", "idn_mA": "RCD", "rcd_type": "RCD type", "poles": "Poles", "cable": "Cable (mm²)", "cable_awg": "Cable",

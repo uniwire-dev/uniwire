@@ -813,7 +813,7 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
             lines = [x for x in annotation(node, lang, show_label=feeds_bus) if x]
             if ln.type == "spare":  # a spare way: what it is kept for, its rating
                 in_a = getattr(node, "in_A", None)
-                lines = [x for x in (node.label or registry.label("spare", lang), f"{fmt(in_a)}A" if in_a else "",
+                lines = [x for x in (node.label or registry.label("spare", lang), fmt(in_a, " A") if in_a else "",
                                      getattr(node, "poles", None) or "") if x]
             pn = part_number(node)
             tag = pn if view.tag_field == "part_number" and pn else node.ref

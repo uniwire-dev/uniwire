@@ -49,8 +49,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   being cut when the room beside the symbol is short.
 
 * Units: a number and its unit are written apart everywhere ("100 A", "20 A 30 mA", "C16 30 mA", "gG 32 A",
-  "6 kA", "Ir 63 A"), in the drawings, the circuit tables and the bill of materials; the ratings of protective
-  devices were written "100A" and "30mA" beside "200 A" and "250 kVA". Curve designations ("C16") are unchanged.
+  "6 kA", "Ir 63 A", a spare way "125 A"), in the drawings, the circuit tables and the bill of materials; the
+  ratings of protective devices were written "100A" and "30mA" beside "200 A" and "250 kVA". Curve designations
+  ("C16") are unchanged.
 
 * Examples 21 and 29: the feeders of the refrigeration board and of the smoke-control board carry a neutral
   (their 1P+N circuits need one).
@@ -58,6 +59,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Drawings in Spanish (`meta.lang` "es") and Simplified Chinese ("zh"): title block, notes, legends, table
   headings, type names and the short texts in symbols, with IEC 60050 terms (GB/T terms for Chinese; neutral terms
   where Spain and Argentina differ). Spanish numbers take a decimal comma. Messages stay in English.
+
+* Drawings in German (`meta.lang` "de", "de-AT", "de-CH"...): title block, notes, legends, table headings ("BMK",
+  "Stromkreis"), type names and the short texts in symbols ("FU", "SPS", "USV"), with the terms of DIN EN 60617 and
+  IEC 60050-826 practice. German numbers take a decimal comma. Messages stay in English.
 
 * A cable written in a device text comes after the device's own lines (settings, poles, vector group) and never
   replaces one; a composition ending with its section ("4x35+PE16") is not followed by the section again.

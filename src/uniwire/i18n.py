@@ -740,7 +740,80 @@ ES: dict[str, str] = {
     "symbols.heading": "Biblioteca de símbolos uniwire (cuadrícula M = 2,5 mm)",
 }
 
-CATALOGS: dict[str, dict[str, str]] = {"en": EN, "fr": FR, "ru": RU, "zh": ZH, "es": ES}
+DE: dict[str, str] = {
+    "render.unknown_view": "unbekannte Ansicht: {id}",
+    "render.incoming_from": "von {ref}",
+    "render.incoming": "Einspeisung",
+    "render.incoming_folio": "{what} (Blatt {folio})",
+    "render.default_title": "Übersichtsschaltplan",
+    "render.multiline_title": "Allpoliger Stromlaufplan (Hauptstromkreise)",
+    "render.continued_from": "{label} (von Blatt {folio})",
+    "render.continued_on": "weiter auf Blatt {folio}",
+    "render.continuation_name": "{name} (Forts.)",
+    "render.to_folio": " → Blatt {folio}",
+    "label.rcd_type": "Typ {type}",
+    "label.safety": "Sicherheitsstromkreis",
+    "render.auxiliary_devices": "Hilfsgeräte",
+    "render.scale": "Maßstab {scale}",
+    "render.sheet_bookmark": "Blatt {number}: {title}",
+    "render.sheet_bookmark_untitled": "Blatt {number}",
+    "legend.conductors": "Leiter ({standard})",
+    "legend.preset.iec": "IEC 60445",
+    "legend.preset.us": "NEC-Praxis",
+    "legend.phase": "Außenleiter",
+    "legend.multi_phase": "mehrphasig",
+    "legend.source": "Quellen",
+    "legend.status": "Status",
+    "legend.status.new": "neu",
+    "legend.status.existing": "bestehend",
+    "legend.status.future": "geplant",
+    "legend.status.temporary": "provisorisch",
+    "legend.status.removed": "Rückbau",
+    "legend.status.spare": "Reserve",
+    "legend.voltage": "Spannung",
+    "legend.voltage.mv": "HS / MS (> 1 kV AC)",
+    "legend.voltage.lv": "NS",
+    "legend.voltage.elv": "Kleinspannung (≤ 50 V AC)",
+    "legend.voltage.dc": "Gleichstrom",
+    "tb.title": "Titel",
+    "tb.sheet_title": "Blatttitel",
+    "tb.default_sheet_title": "Übersichtsschaltplan",
+    "tb.project": "Projekt",
+    "tb.client": "Auftraggeber",
+    "tb.earthing": "Netzform",
+    "tb.voltage": "Spannung",
+    "tb.power": "Leistung",
+    "tb.ik_max": "Ik max.",
+    "tb.earth_electrode": "Erder",
+    "tb.standard": "Norm",
+    "tb.drawn_by": "Gezeichnet",
+    "tb.checked_by": "Geprüft",
+    "tb.company": "Firma",
+    "tb.date": "Datum",
+    "tb.revision": "Rev.",
+    "tb.sheet": "Blatt",
+    "tb.generated_by": "Erstellt mit",
+    "notes.title": "Hinweise",
+    "notes.site": "Standort: {site}",
+    "notes.supply": "Einspeisung: {supply}",
+    "notes.revision": "Rev. {index} {date} {description}",
+    "notes.more": "… (+{count} weitere Zeile(n))",
+    "ann.frame": "Baugröße {frame} A",
+    "ann.off_peak": "Tag/Nacht (Niedertarif)",
+    "ann.manual": "manuell",
+    "ann.automatic": "automatisch",
+    "ann.peak_power_unit": "Wp",
+    "ann.peak_power_kunit": "kWp",
+    "ann.modules": "{count} Modul(e)",
+    "ann.normally_open": "Schließer",
+    "ann.locks": "Schlüssel {keys}",
+    "cell.points_one": "{count} Auslass",
+    "cell.points": "{count} Auslässe",
+    "cell.upstream": "{value} (vorgeschaltet)",
+    "symbols.page_title": "uniwire-Symbole",
+    "symbols.heading": "uniwire-Symbolbibliothek (Raster M = 2,5 mm)",
+}
+CATALOGS: dict[str, dict[str, str]] = {"en": EN, "fr": FR, "ru": RU, "zh": ZH, "es": ES, "de": DE}
 
 
 def normalize_lang(lang: Optional[str]) -> str:
@@ -775,7 +848,7 @@ def t(key: str, lang: Optional[str] = None, **kwargs: Any) -> str:
 
 
 #: Languages whose messages write decimals with a comma ('1,5 mm²').
-DECIMAL_COMMA = {"fr", "ru", "es"}
+DECIMAL_COMMA = {"fr", "ru", "es", "de"}
 
 
 def number(value: float, lang: Optional[str] = None) -> str:

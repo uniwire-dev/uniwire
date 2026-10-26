@@ -1,7 +1,7 @@
 import re
 
 from uniwire import load, render_pages
-from uniwire.i18n import CATALOGS, EN, ES, FR, RU, ZH, normalize_lang, t
+from uniwire.i18n import CATALOGS, DE, EN, ES, FR, RU, ZH, normalize_lang, t
 from uniwire.render.scene import Group, Text
 from uniwire.rules import check
 
@@ -20,9 +20,9 @@ def _texts(item) -> list[str]:
 
 def test_catalogs_have_same_keys():
     assert set(EN) == set(FR)
-    assert set(CATALOGS) == {"en", "fr", "ru", "zh", "es"}
+    assert set(CATALOGS) == {"en", "fr", "ru", "zh", "es", "de"}
     drawing = {k for k in EN if k.split(".")[0] in ("tb", "notes", "legend", "ann", "cell")}
-    for cat in (RU, ZH, ES):  # the drawing texts, English for the other messages
+    for cat in (RU, ZH, ES, DE):  # the drawing texts, English for the other messages
         assert drawing <= set(cat) <= set(EN)
         assert set(cat) == set(RU)
         for k, v in cat.items():  # same placeholders as the English text
@@ -49,11 +49,18 @@ def test_chinese_and_spanish_drawing_texts():
     assert "1,5" in " ".join(es)  # decimal comma
 
 
+def test_german_drawing_texts():
+    view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
+    de = [s for p in render_pages(load({**DOC, "meta": {"lang": "de-AT"}, "views": [view]})) for s in _texts(p.root)]
+    assert {"Hinweise", "BMK", "Kabel (mm²)", "Blatt"} <= set(de)
+    assert "1,5" in " ".join(de)  # decimal comma
+
+
 def test_type_labels_in_every_language():
     from uniwire import registry
 
     for type_, info in registry.registry()["types"].items():
-        assert set(info["label"]) == {"en", "fr", "ru", "zh", "es"}, type_
+        assert set(info["label"]) == {"en", "fr", "ru", "zh", "es", "de"}, type_
 
 
 def test_lang_selection(monkeypatch):
