@@ -122,12 +122,12 @@ def fmt_current(a: float | None) -> str:
     """30 mA stays in mA, 300 mA stays in mA, 1000 mA -> 1 A."""
     if a is None:
         return ""
-    return fmt(a, "A")
+    return fmt(a, " A")
 
 
 def fmt_sensitivity(ma: float | None) -> str:
     if ma is None:
         return ""
     if ma >= 1000:
-        return fmt(ma / 1000, "A")
-    return fmt(ma, "mA")
+        return fmt(ma / 1000, " A")
+    return fmt(ma, " mA")

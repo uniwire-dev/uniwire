@@ -62,29 +62,29 @@ def part_number(node: Any) -> Optional[str]:
 
 
 def protection_short(node: Any) -> str:
-    """'C16', '40A 30mA A', 'gG 32A', 'IS 63A'..."""
+    """'C16', '40 A 30 mA', 'gG 32 A', '63 A / 32 A'...: the number and its unit apart, as everywhere on the drawing."""
     t = node.type
     in_a = _g(node, "in_A")
     if t == "breaker":
-        return f"{node.curve or ''}{fmt(in_a)}" if node.curve else (fmt(in_a, "A") if in_a else "")
-    if t == "rcbo":  # 'C16 30mA', or '20A 5mA' without a curve (the rating alone would read as part of the mA)
-        rating = f"{node.curve}{fmt(in_a)}" if node.curve else (fmt(in_a, "A") if in_a else "")
+        return f"{node.curve or ''}{fmt(in_a)}" if node.curve else (fmt(in_a, " A") if in_a else "")
+    if t == "rcbo":  # 'C16 30 mA', or '20 A 5 mA' without a curve
+        rating = f"{node.curve}{fmt(in_a)}" if node.curve else (fmt(in_a, " A") if in_a else "")
         return f"{rating} {fmt_sensitivity(node.idn_mA)}".strip()
     if t == "main_breaker":
         r = node.range_A or fmt(in_a)
-        return f"{r}A {fmt_sensitivity(node.idn_mA)}".strip()
+        return f"{r} A {fmt_sensitivity(node.idn_mA)}".strip()
     if t == "rcd":
-        return f"{fmt(in_a, 'A')} {fmt_sensitivity(node.idn_mA)}".strip()
+        return f"{fmt(in_a, ' A')} {fmt_sensitivity(node.idn_mA)}".strip()
     if t == "fuse":
-        return f"{node.fuse_class or ''} {fmt(in_a, 'A')}".strip()
+        return f"{node.fuse_class or ''} {fmt(in_a, ' A')}".strip()
     if t == "fuse_switch":
-        return f"{fmt(in_a, 'A')} / {fmt(node.fuse_A, 'A')}".strip(" /")
+        return f"{fmt(in_a, ' A')} / {fmt(node.fuse_A, ' A')}".strip(" /")
     if t in ("switch_disconnector", "disconnector"):
-        return fmt(in_a, "A")
+        return fmt(in_a, " A")
     if t == "motor_starter":
-        return f"{fmt(in_a, 'A')}"
+        return f"{fmt(in_a, ' A')}"
     if t == "spare":
-        return fmt(in_a, "A") if in_a else ""
+        return fmt(in_a, " A") if in_a else ""
     return ""
 
 
@@ -283,7 +283,7 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
         lines.append(protection_short(node))
         extra = []
         if g("icn_kA"):
-            extra.append(fmt(g("icn_kA"), "kA"))
+            extra.append(fmt(g("icn_kA"), " kA"))
         if g("poles"):
             extra.append(g("poles"))
         if extra:
@@ -296,7 +296,7 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
             if g("idn_range_mA"):
                 lines.append(f"IΔn {g('idn_range_mA')} mA")
         if g("ir_A"):
-            lines.append(f"Ir {fmt(g('ir_A'))}A")
+            lines.append(f"Ir {fmt(g('ir_A'))} A")
         if g("range") and len(lines) < 4:
             lines.insert(0, g("range"))
     elif t == "main_breaker":

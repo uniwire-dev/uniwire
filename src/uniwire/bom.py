@@ -42,7 +42,7 @@ def spec(node: Any) -> str:
     parts: list[str] = []
     rating = protection_short(node) if registry.category(node.type) in ("protection", "switching") else ""
     if not rating and g("in_A"):
-        rating = fmt(g("in_A"), "A")
+        rating = fmt(g("in_A"), " A")
     parts.append(rating)
     if g("poles"):
         parts.append(g("poles"))
@@ -50,14 +50,14 @@ def spec(node: Any) -> str:
         parts.append(f"type {g('rcd_type')}")
     breaking = g("icn_kA") or g("icu_kA")
     if breaking:
-        parts.append(fmt(breaking, "kA"))
+        parts.append(fmt(breaking, " kA"))
     if g("imax_kA"):
-        parts.append(f"Imax {fmt(g('imax_kA'), 'kA')}")
+        parts.append(f"Imax {fmt(g('imax_kA'), ' kA')}")
     for name, unit in (("sn_kVA", "kVA"), ("p_kVA", "kVA"), ("capacity_kWh", "kWh")):
         if g(name):
-            parts.append(fmt(g(name), unit))
+            parts.append(fmt(g(name), unit, " "))
     if not any(g(n) for n in ("sn_kVA", "p_kVA")) and g("p_kW") and node.type in ("pv_array", "ev_charger", "inverter"):
-        parts.append(fmt(g("p_kW"), "kW"))
+        parts.append(fmt(g("p_kW"), " kW"))
     return " ".join(p for p in parts if p)
 
 

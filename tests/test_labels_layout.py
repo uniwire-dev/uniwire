@@ -88,7 +88,7 @@ def test_spare_imd_and_busway_taps_have_table_cells():
     texts = _texts(render_pages(doc)[0].root)
     assert texts.count("-Q1") == 3  # the protection itself + both trunking tap-offs
     assert texts.count("C25") == 3  # annotation + both tap-off cells
-    assert "16A" in texts and "2P" in texts and "-B1" in texts
+    assert "16 A" in texts and "2P" in texts and "-B1" in texts
 
 
 def test_spare_fed_by_its_own_breaker_shows_the_breaker():
@@ -488,7 +488,7 @@ def test_small_texts_rcbo_rating_transformer_ratio_and_tag_once():
     from uniwire.labels import _ratio, protection_short, ref_label, without_ref
     d = load({"sources": [{"type": "grid", "children": [
         {"type": "rcbo", "in_A": 20, "idn_mA": 5}, {"type": "rcbo", "in_A": 16, "curve": "C", "idn_mA": 30}]}]})
-    assert [protection_short(n) for n in d.sources[0].children] == ["20A 5mA", "C16 30mA"]
+    assert [protection_short(n) for n in d.sources[0].children] == ["20 A 5 mA", "C16 30 mA"]
     assert [_ratio(20000, 400), _ratio(400, 230), _ratio(22000, 11000)] == ["20 kV/400 V", "400/230 V", "22/11 kV"]
     assert ref_label("TGBT", "TGBT") == "TGBT" and ref_label("MSB", "Main board") == "MSB Main board"
     assert without_ref("TX-A 3150 kVA", "TX-A") == "3150 kVA" and without_ref("-QA12 x", "-QA1") == "-QA12 x"
@@ -548,7 +548,7 @@ def _us_board(**inst):
 
 def test_nec_document_written_with_awg_sizes_and_gfci():
     texts = [t for p in render_pages(_us_board(standard="NEC 2023")) for t in _texts(p.root)]
-    assert "2x#10" in texts and "2-#12+G" in texts and "5mA GFCI" in texts
+    assert "2x#10" in texts and "2-#12+G" in texts and "5 mA GFCI" in texts
     assert not any("type A" in t for t in texts)
     iec = [t for p in render_pages(_us_board()) for t in _texts(p.root)]  # same data, IEC practice
     assert "2x#10" in iec and "3G3.31" in iec and "type A" in iec

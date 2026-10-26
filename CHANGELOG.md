@@ -48,6 +48,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   terminals, in both views (it arrived on the busbar side). A label without a tag goes on two lines rather than
   being cut when the room beside the symbol is short.
 
+* Units: a number and its unit are written apart everywhere ("100 A", "20 A 30 mA", "C16 30 mA", "gG 32 A",
+  "6 kA", "Ir 63 A"), in the drawings, the circuit tables and the bill of materials; the ratings of protective
+  devices were written "100A" and "30mA" beside "200 A" and "250 kVA". Curve designations ("C16") are unchanged.
+
 * Examples 21 and 29: the feeders of the refrigeration board and of the smoke-control board carry a neutral
   (their 1P+N circuits need one).
 

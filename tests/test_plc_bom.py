@@ -116,15 +116,15 @@ def test_bom_without_references():
 
     rows = bom(load(str(ROOT / "examples" / "01_studio_apartment.uniwire.json")))
     by = {(r["type"], r["spec"]): r for r in rows}
-    assert by[("breaker", "C16 1P+N 3kA")]["quantity"] == 3
-    assert sorted(by[("breaker", "C16 1P+N 3kA")]["refs"]) == ["-Q13", "-Q14", "-Q24"]
-    assert by[("rcd", "40A 30mA 2P type A")]["quantity"] == 1
+    assert by[("breaker", "C16 1P+N 3 kA")]["quantity"] == 3
+    assert sorted(by[("breaker", "C16 1P+N 3 kA")]["refs"]) == ["-Q13", "-Q14", "-Q24"]
+    assert by[("rcd", "40 A 30 mA 2P type A")]["quantity"] == 1
     assert by[("cable", "3G2.5")]["quantity"] == 4
     cable = next(r for r in rows if r["type"] == "cable" and r["length_m"])
     assert cable["spec"] == "U1000R2V 3G10 Cu" and cable["length_m"] == 4
     assert all(r["manufacturer"] == r["part_number"] == "" for r in rows)
     assert not any(r["type"] in ("lighting", "socket", "grid", "meter") for r in rows)  # loads, supply, utility meter
-    assert "C16 1P+N 3kA;breaker;3" in bom_csv(load(str(ROOT / "examples" / "01_studio_apartment.uniwire.json")))
+    assert "C16 1P+N 3 kA;breaker;3" in bom_csv(load(str(ROOT / "examples" / "01_studio_apartment.uniwire.json")))
 
 
 def test_bom_meters():
