@@ -22,11 +22,22 @@ def test_catalogs_have_same_keys():
     assert set(EN) == set(FR)
     assert set(CATALOGS) == {"en", "fr", "ru", "zh", "es", "de", "pt"}
     drawing = {k for k in EN if k.split(".")[0] in ("tb", "notes", "legend", "ann", "cell")}
-    for cat in (RU, ZH, ES, DE, PT):  # the drawing texts, English for the other messages
-        assert drawing <= set(cat) <= set(EN)
+    rules = {k for k in EN if k.split(".")[0] in ("core", "rules", "nfc15100", "vde0100", "iec60364", "enedis", "plc")}
+    for cat in (RU, ZH, ES, DE, PT):  # the drawing texts and the rule messages, English for the CLI and validation
+        assert drawing | rules <= set(cat) <= set(EN)
         assert set(cat) == set(RU)
-        for k, v in cat.items():  # same placeholders as the English text
-            assert re.findall(r"{\w+}", v) == re.findall(r"{\w+}", EN[k]), k
+        for k, v in cat.items():  # same placeholders as the English text (the order follows each language)
+            assert sorted(re.findall(r"{\w+}", v)) == sorted(re.findall(r"{\w+}", EN[k])), k
+
+
+def test_rule_messages_follow_the_language(monkeypatch):
+    d = load({"profiles": ["vde0100"], "sources": [{"type": "grid", "children": [
+        {"type": "breaker", "in_A": 16, "children": [{"type": "socket", "id": "S"}]}]}]})
+    for lang, word in (("de", "Steckdosenstromkreis"), ("es", "diferencial"), ("pt", "DR"), ("ru", "УЗО"),
+                       ("zh", "剩余电流保护器")):
+        monkeypatch.setenv("UNIWIRE_LANG", lang)
+        msg = next(f.message for f in check(d) if f.rule == "vde0100.rcd-30mA")
+        assert word in msg, (lang, msg)
 
 
 def test_russian_drawing_texts():

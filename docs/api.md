@@ -190,7 +190,8 @@ uniwire marks mcc.uniwire.json --view marks --write              # freeze the ge
 ```
 
 CLI output, validation errors and rule findings follow the `UNIWIRE_LANG` environment variable
-(`en` by default, `fr` available; the other drawing languages use English here):
+(`en` by default). French covers everything; German, Spanish, Portuguese, Russian and Chinese cover the rule
+findings, the CLI and validation messages staying in English:
 
 ```bash
 UNIWIRE_LANG=fr uniwire check house.uniwire.json

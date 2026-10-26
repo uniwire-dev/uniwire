@@ -36,7 +36,7 @@ house.uniwire.json: 2 finding(s)
 
 In Python, a `Finding` has the attributes `level`, `rule`, `message`, `node` and `source`. Rules based on a
 standard carry a `source` (the document and clause the rule relies on) and a `confidence` (`high` or
-`medium`), available in `uniwire.rules.RULE_INFO`. Messages are translated: set `UNIWIRE_LANG=fr` for French.
+`medium`), available in `uniwire.rules.RULE_INFO`. Messages are translated: set `UNIWIRE_LANG` to `fr`, `de`, `es`, `pt`, `ru` or `zh`.
 
 An unknown profile name produces a `profile` warning.
 

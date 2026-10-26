@@ -70,6 +70,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   cross-section (540). Combine it with `iec60364`. Example 06 uses it. A document following DIN VDE 0100 without
   a profile is pointed to it.
 
+* Rule findings in German, Spanish, Portuguese, Russian and Chinese (`UNIWIRE_LANG`), with the terms of each
+  practice (RCD/FI, diferencial, DR, УЗО, 剩余电流保护器); CLI and validation messages stay in English.
+
 * Drawings in Portuguese (`meta.lang` "pt", "pt-BR", "pt-PT"): title block, notes, legends, table headings
   ("Identificação", "Circuito"), type names and the short texts in symbols ("DR", "DPS", "CLP"), with the terms of
   ABNT NBR 5410 practice. Portuguese numbers take a decimal comma. Messages stay in English.
