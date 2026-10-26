@@ -554,7 +554,7 @@ RU: dict[str, str] = {
     "render.continuation_name": "{name} (прод.)",
     "render.to_folio": " → лист {folio}",
     "label.rcd_type": "тип {type}",
-    "label.safety": "Цепь безопасности",
+    "label.safety": "Цепь систем безопасности",
     "render.auxiliary_devices": "Вспомогательные устройства",
     "render.scale": "масштаб {scale}",
     "render.sheet_bookmark": "Лист {number}: {title}",
@@ -582,7 +582,7 @@ RU: dict[str, str] = {
     "tb.default_sheet_title": "Схема однолинейная",
     "tb.project": "Проект",
     "tb.client": "Заказчик",
-    "tb.earthing": "Тип заземления",
+    "tb.earthing": "Система заземления",
     "tb.voltage": "Напряжение",
     "tb.power": "Мощность",
     "tb.ik_max": "Iкз макс.",
@@ -600,8 +600,8 @@ RU: dict[str, str] = {
     "notes.supply": "Питание: {supply}",
     "notes.revision": "Изм. {index} {date} {description}",
     "notes.more": "… (ещё строк примечаний: {count})",
-    "ann.frame": "корпус {frame} A",
-    "ann.off_peak": "день/ночь (льготный тариф)",
+    "ann.frame": "корпус {frame} А",
+    "ann.off_peak": "день/ночь (ночной тариф)",
     "ann.manual": "ручн.",
     "ann.automatic": "авт.",
     "ann.peak_power_unit": "Вт пик",
@@ -609,8 +609,8 @@ RU: dict[str, str] = {
     "ann.modules": "модулей: {count}",
     "ann.normally_open": "норм. разомкн.",
     "ann.locks": "ключ {keys}",
-    "cell.points_one": "{count} т.",
-    "cell.points": "{count} т.",
+    "cell.points_one": "{count} шт.",
+    "cell.points": "{count} шт.",
     "cell.upstream": "{value} (выше по цепи)",
     "symbols.page_title": "Символы uniwire",
     "symbols.heading": "Библиотека символов uniwire (сетка M = 2,5 мм)",
@@ -622,31 +622,31 @@ RU: dict[str, str] = {
     "rules.standard_not_covered": "ни один профиль правил не охватывает {standard}: проверена только согласованность "
                                   "документа (обозначения, связи, блокировки, ступенчатость номиналов); аппараты защиты, "
                                   "кабели, УЗО и заземление не проверены по {standard}",
-    "core.ref_unique": "обозначение {ref!r} уже используется {other!r}",
+    "core.ref_unique": "обозначение {ref!r} уже присвоено элементу {other!r}",
     "core.normalized": "{where}: {field} {old!r} прочитано как {new!r}; записывайте в этой форме",
     "core.normalized_field": "{where}: неизвестное поле {old!r} прочитано как {new!r}; используйте {new!r}",
-    "core.transfer_target": "связь 'transfer' должна заканчиваться на устройстве АВР (transfer_switch)",
-    "core.tie_device": "секционирование без описанного аппарата",
-    "core.transfer_source": "АВР без второго источника (связь 'transfer')",
+    "core.transfer_target": "связь 'transfer' должна заканчиваться на переключателе источников (transfer_switch)",
+    "core.tie_device": "межсекционная связь без указания аппарата",
+    "core.transfer_source": "переключатель источников без второго источника (связь 'transfer')",
     "core.terminal_node": "узел {type} обычно ничего не питает",
-    "core.rating_cascade": "номинал {in_a:g} А выше вышестоящей защиты {up} ({up_in_a:g} А)",
-    "core.interlock_closed": "блокировка {lock!r}: {count} элементов замкнуты в нормальном режиме ({members}) при {keys} "
-                             "ключ(ах)",
+    "core.rating_cascade": "номинал {in_a:g} А больше номинала вышестоящей защиты {up} ({up_in_a:g} А)",
+    "core.interlock_closed": "блокировка {lock!r}: в нормальном режиме замкнуто элементов: {count} ({members}), "
+                             "ключей: {keys}",
     "core.interlock_single": "замок {lock!r} используется одним элементом и не объявлен ни в одной записи 'interlocks': "
                              "он ничего не блокирует",
-    "core.interlock_unused": "объявленная блокировка {lock!r} используется {count} элементом(ами) ('locks'), ожидается не "
+    "core.interlock_unused": "объявленная блокировка {lock!r}: число элементов ('locks') {count}, ожидается не "
                              "менее 2",
     "core.interlock_duplicate": "блокировка {lock!r} объявлена дважды",
     "core.control_scope": "этот документ описывает цепи управления ({nodes}): uniwire рисует распределение энергии "
-                          "(однолинейные и многолинейные схемы), а не схемы управления; катушки, контакты, кнопки и цепи "
-                          "тока здесь только перечислены, а не нарисованы как принципиальная схема управления",
+                          "(однолинейные и многолинейные схемы), а не схемы управления; катушки, контакты, кнопки и "
+                          "ветви цепей здесь только перечислены, а не нарисованы как принципиальная схема управления",
     "plc.duplicate_slots": "повторяющиеся слоты: {slots}",
     "plc.unsorted_slots": "модули не упорядочены по слотам",
     "plc.wago_end": "локальная шина WAGO без концевого модуля (750-600) на последней позиции",
     "plc.wago_feed": "не объявлен модуль подачи питания (750-602...)",
     "plc.port_unreadable": "порт {port!r} не распознан (ожидается 'слот.канал')",
     "plc.port_missing_slot": "порт {port!r}: отсутствует слот {slot}",
-    "plc.port_channels": "порт {port!r}: у модуля {module} только {channels} каналов",
+    "plc.port_channels": "порт {port!r}: у модуля {module} каналов всего {channels}",
     "plc.coil": "выход {port} ({un_v:g} В) управляет катушкой {coil:g} В: используйте промежуточное реле или релейный "
                 "модуль",
     "plc.port_shared": "канал {port} управляет {count} аппаратами",
@@ -656,13 +656,13 @@ RU: dict[str, str] = {
     "iec60364.iz_exceeded": "защита {rating:g} А > Iz {iz:g} А ({material} {insulation} {section:g} мм², способ "
                             "{method}, {loaded} нагруж. пров., {ambient})",
     "iec60364.ambient_ground": "грунт 25 °C",
-    "iec60364.ambient_air": "окружающая среда 40 °C",
+    "iec60364.ambient_air": "воздух 40 °C",
     "nfc15100.section": "автоматический выключатель {in_a:g} А на {section:g} мм² (не более {limit} А)",
-    "nfc15100.section_sizing": "автоматический выключатель {in_a:g} А на {section:g} мм²: выше обычных {limit} А "
-                               "проверьте кабель для его способа прокладки (NF C 15-100 часть 5-52, руководство "
+    "nfc15100.section_sizing": "автоматический выключатель {in_a:g} А на {section:g} мм²: выше обычных {limit} А, "
+                               "проверьте кабель с учётом способа прокладки (NF C 15-100 часть 5-52, руководство "
                                "UTE C 15-105)",
     "nfc15100.lighting_points": "{points} точек на цепи освещения (не более {limit})",
-    "nfc15100.lighting_rating": "освещение защищено на {in_a:g} А (не более 16 А)",
+    "nfc15100.lighting_rating": "защита цепи освещения {in_a:g} А (не более 16 А)",
     "nfc15100.socket_section": " при {section:g} мм²",
     "nfc15100.socket_points": "{points} розеток на розеточной цепи{where} (не более {limit})",
     "nfc15100.heating": "отопление {total:g} кВт на цепи {in_a:g} А (не более {limit:g} кВт)",
@@ -670,10 +670,10 @@ RU: dict[str, str] = {
     "nfc15100.rcd_30mA_socket": "{what}: розеточная / зарядная цепь не защищена УЗО 30 мА",
     "nfc15100.rcd_30mA_dwelling": "{what}: цепь жилого помещения не защищена УЗО 30 мА",
     "nfc15100.rcd_type_A": "{what}: требуется УЗО типа A (или F, B), тип AC исключён",
-    "nfc15100.rcd_count_single": "только одно УЗО 30 мА (жильё: не менее 2; укажите installation.premises для других "
-                                 "помещений)",
-    "nfc15100.rcd_count_type_A": "нет УЗО 30 мА типа A (жильё: не менее 1; укажите installation.premises для других "
-                                 "помещений)",
+    "nfc15100.rcd_count_single": "только одно УЗО 30 мА (жильё: не менее 2; для объектов другого назначения укажите "
+                                 "installation.premises)",
+    "nfc15100.rcd_count_type_A": "нет УЗО 30 мА типа A (жильё: не менее 1; для объектов другого назначения укажите "
+                                 "installation.premises)",
     "nfc15100.rcd_circuits": "{count} цепей на одном УЗО 30 мА (не более 8)",
     "nfc15100.dedicated_single": "{what}: должно быть единственным на своей цепи ({prot} питает также {others})",
     "nfc15100.dedicated_shared": "{what}: выделенная цепь используется совместно с другим потребителем",
@@ -681,9 +681,9 @@ RU: dict[str, str] = {
     "nfc15100.ev_mode2_3ph": "{what}: трёхфазный режим 2, требуется УЗО типа B",
     "nfc15100.ev_mode3": "{what}: режим 3 с УЗО типа {rtype}: зарядная станция должна иметь обнаружение постоянного тока "
                          "утечки 6 мА (RDC-DD, IEC 62955), иначе тип B",
-    "nfc15100.selectivity": "УЗО выше других УЗО и не селективное (тип S)",
+    "nfc15100.selectivity": "УЗО установлено выше других УЗО и не является селективным (тип S)",
     "nfc15100.circuit_section": "{what}: {section:g} мм² (не менее {need:g} мм² для этой цепи)",
-    "nfc15100.circuit_rating": "{what}: защищено на {in_a:g} А (не более {need:g} А для этой цепи)",
+    "nfc15100.circuit_rating": "{what}: защита {in_a:g} А (не более {need:g} А для этой цепи)",
     "nfc15100.rcd_rating": "УЗО 30 мА на {in_a:g} А, ниже {need:g} А, требуемых нижестоящими цепями",
     "nfc15100.rcd_spread_lighting": "все {count} цепей освещения за одним УЗО 30 мА (распределите их не менее чем на 2)",
     "nfc15100.rcd_spread_socket": "все {count} розеточных цепей за одним УЗО 30 мА (распределите их не менее чем на 2)",
@@ -712,10 +712,10 @@ RU: dict[str, str] = {
                         "подключений ограниченной мощности не применяются",
     "enedis.mv": "{kva:g} кВА: свыше 250 кВА подключение выполняется на среднем напряжении (HTA)",
     "enedis.dwelling_min": "{kva:g} кВА в жилом помещении: подключения ограниченной мощности для жилья начинаются с 6 кВА",
-    "enedis.agcp_max": "вводной автомат настроен на {in_a:g} А: подключение ограниченной мощности настраивается не более "
-                       "чем на 60 А",
-    "enedis.agcp_low": "вводной автомат на {in_a:g} А пропускает {pr:g} кВА, меньше договорных {kva:g} кВА: он сработает "
-                       "раньше договорной мощности",
+    "enedis.agcp_max": "уставка вводного автомата {in_a:g} А: при подключении ограниченной мощности уставка не "
+                       "более 60 А",
+    "enedis.agcp_low": "вводной автомат на {in_a:g} А пропускает {pr:g} кВА, меньше договорных {kva:g} кВА: он "
+                       "сработает до достижения договорной мощности",
     "enedis.agcp_no_rcd": "вводной автомат без дифференциальной защиты: NF C 14-100 рекомендует 500 мА в новых зданиях "
                           "(автомат без дифзащиты по запросу в Enedis)",
     "enedis.agcp_rcd_value": "вводной автомат с дифференциальной защитой {idn:g} мА: NF C 14-100 рекомендует 500 мА",
@@ -727,12 +727,12 @@ RU: dict[str, str] = {
                                 "ограничена 250 кВА",
     "enedis.prod_above_36": "{kva:g} кВА генерации и накопления ({what}): выдача свыше 36 кВА следует процедуре "
                             "подключения установок свыше 36 кВА",
-    "enedis.service_cable_length": "индивидуальный ввод длиной {length:g} м: подключения ограниченной мощности допускают "
-                                   "не более 30 м (отклонение напряжения в пределах 2 %)",
-    "enedis.service_cable_section": "индивидуальный ввод сечением {section:g} мм²: стандартное сечение 35 мм² алюминий "
-                                    "(2 x 35 однофазный, 4 x 35 трёхфазный)",
-    "enedis.decoupling": "{what}: укажите защиту развязки, обязательную для генерации и накопления (`protection`, "
-                         "напр. NF EN 50549-1 / NF EN 50549-10)",
+    "enedis.service_cable_length": "индивидуальный ввод длиной {length:g} м: подключения ограниченной мощности "
+                                   "допускают не более 30 м (падение напряжения не более 2 %)",
+    "enedis.service_cable_section": "индивидуальный ввод сечением {section:g} мм²: стандартное сечение 35 мм² по "
+                                    "алюминию (2 x 35 однофазный, 4 x 35 трёхфазный)",
+    "enedis.decoupling": "{what}: укажите делительную защиту (отделение от сети), обязательную для генерации и "
+                         "накопления (`protection`, напр. NF EN 50549-1 / NF EN 50549-10)",
 }
 
 #: Simplified Chinese: the drawing texts, as RU (terms of IEC 60050 and the GB/T standards adopting IEC ones).
@@ -820,10 +820,10 @@ ZH: dict[str, str] = {
     "core.transfer_target": "'transfer' 连接必须终止于转换开关（transfer_switch）",
     "core.tie_device": "母联未描述电器",
     "core.transfer_source": "转换开关没有第二电源（'transfer' 连接）",
-    "core.terminal_node": "{type} 节点通常不供电给任何负载",
+    "core.terminal_node": "{type} 节点通常没有下级回路",
     "core.rating_cascade": "额定电流 {in_a:g} A 大于上级保护 {up}（{up_in_a:g} A）",
     "core.interlock_closed": "联锁 {lock!r}：正常运行时 {count} 个成员闭合（{members}），钥匙数为 {keys}",
-    "core.interlock_single": "锁 {lock!r} 仅被一个成员使用，且未在任何 'interlocks' 条目中声明：它不联锁任何东西",
+    "core.interlock_single": "锁 {lock!r} 仅被一个成员使用，且未在任何 'interlocks' 条目中声明：不起联锁作用",
     "core.interlock_unused": "已声明的联锁 {lock!r} 被 {count} 个成员使用（'locks'），至少应为 2 个",
     "core.interlock_duplicate": "联锁 {lock!r} 重复声明",
     "core.control_scope": "本文档描述了控制回路（{nodes}）：uniwire 绘制配电（单线图和多线图），而非控制原理图；线圈、触点、按钮"
@@ -842,16 +842,16 @@ ZH: dict[str, str] = {
     "iec60364.iz_exceeded": "保护 {rating:g} A > Iz {iz:g} A（{material} {insulation} {section:g} mm²，方式 {method}，"
                             "{loaded} 根载流导体，{ambient}）",
     "iec60364.ambient_ground": "土壤 25 °C",
-    "iec60364.ambient_air": "环境 40 °C",
+    "iec60364.ambient_air": "环境温度 40 °C",
     "nfc15100.section": "{in_a:g} A 断路器配 {section:g} mm²（最大 {limit} A）",
     "nfc15100.section_sizing": "{in_a:g} A 断路器配 {section:g} mm²：超过通常的 {limit} A，请按敷设方式校核电缆（NF C 15-100 "
                                "第 5-52 部分，UTE C 15-105 指南）",
     "nfc15100.lighting_points": "照明回路有 {points} 个点（最多 {limit}）",
-    "nfc15100.lighting_rating": "照明以 {in_a:g} A 保护（最大 16 A）",
+    "nfc15100.lighting_rating": "照明回路保护电器 {in_a:g} A（最大 16 A）",
     "nfc15100.socket_section": "（{section:g} mm²）",
     "nfc15100.socket_points": "插座回路{where}有 {points} 个插座（最多 {limit}）",
-    "nfc15100.heating": "{in_a:g} A 回路上的供暖 {total:g} kW（最大 {limit:g} kW）",
-    "nfc15100.heating_unprotected": "一个回路上的供暖 {p:g} kW（32 A 时最大 {limit:g} kW）",
+    "nfc15100.heating": "{in_a:g} A 回路带采暖负荷 {total:g} kW（最大 {limit:g} kW）",
+    "nfc15100.heating_unprotected": "单一回路带采暖负荷 {p:g} kW（32 A 时最大 {limit:g} kW）",
     "nfc15100.rcd_30mA_socket": "{what}：插座 / 充电回路未由 30 mA 剩余电流保护器保护",
     "nfc15100.rcd_30mA_dwelling": "{what}：住宅回路未由 30 mA 剩余电流保护器保护",
     "nfc15100.rcd_type_A": "{what}：需要 A 型（或 F、B 型）剩余电流保护器，不允许 AC 型",
@@ -866,16 +866,16 @@ ZH: dict[str, str] = {
                          "需 B 型",
     "nfc15100.selectivity": "剩余电流保护器位于其他剩余电流保护器上级且不具选择性（S 型）",
     "nfc15100.circuit_section": "{what}：{section:g} mm²（该回路至少 {need:g} mm²）",
-    "nfc15100.circuit_rating": "{what}：以 {in_a:g} A 保护（该回路最大 {need:g} A）",
+    "nfc15100.circuit_rating": "{what}：保护电器 {in_a:g} A（该回路最大 {need:g} A）",
     "nfc15100.rcd_rating": "30 mA 剩余电流保护器额定 {in_a:g} A，低于下级回路要求的 {need:g} A",
-    "nfc15100.rcd_spread_lighting": "{count} 个照明回路都在同一个 30 mA 剩余电流保护器之后（请分配到至少 2 个）",
-    "nfc15100.rcd_spread_socket": "{count} 个插座回路都在同一个 30 mA 剩余电流保护器之后（请分配到至少 2 个）",
-    "nfc15100.spd_rcd": "{what}：进线处的浪涌保护器不得位于 30 mA 剩余电流保护器之后",
-    "nfc15100.agcp_rcd_adjustable": "{what}：限定功率供电不允许可调灵敏度",
-    "nfc15100.agcp_rcd_max": "{what}：{idn:g} mA，限定功率供电最大 500 mA",
-    "nfc15100.earth_resistance": "接地极 {r:g} Ω 配 {idn:g} mA 剩余电流保护器：最大 {limit:g} Ω（50 V）",
+    "nfc15100.rcd_spread_lighting": "{count} 个照明回路都接在同一个 30 mA 剩余电流保护器下游（请分配到至少 2 个保护器）",
+    "nfc15100.rcd_spread_socket": "{count} 个插座回路都接在同一个 30 mA 剩余电流保护器下游（请分配到至少 2 个保护器）",
+    "nfc15100.spd_rcd": "{what}：进线处的浪涌保护器不得装在 30 mA 剩余电流保护器下游",
+    "nfc15100.agcp_rcd_adjustable": "{what}：限定功率接入不允许剩余动作电流可调",
+    "nfc15100.agcp_rcd_max": "{what}：{idn:g} mA，限定功率接入最大 500 mA",
+    "nfc15100.earth_resistance": "接地电阻 {r:g} Ω，配 {idn:g} mA 剩余电流保护器：最大 {limit:g} Ω（50 V）",
     "nfc15100.neutral_pole": "{what}：带中性线回路上的 1P 断路器不能隔离中性线（应为 1P+N 或 2P）",
-    "nfc15100.supply_section": "至总配电箱的连接为 {section:g} mm²，进线断路器 {in_a:g} A（铜至少 {need:g} mm²）",
+    "nfc15100.supply_section": "至总配电箱的进线截面 {section:g} mm²，进线断路器 {in_a:g} A（铜芯至少 {need:g} mm²）",
     "vde0100.rcd_30mA_socket": "{what}：32 A 及以下插座回路未由不大于 30 mA 的剩余电流保护器保护",
     "vde0100.rcd_30mA_lighting": "{what}：住宅照明回路未由不大于 30 mA 的剩余电流保护器保护",
     "vde0100.bathroom": "{what}：有浴缸或淋浴的房间的回路未由不大于 30 mA 的剩余电流保护器保护",
@@ -892,14 +892,14 @@ ZH: dict[str, str] = {
     "enedis.mv": "{kva:g} kVA：超过 250 kVA 需中压（HTA）接入",
     "enedis.dwelling_min": "住宅 {kva:g} kVA：住宅限定功率接入从 6 kVA 起",
     "enedis.agcp_max": "进线断路器整定为 {in_a:g} A：限定功率接入最大整定 60 A",
-    "enedis.agcp_low": "进线断路器整定为 {in_a:g} A，对应 {pr:g} kVA，低于约定的 {kva:g} kVA：会在约定功率之前跳闸",
+    "enedis.agcp_low": "进线断路器整定为 {in_a:g} A，对应 {pr:g} kVA，低于合同容量 {kva:g} kVA：会在达到合同容量前跳闸",
     "enedis.agcp_no_rcd": "进线断路器无剩余电流保护：NF C 14-100 建议新建筑采用 500 mA（可向 Enedis 申请无剩余电流保护的断路器）",
     "enedis.agcp_rcd_value": "进线断路器剩余电流保护为 {idn:g} mA：NF C 14-100 建议 500 mA",
     "enedis.prod_installed_1p": "单相发电和储能 {kva:g} kVA（{what}）：装机功率超过 18 kVA 需要三相接入",
     "enedis.prod_injection_1p": "单相发电和储能 {kva:g} kVA（{what}）：上网功率限制为 6 kVA（限制输出或改为三相接入）",
     "enedis.prod_installed_3p": "发电和储能 {kva:g} kVA（{what}）：低压装机功率限制为 250 kVA",
     "enedis.prod_above_36": "发电和储能 {kva:g} kVA（{what}）：上网功率超过 36 kVA 需按 36 kVA 以上装置的接入程序办理",
-    "enedis.service_cable_length": "单独进户电缆长 {length:g} m：限定功率接入最长 30 m（电压变化在 2 % 以内）",
+    "enedis.service_cable_length": "单独进户电缆长 {length:g} m：限定功率接入最长 30 m（电压降不超过 2 %）",
     "enedis.service_cable_section": "单独进户电缆截面 {section:g} mm²：标准截面为铝 35 mm²（单相 2 x 35，三相 4 x 35）",
     "enedis.decoupling": "{what}：请注明其解列保护，发电和储能必须设置（`protection`，例如 NF EN 50549-1 / NF EN 50549-10）",
 }
@@ -908,7 +908,7 @@ ZH: dict[str, str] = {
 ES: dict[str, str] = {
     "render.unknown_view": "vista desconocida: {id}",
     "render.incoming_from": "desde {ref}",
-    "render.incoming": "llegada",
+    "render.incoming": "entrada",
     "render.incoming_folio": "{what} (hoja {folio})",
     "render.default_title": "Esquema unifilar general",
     "render.multiline_title": "Esquema multifilar de potencia",
@@ -927,7 +927,7 @@ ES: dict[str, str] = {
     "legend.preset.us": "práctica NEC",
     "legend.phase": "Fases",
     "legend.multi_phase": "polifásico",
-    "legend.source": "Fuentes",
+    "legend.source": "Fuentes de alimentación",
     "legend.status": "Estado",
     "legend.status.new": "nuevo",
     "legend.status.existing": "existente",
@@ -949,7 +949,7 @@ ES: dict[str, str] = {
     "tb.voltage": "Tensión",
     "tb.power": "Potencia",
     "tb.ik_max": "Icc máx.",
-    "tb.earth_electrode": "Electrodo de tierra",
+    "tb.earth_electrode": "Toma de tierra",
     "tb.standard": "Norma",
     "tb.drawn_by": "Dibujado",
     "tb.checked_by": "Revisado",
@@ -963,7 +963,7 @@ ES: dict[str, str] = {
     "notes.supply": "Alimentación: {supply}",
     "notes.revision": "Rev. {index} {date} {description}",
     "notes.more": "… (+{count} línea(s) de notas)",
-    "ann.frame": "bastidor {frame} A",
+    "ann.frame": "caja {frame} A",
     "ann.off_peak": "día/noche (tarifa reducida)",
     "ann.manual": "manual",
     "ann.automatic": "automático",
@@ -986,7 +986,7 @@ ES: dict[str, str] = {
                                   "(designaciones, enlaces, enclavamientos, calibres en cascada); las protecciones, los "
                                   "cables, los diferenciales y la puesta a tierra no se verificaron según {standard}",
     "core.ref_unique": "designación {ref!r} ya usada por {other!r}",
-    "core.normalized": "{where}: {field} {old!r} leído como {new!r}; escribirlo en esta forma",
+    "core.normalized": "{where}: {field} {old!r} leído como {new!r}; escribirlo de esta forma",
     "core.normalized_field": "{where}: campo desconocido {old!r} leído como {new!r}; usar {new!r}",
     "core.transfer_target": "un enlace 'transfer' debe terminar en un conmutador de transferencia (transfer_switch)",
     "core.tie_device": "acoplamiento sin aparato descrito",
@@ -1010,8 +1010,9 @@ ES: dict[str, str] = {
     "plc.port_unreadable": "puerto {port!r} ilegible (se espera 'ranura.canal')",
     "plc.port_missing_slot": "puerto {port!r}: falta la ranura {slot}",
     "plc.port_channels": "puerto {port!r}: el módulo {module} solo tiene {channels} canales",
-    "plc.coil": "la salida {port} ({un_v:g} V) manda una bobina de {coil:g} V: usar un relé de interfaz o un módulo de relés",
-    "plc.port_shared": "el canal {port} manda {count} aparatos",
+    "plc.coil": "la salida {port} ({un_v:g} V) acciona una bobina de {coil:g} V: usar un relé de interfaz o un "
+                "módulo de relés",
+    "plc.port_shared": "el canal {port} controla {count} aparatos",
     "iec60364.install_uncovered": "método de instalación {install!r} no cubierto (A1, A2, B1, B2, C, E, F, D-duct)",
     "iec60364.iz_unavailable": "Iz no disponible para {material} {insulation} {section:g} mm² método {method}, {loaded} "
                                "conductores cargados",
@@ -1023,8 +1024,8 @@ ES: dict[str, str] = {
     "nfc15100.section_sizing": "interruptor automático de {in_a:g} A en {section:g} mm²: por encima de los {limit} A "
                                "habituales, verificar el cable según su método de instalación (NF C 15-100 parte 5-52, "
                                "guía UTE C 15-105)",
-    "nfc15100.lighting_points": "{points} puntos en un circuito de alumbrado (máx. {limit})",
-    "nfc15100.lighting_rating": "alumbrado protegido a {in_a:g} A (máx. 16 A)",
+    "nfc15100.lighting_points": "{points} puntos en un circuito de iluminación (máx. {limit})",
+    "nfc15100.lighting_rating": "iluminación protegida a {in_a:g} A (máx. 16 A)",
     "nfc15100.socket_section": " en {section:g} mm²",
     "nfc15100.socket_points": "{points} tomas en un circuito de tomas de corriente{where} (máx. {limit})",
     "nfc15100.heating": "calefacción de {total:g} kW en un circuito de {in_a:g} A (máx. {limit:g} kW)",
@@ -1041,19 +1042,20 @@ ES: dict[str, str] = {
     "nfc15100.dedicated_shared": "{what}: circuito dedicado compartido con otro uso",
     "nfc15100.ev_default": "Punto de recarga",
     "nfc15100.ev_mode2_3ph": "{what}: modo 2 trifásico, diferencial tipo B requerido",
-    "nfc15100.ev_mode3": "{what}: modo 3 con diferencial tipo {rtype}: el punto de recarga debe integrar una detección de "
-                         "corriente continua de 6 mA (RDC-DD, IEC 62955), si no tipo B",
+    "nfc15100.ev_mode3": "{what}: modo 3 con diferencial tipo {rtype}: el punto de recarga debe integrar una "
+                         "detección de corriente continua de 6 mA (RDC-DD, IEC 62955); de lo contrario, diferencial "
+                         "tipo B",
     "nfc15100.selectivity": "diferencial aguas arriba de otros diferenciales y no selectivo (tipo S)",
     "nfc15100.circuit_section": "{what}: {section:g} mm² (al menos {need:g} mm² para este circuito)",
     "nfc15100.circuit_rating": "{what}: protegido a {in_a:g} A (como máximo {need:g} A para este circuito)",
     "nfc15100.rcd_rating": "diferencial de 30 mA de {in_a:g} A, por debajo de los {need:g} A que requieren los circuitos "
                            "aguas abajo",
-    "nfc15100.rcd_spread_lighting": "los {count} circuitos de alumbrado están todos detrás del mismo diferencial de 30 mA "
-                                    "(repartirlos en al menos 2)",
-    "nfc15100.rcd_spread_socket": "los {count} circuitos de tomas están todos detrás del mismo diferencial de 30 mA "
-                                  "(repartirlos en al menos 2)",
-    "nfc15100.spd_rcd": "{what}: el protector contra sobretensiones en el origen no debe estar detrás de un diferencial de "
-                        "30 mA",
+    "nfc15100.rcd_spread_lighting": "los {count} circuitos de iluminación están todos aguas abajo del mismo "
+                                    "diferencial de 30 mA (repartirlos en al menos 2)",
+    "nfc15100.rcd_spread_socket": "los {count} circuitos de tomas están todos aguas abajo del mismo diferencial de "
+                                  "30 mA (repartirlos en al menos 2)",
+    "nfc15100.spd_rcd": "{what}: el protector contra sobretensiones en el origen no debe estar aguas abajo de un "
+                        "diferencial de 30 mA",
     "nfc15100.agcp_rcd_adjustable": "{what}: la sensibilidad regulable no se admite en un suministro de potencia limitada",
     "nfc15100.agcp_rcd_max": "{what}: {idn:g} mA, como máximo 500 mA en un suministro de potencia limitada",
     "nfc15100.earth_resistance": "toma de tierra de {r:g} Ω con un diferencial de {idn:g} mA: como máximo {limit:g} Ω (50 V)",
@@ -1062,19 +1064,19 @@ ES: dict[str, str] = {
                                "(al menos {need:g} mm² de cobre)",
     "vde0100.rcd_30mA_socket": "{what}: circuito de tomas de hasta 32 A no protegido por un diferencial de 30 mA como "
                                "máximo",
-    "vde0100.rcd_30mA_lighting": "{what}: circuito de alumbrado de una vivienda no protegido por un diferencial de 30 mA "
-                                 "como máximo",
+    "vde0100.rcd_30mA_lighting": "{what}: circuito de iluminación de una vivienda no protegido por un diferencial "
+                                 "de 30 mA como máximo",
     "vde0100.bathroom": "{what}: circuito de un cuarto con bañera o ducha no protegido por un diferencial de 30 mA como "
                         "máximo",
-    "vde0100.ev_own_circuit": "{what}: un punto de recarga necesita su propio circuito terminal (otras cargas en su "
-                              "protección)",
+    "vde0100.ev_own_circuit": "{what}: un punto de recarga necesita su propio circuito terminal (hay otras cargas "
+                              "en su protección)",
     "vde0100.ev_no_rcd": "{what}: punto de recarga no protegido por un diferencial de 30 mA como máximo",
     "vde0100.ev_own_rcd": "{what}: un punto de recarga necesita su propio diferencial (el diferencial protege también otras "
                           "cargas)",
     "vde0100.ev_rcd_type": "{what}: diferencial tipo {rtype}: se requiere tipo B, o tipo A / F con detección de corriente "
                            "continua de 6 mA en el punto de recarga",
-    "vde0100.ev_rdc_dd": "{what}: diferencial tipo {rtype}: el punto de recarga debe integrar una detección de corriente "
-                         "continua de 6 mA (RDC-DD, IEC 62955), si no un diferencial tipo B",
+    "vde0100.ev_rdc_dd": "{what}: diferencial tipo {rtype}: el punto de recarga debe integrar una detección de "
+                         "corriente continua de 6 mA (RDC-DD, IEC 62955); de lo contrario, un diferencial tipo B",
     "vde0100.spd": "ningún protector contra sobretensiones: requerido en la mayoría de los edificios (DIN VDE 0100-443 / "
                    "-534)",
     "vde0100.pen_section": "conductor PEN de {section:g} mm² {material}: se requieren al menos {minimum:g} mm²",
@@ -1088,24 +1090,24 @@ ES: dict[str, str] = {
     "enedis.agcp_max": "interruptor general ajustado a {in_a:g} A: un suministro de potencia limitada se ajusta a 60 A "
                        "como máximo",
     "enedis.agcp_low": "interruptor general ajustado a {in_a:g} A admite {pr:g} kVA, por debajo de los {kva:g} kVA "
-                       "contratados: dispararía antes de la potencia contratada",
-    "enedis.agcp_no_rcd": "interruptor general sin protección diferencial: NF C 14-100 recomienda 500 mA en obra nueva "
-                          "(interruptor no diferencial a petición a Enedis)",
+                       "contratados: dispararía antes de alcanzar la potencia contratada",
+    "enedis.agcp_no_rcd": "interruptor general sin protección diferencial: NF C 14-100 recomienda 500 mA en obra "
+                          "nueva (interruptor no diferencial previa solicitud a Enedis)",
     "enedis.agcp_rcd_value": "interruptor general con protección diferencial de {idn:g} mA: NF C 14-100 recomienda 500 mA",
     "enedis.prod_installed_1p": "{kva:g} kVA de producción y almacenamiento en monofásico ({what}): por encima de 18 kVA "
                                 "de potencia instalada se necesita un suministro trifásico",
-    "enedis.prod_injection_1p": "{kva:g} kVA de producción y almacenamiento en monofásico ({what}): la inyección se limita "
-                                "a 6 kVA (limitar la exportación o conectar en trifásico)",
+    "enedis.prod_injection_1p": "{kva:g} kVA de producción y almacenamiento en monofásico ({what}): la inyección se "
+                                "limita a 6 kVA (limitar la inyección o conectar en trifásico)",
     "enedis.prod_installed_3p": "{kva:g} kVA de producción y almacenamiento ({what}): la potencia instalada se limita a "
                                 "250 kVA en baja tensión",
     "enedis.prod_above_36": "{kva:g} kVA de producción y almacenamiento ({what}): una inyección por encima de 36 kVA sigue "
                             "el procedimiento de conexión de las instalaciones de más de 36 kVA",
-    "enedis.service_cable_length": "acometida individual de {length:g} m: los suministros de potencia limitada admiten 30 m "
-                                   "como máximo (variación de tensión dentro del 2 %)",
+    "enedis.service_cable_length": "acometida individual de {length:g} m: los suministros de potencia limitada "
+                                   "admiten 30 m como máximo (caída de tensión de hasta el 2 %)",
     "enedis.service_cable_section": "acometida individual de {section:g} mm²: la sección estándar es 35 mm² de aluminio "
                                     "(2 x 35 monofásico, 4 x 35 trifásico)",
-    "enedis.decoupling": "{what}: indicar su protección de desacoplamiento, obligatoria para producción y almacenamiento "
-                         "(`protection`, p. ej. NF EN 50549-1 / NF EN 50549-10)",
+    "enedis.decoupling": "{what}: indicar su protección de interconexión (desacoplamiento), obligatoria para "
+                         "producción y almacenamiento (`protection`, p. ej. NF EN 50549-1 / NF EN 50549-10)",
 }
 
 DE: dict[str, str] = {
@@ -1130,13 +1132,13 @@ DE: dict[str, str] = {
     "legend.preset.us": "NEC-Praxis",
     "legend.phase": "Außenleiter",
     "legend.multi_phase": "mehrphasig",
-    "legend.source": "Quellen",
+    "legend.source": "Einspeisungen",
     "legend.status": "Status",
     "legend.status.new": "neu",
     "legend.status.existing": "bestehend",
     "legend.status.future": "geplant",
     "legend.status.temporary": "provisorisch",
-    "legend.status.removed": "Rückbau",
+    "legend.status.removed": "rückgebaut",
     "legend.status.spare": "Reserve",
     "legend.voltage": "Spannung",
     "legend.voltage.mv": "HS / MS (> 1 kV AC)",
@@ -1173,7 +1175,7 @@ DE: dict[str, str] = {
     "ann.peak_power_unit": "Wp",
     "ann.peak_power_kunit": "kWp",
     "ann.modules": "{count} Modul(e)",
-    "ann.normally_open": "Schließer",
+    "ann.normally_open": "Normalstellung: offen",
     "ann.locks": "Schlüssel {keys}",
     "cell.points_one": "{count} Auslass",
     "cell.points": "{count} Auslässe",
@@ -1182,26 +1184,27 @@ DE: dict[str, str] = {
     "symbols.heading": "uniwire-Symbolbibliothek (Raster M = 2,5 mm)",
     # rule messages
     "rules.unknown_profile": "unbekanntes Profil: {profile!r}",
-    "rules.no_profile": "kein Regelprofil angewendet: nur die Konsistenz des Dokuments wurde geprüft (BMK, Verbindungen, "
-                        "Verriegelungen, Staffelung der Nennströme), nicht die Schutzorgane, Kabel und RCDs; Profile: "
-                        "'nfc15100' (Frankreich), 'vde0100' (Deutschland), 'iec60364'",
-    "rules.standard_not_covered": "kein Regelprofil deckt {standard} ab: nur die Konsistenz des Dokuments wurde geprüft "
-                                  "(BMK, Verbindungen, Verriegelungen, Staffelung der Nennströme); Schutzorgane, Kabel, "
-                                  "Fehlerstrom-Schutzeinrichtungen und Erdung wurden nicht nach {standard} geprüft",
+    "rules.no_profile": "kein Regelprofil angewendet: nur die Konsistenz des Dokuments wurde geprüft (BMK, "
+                        "Verbindungen, Verriegelungen, Staffelung der Nennströme), nicht die Schutzorgane, "
+                        "Leitungen und RCDs; Profile: 'nfc15100' (Frankreich), 'vde0100' (Deutschland), 'iec60364'",
+    "rules.standard_not_covered": "kein Regelprofil deckt {standard} ab: nur die Konsistenz des Dokuments wurde "
+                                  "geprüft (BMK, Verbindungen, Verriegelungen, Staffelung der Nennströme); "
+                                  "Schutzorgane, Leitungen, Fehlerstrom-Schutzeinrichtungen und Erdung wurden nicht "
+                                  "nach {standard} geprüft",
     "core.ref_unique": "BMK {ref!r} bereits von {other!r} verwendet",
     "core.normalized": "{where}: {field} {old!r} als {new!r} gelesen; in dieser Form schreiben",
     "core.normalized_field": "{where}: unbekanntes Feld {old!r} als {new!r} gelesen; {new!r} verwenden",
     "core.transfer_target": "eine 'transfer'-Verbindung muss an einem Netzumschalter (transfer_switch) enden",
-    "core.tie_device": "Kupplung ohne beschriebenes Gerät",
+    "core.tie_device": "Kupplung ohne angegebenes Schaltgerät",
     "core.transfer_source": "Netzumschalter ohne zweite Quelle ('transfer'-Verbindung)",
     "core.terminal_node": "ein Knoten {type} speist normalerweise nichts",
     "core.rating_cascade": "Nennstrom {in_a:g} A höher als das vorgeschaltete Schutzorgan {up} ({up_in_a:g} A)",
-    "core.interlock_closed": "Verriegelung {lock!r}: {count} Glieder im Normalbetrieb geschlossen ({members}) bei {keys} "
-                             "Schlüssel(n)",
-    "core.interlock_single": "Schloss {lock!r} wird von nur einem Glied verwendet und in keinem 'interlocks'-Eintrag "
-                             "deklariert: es verriegelt nichts",
-    "core.interlock_unused": "deklarierte Verriegelung {lock!r} wird von {count} Glied(ern) verwendet ('locks'), "
-                             "mindestens 2 erwartet",
+    "core.interlock_closed": "Verriegelung {lock!r}: {count} Schaltgeräte im Normalbetrieb geschlossen ({members}) "
+                             "bei {keys} Schlüssel(n)",
+    "core.interlock_single": "Schloss {lock!r} wird von nur einem Schaltgerät verwendet und in keinem "
+                             "'interlocks'-Eintrag deklariert: es verriegelt nichts",
+    "core.interlock_unused": "deklarierte Verriegelung {lock!r} wird von {count} Schaltgerät(en) verwendet "
+                             "('locks'), mindestens 2 erwartet",
     "core.interlock_duplicate": "Verriegelung {lock!r} doppelt deklariert",
     "core.control_scope": "dieses Dokument beschreibt Steuerstromkreise ({nodes}): uniwire zeichnet die Energieverteilung "
                           "(Übersichtsschaltplan und allpoliger Stromlaufplan), keine Steuerstromlaufpläne; Spulen, "
@@ -1224,8 +1227,9 @@ DE: dict[str, str] = {
     "iec60364.ambient_ground": "Erdreich 25 °C",
     "iec60364.ambient_air": "Umgebung 40 °C",
     "nfc15100.section": "Leitungsschutzschalter {in_a:g} A an {section:g} mm² (max. {limit} A)",
-    "nfc15100.section_sizing": "Leitungsschutzschalter {in_a:g} A an {section:g} mm²: über den üblichen {limit} A das "
-                               "Kabel für seine Verlegeart prüfen (NF C 15-100 Teil 5-52, Leitfaden UTE C 15-105)",
+    "nfc15100.section_sizing": "Leitungsschutzschalter {in_a:g} A an {section:g} mm²: über den üblichen {limit} A, "
+                               "Strombelastbarkeit der Leitung für die Verlegeart prüfen (NF C 15-100 Teil 5-52, "
+                               "Leitfaden UTE C 15-105)",
     "nfc15100.lighting_points": "{points} Auslässe an einem Beleuchtungsstromkreis (max. {limit})",
     "nfc15100.lighting_rating": "Beleuchtung mit {in_a:g} A abgesichert (max. 16 A)",
     "nfc15100.socket_section": " bei {section:g} mm²",
@@ -1241,15 +1245,16 @@ DE: dict[str, str] = {
                                  "Räumlichkeiten angeben)",
     "nfc15100.rcd_circuits": "{count} Stromkreise an einem RCD 30 mA (max. 8)",
     "nfc15100.dedicated_single": "{what}: muss allein an seinem Stromkreis sein ({prot} speist auch {others})",
-    "nfc15100.dedicated_shared": "{what}: eigener Stromkreis mit einer anderen Nutzung geteilt",
+    "nfc15100.dedicated_shared": "{what}: eigener Stromkreis wird mit anderen Verbrauchern geteilt",
     "nfc15100.ev_default": "Ladepunkt",
     "nfc15100.ev_mode2_3ph": "{what}: dreiphasig Mode 2, RCD Typ B erforderlich",
     "nfc15100.ev_mode3": "{what}: Mode 3 mit RCD Typ {rtype}: der Ladepunkt muss eine DC-Fehlerstromerkennung 6 mA "
                          "enthalten (RDC-DD, IEC 62955), sonst Typ B",
-    "nfc15100.selectivity": "Fehlerstrom-Schutzeinrichtung vor anderen RCDs und nicht selektiv (Typ S)",
+    "nfc15100.selectivity": "RCD anderen RCDs vorgeschaltet und nicht selektiv (Typ S)",
     "nfc15100.circuit_section": "{what}: {section:g} mm² (mindestens {need:g} mm² für diesen Stromkreis)",
     "nfc15100.circuit_rating": "{what}: mit {in_a:g} A abgesichert (höchstens {need:g} A für diesen Stromkreis)",
-    "nfc15100.rcd_rating": "RCD 30 mA mit {in_a:g} A Nennstrom, unter den {need:g} A der nachgeschalteten Stromkreise",
+    "nfc15100.rcd_rating": "RCD 30 mA mit {in_a:g} A Nennstrom, unter den für die nachgeschalteten Stromkreise "
+                           "erforderlichen {need:g} A",
     "nfc15100.rcd_spread_lighting": "die {count} Beleuchtungsstromkreise liegen alle hinter demselben RCD 30 mA (auf "
                                     "mindestens 2 verteilen)",
     "nfc15100.rcd_spread_socket": "die {count} Steckdosenstromkreise liegen alle hinter demselben RCD 30 mA (auf "
@@ -1259,7 +1264,7 @@ DE: dict[str, str] = {
     "nfc15100.agcp_rcd_adjustable": "{what}: einstellbare Empfindlichkeit an einem Anschluss begrenzter Leistung nicht "
                                     "zulässig",
     "nfc15100.agcp_rcd_max": "{what}: {idn:g} mA, höchstens 500 mA an einem Anschluss begrenzter Leistung",
-    "nfc15100.earth_resistance": "Erder {r:g} Ω mit einem RCD {idn:g} mA: höchstens {limit:g} Ω (50 V)",
+    "nfc15100.earth_resistance": "Erdungswiderstand {r:g} Ω mit einem RCD {idn:g} mA: höchstens {limit:g} Ω (50 V)",
     "nfc15100.neutral_pole": "{what}: 1-poliger Leitungsschutzschalter an einem Stromkreis mit Neutralleiter, den er nicht "
                              "trennt (1P+N oder 2P)",
     "nfc15100.supply_section": "Verbindung zum Hauptverteiler mit {section:g} mm² bei einem Hauptschalter {in_a:g} A "
@@ -1273,22 +1278,22 @@ DE: dict[str, str] = {
                               "Schutzorgan)",
     "vde0100.ev_no_rcd": "{what}: Ladepunkt nicht durch einen RCD von höchstens 30 mA geschützt",
     "vde0100.ev_own_rcd": "{what}: ein Ladepunkt braucht einen eigenen RCD (der RCD schützt auch andere Verbraucher)",
-    "vde0100.ev_rcd_type": "{what}: RCD Typ {rtype}: Typ B, oder Typ A / F mit DC-Fehlerstromerkennung 6 mA im "
-                           "Ladepunkt, erforderlich",
+    "vde0100.ev_rcd_type": "{what}: RCD Typ {rtype}: erforderlich ist Typ B oder Typ A / F mit "
+                           "DC-Fehlerstromerkennung 6 mA im Ladepunkt",
     "vde0100.ev_rdc_dd": "{what}: RCD Typ {rtype}: der Ladepunkt muss eine DC-Fehlerstromerkennung 6 mA enthalten "
                          "(RDC-DD, IEC 62955), sonst ein RCD Typ B",
     "vde0100.spd": "kein Überspannungsschutzgerät: für die meisten Gebäude erforderlich (DIN VDE 0100-443 / -534)",
     "vde0100.pen_section": "PEN-Leiter {section:g} mm² {material}: mindestens {minimum:g} mm² erforderlich",
-    "enedis.single_phase_max": "{kva:g} kVA einphasig: ein einphasiger Anschluss begrenzter Leistung trägt höchstens "
-                               "12 kVA, ein dreiphasiger Anschluss ist nötig",
+    "enedis.single_phase_max": "{kva:g} kVA einphasig: ein einphasiger Anschluss begrenzter Leistung ist auf "
+                               "höchstens 12 kVA begrenzt, ein dreiphasiger Anschluss ist nötig",
     "enedis.monitored": "{kva:g} kVA: Anschluss mit überwachter Leistung (37 bis 250 kVA), die Einstellstufen des AGCP der "
                         "Anschlüsse begrenzter Leistung gelten nicht",
     "enedis.mv": "{kva:g} kVA: über 250 kVA erfolgt der Anschluss in Mittelspannung (HTA)",
     "enedis.dwelling_min": "{kva:g} kVA in einer Wohnung: Anschlüsse begrenzter Leistung von Wohnungen beginnen bei 6 kVA",
     "enedis.agcp_max": "Hauptschalter auf {in_a:g} A eingestellt: ein Anschluss begrenzter Leistung wird auf höchstens "
                        "60 A eingestellt",
-    "enedis.agcp_low": "Hauptschalter auf {in_a:g} A eingestellt trägt {pr:g} kVA, unter den {kva:g} kVA Vertragsleistung: "
-                       "er würde vor der Vertragsleistung auslösen",
+    "enedis.agcp_low": "Hauptschalter auf {in_a:g} A eingestellt entspricht {pr:g} kVA, unter den {kva:g} kVA "
+                       "Vertragsleistung: er würde vor Erreichen der Vertragsleistung auslösen",
     "enedis.agcp_no_rcd": "Hauptschalter ohne Fehlerstromschutz: NF C 14-100 empfiehlt 500 mA in Neubauten (Schalter "
                           "ohne Fehlerstromschutz auf Antrag bei Enedis)",
     "enedis.agcp_rcd_value": "Hauptschalter mit Fehlerstromschutz {idn:g} mA: NF C 14-100 empfiehlt 500 mA",
@@ -1300,36 +1305,36 @@ DE: dict[str, str] = {
                                 "Niederspannung auf 250 kVA begrenzt",
     "enedis.prod_above_36": "{kva:g} kVA Erzeugung und Speicher ({what}): eine Einspeisung über 36 kVA folgt dem "
                             "Anschlussverfahren der Anlagen über 36 kVA",
-    "enedis.service_cable_length": "Hausanschlusskabel von {length:g} m: Anschlüsse begrenzter Leistung erlauben höchstens "
-                                   "30 m (Spannungsänderung innerhalb 2 %)",
+    "enedis.service_cable_length": "Hausanschlusskabel von {length:g} m: Anschlüsse begrenzter Leistung erlauben "
+                                   "höchstens 30 m (Spannungsfall höchstens 2 %)",
     "enedis.service_cable_section": "Hausanschlusskabel von {section:g} mm²: der Standardquerschnitt ist 35 mm² Aluminium "
                                     "(2 x 35 einphasig, 4 x 35 dreiphasig)",
-    "enedis.decoupling": "{what}: den Entkupplungsschutz angeben, für Erzeugung und Speicher Pflicht (`protection`, z. B. "
-                         "NF EN 50549-1 / NF EN 50549-10)",
+    "enedis.decoupling": "{what}: den Entkupplungsschutz (NA-Schutz) angeben, für Erzeugung und Speicher Pflicht "
+                         "(`protection`, z. B. NF EN 50549-1 / NF EN 50549-10)",
 }
 PT: dict[str, str] = {
     "render.unknown_view": "vista desconhecida: {id}",
     "render.incoming_from": "de {ref}",
-    "render.incoming": "Alimentação",
+    "render.incoming": "alimentação",
     "render.incoming_folio": "{what} (folha {folio})",
-    "render.default_title": "Diagrama unifilar",
-    "render.multiline_title": "Diagrama multifilar (circuitos de potência)",
-    "render.continued_from": "{label} (da folha {folio})",
+    "render.default_title": "Diagrama unifilar geral",
+    "render.multiline_title": "Diagrama multifilar de força",
+    "render.continued_from": "{label} (continuação da folha {folio})",
     "render.continued_on": "continua na folha {folio}",
     "render.continuation_name": "{name} (cont.)",
     "render.to_folio": " → folha {folio}",
     "label.rcd_type": "tipo {type}",
     "label.safety": "Circuito de segurança",
     "render.auxiliary_devices": "Dispositivos auxiliares",
-    "render.scale": "Escala {scale}",
+    "render.scale": "escala {scale}",
     "render.sheet_bookmark": "Folha {number}: {title}",
     "render.sheet_bookmark_untitled": "Folha {number}",
     "legend.conductors": "Condutores ({standard})",
     "legend.preset.iec": "IEC 60445",
     "legend.preset.us": "prática NEC",
-    "legend.phase": "Fase",
+    "legend.phase": "Fases",
     "legend.multi_phase": "polifásico",
-    "legend.source": "Fontes",
+    "legend.source": "Fontes de alimentação",
     "legend.status": "Situação",
     "legend.status.new": "novo",
     "legend.status.existing": "existente",
@@ -1340,7 +1345,7 @@ PT: dict[str, str] = {
     "legend.voltage": "Tensão",
     "legend.voltage.mv": "AT / MT (> 1 kV CA)",
     "legend.voltage.lv": "BT",
-    "legend.voltage.elv": "Extrabaixa tensão (≤ 50 V CA)",
+    "legend.voltage.elv": "EBT (≤ 50 V CA)",
     "legend.voltage.dc": "Corrente contínua",
     "tb.title": "Título",
     "tb.sheet_title": "Título da folha",
@@ -1365,15 +1370,15 @@ PT: dict[str, str] = {
     "notes.supply": "Alimentação: {supply}",
     "notes.revision": "Rev. {index} {date} {description}",
     "notes.more": "… (+{count} linha(s))",
-    "ann.frame": "Carcaça {frame} A",
-    "ann.off_peak": "Horário fora de ponta",
+    "ann.frame": "carcaça {frame} A",
+    "ann.off_peak": "fora de ponta",
     "ann.manual": "manual",
     "ann.automatic": "automático",
     "ann.peak_power_unit": "Wp",
     "ann.peak_power_kunit": "kWp",
     "ann.modules": "{count} módulo(s)",
     "ann.normally_open": "NA",
-    "ann.locks": "Chave {keys}",
+    "ann.locks": "chave {keys}",
     "cell.points_one": "{count} ponto",
     "cell.points": "{count} pontos",
     "cell.upstream": "{value} (a montante)",
@@ -1389,7 +1394,7 @@ PT: dict[str, str] = {
                                   "proteções, cabos, dispositivos DR e aterramento não foram verificados segundo "
                                   "{standard}",
     "core.ref_unique": "identificação {ref!r} já usada por {other!r}",
-    "core.normalized": "{where}: {field} {old!r} lido como {new!r}; escrever nesta forma",
+    "core.normalized": "{where}: {field} {old!r} lido como {new!r}; escrever desta forma",
     "core.normalized_field": "{where}: campo desconhecido {old!r} lido como {new!r}; usar {new!r}",
     "core.transfer_target": "uma ligação 'transfer' deve terminar numa chave de transferência (transfer_switch)",
     "core.tie_device": "acoplamento sem dispositivo descrito",
@@ -1427,7 +1432,7 @@ PT: dict[str, str] = {
     "nfc15100.section_sizing": "disjuntor de {in_a:g} A em {section:g} mm²: acima dos {limit} A usuais, verificar o cabo "
                                "para o seu método de instalação (NF C 15-100 parte 5-52, guia UTE C 15-105)",
     "nfc15100.lighting_points": "{points} pontos num circuito de iluminação (máx. {limit})",
-    "nfc15100.lighting_rating": "iluminação protegida a {in_a:g} A (máx. 16 A)",
+    "nfc15100.lighting_rating": "iluminação protegida por {in_a:g} A (máx. 16 A)",
     "nfc15100.socket_section": " em {section:g} mm²",
     "nfc15100.socket_points": "{points} tomadas num circuito de tomadas{where} (máx. {limit})",
     "nfc15100.heating": "aquecimento de {total:g} kW num circuito de {in_a:g} A (máx. {limit:g} kW)",
@@ -1444,17 +1449,17 @@ PT: dict[str, str] = {
     "nfc15100.dedicated_shared": "{what}: circuito dedicado compartilhado com outro uso",
     "nfc15100.ev_default": "Carregador de VE",
     "nfc15100.ev_mode2_3ph": "{what}: modo 2 trifásico, DR tipo B exigido",
-    "nfc15100.ev_mode3": "{what}: modo 3 com DR tipo {rtype}: o carregador deve integrar uma detecção de corrente contínua "
-                         "de 6 mA (RDC-DD, IEC 62955), senão tipo B",
+    "nfc15100.ev_mode3": "{what}: modo 3 com DR tipo {rtype}: o carregador deve integrar uma detecção de corrente "
+                         "contínua de 6 mA (RDC-DD, IEC 62955); caso contrário, DR tipo B",
     "nfc15100.selectivity": "DR a montante de outros DR e não seletivo (tipo S)",
     "nfc15100.circuit_section": "{what}: {section:g} mm² (pelo menos {need:g} mm² para este circuito)",
-    "nfc15100.circuit_rating": "{what}: protegido a {in_a:g} A (no máximo {need:g} A para este circuito)",
+    "nfc15100.circuit_rating": "{what}: protegido por {in_a:g} A (no máximo {need:g} A para este circuito)",
     "nfc15100.rcd_rating": "DR de 30 mA de {in_a:g} A, abaixo dos {need:g} A exigidos pelos circuitos a jusante",
-    "nfc15100.rcd_spread_lighting": "os {count} circuitos de iluminação estão todos atrás do mesmo DR de 30 mA "
+    "nfc15100.rcd_spread_lighting": "os {count} circuitos de iluminação estão todos a jusante do mesmo DR de 30 mA "
                                     "(distribuí-los em pelo menos 2)",
-    "nfc15100.rcd_spread_socket": "os {count} circuitos de tomadas estão todos atrás do mesmo DR de 30 mA (distribuí-los em "
-                                  "pelo menos 2)",
-    "nfc15100.spd_rcd": "{what}: o DPS na origem não deve estar atrás de um DR de 30 mA",
+    "nfc15100.rcd_spread_socket": "os {count} circuitos de tomadas estão todos a jusante do mesmo DR de 30 mA "
+                                  "(distribuí-los em pelo menos 2)",
+    "nfc15100.spd_rcd": "{what}: o DPS na origem não deve estar a jusante de um DR de 30 mA",
     "nfc15100.agcp_rcd_adjustable": "{what}: sensibilidade regulável não admitida num fornecimento de potência limitada",
     "nfc15100.agcp_rcd_max": "{what}: {idn:g} mA, no máximo 500 mA num fornecimento de potência limitada",
     "nfc15100.earth_resistance": "eletrodo de aterramento de {r:g} Ω com um DR de {idn:g} mA: no máximo {limit:g} Ω (50 V)",
@@ -1465,14 +1470,14 @@ PT: dict[str, str] = {
     "vde0100.rcd_30mA_lighting": "{what}: circuito de iluminação de uma habitação não protegido por um DR de no máximo "
                                  "30 mA",
     "vde0100.bathroom": "{what}: circuito de um cômodo com banheira ou chuveiro não protegido por um DR de no máximo 30 mA",
-    "vde0100.ev_own_circuit": "{what}: um ponto de recarga precisa do seu próprio circuito terminal (outras cargas na sua "
-                              "proteção)",
+    "vde0100.ev_own_circuit": "{what}: um ponto de recarga precisa do seu próprio circuito terminal (há outras "
+                              "cargas na sua proteção)",
     "vde0100.ev_no_rcd": "{what}: ponto de recarga não protegido por um DR de no máximo 30 mA",
     "vde0100.ev_own_rcd": "{what}: um ponto de recarga precisa do seu próprio DR (o DR protege também outras cargas)",
     "vde0100.ev_rcd_type": "{what}: DR tipo {rtype}: exigido tipo B, ou tipo A / F com detecção de corrente contínua de "
                            "6 mA no ponto de recarga",
-    "vde0100.ev_rdc_dd": "{what}: DR tipo {rtype}: o ponto de recarga deve integrar uma detecção de corrente contínua de "
-                         "6 mA (RDC-DD, IEC 62955), senão um DR tipo B",
+    "vde0100.ev_rdc_dd": "{what}: DR tipo {rtype}: o ponto de recarga deve integrar uma detecção de corrente "
+                         "contínua de 6 mA (RDC-DD, IEC 62955); caso contrário, um DR tipo B",
     "vde0100.spd": "nenhum DPS: exigido para a maioria dos edifícios (DIN VDE 0100-443 / -534)",
     "vde0100.pen_section": "condutor PEN de {section:g} mm² {material}: exigidos pelo menos {minimum:g} mm²",
     "enedis.single_phase_max": "{kva:g} kVA em monofásico: um fornecimento monofásico de potência limitada admite 12 kVA "
@@ -1484,25 +1489,25 @@ PT: dict[str, str] = {
                            "6 kVA",
     "enedis.agcp_max": "disjuntor geral ajustado em {in_a:g} A: um fornecimento de potência limitada é ajustado em 60 A no "
                        "máximo",
-    "enedis.agcp_low": "disjuntor geral ajustado em {in_a:g} A admite {pr:g} kVA, abaixo dos {kva:g} kVA contratados: "
-                       "dispararia antes da potência contratada",
-    "enedis.agcp_no_rcd": "disjuntor geral sem proteção diferencial: a NF C 14-100 recomenda 500 mA em construções novas "
-                          "(disjuntor não diferencial a pedido à Enedis)",
+    "enedis.agcp_low": "disjuntor geral ajustado em {in_a:g} A admite {pr:g} kVA, abaixo dos {kva:g} kVA "
+                       "contratados: dispararia antes de atingir a potência contratada",
+    "enedis.agcp_no_rcd": "disjuntor geral sem proteção diferencial: a NF C 14-100 recomenda 500 mA em construções "
+                          "novas (disjuntor não diferencial mediante solicitação à Enedis)",
     "enedis.agcp_rcd_value": "disjuntor geral com proteção diferencial de {idn:g} mA: a NF C 14-100 recomenda 500 mA",
     "enedis.prod_installed_1p": "{kva:g} kVA de geração e armazenamento em monofásico ({what}): acima de 18 kVA de "
                                 "potência instalada é preciso um fornecimento trifásico",
-    "enedis.prod_injection_1p": "{kva:g} kVA de geração e armazenamento em monofásico ({what}): a injeção é limitada a "
-                                "6 kVA (limitar a exportação ou ligar em trifásico)",
+    "enedis.prod_injection_1p": "{kva:g} kVA de geração e armazenamento em monofásico ({what}): a injeção é "
+                                "limitada a 6 kVA (limitar a injeção ou ligar em trifásico)",
     "enedis.prod_installed_3p": "{kva:g} kVA de geração e armazenamento ({what}): a potência instalada é limitada a "
                                 "250 kVA em baixa tensão",
     "enedis.prod_above_36": "{kva:g} kVA de geração e armazenamento ({what}): uma injeção acima de 36 kVA segue o "
                             "procedimento de ligação das instalações acima de 36 kVA",
-    "enedis.service_cable_length": "ramal de ligação individual de {length:g} m: os fornecimentos de potência limitada "
-                                   "admitem 30 m no máximo (variação de tensão dentro de 2 %)",
+    "enedis.service_cable_length": "ramal de ligação individual de {length:g} m: os fornecimentos de potência "
+                                   "limitada admitem 30 m no máximo (queda de tensão de até 2 %)",
     "enedis.service_cable_section": "ramal de ligação individual de {section:g} mm²: a seção padrão é 35 mm² de alumínio "
                                     "(2 x 35 monofásico, 4 x 35 trifásico)",
-    "enedis.decoupling": "{what}: indicar a sua proteção de desacoplamento, obrigatória para geração e armazenamento "
-                         "(`protection`, p. ex. NF EN 50549-1 / NF EN 50549-10)",
+    "enedis.decoupling": "{what}: indicar a sua proteção de interface (desacoplamento), obrigatória para geração e "
+                         "armazenamento (`protection`, p. ex. NF EN 50549-1 / NF EN 50549-10)",
 }
 IT: dict[str, str] = {
     "render.unknown_view": "vista sconosciuta: {id}",
@@ -1526,7 +1531,7 @@ IT: dict[str, str] = {
     "legend.preset.us": "pratica NEC",
     "legend.phase": "Fasi",
     "legend.multi_phase": "polifase",
-    "legend.source": "Sorgenti",
+    "legend.source": "Sorgenti di alimentazione",
     "legend.status": "Stato",
     "legend.status.new": "nuovo",
     "legend.status.existing": "esistente",
@@ -1634,19 +1639,19 @@ PL: dict[str, str] = {
     "notes.site": "Obiekt: {site}",
     "notes.supply": "Zasilanie: {supply}",
     "notes.revision": "Rew. {index} {date} {description}",
-    "notes.more": "… (+{count} wiersz(e) uwag)",
+    "notes.more": "… (dodatkowe wiersze uwag: {count})",
     "ann.frame": "obudowa {frame} A",
     "ann.off_peak": "Taryfa nocna",
     "ann.manual": "ręczny",
     "ann.automatic": "automatyczny",
     "ann.peak_power_unit": "Wp",
     "ann.peak_power_kunit": "kWp",
-    "ann.modules": "{count} moduł(y)",
+    "ann.modules": "moduły: {count}",
     "ann.normally_open": "NO",
     "ann.locks": "Klucz {keys}",
-    "cell.points_one": "{count} punkt",
+    "cell.points_one": "{count} pkt",
     "cell.points": "{count} pkt",
-    "cell.upstream": "{value} (nadrzędny)",
+    "cell.upstream": "{value} (zab. nadrz.)",
     "symbols.page_title": "Symbole uniwire",
     "symbols.heading": "Biblioteka symboli uniwire (siatka M = 2,5 mm)",
 }
@@ -1661,7 +1666,7 @@ TR: dict[str, str] = {
     "render.continued_on": "devamı sayfa {folio}",
     "render.continuation_name": "{name} (devam)",
     "render.to_folio": " → sayfa {folio}",
-    "label.rcd_type": "tip {type}",
+    "label.rcd_type": "{type} tipi",
     "label.safety": "Güvenlik devresi",
     "render.auxiliary_devices": "Yardımcı cihazlar",
     "render.scale": "Ölçek {scale}",
@@ -1676,7 +1681,7 @@ TR: dict[str, str] = {
     "legend.status": "Durum",
     "legend.status.new": "yeni",
     "legend.status.existing": "mevcut",
-    "legend.status.future": "ileride",
+    "legend.status.future": "ileride yapılacak",
     "legend.status.temporary": "geçici",
     "legend.status.removed": "sökülecek",
     "legend.status.spare": "yedek",
@@ -1719,7 +1724,7 @@ TR: dict[str, str] = {
     "ann.locks": "Anahtar {keys}",
     "cell.points_one": "{count} nokta",
     "cell.points": "{count} nokta",
-    "cell.upstream": "{value} (üst devre)",
+    "cell.upstream": "{value} (üst koruma)",
     "symbols.page_title": "uniwire sembolleri",
     "symbols.heading": "uniwire sembol kütüphanesi (ızgara M = 2,5 mm)",
 }

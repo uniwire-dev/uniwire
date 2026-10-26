@@ -65,14 +65,14 @@ def test_chinese_and_spanish_drawing_texts():
 def test_german_drawing_texts():
     view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
     de = [s for p in render_pages(load({**DOC, "meta": {"lang": "de-AT"}, "views": [view]})) for s in _texts(p.root)]
-    assert {"Hinweise", "BMK", "Kabel (mm²)", "Blatt"} <= set(de)
+    assert {"Hinweise", "BMK", "Leitung (mm²)", "Blatt"} <= set(de)
     assert "1,5" in " ".join(de)  # decimal comma
 
 
 def test_portuguese_drawing_texts():
     view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
     pt = [s for p in render_pages(load({**DOC, "meta": {"lang": "pt-BR"}, "views": [view]})) for s in _texts(p.root)]
-    assert {"Observações", "Identificação", "Cabo (mm²)", "Folha"} <= set(pt)
+    assert {"Observações", "Ident.", "Cabo (mm²)", "Folha"} <= set(pt)
     assert "1,5" in " ".join(pt)  # decimal comma
 
 
