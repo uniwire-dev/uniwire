@@ -64,6 +64,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   "Stromkreis"), type names and the short texts in symbols ("FU", "SPS", "USV"), with the terms of DIN EN 60617 and
   IEC 60050-826 practice. German numbers take a decimal comma. Messages stay in English.
 
+* Drawings in Portuguese (`meta.lang` "pt", "pt-BR", "pt-PT"): title block, notes, legends, table headings
+  ("Identificação", "Circuito"), type names and the short texts in symbols ("DR", "DPS", "CLP"), with the terms of
+  ABNT NBR 5410 practice. Portuguese numbers take a decimal comma. Messages stay in English.
+
 * A cable written in a device text comes after the device's own lines (settings, poles, vector group) and never
   replaces one; a composition ending with its section ("4x35+PE16") is not followed by the section again.
   "Safety circuit" is not repeated on every feeder of a safety board, nor a data link protocol already in a device

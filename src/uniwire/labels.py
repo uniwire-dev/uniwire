@@ -490,6 +490,14 @@ CARTOUCHE_TITLES = {
         "ib_A": "Ib", "cos_phi": "cos φ", "count": "Anz.", "un_V": "Spannung", "frame_A": "Baugröße",
         "cable_type": "Kabeltyp", "cable_ref": "Kabel-BMK", "install": "Verlegeart",
     },
+    "pt": {
+        "label": "Descrição", "ref": "Identificação", "protection": "Proteção", "in_A": "Corrente nominal",
+        "curve": "Curva", "icn_kA": "Capacidade de interrupção", "idn_mA": "DR", "rcd_type": "Tipo DR", "poles": "Polos",
+        "cable": "Cabo (mm²)", "cable_awg": "Cabo", "section_mm2": "Seção", "length_m": "Comprimento",
+        "p_kW": "Potência", "phase": "Fase", "room": "Local", "points": "Pontos", "circuit": "Circuito", "ib_A": "Ib",
+        "cos_phi": "cos φ", "count": "Qtd.", "un_V": "Tensão", "frame_A": "Carcaça", "cable_type": "Tipo de cabo",
+        "cable_ref": "Ident. cabo", "install": "Método de instalação",
+    },
     "en": {
         "label": "Description", "ref": "Tag", "protection": "Protection", "in_A": "Rating", "curve": "Curve",
         "icn_kA": "Breaking cap.", "idn_mA": "RCD", "rcd_type": "RCD type", "poles": "Poles", "cable": "Cable (mm²)", "cable_awg": "Cable",
