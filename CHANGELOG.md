@@ -77,6 +77,18 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   ("Identificação", "Circuito"), type names and the short texts in symbols ("DR", "DPS", "CLP"), with the terms of
   ABNT NBR 5410 practice. Portuguese numbers take a decimal comma. Messages stay in English.
 
+* Drawings in Italian (`meta.lang` "it", "it-IT"): title block, notes, legends, table headings ("Sigla",
+  "Circuito"), type names and the short texts in symbols ("INV", "PLC", "UPS"), with the terms of CEI 64-8
+  practice. Italian numbers take a decimal comma. Messages stay in English.
+
+* Drawings in Polish (`meta.lang` "pl", "pl-PL"): title block, notes, legends, table headings ("Oznaczenie",
+  "Obwód"), type names and the short texts in symbols ("PCZ", "PLC", "UPS"), with the terms of PN-HD 60364 and
+  PN-EN 60617 practice. Polish numbers take a decimal comma. Messages stay in English.
+
+* Drawings in Turkish (`meta.lang` "tr", "tr-TR"): title block, notes, legends, table headings ("Etiket",
+  "Devre"), type names and the short texts in symbols ("SRÜ", "PLC", "KGK"), with the terms of TS HD 60364 and
+  Elektrik İç Tesisleri Yönetmeliği practice. Turkish numbers take a decimal comma. Messages stay in English.
+
 * A cable written in a device text comes after the device's own lines (settings, poles, vector group) and never
   replaces one; a composition ending with its section ("4x35+PE16") is not followed by the section again.
   "Safety circuit" is not repeated on every feeder of a safety board, nor a data link protocol already in a device
