@@ -43,7 +43,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Single-line view, sheets: several trees too wide for one sheet are cut into groups of whole trees that each fit
   (the fewest sheets, then the fewest links between them, each ending on an off-page reference), before any board
   is taken to its own sheet; such a sheet no longer shows an incoming feed, and a bus tie between two sheets ends on
-  an off-page reference at each end (it was not drawn). An instrument above a busbar (`measure`
+  an off-page reference at each end (it was not drawn). The board taken to its own sheet is the smallest one that
+  makes the sheet fit (it was the widest: a first sheet could hold only the incomer, the next one only the main
+  board). An instrument above a busbar (`measure`
   link) is connected straight down onto it; auxiliary devices are placed off the channels of the feeds tapping a
   busbar, and these channels pass below an off-sheet reference hanging over them.
 

@@ -172,3 +172,25 @@ def test_instrument_above_a_busbar_measures_it_straight_down():
            for it in _items(g) if hasattr(it, "a") and abs(it.a[1] - it.b[1]) < 1e-9][0]
     assert abs(p[0] - q[0]) < 1e-6 and abs(max(p[1], q[1]) - bus.a[1]) < 1e-6  # vertical, down onto the busbar
     assert min(bus.a[0], bus.b[0]) + 1.0 < q[0] < max(bus.a[0], bus.b[0]) - 1.0  # on it, not at its end
+
+
+def test_board_taken_to_its_own_sheet_is_the_one_that_makes_the_sheet_fit():
+    # nested boards too wide for one sheet: not a first sheet holding only the incomer, the smallest board that
+    # suffices goes to its own sheet, the upstream boards stay with the supply
+    def rcbo(ref):
+        return {"type": "rcbo", "ref": ref, "in_A": 16, "idn_mA": 30, "rcd_type": "A", "children": [{"type": "socket"}]}
+
+    def floor(f, n, sub=None):
+        return {"type": "breaker", "ref": f"-QF{f}", "in_A": 40, "poles": "4P", "children": [
+            {"type": "board", "id": f"DB{f}", "ref": f"DB{f}",
+             "children": [rcbo(f"-Q{f}{k}") for k in range(1, n + 1)] + ([sub] if sub else [])}]}
+    general = {"type": "board", "id": "GDB", "ref": "GDB", "children": [
+        _br(f"Q1{k}", [{"type": "lighting"}]) for k in range(1, 11)] + [floor("2", 5, floor("3", 3)), floor("4", 6)]}
+    doc = _doc([{"type": "grid", "id": "G", "children": [{"type": "main_breaker", "id": "Q0", "ref": "-Q0", "in_A": 250,
+                "children": [{"type": "board", "id": "MDB", "ref": "MDB", "children": [
+                    {"type": "spd", "spd_type": "1+2"}, _br("Q1") | {"children": [general]}]}]}]}], [])
+    from uniwire.layout.engine import fit_scale
+    lays, view = _sheets(doc)
+    first = {n.node.id for n in lays[0].lnodes if n.node is not None and n.node.id}
+    assert {"Q0", "MDB", "GDB"} <= first  # the supply keeps its boards
+    assert len(lays) == 2 and all(fit_scale(lay, view) >= view.min_scale for lay in lays)

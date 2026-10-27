@@ -2688,8 +2688,7 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
             boards = [n for n in lay.lnodes if n.is_board and n.node is not None and n.node.id not in root_ids
                       and n.node.id not in spec.detached and n.width >= 3 * view.pitch_mm]
             if boards:
-                boards.sort(key=lambda n: -n.width)
-                spec.detached.add(boards[0].node.id)  # type: ignore[union-attr]
+                spec.detached.add(_board_to_detach(boards, lay, view).node.id)  # type: ignore[union-attr]
                 continue
             if allow_bus_split:
                 conts = _split_bus(spec, lay, view, index, normalize_lang(doc.meta.lang))
@@ -2713,6 +2712,19 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
 
     first = SheetSpec(_sheet_roots(doc, view, index), name="")
     return process(first)
+
+
+def _board_to_detach(boards: list[LNode], lay: SheetLayout, view: View) -> LNode:
+    """The board to draw on its own sheet: the narrowest whose departure makes the sheet fit (the rest of the tree
+    keeps its upstream boards: not a sheet holding only an incomer), otherwise the widest that is not nearly the
+    whole sheet, otherwise the widest."""
+    _, _, aw, _ = drawing_area(view)
+    excess = lay.width - aw / view.min_scale
+    enough = [n for n in boards if n.width - view.pitch_mm >= excess]
+    if enough:
+        return min(enough, key=lambda n: n.width)
+    part = [n for n in boards if n.width < 0.85 * lay.width]
+    return max(part or boards, key=lambda n: n.width)
 
 
 def _walk_nodes(n: NodeBase) -> Iterator[NodeBase]:
