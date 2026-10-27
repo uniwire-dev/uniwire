@@ -263,6 +263,11 @@ A power link (`transfer`, `tie`, `bypass`, `parallel`, `infeed`) with `normally_
 **long dash** (control links use a short dash). Its `device` is drawn on the route, in its normal state, with
 its tag, rating and state (`N.O.`, interlock keys) placed beside it.
 
+Single-line view: a tree that only adds a supply to another one (its `infeed` links all land below the head of
+that tree) is drawn beside it. A link between two trees with a third tree drawn between them is an interrupted
+line: a short stub at each end naming the other end (its tag) and the link's `label`. Several feeds landing on
+one busbar each get their own tap on top of it, beyond its end, inside the frame of the board.
+
 ### 4.1 Interlocks (`locks`, `interlocks`)
 
 `locks[]` (on any node and on any link) lists the interlock keys engaged by a device. Trapped-key principle:

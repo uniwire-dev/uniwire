@@ -133,8 +133,8 @@ def place_box(obs: Obstacles, w: float, h: float, pref: Point, step: float = 1.2
 
 @dataclass
 class End:
-    """Link end. ``side``: 'left' / 'right' (stub to that side, then vertical) or 'down' (vertical from the
-    terminal)."""
+    """Link end. ``side``: 'left' / 'right' (stub to that side, then vertical), 'down' (vertical from the
+    terminal) or 'up' (vertical from above: a tap on top of a busbar)."""
 
     x: float
     y: float
@@ -191,6 +191,10 @@ def _leg(obs: Obstacles, e: End, y: float, lane: float = LANE) -> tuple[float, l
         if y < e.y + 1.0:
             return 1e9, []
         return _seg_cost(obs, (e.x, e.y), (e.x, y), lane), [(e.x, e.y), (e.x, y)]
+    if e.side == "up":  # high enough above the busbar not to read as its extension
+        if y > e.y - 4.0:
+            return 1e9, []
+        return _seg_cost(obs, (e.x, y), (e.x, e.y), lane), [(e.x, e.y), (e.x, y)]
     best: tuple[float, list[Point]] = (1e9, [])
     for s in e.stubs:
         xs = e.x + s if e.side == "right" else e.x - s

@@ -33,6 +33,16 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   leaves it (it ran into the windings); the cable of a feeder is no longer written on the run behind a drive or
   converter; the conductors of a power link stay solid when its device shows the normally open contacts.
 
+* Single-line view, feeds between trees: a tree that only adds a supply to another one (a genset, a charger, a
+  storage converter whose `infeed` lands on a busbar of that tree) is drawn beside it, whatever its place in
+  `sources`; a link between two trees with a third tree between them is drawn as an interrupted line, a stub at
+  each end naming the other end, instead of a run across the sheet; several feeds landing on one busbar each get
+  their own tap on top of it, routed on separate channels without crossing (the second one ended on a stub of
+  conductor that did not exist), the board frame enclosing the taps.
+
+* Rule `core.terminal-node` (a PV array, a battery, an SPD or an earth electrode with children) says how to draw it:
+  below the device that connects it, the power may flow both ways.
+
 * PLC annotation: the protocols are cut on whole names, with an ellipsis ("Modbus TC" was printed).
 
 * Rule checks: when no rule profile applies, an info finding `core.no-profile` says that only the consistency of the

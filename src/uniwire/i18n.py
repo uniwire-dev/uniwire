@@ -61,7 +61,8 @@ EN: dict[str, str] = {
     "core.transfer_target": "a 'transfer' link must end on a transfer switch (transfer_switch)",
     "core.tie_device": "bus tie without a described device",
     "core.transfer_source": "transfer switch without a 2nd source ('transfer' link)",
-    "core.terminal_node": "a {type} node normally feeds nothing",
+    "core.terminal_node": "a {type} node is a leaf and feeds nothing: draw it below the device that connects it (its "
+                          "protection, converter or inverter), power may flow both ways",
     "core.rating_cascade": "rating {in_a:g} A higher than the upstream protection {up} ({up_in_a:g} A)",
     "core.interlock_closed": "interlock {lock!r}: {count} members closed in normal operation ({members}) for {keys} key(s)",
     "core.interlock_single": "lock {lock!r} is used by a single member and declared in no 'interlocks' entry: it interlocks nothing",
@@ -319,7 +320,9 @@ FR: dict[str, str] = {
     "core.transfer_target": "un lien 'transfer' doit aboutir sur un inverseur (transfer_switch)",
     "core.tie_device": "couplage sans appareil décrit",
     "core.transfer_source": "inverseur sans 2e source (lien 'transfer')",
-    "core.terminal_node": "un nœud {type} n'alimente normalement rien",
+    "core.terminal_node": "un nœud {type} est une feuille et n'alimente rien : le placer sous l'appareil qui le "
+                          "raccorde (sa protection, son convertisseur ou son onduleur), l'énergie peut circuler dans "
+                          "les deux sens",
     "core.rating_cascade": "calibre {in_a:g} A supérieur à la protection amont {up} ({up_in_a:g} A)",
     "core.interlock_closed": "verrouillage {lock!r} : {count} membres fermés en exploitation normale ({members}) pour {keys} clé(s)",
     "core.interlock_single": "la serrure {lock!r} n'équipe qu'un seul membre et n'est déclarée dans aucune entrée 'interlocks' : elle ne verrouille rien",
@@ -628,7 +631,9 @@ RU: dict[str, str] = {
     "core.transfer_target": "связь 'transfer' должна заканчиваться на переключателе источников (transfer_switch)",
     "core.tie_device": "межсекционная связь без указания аппарата",
     "core.transfer_source": "переключатель источников без второго источника (связь 'transfer')",
-    "core.terminal_node": "узел {type} обычно ничего не питает",
+    "core.terminal_node": "узел {type} является конечным и ничего не питает: разместите его под аппаратом, через "
+                          "который он подключён (защита, преобразователь или инвертор), энергия может идти в обе "
+                          "стороны",
     "core.rating_cascade": "номинал {in_a:g} А больше номинала вышестоящей защиты {up} ({up_in_a:g} А)",
     "core.interlock_closed": "блокировка {lock!r}: в нормальном режиме замкнуто элементов: {count} ({members}), "
                              "ключей: {keys}",
@@ -820,7 +825,8 @@ ZH: dict[str, str] = {
     "core.transfer_target": "'transfer' 连接必须终止于转换开关（transfer_switch）",
     "core.tie_device": "母联未描述电器",
     "core.transfer_source": "转换开关没有第二电源（'transfer' 连接）",
-    "core.terminal_node": "{type} 节点通常没有下级回路",
+    "core.terminal_node": "{type} 节点是末端节点，不应有下级回路：请将其画在连接它的电器（保护电器、变换器或逆变器）之下，"
+                          "能量可双向流动",
     "core.rating_cascade": "额定电流 {in_a:g} A 大于上级保护 {up}（{up_in_a:g} A）",
     "core.interlock_closed": "联锁 {lock!r}：正常运行时 {count} 个成员闭合（{members}），钥匙数为 {keys}",
     "core.interlock_single": "锁 {lock!r} 仅被一个成员使用，且未在任何 'interlocks' 条目中声明：不起联锁作用",
@@ -991,7 +997,8 @@ ES: dict[str, str] = {
     "core.transfer_target": "un enlace 'transfer' debe terminar en un conmutador de transferencia (transfer_switch)",
     "core.tie_device": "acoplamiento sin aparato descrito",
     "core.transfer_source": "conmutador de transferencia sin segunda fuente (enlace 'transfer')",
-    "core.terminal_node": "un nodo {type} normalmente no alimenta nada",
+    "core.terminal_node": "un nodo {type} es una hoja y no alimenta nada: colocarlo bajo el aparato que lo conecta "
+                          "(su protección, convertidor o inversor), la energía puede circular en ambos sentidos",
     "core.rating_cascade": "calibre {in_a:g} A superior a la protección aguas arriba {up} ({up_in_a:g} A)",
     "core.interlock_closed": "enclavamiento {lock!r}: {count} miembros cerrados en servicio normal ({members}) para {keys} "
                              "llave(s)",
@@ -1197,7 +1204,9 @@ DE: dict[str, str] = {
     "core.transfer_target": "eine 'transfer'-Verbindung muss an einem Netzumschalter (transfer_switch) enden",
     "core.tie_device": "Kupplung ohne angegebenes Schaltgerät",
     "core.transfer_source": "Netzumschalter ohne zweite Quelle ('transfer'-Verbindung)",
-    "core.terminal_node": "ein Knoten {type} speist normalerweise nichts",
+    "core.terminal_node": "ein Knoten {type} ist ein Endknoten und speist nichts: unter dem Gerät anordnen, über "
+                          "das er angeschlossen ist (Schutzorgan, Wandler oder Wechselrichter), die Energie kann in "
+                          "beide Richtungen fließen",
     "core.rating_cascade": "Nennstrom {in_a:g} A höher als das vorgeschaltete Schutzorgan {up} ({up_in_a:g} A)",
     "core.interlock_closed": "Verriegelung {lock!r}: {count} Schaltgeräte im Normalbetrieb geschlossen ({members}) "
                              "bei {keys} Schlüssel(n)",
@@ -1399,7 +1408,8 @@ PT: dict[str, str] = {
     "core.transfer_target": "uma ligação 'transfer' deve terminar numa chave de transferência (transfer_switch)",
     "core.tie_device": "acoplamento sem dispositivo descrito",
     "core.transfer_source": "chave de transferência sem segunda fonte (ligação 'transfer')",
-    "core.terminal_node": "um nó {type} normalmente não alimenta nada",
+    "core.terminal_node": "um nó {type} é uma folha e não alimenta nada: colocá-lo sob o dispositivo que o liga "
+                          "(sua proteção, conversor ou inversor), a energia pode circular nos dois sentidos",
     "core.rating_cascade": "corrente nominal {in_a:g} A acima da proteção a montante {up} ({up_in_a:g} A)",
     "core.interlock_closed": "intertravamento {lock!r}: {count} membros fechados em operação normal ({members}) para "
                              "{keys} chave(s)",
