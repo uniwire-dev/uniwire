@@ -505,7 +505,8 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
      for socket-outlets, the lighting of dwellings and bathrooms, charging points, surge protection, PEN
      cross-section. Rules, checks and levels: [Rules](rules.md#vde0100-german-low-voltage-installations).
 
-   * `iec60364` *(optional, must be declared in `profiles`)*: current-carrying capacity of cables.
+   * `iec60364` *(optional, must be declared in `profiles`)*: current-carrying capacity of cables and the
+     30 mA RCD of socket-outlets.
      * **Rule `iec60364.iz`**
        * Condition: the cable specifies `section_mm2`, `material`, `insulation` and `install`.
        * Check: the rating of the protective device supplying the cable does not exceed Iz. The rating
@@ -530,6 +531,15 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
          lower.
        * No grouping or temperature correction factor is applied.
        * The IEC 60364-5-52:2009 edition may differ slightly.
+     * **Rule `iec60364.iz-estimate`**: a cable giving `section_mm2` without its `material`, `insulation`
+       or `install` is estimated: copper and PVC unless stated, the most favourable method in air (`A1` to
+       `F`) unless stated, the table values brought back to 30 °C (IEC 60364-5-52, table B.52.14: 0.87 for
+       PVC, 0.91 for XLPE). A rating above that Iz: **warning**. One **info** lists the cables estimated, so
+       that an empty result is not read as a checked cable.
+     * **Rule `iec60364.rcd-30mA`** (IEC 60364-4-41:2005+AMD1:2017, 411.3.3 and 411.3.4): a socket-outlet
+       up to 32 A, in all premises, and a lighting circuit when `installation.premises` is `dwelling`, protected
+       by an RCD of at most 30 mA: **error**. Not applied below an isolation transformer feeding an IT system
+       (medical IT, IEC 60364-7-710), nor when the document also declares `nfc15100` or `vde0100` (they check it).
 
    * `enedis` *(optional, must be declared in `profiles`)*: connection of a low-voltage installation to the
      French public network (NF C 14-100, Enedis technical reference Enedis-NMO-RAC_001E), separate from

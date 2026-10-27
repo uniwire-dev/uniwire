@@ -119,9 +119,11 @@ rules of VDE-AR-N 4100 (meter cabinet, selective main circuit breaker) and the m
 (DIN 18015-2). The rules were written from the structure of the standard, without its text: report any
 difference with the edition you apply.
 
-## `iec60364`: current-carrying capacity
+## `iec60364`: current-carrying capacity and 30 mA RCDs
 
-One rule, `iec60364.iz`: the rating of the protective device feeding a cable (`ir_A`, otherwise
+### `iec60364.iz`
+
+The rating of the protective device feeding a cable (`ir_A`, otherwise
 `fuse_A`, otherwise `in_A`) must not exceed the cable's current-carrying capacity Iz (multiplied by
 `parallel`).
 
@@ -134,6 +136,30 @@ One rule, `iec60364.iz`: the rating of the protective device feeding a cable (`i
 * Level: **warning**, never error. The tables (`src/uniwire/registry/data/iz_tables.json`, read with
   `uniwire.registry.iz_tables()`) are given at 40 °C ambient and are therefore conservative compared with
   IEC tables at 30 °C; no grouping or temperature correction factor is applied.
+
+### `iec60364.iz-estimate`
+
+A cable that gives `section_mm2` but not its `material`, `insulation` or `install` is not left unchecked:
+
+* Iz is estimated with copper and PVC unless stated, and the most favourable installation method in air
+  (`A1` to `F`) unless `install` is given; the table values are brought back to 30 °C (IEC 60364-5-52,
+  table B.52.14: 0.87 for PVC, 0.91 for XLPE at 40 °C).
+* A protection above that Iz is too high under these assumptions: **warning**, with the
+  assumptions in the message.
+* One **info** finding lists the cables estimated: give their material, insulation and installation method for
+  the exact check of `iec60364.iz`.
+
+### `iec60364.rcd-30mA`
+
+IEC 60364-4-41:2005+AMD1:2017, 411.3.3 and 411.3.4: additional protection by an RCD of at most 30 mA (**error**
+when missing; the 2005 edition without its amendment stopped at socket-outlets up to 20 A):
+
+* socket-outlets up to 32 A (their own rating, otherwise the rating of their protection), in all premises;
+* lighting circuits when `installation.premises` is `dwelling`.
+
+Not applied below an isolation transformer (`kind: "isolation"`) feeding an IT system (`earthing: "IT"`): a
+medical IT system (IEC 60364-7-710) is monitored by an insulation monitoring device instead. When the document
+also declares `nfc15100` or `vde0100`, this rule leaves the check to them (their national rules go further).
 
 See the [specification](SPEC.md) §10 for the data source and its limitations.
 

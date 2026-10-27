@@ -89,6 +89,16 @@ EN: dict[str, str] = {
                             "method {method}, {loaded} loaded cond., {ambient})",
     "iec60364.ambient_ground": "ground 25 °C",
     "iec60364.ambient_air": "40 °C ambient",
+    "iec60364.iz_estimate_exceeded": "the cable does not state its material, insulation or installation method: "
+                                     "estimated with {material} {insulation} {section:g} mm², method {method}, "
+                                     "{loaded} loaded conductors, 30 °C: protection {rating:g} A > Iz {iz:g} A; "
+                                     "give them to check it exactly",
+    "iec60364.any_air_method": "most favourable in air",
+    "iec60364.iz_estimated": "current-carrying capacity only estimated for {count} cable(s) ({tags}): material, "
+                             "insulation or installation method missing (copper, PVC and the most favourable method "
+                             "assumed); give them for an exact check",
+    "iec60364.rcd_30mA_socket": "{what}: socket-outlet circuit up to 32 A not protected by an RCD of at most 30 mA",
+    "iec60364.rcd_30mA_lighting": "{what}: lighting circuit of a dwelling not protected by an RCD of at most 30 mA",
     # nfc15100
     "nfc15100.section": "{in_a:g} A breaker on {section:g} mm² (max {limit} A)",
     "nfc15100.section_sizing": "{in_a:g} A breaker on {section:g} mm²: above the usual {limit} A, check the cable "
@@ -347,6 +357,18 @@ FR: dict[str, str] = {
                             "pose {method}, {loaded} cond. chargés, {ambient})",
     "iec60364.ambient_ground": "sol 25 °C",
     "iec60364.ambient_air": "40 °C ambiant",
+    "iec60364.iz_estimate_exceeded": "le câble ne précise pas sa matière, son isolant ou son mode de pose : "
+                                     "estimation en {material} {insulation} {section:g} mm², mode {method}, "
+                                     "{loaded} conducteurs chargés, 30 °C : protection {rating:g} A > Iz {iz:g} A ; "
+                                     "les préciser pour une vérification exacte",
+    "iec60364.any_air_method": "le plus favorable à l'air libre",
+    "iec60364.iz_estimated": "courant admissible seulement estimé pour {count} câble(s) ({tags}) : matière, isolant "
+                             "ou mode de pose manquant (cuivre, PVC et mode le plus favorable supposés) ; les "
+                             "préciser pour une vérification exacte",
+    "iec60364.rcd_30mA_socket": "{what} : circuit de prises jusqu'à 32 A non protégé par un différentiel de 30 mA "
+                                "au plus",
+    "iec60364.rcd_30mA_lighting": "{what} : circuit d'éclairage d'un logement non protégé par un différentiel de 30 "
+                                  "mA au plus",
     "nfc15100.section": "disjoncteur {in_a:g} A sur {section:g} mm² (max {limit} A)",
     "nfc15100.section_sizing": "disjoncteur {in_a:g} A sur {section:g} mm² : au-delà des {limit} A usuels, vérifier "
                                "le câble selon son mode de pose (NF C 15-100 partie 5-52, guide UTE C 15-105)",
@@ -662,6 +684,16 @@ RU: dict[str, str] = {
                             "{method}, {loaded} нагруж. пров., {ambient})",
     "iec60364.ambient_ground": "грунт 25 °C",
     "iec60364.ambient_air": "воздух 40 °C",
+    "iec60364.iz_estimate_exceeded": "для кабеля не указаны материал, изоляция или способ прокладки: оценка для "
+                                     "{material} {insulation} {section:g} мм², способ {method}, нагруженных "
+                                     "проводников: {loaded}, 30 °C: защита {rating:g} А > Iz {iz:g} А; укажите их "
+                                     "для точной проверки",
+    "iec60364.any_air_method": "наиболее благоприятный в воздухе",
+    "iec60364.iz_estimated": "допустимый ток только оценён, кабелей: {count} ({tags}): не указаны материал, "
+                             "изоляция или способ прокладки (приняты медь, ПВХ и наиболее благоприятный способ); "
+                             "укажите их для точной проверки",
+    "iec60364.rcd_30mA_socket": "{what}: розеточная цепь до 32 А не защищена УЗО не более 30 мА",
+    "iec60364.rcd_30mA_lighting": "{what}: цепь освещения жилого помещения не защищена УЗО не более 30 мА",
     "nfc15100.section": "автоматический выключатель {in_a:g} А на {section:g} мм² (не более {limit} А)",
     "nfc15100.section_sizing": "автоматический выключатель {in_a:g} А на {section:g} мм²: выше обычных {limit} А, "
                                "проверьте кабель с учётом способа прокладки (NF C 15-100 часть 5-52, руководство "
@@ -849,6 +881,12 @@ ZH: dict[str, str] = {
                             "{loaded} 根载流导体，{ambient}）",
     "iec60364.ambient_ground": "土壤 25 °C",
     "iec60364.ambient_air": "环境温度 40 °C",
+    "iec60364.iz_estimate_exceeded": "电缆未注明导体材料、绝缘或敷设方式：按 {material} {insulation} {section:g} mm²、方式 "
+                                     "{method}、{loaded} 根载流导体、30 °C 估算：保护 {rating:g} A > Iz {iz:g} A；请注明以便精确校验",
+    "iec60364.any_air_method": "空气中最有利方式",
+    "iec60364.iz_estimated": "仅估算了 {count} 根电缆的载流量（{tags}）：缺少导体材料、绝缘或敷设方式（假定为铜、PVC 及最有利的敷设方式）；请注明以便精确校验",
+    "iec60364.rcd_30mA_socket": "{what}：32 A 及以下插座回路未由不大于 30 mA 的剩余电流保护器保护",
+    "iec60364.rcd_30mA_lighting": "{what}：住宅照明回路未由不大于 30 mA 的剩余电流保护器保护",
     "nfc15100.section": "{in_a:g} A 断路器配 {section:g} mm²（最大 {limit} A）",
     "nfc15100.section_sizing": "{in_a:g} A 断路器配 {section:g} mm²：超过通常的 {limit} A，请按敷设方式校核电缆（NF C 15-100 "
                                "第 5-52 部分，UTE C 15-105 指南）",
@@ -1027,6 +1065,18 @@ ES: dict[str, str] = {
                             "{method}, {loaded} cond. cargados, {ambient})",
     "iec60364.ambient_ground": "terreno 25 °C",
     "iec60364.ambient_air": "ambiente 40 °C",
+    "iec60364.iz_estimate_exceeded": "el cable no indica material, aislamiento o método de instalación: estimación "
+                                     "con {material} {insulation} {section:g} mm², método {method}, {loaded} "
+                                     "conductores cargados, 30 °C: protección {rating:g} A > Iz {iz:g} A; "
+                                     "indíquelos para una comprobación exacta",
+    "iec60364.any_air_method": "el más favorable al aire",
+    "iec60364.iz_estimated": "intensidad admisible solo estimada para {count} cable(s) ({tags}): falta material, "
+                             "aislamiento o método de instalación (se suponen cobre, PVC y el método más "
+                             "favorable); indíquelos para una comprobación exacta",
+    "iec60364.rcd_30mA_socket": "{what}: circuito de tomas de hasta 32 A no protegido por un diferencial de 30 mA "
+                                "como máximo",
+    "iec60364.rcd_30mA_lighting": "{what}: circuito de iluminación de una vivienda no protegido por un diferencial "
+                                  "de 30 mA como máximo",
     "nfc15100.section": "interruptor automático de {in_a:g} A en {section:g} mm² (máx. {limit} A)",
     "nfc15100.section_sizing": "interruptor automático de {in_a:g} A en {section:g} mm²: por encima de los {limit} A "
                                "habituales, verificar el cable según su método de instalación (NF C 15-100 parte 5-52, "
@@ -1235,6 +1285,18 @@ DE: dict[str, str] = {
                             "{method}, {loaded} belastete Leiter, {ambient})",
     "iec60364.ambient_ground": "Erdreich 25 °C",
     "iec60364.ambient_air": "Umgebung 40 °C",
+    "iec60364.iz_estimate_exceeded": "Leitung ohne Angabe von Leitermaterial, Isolierung oder Verlegeart: Schätzung "
+                                     "mit {material} {insulation} {section:g} mm², Verlegeart {method}, {loaded} "
+                                     "belastete Leiter, 30 °C: Schutzorgan {rating:g} A > Iz {iz:g} A; für eine "
+                                     "genaue Prüfung angeben",
+    "iec60364.any_air_method": "günstigste in Luft",
+    "iec60364.iz_estimated": "Strombelastbarkeit nur geschätzt für {count} Leitung(en) ({tags}): Leitermaterial, "
+                             "Isolierung oder Verlegeart fehlt (Kupfer, PVC und günstigste Verlegeart angenommen); "
+                             "für eine genaue Prüfung angeben",
+    "iec60364.rcd_30mA_socket": "{what}: Steckdosenstromkreis bis 32 A nicht durch einen RCD von höchstens 30 mA "
+                                "geschützt",
+    "iec60364.rcd_30mA_lighting": "{what}: Beleuchtungsstromkreis einer Wohnung nicht durch einen RCD von höchstens "
+                                  "30 mA geschützt",
     "nfc15100.section": "Leitungsschutzschalter {in_a:g} A an {section:g} mm² (max. {limit} A)",
     "nfc15100.section_sizing": "Leitungsschutzschalter {in_a:g} A an {section:g} mm²: über den üblichen {limit} A, "
                                "Strombelastbarkeit der Leitung für die Verlegeart prüfen (NF C 15-100 Teil 5-52, "
@@ -1438,6 +1500,17 @@ PT: dict[str, str] = {
                             "{method}, {loaded} cond. carregados, {ambient})",
     "iec60364.ambient_ground": "solo 25 °C",
     "iec60364.ambient_air": "ambiente 40 °C",
+    "iec60364.iz_estimate_exceeded": "o cabo não indica material, isolamento ou método de instalação: estimativa "
+                                     "com {material} {insulation} {section:g} mm², método {method}, {loaded} "
+                                     "condutores carregados, 30 °C: proteção {rating:g} A > Iz {iz:g} A; indique-os "
+                                     "para uma verificação exata",
+    "iec60364.any_air_method": "o mais favorável ao ar",
+    "iec60364.iz_estimated": "corrente admissível apenas estimada para {count} cabo(s) ({tags}): falta material, "
+                             "isolamento ou método de instalação (supostos cobre, PVC e o método mais favorável); "
+                             "indique-os para uma verificação exata",
+    "iec60364.rcd_30mA_socket": "{what}: circuito de tomadas até 32 A não protegido por um DR de no máximo 30 mA",
+    "iec60364.rcd_30mA_lighting": "{what}: circuito de iluminação de uma habitação não protegido por um DR de no "
+                                  "máximo 30 mA",
     "nfc15100.section": "disjuntor de {in_a:g} A em {section:g} mm² (máx. {limit} A)",
     "nfc15100.section_sizing": "disjuntor de {in_a:g} A em {section:g} mm²: acima dos {limit} A usuais, verificar o cabo "
                                "para o seu método de instalação (NF C 15-100 parte 5-52, guia UTE C 15-105)",

@@ -388,3 +388,37 @@ def test_no_profile_said_so():
     us = [x for x in check(load({**base, "installation": {"standard": "NEC 2023"}})) if x.rule == "core.no-profile"]
     assert "no rule profile covers NEC 2023" in us[0].message and "'iec60364'" not in us[0].message
     assert "core.no-profile" not in rules_of(check(load({**base, "profiles": ["iec60364"]})))
+
+
+def test_iz_estimated_when_the_cable_is_incomplete():
+    # section only: copper, PVC, the most favourable method in air at 30 °C (1.5 mm², 2 loaded: 20 / 0.87 = 23 A)
+    fs = [f for f in check(iz_doc({"section_mm2": 1.5}, 25)) if f.rule == "iec60364.iz-estimate"]
+    assert [f.level for f in fs] == ["warning", "info"] and "23" in fs[0].message
+    fs = [f for f in check(iz_doc({"section_mm2": 1.5}, 16)) if f.rule == "iec60364.iz-estimate"]
+    assert [f.level for f in fs] == ["info"]  # within the estimate: still said to be estimated only
+    # a stated method is used (A1, PVC, 2 loaded: 13 / 0.87 = 14.9 A)
+    fs = [f for f in check(iz_doc({"section_mm2": 1.5, "install": "A1"}, 16)) if f.level == "warning"]
+    assert [f.rule for f in fs] == ["iec60364.iz-estimate"] and "14.9" in fs[0].message
+    # a complete cable is checked exactly, not estimated
+    full = {"section_mm2": 2.5, "material": "Cu", "insulation": "PVC", "install": "B1"}
+    assert not [f for f in check(iz_doc(full, 20)) if f.rule == "iec60364.iz-estimate"]
+
+
+def test_iec60364_sockets_need_30ma():
+    def d(children, premises="commercial", profiles=("iec60364",)):
+        return load({"profiles": list(profiles), "installation": {"premises": premises},
+                     "sources": [{"type": "grid", "children": children}]})
+
+    def mcb(load, in_a=16):
+        return {"type": "breaker", "in_A": in_a, "children": [load]}
+
+    rcd = {"type": "rcd", "idn_mA": 30, "in_A": 40, "children": [mcb({"type": "socket"})]}
+    assert [f.node for f in check(d([mcb({"type": "socket", "id": "S"})])) if f.rule == "iec60364.rcd-30mA"] == ["S"]
+    assert not [f for f in check(d([rcd])) if f.rule == "iec60364.rcd-30mA"]
+    assert not [f for f in check(d([mcb({"type": "socket"}, 63)])) if f.rule == "iec60364.rcd-30mA"]
+    # luminaires: dwellings only
+    assert [f for f in check(d([mcb({"type": "lighting"})], "dwelling")) if f.rule == "iec60364.rcd-30mA"]
+    assert not [f for f in check(d([mcb({"type": "lighting"})])) if f.rule == "iec60364.rcd-30mA"]
+    # with a national profile, left to it (no duplicate)
+    both = d([mcb({"type": "socket"})], profiles=("vde0100", "iec60364"))
+    assert [f.rule for f in check(both) if f.rule.endswith("rcd-30mA")] == ["vde0100.rcd-30mA"]
