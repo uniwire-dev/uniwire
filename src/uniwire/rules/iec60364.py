@@ -27,8 +27,7 @@ from .. import registry
 from ..i18n import t as _t
 from ..model import Document
 from ..resolve import Index
-from . import describe, rule
-from .nfc15100 import _rcds, _socket_rating
+from . import PROFILES, describe, rule
 
 IZ = describe(
     "iec60364.iz",
@@ -174,8 +173,9 @@ def _medical_it(idx: Index, nid: str) -> bool:
 
 @rule("iec60364")
 def rcd_30ma(doc: Document, idx: Index):
-    if {"nfc15100", "vde0100"} & set(doc.profiles):
+    if {"nfc15100", "vde0100"} & set(doc.profiles) & set(PROFILES):  # a national profile checks it
         return
+    from .nfc15100 import _rcds, _socket_rating  # here: importing it first would register its profile first
     dwelling = doc.installation.premises == "dwelling"
     for nid, n in idx.nodes.items():
         t = n.type  # type: ignore[attr-defined]
