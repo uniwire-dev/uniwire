@@ -171,8 +171,8 @@ def _render_sheets(doc: Document, view: View, lang: str) -> tuple[list[Page], li
         next_f = number.get(id(spec.next)) if spec.next is not None else None
         incoming = None
         incoming_ref: tuple[Optional[int], Optional[str]] = (None, None)
-        if i > 1 and spec.roots and not spec.continuation:
-            rid = spec.roots[0].id
+        if i > 1 and spec.roots and not spec.continuation and index.parent.get(spec.roots[0].id or ""):
+            rid = spec.roots[0].id  # a board drawn on its own sheet (not a group of trees): fed from another one
             src = next((j for j, s in enumerate(specs, 1) if rid in s.detached and j != i), None)
             incoming_ref = (src, index.parent.get(rid or ""))
             feeder = next((a for a in index.ancestors(rid or "") if a.ref), None)

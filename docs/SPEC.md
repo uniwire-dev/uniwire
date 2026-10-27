@@ -352,7 +352,7 @@ Common enumerations: `poles` ∈ {1P, 1P+N, 2P, 3P, 3P+N, 4P}.
 | `direction` | `down` | Direction of power flow (future values reserved) |
 | `pitch_mm` | 20 | Width of an outgoing feeder column |
 | `cartouche` | `label, ref, protection, idn_mA, cable, p_kW` | Rows of the circuit schedule (among `label`, `ref`, `protection`, `in_A`, `curve`, `icn_kA`, `idn_mA`, `rcd_type`, `poles`, `cable`, `section_mm2`, `length_m`, `p_kW`, `phase`, `room`, `points`, and the 1.2 rows below, e.g. `cable_ref` "Cable tag"); an `idn_mA` value carried by a device upstream of the feeder (incomer, group RCD), not by its own protection, reads "30 mA (upstream)" |
-| `folio_split` | `auto` | `auto`: split across sheets if needed; `none`: everything on one sheet |
+| `folio_split` | `auto` | `auto`: split across sheets if needed (several trees side by side: groups of whole trees first, then sub-distribution boards on their own sheet, then busbars cut into continuation sheets); `none`: everything on one sheet |
 | `min_scale` | 0.7 | Maximum reduction before splitting |
 | `annotations` | `true` | Reference designation and characteristics next to the symbols |
 | `tag_field` | `ref` | Displayed identifier: `ref` or `part_number` (diagrams that print only catalogue part numbers) |

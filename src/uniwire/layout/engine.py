@@ -693,6 +693,9 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         if len(srcs) < 2 or b is None or b.bus_y is None:
             continue
         need = 2.0 + 4.0 + 3.0 * (len(srcs) - 1) + 1.0  # see bus_lane in _draw_links
+        xs = [a.x for a in srcs] + [b.bus_x0, b.bus_x1]
+        if any(min(xs) - 1.0 < e.x < max(xs) + 1.0 for e in _down_stubs(doc, main)):
+            need += STUB_DROP  # the channels below an off-sheet stub hanging down where they run (see _feed_taps)
         for a in srcs:
             r = _root_of(main, a)
             d = min(b.bus_y - _end(a, "infeed").y - need, lift.get(id(r), (r, 0.0))[1])
@@ -770,8 +773,19 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         parent = {id(c): n for n in everything for c in n.children}
         _draw_conductor_marks(columns, index, doc, marks, obs, y_load, drawn, parent)
 
-    # auxiliary devices: on the sheet of the tree node they are linked to, in free space near their partner
+    # auxiliary devices: on the sheet of the tree node they are linked to, in free space near their partner (and off
+    # the channels already given to the feeds tapping a busbar, which are routed later)
+    lanes: list[tuple[str, tuple[float, float, float]]] = []
+    for i, y in feed_taps.lane.items():
+        a, e = _find(roots, doc.links[i].from_), feed_taps.land[i]
+        if a is not None:
+            s = _end(a, "infeed")
+            lanes += [("h", (y, min(e.x, s.x), max(e.x, s.x))), ("v", (s.x, min(s.y, y), max(s.y, y)))]
+    for kind, line in lanes:
+        (obs.hlines if kind == "h" else obs.vwires).append(line)
     annex = _place_devices(doc, roots, everything, view, lang, obs, pitch)
+    for kind, line in lanes:
+        (obs.hlines if kind == "h" else obs.vwires).remove(line)
     homes = _device_homes(doc)
     unlinked: list[NodeBase] = [d for d in doc.devices if homes.get(d.id or "") is None]
 
@@ -1710,6 +1724,19 @@ class FeedTaps:
     reach: dict[str, float]  # busbar id -> x of the outermost tap and its texts on the right (the frame encloses it)
 
 
+STUB_DROP = 7.5 + 2.5  # an off-sheet stub leaving downwards: its arrow and the texts beside its tip
+
+
+def _down_stubs(doc: Document, roots: list[LNode]) -> list[End]:
+    """Where the off-sheet stubs leaving downwards start (see ``_draw_offpage_link``)."""
+    out = []
+    for link in doc.links:
+        a, b = _find(roots, link.from_), _find(roots, link.to)
+        if (a is None) != (b is None) and (e := _end(a or b, link.kind)).side == "down":  # type: ignore[arg-type]
+            out.append(e)
+    return out
+
+
 def _feed_taps(doc: Document, roots: list[LNode], far: set[int], band: Optional[AltBand]) -> FeedTaps:
     """One tap each on top of the busbar, beyond its end on the side of their source: the interrupted lines
     (stubs, see ``_far_links``) innermost with room for their texts, then the routed feeds, the nearest innermost
@@ -1721,6 +1748,7 @@ def _feed_taps(doc: Document, roots: list[LNode], far: set[int], band: Optional[
         if (link.kind == "infeed" and a is not None and b is not None and b.sym.height == 0 and b.bus_y is not None
                 and b.children and not (band is not None and i in band.links)):
             feeds.setdefault(b.id, []).append(i)
+    stubs = _down_stubs(doc, roots)
     ft = FeedTaps({}, {}, {}, {})
     for bid, ids in feeds.items():
         b = _find(roots, bid)
@@ -1729,6 +1757,10 @@ def _feed_taps(doc: Document, roots: list[LNode], far: set[int], band: Optional[
         src = {i: _find(roots, doc.links[i].from_) for i in ids}
         routed = [i for i in ids if i not in far]
         tops = [_end(n, doc.links[i].kind).y for i in routed if (n := src[i]) is not None]
+        xs = [n.x for i in routed if (n := src[i]) is not None] + [b.bus_x0, b.bus_x1]
+        for e in stubs:  # an off-sheet stub hanging down where the channels run: the channels below its texts
+            if tops and min(xs) - 1.0 < e.x < max(xs) + 1.0 and e.y < b.bus_y:
+                tops.append(e.y + STUB_DROP)
         y0, room = (max(tops) + 2.0, b.bus_y - 4.0 - (max(tops) + 2.0)) if tops else (0.0, -1.0)
         near = sorted(routed, key=lambda i: abs(src[i].x - b.x))  # type: ignore[union-attr]
         if len(near) == 1 and room >= 0:
@@ -2062,7 +2094,12 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             continue
         lg = group_of(i)
         if a is None or b is None:
-            if link.kind not in ("transfer", "tie"):
+            n = a or b
+            if link.kind == "tie" and n.bus_y is not None:  # a bus tie to another sheet: out of the busbar end
+                other = link.to if b is None else link.from_
+                at = End(n.bus_x1, n.bus_y, "right") if b is None else End(n.bus_x0, n.bus_y, "left")
+                _draw_offpage_link(link, n, other, nodes.get(other), obs, lg, lang, node_folio, offpage, at)
+            elif link.kind not in ("transfer", "tie"):
                 other = link.to if b is None else link.from_
                 at = None
                 if b is not None and link.kind == "infeed" and link.to in fed_ok:  # on its input conductor
@@ -2110,6 +2147,9 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         fed = link.kind == "infeed" and (link.to in fed_ok or (b in roots and b.dc_side > 0))
         start = tap_end.get(i) or _end(a, link.kind)
         ends = [start, _end(b, link.kind, fed=fed, near=start.x)]
+        if (link.kind == "measure" and obs.min_lane == 0 and b.sym.height == 0 and b.bus_y is not None
+                and b.bus_x0 + 1.0 < start.x < b.bus_x1 - 1.0 and start.y < b.bus_y - 4.0):
+            ends[1] = End(start.x, b.bus_y, "up")  # an instrument above a busbar: straight down onto it
         for k, (n, e) in enumerate(zip((a, b), ends)):  # links of different kinds on the side of a node:
             if e.side == "left":                         # one point per kind (a power feed, a data bus...)
                 kinds = side_ends.setdefault((n.id, round(e.x, 2), round(e.y, 2)), [])
@@ -2413,6 +2453,10 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         pts = [(e.x, e.y), (e.x, e.y - 6.0)]
         tip = (e.x, e.y - 7.5)
         head = [(e.x - 0.8, e.y - 6.0), tip, (e.x + 0.8, e.y - 6.0)]
+    elif e.side == "right":  # out of the right end of a busbar
+        pts = [(e.x, e.y), (e.x + 6.0, e.y)]
+        tip = (e.x + 7.5, e.y)
+        head = [(e.x + 6.0, e.y - 0.8), tip, (e.x + 6.0, e.y + 0.8)]
     else:
         pts = [(e.x, e.y), (e.x - 6.0, e.y)]
         tip = (e.x - 7.5, e.y)
@@ -2628,11 +2672,19 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
         root_ids = {r.id for r in spec.roots}
         spec.detached |= {f for f in forced if f not in root_ids and _in_spec(spec, f, index)}
         conts: list[SheetSpec] = []
+        groups: list[list[NodeBase]] = []
         for _ in range(50):
             spec.moved = {s.id for nid in spec.detached for s in standby(nid) if s.id and s in spec.roots}
             lay = layout_sheet(doc, view, spec, index)
             if view.folio_split == "none" or fit_scale(lay, view) >= view.min_scale:
                 break
+            if allow_bus_split and not groups and spec.continuation is None:
+                # several installations side by side: each whole on a sheet, before taking boards out of them
+                groups = _split_trees(doc, spec, lay, view, index)
+                if groups:
+                    spec.roots = groups.pop(0)
+                    root_ids = {r.id for r in spec.roots}
+                    continue
             boards = [n for n in lay.lnodes if n.is_board and n.node is not None and n.node.id not in root_ids
                       and n.node.id not in spec.detached and n.width >= 3 * view.pitch_mm]
             if boards:
@@ -2647,6 +2699,9 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
             out += process(c, allow_bus_split=False)
         for nid in _ordered(spec, index):
             out += process(SheetSpec([index.nodes[nid]] + standby(nid), name=name_of(index.nodes[nid])))
+        for roots in groups:
+            board = next((n for r in roots for n in _walk_nodes(r) if n.type == "board"), roots[0])  # type: ignore[attr-defined]
+            out += process(SheetSpec(roots, name=name_of(board)))
         return out
 
     def standby(nid: str) -> list[NodeBase]:
@@ -2658,6 +2713,51 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
 
     first = SheetSpec(_sheet_roots(doc, view, index), name="")
     return process(first)
+
+
+def _walk_nodes(n: NodeBase) -> Iterator[NodeBase]:
+    yield n
+    for c in n.children:
+        yield from _walk_nodes(c)
+
+
+def _split_trees(doc: Document, spec: SheetSpec, lay: SheetLayout, view: View, index: Index) -> list[list[NodeBase]]:
+    """Trees of a sheet too wide for it, in their drawing order, cut into groups that each fit (a tree wider than a
+    sheet alone on its own): the fewest sheets, then the fewest links between them (a link cut is drawn as an
+    off-page reference at both ends). Empty: nothing to cut."""
+    by_id = {id(r.node): r for r in lay.lnodes if r.node is not None and any(r.node is s for s in spec.roots)}
+    trees = sorted((r for r in by_id.values()), key=lambda r: r.x_left)
+    if len(trees) < 2:
+        return []
+    _, _, aw, _ = drawing_area(view)
+    cap = aw / view.min_scale - 30.0
+    pos = {n.id: k for k, r in enumerate(trees) for n in _walk_nodes(r.node) if n.id}  # type: ignore[arg-type]
+    spans = [(pos[l.from_], pos[l.to], 100 if l.kind in ("tie", "transfer") else 1) for l in doc.links
+             if l.from_ in pos and l.to in pos and pos[l.from_] != pos[l.to]]
+
+    def cut(k: int) -> int:  # links between trees [0, k) and [k, n), a bus tie or a transfer weighing most
+        return sum(w for a, b, w in spans if min(a, b) < k <= max(a, b))
+
+    n = len(trees)
+    # (sheets, links cut, widest sheet, previous cut)
+    best: list[tuple[int, int, float, int]] = [(0, 0, 0.0, -1)] + [(10 ** 9, 0, 0.0, -1)] * n
+    for j in range(1, n + 1):
+        for i in range(j):
+            width = trees[j - 1].x_left + trees[j - 1].width - trees[i].x_left
+            if width > cap and j - i > 1:
+                continue
+            s, c, w, _ = best[i]
+            cand = (s + 1, c + (cut(i) if i else 0), max(w, width), i)
+            if cand[:3] < best[j][:3]:
+                best[j] = cand
+    if best[n][0] < 2:
+        return []
+    cuts, j = [], n
+    while j > 0:
+        cuts.append(j)
+        j = best[j][3]
+    bounds = [0] + sorted(cuts)
+    return [[trees[k].node for k in range(a, b)] for a, b in zip(bounds, bounds[1:])]  # type: ignore[misc]
 
 
 def _in_spec(spec: SheetSpec, nid: str, index: Index) -> bool:

@@ -121,3 +121,54 @@ def test_several_feeds_on_one_busbar_on_their_own_taps():
     frame = [r for g in _groups(lay.group) if "board" in (g.cls or "") and g.id == "B1"
              for r in g.items if isinstance(r, Rect)][0]
     assert all(frame.x < p[0] < frame.x + frame.w for p in ends)  # the board frame encloses the taps
+
+
+def _sheets(doc):
+    view = default_view(doc)
+    return [layout_sheet(doc, view, s) for s in plan_sheets(doc, view)], view
+
+
+def test_trees_too_wide_for_one_sheet_split_into_groups_that_fit():
+    # six boards, each with a storage supply beside it: two or more sheets, each tree whole, a supply with its board
+    sources, links = [], []
+    for k in range(1, 7):
+        sources += [_board(k, feeders=4), _supply(f"G{k}")]
+        links.append({"kind": "infeed", "from": f"QG{k}", "to": f"W{k}"})
+    doc = _doc(sources, links)
+    from uniwire.layout.engine import fit_scale
+    lays, view = _sheets(doc)
+    assert len(lays) >= 2 and all(fit_scale(lay, view) >= view.min_scale for lay in lays)
+    where = {n.node.id: i for i, lay in enumerate(lays) for n in lay.lnodes if n.node is not None and n.node.id}
+    assert all(where[f"T{k}"] == where[f"W{k}"] == where[f"G{k}"] for k in range(1, 7))
+    texts = [t.text for lay in lays[1:] for t in _items(lay.group) if isinstance(t, Text)]
+    assert not any("incoming" in t.lower() for t in texts)  # a group of trees is not fed from another sheet
+
+
+def test_bus_tie_between_two_sheets_drawn_at_both_ends():
+    sources, links = [], [{"kind": "tie", "from": "W2", "to": "W5"}]
+    for k in range(1, 7):
+        sources += [_board(k, feeders=4), _supply(f"G{k}")]
+        links.append({"kind": "infeed", "from": f"QG{k}", "to": f"W{k}"})
+    from uniwire.render import render_pages
+    pages = render_pages(_doc(sources, links))
+    texts = [{t.text for t in _items(p.root) if isinstance(t, Text)} for p in pages]
+    w2 = next(i for i, ts in enumerate(texts) if "-W2" in ts)
+    w5 = next(i for i, ts in enumerate(texts) if "-W5" in ts)
+    assert w2 != w5
+    assert any(t.startswith("-W5") and "→" in t for t in texts[w2])  # an off-page reference at each end
+    assert any(t.startswith("-W2") and "→" in t for t in texts[w5])
+
+
+def test_instrument_above_a_busbar_measures_it_straight_down():
+    board = {"type": "board", "id": "B", "ref": "B1", "children": [_br("Q0", [
+        {"type": "busbar", "id": "W1", "ref": "-W1", "children": [_br(f"Q{j}", [{"type": "load"}]) for j in (1, 2, 3)]}])]}
+    doc = load({"installation": {"earthing": "IT", "system": "2P", "un_V": 400},
+                "sources": [{"type": "generator", "id": "G", "ref": "-G1", "children": [board]}],
+                "devices": [{"type": "insulation_monitor", "id": "IM", "ref": "-B1"}],
+                "links": [{"kind": "measure", "from": "IM", "to": "W1"}]})
+    lay = _sld(doc)
+    (p, q) = list(_segments(_link_groups(lay, "IM")[0]))[-1]
+    bus = [it for g in _groups(lay.group) if "uw-busbar" in (g.cls or "")
+           for it in _items(g) if hasattr(it, "a") and abs(it.a[1] - it.b[1]) < 1e-9][0]
+    assert abs(p[0] - q[0]) < 1e-6 and abs(max(p[1], q[1]) - bus.a[1]) < 1e-6  # vertical, down onto the busbar
+    assert min(bus.a[0], bus.b[0]) + 1.0 < q[0] < max(bus.a[0], bus.b[0]) - 1.0  # on it, not at its end

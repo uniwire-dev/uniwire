@@ -40,6 +40,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   their own tap on top of it, routed on separate channels without crossing (the second one ended on a stub of
   conductor that did not exist), the board frame enclosing the taps.
 
+* Single-line view, sheets: several trees too wide for one sheet are cut into groups of whole trees that each fit
+  (the fewest sheets, then the fewest links between them, each ending on an off-page reference), before any board
+  is taken to its own sheet; such a sheet no longer shows an incoming feed, and a bus tie between two sheets ends on
+  an off-page reference at each end (it was not drawn). An instrument above a busbar (`measure`
+  link) is connected straight down onto it; auxiliary devices are placed off the channels of the feeds tapping a
+  busbar, and these channels pass below an off-sheet reference hanging over them.
+
 * Single-line view: a control or data link between two loads too close for its label runs under the loads, where
   the label has room (it was written over the symbols).
 
