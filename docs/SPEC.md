@@ -522,14 +522,15 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
        * Copper, PVC or XLPE (`PR` and `EPR` are treated as XLPE).
        * Installation methods `A1`, `A2`, `B1`, `B2`, `C`, `E`, `F`, with 2 or 3 loaded conductors.
        * Cross-sections from 1.5 to 300 mm².
-       * Method `D-duct` (buried in duct, XLPE): copper and aluminium.
+       * Method `D-duct` (buried in duct, XLPE), also written `D1` (its IEC name): copper and aluminium.
        * Non-buried aluminium is not provided by the source: the rule then emits an info.
      * **Number of loaded conductors**: 3 if the protective device is `3P`, `3P+N` or `4P`. Otherwise 2.
        If the poles are not specified, `installation.system` is used.
      * **Limitations**
-       * Referenced to **40 °C ambient**, versus 30 °C in IEC: Iz is therefore about 9 to 13 %
-         lower.
-       * No grouping or temperature correction factor is applied.
+       * Referenced to **40 °C** in air and 25 °C in the ground. The cable's `ambient_C` picks the values: 30 °C
+         or less in air, brought back to 30 °C (IEC 60364-5-52, table B.52.14); up to 40 °C, the values at
+         40 °C; above 40 °C in air or 25 °C in the ground, Iz is not checked (info). Without `ambient_C`, 40 °C.
+       * No grouping factor is applied.
        * The IEC 60364-5-52:2009 edition may differ slightly.
      * **Rule `iec60364.iz-estimate`**: a cable giving `section_mm2` without its `material`, `insulation`
        or `install` is estimated: copper and PVC unless stated, the most favourable method in air (`A1` to

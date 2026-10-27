@@ -82,16 +82,18 @@ EN: dict[str, str] = {
     "plc.coil": "output {port} ({un_v:g} V) drives a {coil:g} V coil: use an interface relay or a relay module",
     "plc.port_shared": "channel {port} controls {count} devices",
     # iec60364
-    "iec60364.install_uncovered": "installation method {install!r} not covered (A1, A2, B1, B2, C, E, F, D-duct)",
+    "iec60364.install_uncovered": "installation method {install!r} not covered (A1, A2, B1, B2, C, E, F, D1/D-duct)",
     "iec60364.iz_unavailable": "Iz not available for {material} {insulation} {section:g} mm² "
                                "method {method}, {loaded} loaded conductors",
     "iec60364.iz_exceeded": "protection {rating:g} A > Iz {iz:g} A ({material} {insulation} {section:g} mm², "
                             "method {method}, {loaded} loaded cond., {ambient})",
-    "iec60364.ambient_ground": "ground 25 °C",
-    "iec60364.ambient_air": "40 °C ambient",
+    "iec60364.ambient_ground": "ground {t:g} °C",
+    "iec60364.ambient_air": "{t:g} °C ambient",
+    "iec60364.ambient_default": ", ambient_C not given",
+    "iec60364.ambient_uncovered": "Iz not checked: ambient {ambient:g} °C above the {limit} °C of the table for method {method}",
     "iec60364.iz_estimate_exceeded": "the cable does not state its material, insulation or installation method: "
                                      "estimated with {material} {insulation} {section:g} mm², method {method}, "
-                                     "{loaded} loaded conductors, 30 °C: protection {rating:g} A > Iz {iz:g} A; "
+                                     "{loaded} loaded conductors, {t:g} °C: protection {rating:g} A > Iz {iz:g} A; "
                                      "give them to check it exactly",
     "iec60364.any_air_method": "most favourable in air",
     "iec60364.iz_estimated": "current-carrying capacity only estimated for {count} cable(s) ({tags}): material, "
@@ -350,16 +352,18 @@ FR: dict[str, str] = {
     "plc.port_channels": "port {port!r} : le module {module} n'a que {channels} voies",
     "plc.coil": "sortie {port} ({un_v:g} V) pilote une bobine {coil:g} V : prévoir un relais d'interface ou un module relais",
     "plc.port_shared": "la voie {port} commande {count} appareils",
-    "iec60364.install_uncovered": "mode de pose {install!r} non couvert (A1, A2, B1, B2, C, E, F, D-duct)",
+    "iec60364.install_uncovered": "mode de pose {install!r} non couvert (A1, A2, B1, B2, C, E, F, D1/D-duct)",
     "iec60364.iz_unavailable": "Iz non disponible pour {material} {insulation} {section:g} mm² "
                                "pose {method}, {loaded} conducteurs chargés",
     "iec60364.iz_exceeded": "protection {rating:g} A > Iz {iz:g} A ({material} {insulation} {section:g} mm², "
                             "pose {method}, {loaded} cond. chargés, {ambient})",
-    "iec60364.ambient_ground": "sol 25 °C",
-    "iec60364.ambient_air": "40 °C ambiant",
+    "iec60364.ambient_ground": "sol {t:g} °C",
+    "iec60364.ambient_air": "{t:g} °C ambiant",
+    "iec60364.ambient_default": ", ambient_C non indiqué",
+    "iec60364.ambient_uncovered": "Iz non vérifié : ambiante {ambient:g} °C au-dessus des {limit} °C de la table pour la pose {method}",
     "iec60364.iz_estimate_exceeded": "le câble ne précise pas sa matière, son isolant ou son mode de pose : "
                                      "estimation en {material} {insulation} {section:g} mm², mode {method}, "
-                                     "{loaded} conducteurs chargés, 30 °C : protection {rating:g} A > Iz {iz:g} A ; "
+                                     "{loaded} conducteurs chargés, {t:g} °C : protection {rating:g} A > Iz {iz:g} A ; "
                                      "les préciser pour une vérification exacte",
     "iec60364.any_air_method": "le plus favorable à l'air libre",
     "iec60364.iz_estimated": "courant admissible seulement estimé pour {count} câble(s) ({tags}) : matière, isolant "
@@ -677,16 +681,18 @@ RU: dict[str, str] = {
     "plc.coil": "выход {port} ({un_v:g} В) управляет катушкой {coil:g} В: используйте промежуточное реле или релейный "
                 "модуль",
     "plc.port_shared": "канал {port} управляет {count} аппаратами",
-    "iec60364.install_uncovered": "способ прокладки {install!r} не охвачен (A1, A2, B1, B2, C, E, F, D-duct)",
+    "iec60364.install_uncovered": "способ прокладки {install!r} не охвачен (A1, A2, B1, B2, C, E, F, D1/D-duct)",
     "iec60364.iz_unavailable": "Iz недоступен для {material} {insulation} {section:g} мм², способ {method}, {loaded} "
                                "нагруженных проводника",
     "iec60364.iz_exceeded": "защита {rating:g} А > Iz {iz:g} А ({material} {insulation} {section:g} мм², способ "
                             "{method}, {loaded} нагруж. пров., {ambient})",
-    "iec60364.ambient_ground": "грунт 25 °C",
-    "iec60364.ambient_air": "воздух 40 °C",
+    "iec60364.ambient_ground": "грунт {t:g} °C",
+    "iec60364.ambient_air": "воздух {t:g} °C",
+    "iec60364.ambient_default": ", ambient_C не указан",
+    "iec60364.ambient_uncovered": "Iz не проверен: температура {ambient:g} °C выше {limit} °C таблицы для способа {method}",
     "iec60364.iz_estimate_exceeded": "для кабеля не указаны материал, изоляция или способ прокладки: оценка для "
                                      "{material} {insulation} {section:g} мм², способ {method}, нагруженных "
-                                     "проводников: {loaded}, 30 °C: защита {rating:g} А > Iz {iz:g} А; укажите их "
+                                     "проводников: {loaded}, {t:g} °C: защита {rating:g} А > Iz {iz:g} А; укажите их "
                                      "для точной проверки",
     "iec60364.any_air_method": "наиболее благоприятный в воздухе",
     "iec60364.iz_estimated": "допустимый ток только оценён, кабелей: {count} ({tags}): не указаны материал, "
@@ -875,14 +881,16 @@ ZH: dict[str, str] = {
     "plc.port_channels": "端口 {port!r}：模块 {module} 只有 {channels} 个通道",
     "plc.coil": "输出 {port}（{un_v:g} V）驱动 {coil:g} V 线圈：请使用中间继电器或继电器模块",
     "plc.port_shared": "通道 {port} 控制 {count} 个电器",
-    "iec60364.install_uncovered": "敷设方式 {install!r} 不在范围内（A1、A2、B1、B2、C、E、F、D-duct）",
+    "iec60364.install_uncovered": "敷设方式 {install!r} 不在范围内（A1、A2、B1、B2、C、E、F、D1/D-duct）",
     "iec60364.iz_unavailable": "无 Iz 数据：{material} {insulation} {section:g} mm²，方式 {method}，{loaded} 根载流导体",
     "iec60364.iz_exceeded": "保护 {rating:g} A > Iz {iz:g} A（{material} {insulation} {section:g} mm²，方式 {method}，"
                             "{loaded} 根载流导体，{ambient}）",
-    "iec60364.ambient_ground": "土壤 25 °C",
-    "iec60364.ambient_air": "环境温度 40 °C",
+    "iec60364.ambient_ground": "土壤 {t:g} °C",
+    "iec60364.ambient_air": "环境温度 {t:g} °C",
+    "iec60364.ambient_default": "，未给出 ambient_C",
+    "iec60364.ambient_uncovered": "未校核 Iz：环境温度 {ambient:g} °C 高于敷设方式 {method} 表格的 {limit} °C",
     "iec60364.iz_estimate_exceeded": "电缆未注明导体材料、绝缘或敷设方式：按 {material} {insulation} {section:g} mm²、方式 "
-                                     "{method}、{loaded} 根载流导体、30 °C 估算：保护 {rating:g} A > Iz {iz:g} A；请注明以便精确校验",
+                                     "{method}、{loaded} 根载流导体、{t:g} °C 估算：保护 {rating:g} A > Iz {iz:g} A；请注明以便精确校验",
     "iec60364.any_air_method": "空气中最有利方式",
     "iec60364.iz_estimated": "仅估算了 {count} 根电缆的载流量（{tags}）：缺少导体材料、绝缘或敷设方式（假定为铜、PVC 及最有利的敷设方式）；请注明以便精确校验",
     "iec60364.rcd_30mA_socket": "{what}：32 A 及以下插座回路未由不大于 30 mA 的剩余电流保护器保护",
@@ -1058,16 +1066,18 @@ ES: dict[str, str] = {
     "plc.coil": "la salida {port} ({un_v:g} V) acciona una bobina de {coil:g} V: usar un relé de interfaz o un "
                 "módulo de relés",
     "plc.port_shared": "el canal {port} controla {count} aparatos",
-    "iec60364.install_uncovered": "método de instalación {install!r} no cubierto (A1, A2, B1, B2, C, E, F, D-duct)",
+    "iec60364.install_uncovered": "método de instalación {install!r} no cubierto (A1, A2, B1, B2, C, E, F, D1/D-duct)",
     "iec60364.iz_unavailable": "Iz no disponible para {material} {insulation} {section:g} mm² método {method}, {loaded} "
                                "conductores cargados",
     "iec60364.iz_exceeded": "protección {rating:g} A > Iz {iz:g} A ({material} {insulation} {section:g} mm², método "
                             "{method}, {loaded} cond. cargados, {ambient})",
-    "iec60364.ambient_ground": "terreno 25 °C",
-    "iec60364.ambient_air": "ambiente 40 °C",
+    "iec60364.ambient_ground": "terreno {t:g} °C",
+    "iec60364.ambient_air": "ambiente {t:g} °C",
+    "iec60364.ambient_default": ", ambient_C no indicado",
+    "iec60364.ambient_uncovered": "Iz no comprobado: ambiente {ambient:g} °C por encima de los {limit} °C de la tabla para el método {method}",
     "iec60364.iz_estimate_exceeded": "el cable no indica material, aislamiento o método de instalación: estimación "
                                      "con {material} {insulation} {section:g} mm², método {method}, {loaded} "
-                                     "conductores cargados, 30 °C: protección {rating:g} A > Iz {iz:g} A; "
+                                     "conductores cargados, {t:g} °C: protección {rating:g} A > Iz {iz:g} A; "
                                      "indíquelos para una comprobación exacta",
     "iec60364.any_air_method": "el más favorable al aire",
     "iec60364.iz_estimated": "intensidad admisible solo estimada para {count} cable(s) ({tags}): falta material, "
@@ -1278,16 +1288,18 @@ DE: dict[str, str] = {
     "plc.port_channels": "Anschluss {port!r}: Modul {module} hat nur {channels} Kanäle",
     "plc.coil": "Ausgang {port} ({un_v:g} V) steuert eine Spule {coil:g} V: Koppelrelais oder Relaismodul verwenden",
     "plc.port_shared": "Kanal {port} steuert {count} Geräte",
-    "iec60364.install_uncovered": "Verlegeart {install!r} nicht abgedeckt (A1, A2, B1, B2, C, E, F, D-duct)",
+    "iec60364.install_uncovered": "Verlegeart {install!r} nicht abgedeckt (A1, A2, B1, B2, C, E, F, D1/D-duct)",
     "iec60364.iz_unavailable": "Iz nicht verfügbar für {material} {insulation} {section:g} mm² Verlegeart {method}, "
                                "{loaded} belastete Leiter",
     "iec60364.iz_exceeded": "Schutzorgan {rating:g} A > Iz {iz:g} A ({material} {insulation} {section:g} mm², Verlegeart "
                             "{method}, {loaded} belastete Leiter, {ambient})",
-    "iec60364.ambient_ground": "Erdreich 25 °C",
-    "iec60364.ambient_air": "Umgebung 40 °C",
+    "iec60364.ambient_ground": "Erdreich {t:g} °C",
+    "iec60364.ambient_air": "Umgebung {t:g} °C",
+    "iec60364.ambient_default": ", ambient_C nicht angegeben",
+    "iec60364.ambient_uncovered": "Iz nicht geprüft: Umgebung {ambient:g} °C über den {limit} °C der Tabelle für Verlegeart {method}",
     "iec60364.iz_estimate_exceeded": "Leitung ohne Angabe von Leitermaterial, Isolierung oder Verlegeart: Schätzung "
                                      "mit {material} {insulation} {section:g} mm², Verlegeart {method}, {loaded} "
-                                     "belastete Leiter, 30 °C: Schutzorgan {rating:g} A > Iz {iz:g} A; für eine "
+                                     "belastete Leiter, {t:g} °C: Schutzorgan {rating:g} A > Iz {iz:g} A; für eine "
                                      "genaue Prüfung angeben",
     "iec60364.any_air_method": "günstigste in Luft",
     "iec60364.iz_estimated": "Strombelastbarkeit nur geschätzt für {count} Leitung(en) ({tags}): Leitermaterial, "
@@ -1493,16 +1505,18 @@ PT: dict[str, str] = {
     "plc.coil": "a saída {port} ({un_v:g} V) comanda uma bobina de {coil:g} V: usar um relé de interface ou um módulo de "
                 "relés",
     "plc.port_shared": "o canal {port} comanda {count} dispositivos",
-    "iec60364.install_uncovered": "método de instalação {install!r} não coberto (A1, A2, B1, B2, C, E, F, D-duct)",
+    "iec60364.install_uncovered": "método de instalação {install!r} não coberto (A1, A2, B1, B2, C, E, F, D1/D-duct)",
     "iec60364.iz_unavailable": "Iz indisponível para {material} {insulation} {section:g} mm² método {method}, {loaded} "
                                "condutores carregados",
     "iec60364.iz_exceeded": "proteção {rating:g} A > Iz {iz:g} A ({material} {insulation} {section:g} mm², método "
                             "{method}, {loaded} cond. carregados, {ambient})",
-    "iec60364.ambient_ground": "solo 25 °C",
-    "iec60364.ambient_air": "ambiente 40 °C",
+    "iec60364.ambient_ground": "solo {t:g} °C",
+    "iec60364.ambient_air": "ambiente {t:g} °C",
+    "iec60364.ambient_default": ", ambient_C não indicado",
+    "iec60364.ambient_uncovered": "Iz não verificado: ambiente {ambient:g} °C acima dos {limit} °C da tabela para o método {method}",
     "iec60364.iz_estimate_exceeded": "o cabo não indica material, isolamento ou método de instalação: estimativa "
                                      "com {material} {insulation} {section:g} mm², método {method}, {loaded} "
-                                     "condutores carregados, 30 °C: proteção {rating:g} A > Iz {iz:g} A; indique-os "
+                                     "condutores carregados, {t:g} °C: proteção {rating:g} A > Iz {iz:g} A; indique-os "
                                      "para uma verificação exata",
     "iec60364.any_air_method": "o mais favorável ao ar",
     "iec60364.iz_estimated": "corrente admissível apenas estimada para {count} cabo(s) ({tags}): falta material, "

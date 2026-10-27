@@ -60,7 +60,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   transformer of a medical IT system; left to `nfc15100` and `vde0100` when the document declares one of them. Rule
   `iec60364.iz-estimate`: a cable without its material, insulation or installation method was not checked at all;
   its current-carrying capacity is now estimated (copper, PVC, the most favourable method in air, 30 °C) and one
-  info finding lists the cables estimated. Example 27 draws the RCBOs of its treatment rooms.
+  info finding lists the cables estimated. Example 27 draws the RCBOs of its treatment rooms. Rule `iec60364.iz`
+  takes the cable's `ambient_C` (30 °C: the values brought back to 30 °C; up to 40 °C: the values at 40 °C; hotter:
+  not checked, said in an info), and reads `D1`, the IEC name of cables in ducts in the ground, as `D-duct`;
+  without `ambient_C` its message says that 40 °C was assumed (a cable at 30 °C was checked at 40 °C).
 
 * Rule `core.terminal-node` (a PV array, a battery, an SPD or an earth electrode with children) says how to draw it:
   below the device that connects it, the power may flow both ways.

@@ -3,13 +3,16 @@
 The ``iec60364.iz`` rule compares the rating ``in_A`` of the protection feeding a cable with the
 current-carrying capacity Iz read from ``registry/data/iz_tables.json`` (GUIA-BT-19, tables of
 UNE 20460-5-523:2004, the Spanish transposition of IEC 60364-5-523). It only applies when the cable
-specifies ``section_mm2``, ``material``, ``insulation`` and ``install``. Values are given at 40 °C
-ambient (Spanish reference): they are conservative compared with the IEC tables at 30 °C, and no
-grouping factor is applied. Outcome: warning, never error.
+specifies ``section_mm2``, ``material``, ``insulation`` and ``install`` (``D1``, the IEC name of cables in ducts in
+the ground, is read as ``D-duct``). The table gives Iz at 40 °C in air and 25 °C in the ground. The cable's
+``ambient_C`` picks the values: 30 °C or less in air, the values brought back to 30 °C (IEC 60364-5-52, table
+B.52.14: 0.87 for PVC, 0.91 for XLPE at 40 °C); up to 40 °C, the values at 40 °C, the next temperature tabulated
+above (on the safe side); above 40 °C in air or 25 °C in the ground, Iz is not checked (info). Without ``ambient_C``,
+40 °C in air, as the message says. No grouping factor is applied. Outcome: warning, never error.
 
 A cable giving its section but not its material, insulation or installation method is estimated by the
 ``iec60364.iz-estimate`` rule: copper and PVC unless stated, the most favourable method in air (A1 to F) unless
-stated, values brought back to 30 °C (IEC 60364-5-52, table B.52.14: 0.87 for PVC, 0.91 for XLPE at 40 °C). A
+stated, values brought back to 30 °C unless ``ambient_C`` says otherwise (as for ``iec60364.iz``). A
 protection above that Iz is too high under these assumptions: warning. The cables estimated are listed in one
 info finding, so that an empty result is not read as a checked cable.
 
@@ -48,7 +51,7 @@ RCD_30MA = describe(
 
 PROTECTIONS = ("breaker", "rcbo", "fuse", "fuse_switch", "main_breaker", "motor_starter", "thermal_relay")
 INSULATION = {"PVC": "PVC", "XLPE": "XLPE", "PR": "XLPE", "EPR": "XLPE"}
-METHODS = {"A1", "A2", "B1", "B2", "C", "E", "F", "D-DUCT"}
+METHODS = {"A1", "A2", "B1", "B2", "C", "E", "F", "D-DUCT", "D1"}  # D1: IEC name of D-duct (cables in ducts in ground)
 THREE_PHASE = ("3P", "3P+N", "4P")
 AIR_METHODS = ("A1", "A2", "B1", "B2", "C", "E", "F")
 AT_40C = {"PVC": 0.87, "XLPE": 0.91}  # IEC 60364-5-52, table B.52.14: ambient 40 °C against the 30 °C reference
@@ -56,7 +59,27 @@ AT_40C = {"PVC": 0.87, "XLPE": 0.91}  # IEC 60364-5-52, table B.52.14: ambient 4
 
 def _method(install: str) -> str | None:
     m = install.strip().upper().replace(" ", "")
-    return ("D-duct" if m == "D-DUCT" else m) if m in METHODS else None
+    return ("D-duct" if m in ("D-DUCT", "D1") else m) if m in METHODS else None
+
+
+def _ambient(c, method: str, insulation: str, default_air: float) -> tuple[float, float, bool] | None:
+    """(factor on the table value, temperature used, ambient_C given) for a cable; ``None`` when its ambient is above
+    what the table covers (40 °C in air, 25 °C in the ground): Iz is then not checked."""
+    given = c.ambient_C
+    if method == "D-duct":
+        return (1.0, 25.0, given is not None) if given is None or given <= 25 else None
+    temp = default_air if given is None else 30.0 if given <= 30 else 40.0 if given <= 40 else None
+    k40 = AT_40C.get(INSULATION.get(insulation, ""))
+    if temp is None:
+        return None
+    if temp == 30 and k40 is None:  # an insulation the table does not cover: reported by the lookup
+        temp = 40.0
+    return (1.0 if temp == 40 else 1 / k40, temp, given is not None)  # type: ignore[operator]
+
+
+def _ambient_text(method: str, temp: float, given: bool) -> str:
+    where = _t("iec60364.ambient_ground" if method == "D-duct" else "iec60364.ambient_air", t=temp)
+    return where if given else where + _t("iec60364.ambient_default")
 
 
 def lookup_iz(material: str, insulation: str, method: str, loaded: int, section_mm2: float) -> float | None:
@@ -106,17 +129,21 @@ def iz_check(doc: Document, idx: Index):
         if rating is None:
             continue
         loaded = _loaded_conductors(doc, p, n)
+        amb = _ambient(c, method, c.insulation, 40.0)  # type: ignore[arg-type]
+        if amb is None:
+            yield IZ.finding("info", _t("iec60364.ambient_uncovered", ambient=c.ambient_C, method=method,
+                                limit=25 if method == "D-duct" else 40), nid)
+            continue
         iz = lookup_iz(c.material, c.insulation, method, loaded, c.section_mm2)  # type: ignore[arg-type]
         if iz is None:
             yield IZ.finding("info", _t("iec60364.iz_unavailable", material=c.material, insulation=c.insulation,
                                 section=c.section_mm2, method=method, loaded=loaded), nid)
             continue
-        iz *= c.parallel or 1
+        iz = round(iz * amb[0] * (c.parallel or 1), 1)
         if rating > iz:
             yield IZ.finding("warning", _t("iec60364.iz_exceeded", rating=rating, iz=iz, material=c.material,
                                 insulation=c.insulation, section=c.section_mm2, method=method, loaded=loaded,
-                                ambient=_t("iec60364.ambient_ground" if method == "D-duct"
-                                           else "iec60364.ambient_air")), nid)
+                                ambient=_ambient_text(method, amb[1], amb[2])), nid)
 
 
 def _protection(idx: Index, nid: str, n):
@@ -152,12 +179,15 @@ def iz_estimate(doc: Document, idx: Index):
         best = max((v for v in values if v is not None), default=None)
         if best is None:
             continue
-        iz = round(best / AT_40C[insulation] * (c.parallel or 1), 1)
+        amb = _ambient(c, given or "air", insulation, 30.0)
+        if amb is None:
+            continue  # too hot for the table: not estimated either
+        iz = round(best * amb[0] * (c.parallel or 1), 1)
         estimated.append(_tag(n, nid))
         if rating > iz:
             yield IZ_ESTIMATE.finding("warning", _t("iec60364.iz_estimate_exceeded", rating=rating, iz=iz,
                                       material=material, insulation=insulation, section=c.section_mm2,
-                                      method=given or _t("iec60364.any_air_method"), loaded=loaded), nid)
+                                      method=given or _t("iec60364.any_air_method"), loaded=loaded, t=amb[1]), nid)
     if estimated:
         tags = ", ".join(estimated[:6]) + (", …" if len(estimated) > 6 else "")
         yield IZ_ESTIMATE.finding("info", _t("iec60364.iz_estimated", count=len(estimated), tags=tags))

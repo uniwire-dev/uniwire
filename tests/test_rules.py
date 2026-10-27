@@ -123,6 +123,23 @@ def test_iz_rule():
     assert {f.level for f in check(iz_doc(odd, 20)) if f.rule == "iec60364.iz"} == {"info"}
 
 
+def test_iz_reads_the_ambient_temperature_and_the_iec_name_d1():
+    cable = {"section_mm2": 2.5, "material": "Cu", "insulation": "PVC", "install": "B1"}  # 21 A at 40 °C
+
+    def iz_findings(c, in_A=24):
+        return [f for f in check(iz_doc(c, in_A)) if f.rule == "iec60364.iz"]
+    fs = iz_findings(cable)  # no ambient_C: 40 °C, and the message says so
+    assert len(fs) == 1 and fs[0].level == "warning" and "ambient_C" in fs[0].message
+    assert not iz_findings(dict(cable, ambient_C=30))  # 21 / 0.87 = 24.1 A at 30 °C
+    fs = iz_findings(dict(cable, ambient_C=35))  # between the two: the values at 40 °C, on the safe side
+    assert len(fs) == 1 and fs[0].level == "warning" and "40 °C" in fs[0].message and "ambient_C" not in fs[0].message
+    fs = iz_findings(dict(cable, ambient_C=45))  # hotter than the table: not checked, and said
+    assert [f.level for f in fs] == ["info"] and "45" in fs[0].message
+    duct = iz_findings(dict(cable, install="D-duct"), 32)
+    assert [f.message for f in iz_findings(dict(cable, install="D1"), 32)] == [f.message for f in duct]
+    assert not [f for f in iz_findings(dict(cable, install="D1"), 32) if "not covered" in f.message]
+
+
 def test_iz_profile_not_active_by_default():
     d = load({"sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 63, "cable": {
         "section_mm2": 1.5, "material": "Cu", "insulation": "PVC", "install": "C"}}]}]})
