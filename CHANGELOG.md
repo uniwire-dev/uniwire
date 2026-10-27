@@ -8,6 +8,17 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* **Format 1.1** (first part of [UEP-0001](https://uniwire.sh/docs/uep/0001-terminals-and-wires/), SPEC §3c): the
+  terminals of the nodes (defaults by type after the usual markings, `ports` and `port_defaults` on any node,
+  `contacts` on a contactor), terminal strips (`terminal_strips`), wires between terminals (`wires`) and the
+  attribute `wiring` (`factory` or `site`: the connections the installer makes on site). Port references
+  `KM1#A1`, displayed `-KM1:A1`. Rules `port.unknown`, `wire.endpoints`, `port.capacity`, `port.unconnected`,
+  `port.conductor`, `strip.terminal`, `strip.capacity`, `strip.bridge`, only for documents that use these
+  sections. `uniwire wires` and `uniwire markers` list the declared wires; new export `uniwire terminals` (terminal
+  plan), also drawn as sheets by a view of the new kind `terminals`, in the usual layout of a terminal diagram (function, cable columns, external target, part, terminal and bridges, internal target; site wiring starred; the terminals counted by kind and part under the table), with text of 2.5 mm for an A3 print. Example 54: a motor starter with its terminal strip and its wires. Everything is optional: a 1.0
+  document reads the same. Not yet: cables as objects, potentials, auxiliaries, control devices, drawing of the
+  wires.
+
 * Multi-line view: the auxiliary devices (`devices`) and the control, interlock, trip, measure, data, key and earth
   links are drawn, placed and routed as in the single-line view (beside the node they are linked to, clear of the
   conductor bundles and the symbols), with a band above the feeder cables for their channels; a PLC is drawn with

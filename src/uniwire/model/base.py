@@ -66,6 +66,35 @@ class Cable(UWModel):
         "written by 'uniwire marks --write' (freezing)")
 
 
+PORT_ID_PATTERN = r"^[A-Za-z0-9+-][A-Za-z0-9_.:/+-]*$"
+PortFunction = Literal["pole_in", "pole_out", "power_in", "power_out", "neutral", "earth", "shield", "coil",
+                       "contact_no", "contact_nc", "contact_co", "signal_in", "signal_out", "supply", "comm", "other"]
+#: IEC 60757 colour codes, and GNYE (green-and-yellow, reserved for protective conductors by IEC 60445)
+WireColor = Literal["BK", "BN", "RD", "OG", "YE", "GN", "BU", "VT", "GY", "WH", "PK", "GD", "TQ", "SR", "GNYE"]
+#: who makes a connection: in the workshop with the equipment, or on site by the installer (format 1.1)
+Wiring = Literal["factory", "site"]
+
+
+class Port(UWModel):
+    """A terminal of a node (format 1.1, UEP-0001 §3.1): a point where a conductor can be connected, referenced as
+    ``<node id>#<port id>`` and displayed ``<ref>:<marking>`` (``-KM1:A1``)."""
+
+    id: str = Field(pattern=PORT_ID_PATTERN, description="Port identifier, unique within the node: '1', 'A1', '13', "
+                    "'U1', 'PE', '2.1' (PLC slot 2, channel 1). Case-sensitive")
+    marking: Optional[str] = Field(None, description="Marking printed on the device, when it differs from 'id'")
+    aliases: list[str] = Field(default_factory=list, description="Other accepted names: 'L1' for '1', 'T1' for '2'")
+    function: Optional[PortFunction] = None
+    pole: Optional[int] = Field(None, ge=1, description="Rank of the pole or winding")
+    conductor: Optional[ConductorName] = Field(None, description="Fixed conductor of the port: N, PE...")
+    pair: Optional[str] = Field(None, description="The other terminal of the same pole, contact or coil: '2' for '1'")
+    label: Optional[str] = Field(None, description="Description: 'Start', 'Run feedback'")
+    mandatory: Optional[bool] = Field(None, description="Must be connected when the node is wired (coils)")
+    capacity: Optional[int] = Field(None, ge=1, description="Maximum number of conductors on the terminal (default 2; "
+                                    "PLC channels 1)")
+    section_max_mm2: Optional[Q("mm2", "Largest conductor the terminal accepts")] = None
+    wiring: Optional[Wiring] = Field(None, description="'site': the installer connects this terminal on site")
+
+
 class Product(UWModel):
     """Product reference: identifies the commercial product actually installed or specified."""
 

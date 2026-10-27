@@ -246,6 +246,83 @@ out-of-order slots), `plc.wago-end` / `plc.wago-feed` (WAGO local bus without an
 The PLC is drawn as a head unit followed by a strip of modules (one rectangle per slot, coloured by kind, slot
 number above); links leave from below the relevant module and carry the channel number.
 
+## 3c. Terminals, terminal strips and wires (1.1)
+
+Format 1.1 implements the first part of [UEP-0001](uep/0001-terminals-and-wires.md). Everything is optional: a
+single-line document needs none of it, and gets no new finding.
+
+### Terminals (`ports`)
+* Every node has **terminals**: the defaults of its type, merged by `id` with its own `ports` list (an entry with a
+  known `id` replaces the default, a new `id` adds a terminal). `port_defaults: false` keeps only `ports`.
+* A terminal: `id` (**required**, `1`, `A1`, `13`, `U1`, `PE`, `2.1`), `marking`, `aliases`, `function` (`pole_in`,
+  `pole_out`, `power_in`, `power_out`, `neutral`, `earth`, `shield`, `coil`, `contact_no`, `contact_nc`,
+  `contact_co`, `signal_in`, `signal_out`, `supply`, `comm`, `other`), `pole`, `conductor`, `pair`, `label`,
+  `mandatory`, `capacity` (conductors, default 2), `section_max_mm2`, `wiring`.
+* **Defaults**, after the usual markings of low-voltage equipment:
+  * switching and protective devices: one pair per pole, `1`-`2`, `3`-`4`, `5`-`6` (`7`-`8` for `4P`), odd on the
+    line side; the unprotected neutral pole of `1P+N` / `3P+N`: `N1`-`N2` marked `N`; a 2-pole RCD: `1`-`2` and
+    `N1`-`N2`;
+  * `contactor` and `impulse_relay`: the poles (aliases `L1`/`T1`… on a contactor), the coil `A1`-`A2`, and the
+    built-in auxiliary contacts of the new field `contacts` (`NO`, `NC`, `CO`, in order): the first digit is the
+    position, the second the function (`1`-`2` NC, `3`-`4` NO; a changeover: common `1`, `2` and `4`), so
+    `["NO", "NC"]` gives `13`-`14` and `21`-`22`;
+  * `thermal_relay`: `1`-`2`, `3`-`4`, `5`-`6`, and `95`-`96` (NC), `97`-`98` (NO); `motor_starter`: the poles;
+  * `motor`: `U1`, `V1`, `W1` (aliases `U`, `V`, `W`), `PE`; single-phase: `U1`, `U2`, `PE`;
+  * `transformer`: `1U`, `1V`, `1W`, `2U`, `2V`, `2W`, `2N` (alias `N`, when the vector group has a neutral),
+    `PE`; `power_supply`: `L`, `N`, `PE`, and `L+`, `L-` (aliases `+`, `-`), or `2L`, `2N` for an AC output;
+  * `plc`: `L+`, `M`, `PE`, and one terminal per channel `<slot>.<channel>` (capacity 1); the built-in modules
+    are all slot 0, their channels numbered one after the other (8 inputs then 4 outputs: `0.1` to `0.12`);
+  * supplies (`grid`, `generator`, `ups`, `offpage`, `busbar`) and loads: one terminal per conductor (`L1`,
+    `L2`, `L3` or `L`, `N`, `PE`; `L+`, `L-` in DC); `spd`: the live conductors and `PE`; `board`: `PE`, `N`;
+    `earth_bar`: `PE`.
+* **Reference**: `<node id>#<terminal>` (`KM1#A1`), the terminal matched by `id`, then by alias. Only an `id`
+  written in the file can be referenced (a generated one is not stable). **Display**: `<ref>:<marking>`
+  (`-KM1:A1`), the terminal prefix of IEC 81346.
+
+### Terminal strips (`terminal_strips[]`)
+A strip is not a node: it is crossed by many circuits. Fields: `id` (**required**, same namespace as the nodes
+and the wires), `ref` (`-X1`), `label`, `enclosure` (an enclosure or a `board` node), `location`, `product`,
+`terminals` (in mounting order), `status`, `note`. A terminal: `no` (**required**, unique in the strip), `kind`
+(`feed_through` by default, `disconnect`, `fuse`, `earth`, `neutral`, `spare`), `bridge_group` (terminals with the
+same value are bridged), `label`, `section_max_mm2`, `points` (clamping points per side, default 1), `fuse_A`,
+`potential`, `product`, `wiring`, `status`. Referenced `X1#3`, displayed `-X1:3`.
+
+### Wires (`wires[]`)
+A conductor between two terminals: `from`, `to` (**required**, references), `id`, `mark`, `section_mm2`,
+`size_awg`, `color` (IEC 60757: `BK`, `BN`, `RD`, `OG`, `YE`, `GN`, `BU`, `VT`, `GY`, `WH`, `PK`, `GD`, `TQ`,
+`SR`, and `GNYE`, reserved for the protective conductor), `designation`, `material`, `cable` (`<node id>.cable`
+for the cable of a tree node), `core`, `conductor`, `potential`, `length_m`, `kind` (`wire`, `bridge`), `wiring`,
+`label`, `status`, `note`. Wires are undirected and partial: the connections of the tree that no wire describes
+stay implicit.
+
+**`wiring`** (on a terminal, a strip terminal or a wire): `factory` or `site`. A `site` wire is made by the
+installer on site, not in the workshop with the equipment: the dashed connections of a manufacturer's diagram,
+which the electrician who installs the equipment must make.
+
+### Rules (`core` profile)
+`port.unknown` (a reference that names no node or strip, a generated id, an unknown terminal, a terminal named
+twice), `wire.endpoints` (both ends on one terminal), `port.capacity` (more conductors than the terminal takes,
+a wire larger than `section_max_mm2`), `port.unconnected` (a coil terminal left unwired on a wired device),
+`port.conductor` (green-and-yellow on a conductor other than PE or PEN, a PE conductor on a terminal that is not
+an earth terminal), `strip.terminal` (a terminal number twice, an unknown enclosure), `strip.capacity` (a wire
+larger than the strip terminal accepts), `strip.bridge` (a bridge group with a single terminal, warning). All
+errors, except `strip.bridge`.
+
+### Exports
+`uniwire wires` adds one row per declared wire (with its `wiring`), `uniwire markers` their marks, and
+`uniwire terminals [--strip X1]` gives the terminal plan: one row per terminal, in mounting order, with what lands
+inside (cabinet side) and outside (field side: a wire made on site, a cable core, or the other end in another
+enclosure).
+
+A view of kind `terminals` draws the same terminal plan as sheets, in the usual layout of a terminal diagram:
+one table per strip, its designation heading the middle columns; from left
+to right the function, one column per external cable (its tag at the top, its type below, the core on the line of
+each terminal), the external target and its terminal, the part of the terminal, the terminal number and the bridges (side by side
+only where they overlap), the internal target and its terminal, the internal cable columns, the wire mark. The rows fill the sheet
+like a form. A target connected on site is starred, with a note under the table, and a last line counts the
+terminals by kind and part (what to order). Each strip starts a sheet and a
+long strip goes on over the next sheets; a document without terminal strips gives no sheet.
+
 ## 4. Links (`links`)
 
 | `kind` | Direction | Rendering |
@@ -345,7 +422,7 @@ Common enumerations: `poles` ∈ {1P, 1P+N, 2P, 3P, 3P+N, 4P}.
 | Field | Default | Description |
 |---|---|---|
 | `id` | `sld` | Identifier |
-| `kind` | `single-line` | `single-line` or `multi-line` (power diagram, one line per conductor, §7.1) |
+| `kind` | `single-line` | `single-line`, `multi-line` (power diagram, one line per conductor, §7.1) or `terminals` (terminal plan, 1.1, §3c) |
 | `title` | - | Sheet title |
 | `root` | - | Draw only the subtree of this node |
 | `paper` / `orientation` | `A3` / `landscape` | Sheet format. When `paper` is absent, a renderer may choose the smallest format that holds the drawing at full size (the reference library: A4 landscape when it fits, else A3) |
@@ -376,6 +453,7 @@ A document may declare several views, of either kind, e.g.
 `"views": [{"id": "sld"}, {"id": "ml", "kind": "multi-line", "paper": "A3"}]`.
 
 * `single-line` (default): the single-line diagram, one line per circuit.
+* `terminals` (1.1): the terminal plan of the terminal strips, one table per strip (§3c).
 * `multi-line`: the **multi-line power diagram**, derived from the same tree with no extra data: every circuit is
   drawn with one line per conductor (`L1`, `L2`, `L3`, `N`, `PE`, `PEN`, `L+` / `L-` in DC) and every
   switching device with one contact per pole. The conductors of a node are deduced, in order of precedence, from
@@ -474,7 +552,7 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
 * Every object accepts `ext`: `{"<vendor prefix>": {...}}`. A tool **MUST** preserve the extensions
   it does not understand.
 * Everywhere else, undefined properties are forbidden (`additionalProperties: false`).
-* Versions: `1.y.z`. A minor version only adds optional fields or enumeration values.
+* Versions: `1.y.z`, current `1.1.0`. A minor version only adds optional fields or enumeration values.
   An incompatible change bumps the major version and the `$id` path (`/v2/`).
 * A reader **MUST** accept any `1.y.z` document. A document written for a newer minor version than the
   reader supports loads as long as it uses only fields the reader knows; otherwise its unknown fields are
@@ -561,6 +639,7 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
 | Version | Changes |
 |---|---|
 | 1.0 | Initial release |
+| 1.1 | Terminals of the nodes (`ports`, `port_defaults`, `contactor.contacts`), terminal strips (`terminal_strips`), wires (`wires`), `wiring` (factory or site): §3c, UEP-0001 |
 
 ## 12. Complete minimal example
 

@@ -67,6 +67,21 @@ Modular PLCs (`plc`) are checked whenever they appear in a document.
 | `plc.wago-end` | A WAGO local bus ends with an end module (750-600) | warning |
 | `plc.wago-feed` | A WAGO controller declares a potential feed module | info |
 
+## Wiring rules (part of `core`, format 1.1)
+
+They apply only to a document that declares `wires` or `terminal_strips` (SPEC §3c).
+
+| Rule | Check | Level |
+|---|---|---|
+| `port.unknown` | A wire end names no node and no terminal strip, a generated id (not stable), a terminal the node does not have (the message lists those it has), or a terminal named twice | error |
+| `wire.endpoints` | Both ends of a wire on the same terminal | error |
+| `port.capacity` | More conductors on a terminal than its `capacity` (2 by default, 1 for a PLC channel); a wire larger than the terminal's `section_max_mm2` | error |
+| `port.unconnected` | A coil terminal (`A1`, `A2`) left unwired on a device that has other wires | error |
+| `port.conductor` | Green-and-yellow (`GNYE`) on a conductor other than PE or PEN, a control wire included (IEC 60445 reserves it for protective conductors); a PE conductor on a terminal that is not an earth terminal | error |
+| `strip.terminal` | A terminal number twice in a strip; an `enclosure` that is neither an enclosure nor a board | error |
+| `strip.capacity` | A wire larger than the strip terminal accepts | error |
+| `strip.bridge` | A `bridge_group` with a single terminal | warning |
+
 ## `nfc15100`: French low-voltage installations
 
 Checks of a French low-voltage installation under NF C 15-100, which covers every kind of premises. The version

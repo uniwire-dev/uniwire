@@ -7,10 +7,26 @@ from typing import Annotated, Any, Literal, Optional
 
 from pydantic import Field, PrivateAttr, field_validator, model_validator
 
-from .base import ID_PATTERN, Cable, Installation, Meta, UWModel
+from ..units import Q
+from .base import (
+    ID_PATTERN,
+    PORT_ID_PATTERN,
+    Cable,
+    ConductorName,
+    Installation,
+    Material,
+    Meta,
+    Product,
+    UWModel,
+    WireColor,
+    Wiring,
+)
 from .nodes import Node
 
-FORMAT_VERSION = "1.0.0"
+#: a port reference: ``<node or strip id>#<port>`` (UEP-0001 §3.1.2)
+PORT_REF_PATTERN = r"^[A-Za-z_][A-Za-z0-9_.\-]*#[A-Za-z0-9+-][A-Za-z0-9_.:/+-]*$"
+
+FORMAT_VERSION = "1.1.0"
 SCHEMA_ID = "https://uniwire.sh/schema/v1/uniwire.schema.json"
 
 LinkKind = Literal["transfer", "tie", "bypass", "parallel", "infeed", "earth", "control", "interlock", "trip",
@@ -100,6 +116,62 @@ class Enclosure(UWModel):
     form: Optional[str] = None
 
 
+class Terminal(UWModel):
+    """A terminal of a terminal strip (1.1, UEP-0001 §3.2): referenced ``<strip id>#<no>``, displayed ``-X1:3``."""
+
+    no: str = Field(pattern=PORT_ID_PATTERN, description="Terminal number, unique within the strip: '1', 'PE', '10a'")
+    kind: Literal["feed_through", "disconnect", "fuse", "earth", "neutral", "spare"] = "feed_through"
+    bridge_group: Optional[str] = Field(None, description="Terminals sharing a value are bridged together")
+    label: Optional[str] = Field(None, description="Description, or the function of the terminal")
+    section_max_mm2: Optional[Q("mm2", "Largest conductor accepted")] = None
+    points: Optional[int] = Field(None, ge=1, description="Clamping points per side (default 1)")
+    fuse_A: Optional[Q("A", "Fuse rating of a 'fuse' terminal")] = None
+    potential: Optional[str] = Field(None, description="Expected potential")
+    product: Optional[Product] = None
+    wiring: Optional[Wiring] = Field(None, description="'site': the field side is connected by the installer")
+    status: Optional[Literal["new", "existing", "spare", "future", "removed"]] = None
+
+
+class TerminalStrip(UWModel):
+    """A terminal strip (1.1, UEP-0001 §3.2): not a node of the tree, since it is crossed by many circuits."""
+
+    id: str = Field(pattern=ID_PATTERN, description="Identifier, in the namespace of the nodes and wires")
+    ref: Optional[str] = Field(None, description="Reference designation: '-X1'")
+    label: Optional[str] = None
+    enclosure: Optional[str] = Field(None, pattern=ID_PATTERN, description="id of the enclosure or 'board' node")
+    location: Optional[str] = Field(None, description="Location (IEC 81346 '+' aspect), when no enclosure is described")
+    product: Optional[Product] = Field(None, description="Default product of the terminals")
+    terminals: list[Terminal] = Field(default_factory=list, description="Terminals in mounting order on the rail")
+    status: Optional[Literal["new", "existing", "spare", "future", "removed"]] = None
+    note: Optional[str] = None
+
+
+class Wire(UWModel):
+    """A conductor between two terminals (1.1, UEP-0001 §3.3): device ports or strip terminals. Wires are optional
+    and partial: the connections of the power tree that no wire describes stay implicit."""
+
+    id: Optional[str] = Field(None, pattern=ID_PATTERN, description="Identifier (generated when absent, not stable)")
+    from_: str = Field(alias="from", pattern=PORT_REF_PATTERN, description="Port reference: 'X1#11', 'KM1#13'")
+    to: str = Field(pattern=PORT_REF_PATTERN, description="Port reference")
+    mark: Optional[str] = Field(None, description="Wire mark (ferrule text)")
+    section_mm2: Optional[Q("mm2", "Cross-section")] = None
+    size_awg: Optional[str] = Field(None, description="Size as printed in AWG")
+    color: Optional[WireColor] = Field(None, description="IEC 60757 colour code; GNYE for protective conductors")
+    designation: Optional[str] = Field(None, description="Conductor type: 'H05V-K'")
+    material: Optional[Material] = None
+    cable: Optional[str] = Field(None, description="Cable this wire is a core of: '<node id>.cable' for a tree cable")
+    core: Optional[str] = Field(None, description="Core number or colour within the cable: '1', 'BN', 'GNYE'")
+    conductor: Optional[ConductorName] = Field(None, description="Conductor function; absent for control wires")
+    potential: Optional[str] = Field(None, description="Potential id, or a port reference on the same net")
+    length_m: Optional[Q("m", "Length")] = None
+    kind: Literal["wire", "bridge"] = "wire"
+    wiring: Optional[Wiring] = Field(None, description="'site': connected by the installer on site, not in the "
+                                     "workshop (the dashed connections of a manufacturer's diagram)")
+    label: Optional[str] = None
+    status: Optional[Literal["new", "existing", "spare", "future", "removed"]] = None
+    note: Optional[str] = None
+
+
 PATTERN_TOKENS = ("circuit", "conductor", "ref", "from", "to", "from_port", "to_port", "potential", "strip",
                   "terminal", "n", "cable")
 _TOKEN = re.compile(r"\{([^{}]*)\}")
@@ -157,9 +229,10 @@ class View(UWModel):
     """Rendering preferences. A document is complete without any view: layout is automatic."""
 
     id: str = Field("sld", pattern=ID_PATTERN)
-    kind: Literal["single-line", "multi-line"] = Field(
+    kind: Literal["single-line", "multi-line", "terminals"] = Field(
         "single-line", description="'single-line' diagram, or 'multi-line' power diagram (one line per conductor, "
-        "derived from the same tree: phase, poles, cable cores, system and earthing)")
+        "derived from the same tree: phase, poles, cable cores, system and earthing), or 'terminals': the terminal "
+        "plan of the terminal strips, one table per strip (1.1)")
     title: Optional[str] = None
     root: Optional[str] = Field(None, description="Only draw the subtree of this node")
     paper: Literal["A4", "A3", "A2", "A1", "A0"] = "A3"
@@ -210,6 +283,9 @@ class Document(UWModel):
 
     #: Near-miss values rewritten on load (:mod:`uniwire.tolerate`), reported by the rule ``core.normalized``.
     _normalized: list[str] = PrivateAttr(default_factory=list)
+    #: The identifiers written in the file (nodes, terminal strips, wires), set by :func:`uniwire.load`: a port
+    #: reference must use one of them, a generated identifier being unstable.
+    _explicit_ids: set[str] = PrivateAttr(default_factory=set)
 
     schema_: Optional[str] = Field(SCHEMA_ID, alias="$schema")
     uniwire: str = Field(FORMAT_VERSION, pattern=r"^1\.\d+\.\d+$", title="uniwire", description="Format version (semver)")
@@ -225,6 +301,8 @@ class Document(UWModel):
         default_factory=list,
         description="Auxiliary devices outside the power tree (relays, CTs, insulation monitors (CPI), voltage presence indicators (VPIS)...), connected by links")
     enclosures: list[Enclosure] = Field(default_factory=list, description="Addressable enclosures")
+    terminal_strips: list[TerminalStrip] = Field(default_factory=list, description="Terminal strips (1.1)")
+    wires: list[Wire] = Field(default_factory=list, description="Wires between terminals (1.1); optional and partial")
     links: list[Link] = Field(default_factory=list)
     interlocks: list[Interlock] = Field(
         default_factory=list, description="Interlock declarations: number of keys per 'locks' identifier")

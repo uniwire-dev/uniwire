@@ -4,14 +4,15 @@
 |---|---|
 | **UEP** | 0001 |
 | **Title** | Terminals, terminal strips and wires |
-| **Status** | **Draft**. The part that the current format can carry, for tree cables (`wire_marking`, `wire_marks`, `cable.marks`, exports `wires` / `markers` / `cables`, `marks --write`) is implemented in the reference library |
-| **Target** | uniwire format 2.0 |
+| **Status** | **Accepted**, implemented in parts. Format 1.0: wire marking of the tree cables (`wire_marking`, `wire_marks`, `cable.marks`, exports `wires` / `markers` / `cables`, `marks --write`). Format 1.1: terminals (§3.1 without auxiliaries and control device types), terminal strips (§3.2), wires (§3.3.1), the `wiring` attribute (§3.3.3), the rules `port.*`, `wire.endpoints`, `strip.*` (§3.7), the terminal plan export (§3.5.2) and its drawing as sheets (view kind `terminals`, from phase 2). The rest (cables as objects, potentials, auxiliaries, control devices, marking of wires, drawings) comes in later 1.x versions |
+| **Target** | uniwire format 1.1 and later 1.x versions (everything is additive: open question 5, answered) |
 | **Type** | Format change (additive) |
 | **Created** | 2026-10-12 |
 | **Discussion** | GitHub issue with the `uep` label |
 
 The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are to be interpreted as described in RFC 2119.
-Section references of the form "SPEC §n" point to the [uniwire specification](../SPEC.md) (format 1.0).
+Section references of the form "SPEC §n" point to the [uniwire specification](../SPEC.md) (format 1.0; format 1.1
+adds SPEC §3c, the normative text of the implemented part).
 
 ---
 
@@ -450,6 +451,22 @@ A cable object has **every field of the 1.x cable** (SPEC §3.2 and §3a: `desig
   declared once in `cables[]`.
 * Rendering and rules that read `node.cable` (circuit schedule, voltage drop, `iec60364.iz`) resolve the string
   to the cable object.
+
+#### 3.3.3 Workshop and site wiring
+
+The equipment of a manufacturer (an air handling unit, a machine, a skid) comes with its own diagram, and the electrician who
+installs it makes only part of the connections: the supply, the field devices, the remote controls. Manufacturers'
+diagrams show the split with a colour or a line style (dashed connections "to be made on site"). The attribute
+`wiring` carries it:
+
+| On | Values | Meaning |
+|---|---|---|
+| a wire | `factory`, `site` | The wire is made in the workshop with the equipment, or by the installer on site |
+| a node port, a strip terminal | `factory`, `site` | The terminal is connected by the installer (its field side, for a strip terminal) |
+
+Absent means unknown. The wire list carries the column `wiring`, so that the installer's own list is a filter of
+it. An invented example: an air handling unit with its control box, whose supply `-X0:L1…PE`, the remote "run"
+contact `-X2:10-11` and the fire damper output `-X2:20-21` are `site`, everything inside the box `factory`.
 
 ### 3.4 Potentials
 
@@ -912,6 +929,20 @@ The function is idempotent and never deletes data.
 * A separate UEP for the `"control"` view kind (§3.6): current paths, columns, cross-reference tables, sheet
   numbering. Then its rendering in the reference implementation.
 
+## 6a. Lessons from manufacturers' diagrams
+
+Real diagrams of packaged equipment (one sheet per control box, power and control together) gave these points,
+kept for the next steps:
+
+1. **Workshop and site wiring** (§3.3.3): implemented in format 1.1.
+2. **Cross-reference tables under the coils**, in the `sheet.column` form, are what a reader of a control diagram
+   uses most: the control view (§3.6) must generate them, including for small one-sheet diagrams.
+3. **Wire numbers by potential** (`1`, `2`, `N1`, `17` on every wire of a net) are the common practice: the
+   `potential` marking scheme (§3.5.1) is the default to aim at.
+4. **Wiring variants**: an output "permanent, or switched with the main motor" depending on which terminal the
+   installer uses. The format describes one installation, so a variant is two documents, or a note; open
+   question 9.
+
 ## 7. Open questions
 
 1. **Where do marking rules live?** This proposal puts `wire_marking` in views and relies on freezing
@@ -923,8 +954,7 @@ The function is idempotent and never deletes data.
    `level` field and a reference syntax `X1#5/2`?
 4. **Port id case and aliases**: ids are case-sensitive, as proposed. Should `U` vs `U1` (old and current motor
    markings) be an alias in the registry, or a profile choice?
-5. **Version number**: everything is additive. Should this ship as a 1.x minor version (with `cable` as a string deferred), rather
-   than wait for 2.0 and the graph-first changes planned there?
+5. **Version number** (answered): everything is additive, so it ships in 1.x minor versions, from 1.1.
 6. **IFC representation of terminal strips**: is there an entity better suited than a generic element with
    ports, and should each terminal be an element or a port?
 7. **Data source for `wire.section`**: panel wiring needs a current-capacity table for small sections in
@@ -932,6 +962,8 @@ The function is idempotent and never deletes data.
 8. **Coil ↔ contact positions in files**: should a document be able to store a frozen cross-reference
    (`sheet.column`) for contacts, the way marks are frozen, so that printed schematics keep their references
    when the layout changes?
+9. **Wiring variants**: should a terminal or a wire carry alternatives (`"variant": "A"`), for equipment whose
+   installation manual offers several connections, or should each variant stay a separate document?
 
 ## 8. References
 

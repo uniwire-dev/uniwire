@@ -1,12 +1,11 @@
-"""CSV exports of the wiring (UEP-0001 §3.5.2, the part available in the current format): wire list, wire marker list and cable
-schedule.
+"""CSV exports of the wiring (UEP-0001 §3.5.2): wire list, wire marker list, terminal plan and cable schedule.
 
 UTF-8, comma separated, one header line with stable English ``snake_case`` column names, so that other tools can
-read them. Display values (``-KM1``) follow the document's ``ref`` fields and are not translated. In the current format
-the wires are the conductors of the cables of the power tree (:mod:`uniwire.marks`); the columns that need
-format 2.0 data (ports, potentials, cores, colours) are present and left empty.
+read them. Display values (``-KM1:A1``) follow the document's ``ref`` fields and are not translated. The wires are the
+conductors of the cables of the power tree (:mod:`uniwire.marks`), then the wires the document declares in ``wires``
+(format 1.1) between device terminals and terminal strips (:mod:`uniwire.ports`).
 
->>> from uniwire.exports import wires_csv, markers_csv, cables_csv
+>>> from uniwire.exports import wires_csv, markers_csv, terminals_csv, cables_csv
 >>> print(cables_csv(doc))                      # doctest: +SKIP
 """
 
@@ -18,15 +17,20 @@ import re
 from collections.abc import Iterable
 from typing import Any, Optional
 
+from . import registry
 from .marks import Wire, _enclosures, cable_wires, enclosure_at, marked_wires
 from .model import Cable, Document, View
+from .ports import Ports
 from .render.semantics import link_key
 from .render.svg import xml_safe
 from .resolve import Index, build_index, iter_nodes
 
 WIRE_COLUMNS = ["wire_id", "mark", "from", "from_display", "from_enclosure", "to", "to_display", "to_enclosure",
-                "potential", "conductor", "section_mm2", "color", "cable", "core", "length_m", "status"]
+                "potential", "conductor", "section_mm2", "color", "cable", "core", "length_m", "status", "wiring"]
 MARKER_COLUMNS = ["mark", "wire_id", "end", "terminal_display", "section_mm2", "color", "enclosure", "quantity"]
+TERMINAL_COLUMNS = ["strip", "terminal", "kind", "bridge_group", "label", "potential", "mark", "inside_targets",
+                    "inside_sections_mm2", "outside_targets", "outside_cable", "outside_cores", "fuse_A", "product",
+                    "wiring"]
 CABLE_COLUMNS = ["cable_id", "ref", "designation", "cores", "section_mm2", "length_m", "from_enclosure",
                  "to_enclosure", "from", "to", "cores_used", "cores_spare", "status"]
 
@@ -43,8 +47,8 @@ _FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
 # Exempted, exact matches only: an IEC 81346 reference designation ("-Q1", "=TD1+L2-Q3", "-X1:PE"), i.e. one or
 # more segments made of a prefix sign and [A-Za-z0-9._:/] characters (several designations separated by single
 # spaces for the "refs" column of the bill of materials), or a plain number ("-1.5", "+2e-3").
-_REF = r"(?:[-=+][A-Za-z0-9._:/]+)+"
-_REF_CELL = re.compile(rf"{_REF}(?: {_REF})*")
+_REF = r"(?:[-=+][A-Za-z0-9._:/]+)+[-+]?"  # a final sign: the terminals L+, L- of a DC supply
+_REF_CELL = re.compile(rf"{_REF}(?:;? {_REF})*")  # several, separated by spaces or "; " (terminal plan)
 _NUMBER_CELL = re.compile(r"[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
 _MAX_EXEMPT_CHARS = 256
 
@@ -138,14 +142,106 @@ def cable_rows(doc: Document, index: Optional[Index] = None) -> list[dict[str, A
     return rows
 
 
+def _ends(doc: Document, index: Index) -> tuple[Ports, dict[str, str]]:
+    return Ports(doc, index), _enclosures(doc)
+
+
+def _place(ports: Ports, ref: str, index: Index, encl: dict[str, str]) -> tuple[str, str]:
+    """(display, enclosure) of a port reference; the reference itself when it designates no port."""
+    r = ports.resolve(ref)
+    if isinstance(r, str):
+        return ref, ""
+    if r.strip:
+        return r.display, ports.strips[r.owner].enclosure or ""
+    node = index.nodes[r.owner]  # a load, or a device fed by a cable, is outside the board above it
+    inside = node.cable is None and not registry.is_load(node.type)  # type: ignore[attr-defined]
+    return r.display, enclosure_at(node, index, encl, inside)
+
+
+def declared_wire_rows(doc: Document, index: Optional[Index] = None) -> list[dict[str, Any]]:
+    """One row per entry of ``wires[]`` (columns :data:`WIRE_COLUMNS`, format 1.1)."""
+    index = index or build_index(doc)
+    ports, encl = _ends(doc, index)
+    rows = []
+    for w in doc.wires:
+        (fd, fe), (td, te) = _place(ports, w.from_, index, encl), _place(ports, w.to, index, encl)
+        rows.append({"wire_id": w.id, "mark": w.mark or "", "from": w.from_, "from_display": fd, "from_enclosure": fe,
+                     "to": w.to, "to_display": td, "to_enclosure": te, "potential": w.potential or "",
+                     "conductor": w.conductor or "", "section_mm2": _num(w.section_mm2), "color": w.color or "",
+                     "cable": w.cable or "", "core": w.core or "", "length_m": _num(w.length_m),
+                     "status": w.status or "", "wiring": w.wiring or ""})
+    return rows
+
+
 def wires_csv(doc: Document, view: Optional[View] = None) -> str:
-    """Wire list (``uniwire wires``)."""
-    return _csv(WIRE_COLUMNS, wire_rows(marked_wires(doc, view)))
+    """Wire list (``uniwire wires``): the conductors of the cables of the power tree, then the declared wires."""
+    return _csv(WIRE_COLUMNS, wire_rows(marked_wires(doc, view)) + declared_wire_rows(doc))
 
 
 def markers_csv(doc: Document, view: Optional[View] = None) -> str:
-    """Wire marker list (``uniwire markers``)."""
-    return _csv(MARKER_COLUMNS, marker_rows(marked_wires(doc, view)))
+    """Wire marker list (``uniwire markers``), the declared wires with a mark included."""
+    rows = marker_rows(marked_wires(doc, view))
+    merged = {tuple(v for k, v in r.items() if k != "quantity"): r for r in rows}
+    for r in declared_wire_rows(doc):
+        if not r["mark"]:
+            continue
+        for end in ("from", "to"):
+            m = {"mark": r["mark"], "wire_id": r["wire_id"], "end": end, "terminal_display": r[f"{end}_display"],
+                 "section_mm2": r["section_mm2"], "color": r["color"], "enclosure": r[f"{end}_enclosure"]}
+            key = tuple(m.values())
+            if key in merged:
+                merged[key]["quantity"] += 1
+            else:
+                merged[key] = {**m, "quantity": 1}
+    return _csv(MARKER_COLUMNS, merged.values())
+
+
+def terminal_rows(doc: Document, index: Optional[Index] = None, strip: Optional[str] = None) -> list[dict[str, Any]]:
+    """Terminal plan (columns :data:`TERMINAL_COLUMNS`): one row per terminal of each strip, in mounting order. A
+    wire lands on the outside (field side) when it is made on site, belongs to a cable or ends in another enclosure
+    than the strip's; otherwise on the inside (cabinet side)."""
+    index = index or build_index(doc)
+    ports, encl = _ends(doc, index)
+    rows = []
+    for s in doc.terminal_strips:
+        if strip is not None and strip not in (s.id, s.ref):
+            continue
+        for t in s.terminals:
+            inside: list[tuple[str, str]] = []
+            outside: list[tuple[str, str, str]] = []
+            site: list[bool] = []  # per outside wire: made on site
+            marks: list[str] = []
+            for w in doc.wires:
+                for here, other in ((w.from_, w.to), (w.to, w.from_)):
+                    r = ports.resolve(here)
+                    if isinstance(r, str) or not r.strip or r.owner != s.id or r.port != t.no:
+                        continue
+                    display, where = _place(ports, other, index, encl)
+                    if w.mark and w.mark not in marks:
+                        marks.append(w.mark)
+                    if w.wiring == "site" or w.cable or (s.enclosure and where and where != s.enclosure):
+                        outside.append((display, w.cable or "", w.core or ""))
+                        site.append(w.wiring == "site")
+                    else:
+                        inside.append((display, _num(w.section_mm2)))
+            product = t.product or s.product
+            rows.append({"strip": s.ref or s.id, "terminal": t.no, "kind": t.kind, "bridge_group": t.bridge_group or "",
+                         "label": t.label or "", "potential": t.potential or "", "mark": "; ".join(marks),
+                         "inside_targets": "; ".join(d for d, _ in inside),
+                         "inside_sections_mm2": "; ".join(x for _, x in inside if x),
+                         "outside_targets": "; ".join(d for d, _, _ in outside),
+                         "outside_cable": "; ".join(dict.fromkeys(c for _, c, _ in outside if c)),
+                         "outside_cores": "; ".join(c for _, _, c in outside if c), "fuse_A": _num(t.fuse_A),
+                         "product": (product.part_number or product.description or "") if product else "",
+                         "wiring": t.wiring or "",
+                         # for the drawn plan (render/terminal_plan.py), not exported
+                         "_inside": inside, "_outside": outside, "_site": site, "_strip": s})
+    return rows
+
+
+def terminals_csv(doc: Document, strip: Optional[str] = None) -> str:
+    """Terminal plan (``uniwire terminals``)."""
+    return _csv(TERMINAL_COLUMNS, terminal_rows(doc, strip=strip))
 
 
 def cables_csv(doc: Document) -> str:

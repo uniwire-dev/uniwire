@@ -12,7 +12,9 @@ from pydantic import Field
 from typing_extensions import TypeAliasType
 
 from ..units import Q
-from .base import ID_PATTERN, Cable, Curve, Earthing, Phase, Poles, Product, RcdType, Status, System, UWModel
+from .base import ID_PATTERN, Cable, Curve, Earthing, Phase, Poles, Port, Product, RcdType, Status, System, UWModel
+
+Contact = Literal["NO", "NC", "CO"]
 
 
 class NodeBase(UWModel):
@@ -49,6 +51,11 @@ class NodeBase(UWModel):
     notes: list[str] = Field(default_factory=list, description="References to sheet notes (note numbers)")
     point_no: Optional[int] = Field(None, ge=0, description="Sequence number of the point on the circuit (Belgian RGIE diagrams)")
     cable: Optional[Cable] = Field(None, description="Cable run between the parent and this node")
+    # --- 1.1: terminals (UEP-0001 §3.1)
+    ports: list[Port] = Field(
+        default_factory=list, description="Terminals of the node, merged by 'id' with the defaults of its type "
+        "(a known id replaces the default, a new id adds a port)")
+    port_defaults: Optional[bool] = Field(None, description="false: no default terminals, only 'ports'")
     children: list[Node] = Field(default_factory=list)
 
 
@@ -226,6 +233,9 @@ class Contactor(_Protective):
     function: Optional[Literal["HC", "power", "lighting", "load_shedding", "grid_relay", "interface", "other"]] = None
     coil_V: Optional[Q("V")] = None
     manual: Optional[bool] = Field(None, description="Manual override 0/1/Auto")
+    contacts: list[Contact] = Field(
+        default_factory=list, description="Built-in auxiliary contacts, in order (1.1): ['NO', 'NC'] gives the "
+        "terminals 13-14 and 21-22")
 
 
 class ImpulseRelay(_Protective):

@@ -58,7 +58,7 @@ def test_card_examples_are_valid_and_clean():
     for ex in (EXAMPLE_HOUSE, EXAMPLE_STANDBY):
         doc = uniwire.load(json.loads(json.dumps(ex)))
         assert not [f for f in uniwire.check(doc) if f.level == "error"]
-    assert '"uniwire":"1.0.0"' in card()
+    assert f'"uniwire":"{uniwire.FORMAT_VERSION}"' in card()
 
 
 def test_type_info():

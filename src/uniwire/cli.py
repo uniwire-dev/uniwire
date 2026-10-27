@@ -88,6 +88,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--view", help=_t("cli.help.view_marking"))
     p.add_argument("-o", "--out")
 
+    p = sub.add_parser("terminals", help=_t("cli.help.terminals"))
+    p.add_argument("file")
+    p.add_argument("--strip", help=_t("cli.help.strip"))
+    p.add_argument("-o", "--out")
+
     p = sub.add_parser("cables", help=_t("cli.help.cables"))
     p.add_argument("file")
     p.add_argument("-o", "--out")
@@ -185,6 +190,11 @@ def main(argv: list[str] | None = None) -> int:
         doc = _load(a.file)
         view = _marking_view(doc, a.view)
         _write((wires_csv if a.cmd == "wires" else markers_csv)(doc, view), a.out)
+        return 0
+    if a.cmd == "terminals":
+        from .exports import terminals_csv
+
+        _write(terminals_csv(_load(a.file), a.strip), a.out)
         return 0
     if a.cmd == "cables":
         from .exports import cables_csv

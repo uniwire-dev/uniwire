@@ -106,4 +106,4 @@ def _no_profile(doc: Document) -> Finding:
     return Finding("info", "core.no-profile", _t("rules.no_profile"))
 
 
-from . import core, enedis, iec60364, nfc15100, plc, vde0100  # noqa: E402,F401  (rule registration)
+from . import core, enedis, iec60364, nfc15100, plc, vde0100, wiring  # noqa: E402,F401  (rule registration)

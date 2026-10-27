@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uniwire.sh/schema/v1/uniwire.schema.json",
   "title": "uniwire: electrical installation",
-  "description": "uniwire 1.0.0 exchange format for describing electrical installations, drawn as single-line and multi-line diagrams (tree topology + links, characteristics, rendering preferences).",
+  "description": "uniwire 1.1.0 exchange format for describing electrical installations, drawn as single-line and multi-line diagrams (tree topology + links, characteristics, rendering preferences).",
   "$defs": {
     "Appliance": {
       "additionalProperties": false,
@@ -377,6 +377,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -818,6 +839,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -1237,6 +1279,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -1805,6 +1868,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -2470,6 +2554,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -3316,6 +3421,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -3736,6 +3862,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -3950,6 +4097,19 @@
           "default": null,
           "description": "Manual override 0/1/Auto",
           "title": "Manual"
+        },
+        "contacts": {
+          "description": "Built-in auxiliary contacts, in order (1.1): ['NO', 'NC'] gives the terminals 13-14 and 21-22",
+          "items": {
+            "enum": [
+              "NO",
+              "NC",
+              "CO"
+            ],
+            "type": "string"
+          },
+          "title": "Contacts",
+          "type": "array"
         }
       },
       "required": [
@@ -4332,6 +4492,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -4787,6 +4968,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -5225,6 +5427,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -5665,6 +5888,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -6215,6 +6459,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -6652,6 +6917,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -7059,6 +7345,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -7471,6 +7778,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -8095,6 +8423,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -8669,6 +9018,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -9256,6 +9626,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -9688,6 +10079,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -10143,6 +10555,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -10575,6 +11008,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -11391,6 +11845,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -11842,6 +12317,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -12318,6 +12814,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -12772,6 +13289,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -13184,6 +13722,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -13818,6 +14377,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -14251,6 +14831,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -15068,6 +15669,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -15499,6 +16121,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -15963,6 +16606,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -16531,6 +17195,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -17644,6 +18329,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -18106,6 +18812,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -18736,6 +19463,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -18821,6 +19569,209 @@
         "type"
       ],
       "title": "PVArray",
+      "type": "object"
+    },
+    "Port": {
+      "additionalProperties": false,
+      "description": "A terminal of a node (format 1.1, UEP-0001 §3.1): a point where a conductor can be connected, referenced as\n``<node id>#<port id>`` and displayed ``<ref>:<marking>`` (``-KM1:A1``).",
+      "properties": {
+        "ext": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Free-form extensions, namespaced by vendor prefix (e.g. {'acme': {...}}). Tools must preserve what they do not understand.",
+          "title": "Ext"
+        },
+        "id": {
+          "description": "Port identifier, unique within the node: '1', 'A1', '13', 'U1', 'PE', '2.1' (PLC slot 2, channel 1). Case-sensitive",
+          "pattern": "^[A-Za-z0-9+-][A-Za-z0-9_.:/+-]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "marking": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Marking printed on the device, when it differs from 'id'",
+          "title": "Marking"
+        },
+        "aliases": {
+          "description": "Other accepted names: 'L1' for '1', 'T1' for '2'",
+          "items": {
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "array"
+        },
+        "function": {
+          "anyOf": [
+            {
+              "enum": [
+                "pole_in",
+                "pole_out",
+                "power_in",
+                "power_out",
+                "neutral",
+                "earth",
+                "shield",
+                "coil",
+                "contact_no",
+                "contact_nc",
+                "contact_co",
+                "signal_in",
+                "signal_out",
+                "supply",
+                "comm",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Function"
+        },
+        "pole": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Rank of the pole or winding",
+          "title": "Pole"
+        },
+        "conductor": {
+          "anyOf": [
+            {
+              "enum": [
+                "L1",
+                "L2",
+                "L3",
+                "N",
+                "PE",
+                "PEN",
+                "L+",
+                "L-"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Fixed conductor of the port: N, PE...",
+          "title": "Conductor"
+        },
+        "pair": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The other terminal of the same pole, contact or coil: '2' for '1'",
+          "title": "Pair"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Description: 'Start', 'Run feedback'",
+          "title": "Label"
+        },
+        "mandatory": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Must be connected when the node is wired (coils)",
+          "title": "Mandatory"
+        },
+        "capacity": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Maximum number of conductors on the terminal (default 2; PLC channels 1)",
+          "title": "Capacity"
+        },
+        "section_max_mm2": {
+          "anyOf": [
+            {
+              "description": "Largest conductor the terminal accepts",
+              "ge": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Section Max Mm2"
+        },
+        "wiring": {
+          "anyOf": [
+            {
+              "enum": [
+                "factory",
+                "site"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "'site': the installer connects this terminal on site",
+          "title": "Wiring"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "Port",
       "type": "object"
     },
     "PowerSupply": {
@@ -19197,6 +20148,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -19798,6 +20770,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -20226,6 +21219,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -20869,6 +21883,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -21544,6 +22579,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -22043,6 +23099,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -22462,6 +23539,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -22946,6 +24044,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -23388,6 +24507,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -23796,6 +24936,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -23981,6 +25142,178 @@
         "type"
       ],
       "title": "SwitchDisconnector",
+      "type": "object"
+    },
+    "Terminal": {
+      "additionalProperties": false,
+      "description": "A terminal of a terminal strip (1.1, UEP-0001 §3.2): referenced ``<strip id>#<no>``, displayed ``-X1:3``.",
+      "properties": {
+        "ext": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Free-form extensions, namespaced by vendor prefix (e.g. {'acme': {...}}). Tools must preserve what they do not understand.",
+          "title": "Ext"
+        },
+        "no": {
+          "description": "Terminal number, unique within the strip: '1', 'PE', '10a'",
+          "pattern": "^[A-Za-z0-9+-][A-Za-z0-9_.:/+-]*$",
+          "title": "No",
+          "type": "string"
+        },
+        "kind": {
+          "default": "feed_through",
+          "enum": [
+            "feed_through",
+            "disconnect",
+            "fuse",
+            "earth",
+            "neutral",
+            "spare"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "bridge_group": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Terminals sharing a value are bridged together",
+          "title": "Bridge Group"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Description, or the function of the terminal",
+          "title": "Label"
+        },
+        "section_max_mm2": {
+          "anyOf": [
+            {
+              "description": "Largest conductor accepted",
+              "ge": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Section Max Mm2"
+        },
+        "points": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Clamping points per side (default 1)",
+          "title": "Points"
+        },
+        "fuse_A": {
+          "anyOf": [
+            {
+              "description": "Fuse rating of a 'fuse' terminal",
+              "ge": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fuse A"
+        },
+        "potential": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Expected potential",
+          "title": "Potential"
+        },
+        "product": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Product"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "wiring": {
+          "anyOf": [
+            {
+              "enum": [
+                "factory",
+                "site"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "'site': the field side is connected by the installer",
+          "title": "Wiring"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "enum": [
+                "new",
+                "existing",
+                "spare",
+                "future",
+                "removed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        }
+      },
+      "required": [
+        "no"
+      ],
+      "title": "Terminal",
       "type": "object"
     },
     "TerminalBlock": {
@@ -24358,6 +25691,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -24388,6 +25742,140 @@
         "type"
       ],
       "title": "TerminalBlock",
+      "type": "object"
+    },
+    "TerminalStrip": {
+      "additionalProperties": false,
+      "description": "A terminal strip (1.1, UEP-0001 §3.2): not a node of the tree, since it is crossed by many circuits.",
+      "properties": {
+        "ext": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Free-form extensions, namespaced by vendor prefix (e.g. {'acme': {...}}). Tools must preserve what they do not understand.",
+          "title": "Ext"
+        },
+        "id": {
+          "description": "Identifier, in the namespace of the nodes and wires",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_.\\-]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Reference designation: '-X1'",
+          "title": "Ref"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "enclosure": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z_][A-Za-z0-9_.\\-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "id of the enclosure or 'board' node",
+          "title": "Enclosure"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Location (IEC 81346 '+' aspect), when no enclosure is described",
+          "title": "Location"
+        },
+        "product": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Product"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default product of the terminals"
+        },
+        "terminals": {
+          "description": "Terminals in mounting order on the rail",
+          "items": {
+            "$ref": "#/$defs/Terminal"
+          },
+          "title": "Terminals",
+          "type": "array"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "enum": [
+                "new",
+                "existing",
+                "spare",
+                "future",
+                "removed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "TerminalStrip",
       "type": "object"
     },
     "ThermalRelay": {
@@ -24764,6 +26252,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -25185,6 +26694,27 @@
           ],
           "default": null,
           "description": "Cable run between the parent and this node"
+        },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
         },
         "children": {
           "items": {
@@ -25784,6 +27314,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -26296,6 +27847,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -26730,6 +28302,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -26802,10 +28395,11 @@
         },
         "kind": {
           "default": "single-line",
-          "description": "'single-line' diagram, or 'multi-line' power diagram (one line per conductor, derived from the same tree: phase, poles, cable cores, system and earthing)",
+          "description": "'single-line' diagram, or 'multi-line' power diagram (one line per conductor, derived from the same tree: phase, poles, cable cores, system and earthing), or 'terminals': the terminal plan of the terminal strips, one table per strip (1.1)",
           "enum": [
             "single-line",
-            "multi-line"
+            "multi-line",
+            "terminals"
           ],
           "title": "Kind",
           "type": "string"
@@ -27457,6 +29051,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -27850,6 +29465,27 @@
           "default": null,
           "description": "Cable run between the parent and this node"
         },
+        "ports": {
+          "description": "Terminals of the node, merged by 'id' with the defaults of its type (a known id replaces the default, a new id adds a port)",
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "title": "Ports",
+          "type": "array"
+        },
+        "port_defaults": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false: no default terminals, only 'ports'",
+          "title": "Port Defaults"
+        },
         "children": {
           "items": {
             "$ref": "#/$defs/Node"
@@ -27907,6 +29543,302 @@
         "type"
       ],
       "title": "WaterHeater",
+      "type": "object"
+    },
+    "Wire": {
+      "additionalProperties": false,
+      "description": "A conductor between two terminals (1.1, UEP-0001 §3.3): device ports or strip terminals. Wires are optional\nand partial: the connections of the power tree that no wire describes stay implicit.",
+      "properties": {
+        "ext": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Free-form extensions, namespaced by vendor prefix (e.g. {'acme': {...}}). Tools must preserve what they do not understand.",
+          "title": "Ext"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z_][A-Za-z0-9_.\\-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Identifier (generated when absent, not stable)",
+          "title": "Id"
+        },
+        "from": {
+          "description": "Port reference: 'X1#11', 'KM1#13'",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_.\\-]*#[A-Za-z0-9+-][A-Za-z0-9_.:/+-]*$",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "description": "Port reference",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_.\\-]*#[A-Za-z0-9+-][A-Za-z0-9_.:/+-]*$",
+          "title": "To",
+          "type": "string"
+        },
+        "mark": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Wire mark (ferrule text)",
+          "title": "Mark"
+        },
+        "section_mm2": {
+          "anyOf": [
+            {
+              "description": "Cross-section",
+              "ge": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Section Mm2"
+        },
+        "size_awg": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Size as printed in AWG",
+          "title": "Size Awg"
+        },
+        "color": {
+          "anyOf": [
+            {
+              "enum": [
+                "BK",
+                "BN",
+                "RD",
+                "OG",
+                "YE",
+                "GN",
+                "BU",
+                "VT",
+                "GY",
+                "WH",
+                "PK",
+                "GD",
+                "TQ",
+                "SR",
+                "GNYE"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "IEC 60757 colour code; GNYE for protective conductors",
+          "title": "Color"
+        },
+        "designation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Conductor type: 'H05V-K'",
+          "title": "Designation"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "enum": [
+                "Cu",
+                "Al"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Material"
+        },
+        "cable": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Cable this wire is a core of: '<node id>.cable' for a tree cable",
+          "title": "Cable"
+        },
+        "core": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Core number or colour within the cable: '1', 'BN', 'GNYE'",
+          "title": "Core"
+        },
+        "conductor": {
+          "anyOf": [
+            {
+              "enum": [
+                "L1",
+                "L2",
+                "L3",
+                "N",
+                "PE",
+                "PEN",
+                "L+",
+                "L-"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Conductor function; absent for control wires",
+          "title": "Conductor"
+        },
+        "potential": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Potential id, or a port reference on the same net",
+          "title": "Potential"
+        },
+        "length_m": {
+          "anyOf": [
+            {
+              "description": "Length",
+              "ge": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Length M"
+        },
+        "kind": {
+          "default": "wire",
+          "enum": [
+            "wire",
+            "bridge"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "wiring": {
+          "anyOf": [
+            {
+              "enum": [
+                "factory",
+                "site"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "'site': connected by the installer on site, not in the workshop (the dashed connections of a manufacturer's diagram)",
+          "title": "Wiring"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "enum": [
+                "new",
+                "existing",
+                "spare",
+                "future",
+                "removed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Wire",
       "type": "object"
     },
     "WireMarking": {
@@ -28050,7 +29982,7 @@
       "title": "$Schema"
     },
     "uniwire": {
-      "default": "1.0.0",
+      "default": "1.1.0",
       "description": "Format version (semver)",
       "pattern": "^1\\.\\d+\\.\\d+$",
       "title": "uniwire",
@@ -28102,6 +30034,22 @@
         "$ref": "#/$defs/Enclosure"
       },
       "title": "Enclosures",
+      "type": "array"
+    },
+    "terminal_strips": {
+      "description": "Terminal strips (1.1)",
+      "items": {
+        "$ref": "#/$defs/TerminalStrip"
+      },
+      "title": "Terminal Strips",
+      "type": "array"
+    },
+    "wires": {
+      "description": "Wires between terminals (1.1); optional and partial",
+      "items": {
+        "$ref": "#/$defs/Wire"
+      },
+      "title": "Wires",
       "type": "array"
     },
     "links": {

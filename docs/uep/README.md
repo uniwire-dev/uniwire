@@ -38,4 +38,4 @@ The full rules are in [Contributing](../contributing.md#changing-the-format-uniw
 
 | UEP | Title | Status | Target |
 |---|---|---|---|
-| [0001](0001-terminals-and-wires.md) | Terminals, terminal strips and wires | Draft | 2.0 |
+| [0001](0001-terminals-and-wires.md) | Terminals, terminal strips and wires | Accepted (in parts in 1.1) | 1.1 and later 1.x |

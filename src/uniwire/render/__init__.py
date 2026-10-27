@@ -139,6 +139,9 @@ def _enlargement(lays: list[Any], view: View, cap: float) -> Optional[float]:
 
 
 def _render_pages(doc: Document, view: View, lang: str) -> list[Page]:
+    if view.kind == "terminals":
+        from .terminal_plan import terminal_plan_pages
+        return terminal_plan_pages(doc, view, lang)
     if view.kind == "multi-line":
         return _render_multiline(doc, view, lang)
     if "paper" not in view.model_fields_set:

@@ -1,0 +1,106 @@
+{
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.1.0",
+  "profiles": ["iec60364"],
+  "meta": {
+    "title": "Conveyor motor starter: terminals, terminal strip and wires", "project": "EX-54",
+    "client": "Example Logistics Hall", "author": "uniwire examples", "lang": "en",
+    "notes": [
+      "Demonstrates: format 1.1 wiring (UEP-0001): the terminals of the devices (KM1#A1, F1#95, A1#0.9), a terminal strip -X1 and the wires between them, with marks, sections, colours, and the wires the installer makes on site",
+      "The PLC output 0.9 drives the contactor coil through the overload contact 95-96; the auxiliary contact 13-14 reports 'running' to input 0.1",
+      "Exports: 'uniwire wires' (wire list), 'uniwire markers' (ferrules), 'uniwire terminals' (terminal plan of -X1)"
+    ]
+  },
+  "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50, "ik3_kA": 10},
+  "sources": [
+    {
+      "id": "IN", "type": "offpage", "label": "From the main board -Q12", "target": "EX-54 drawing E-001",
+      "children": [
+        {
+          "id": "CP", "type": "board", "ref": "+CP1", "label": "Conveyor control panel", "in_A": 32, "ip": "IP54",
+          "children": [
+            {
+              "id": "Q1", "type": "breaker", "ref": "-Q1", "label": "Motor circuit breaker", "curve": "D", "in_A": 16,
+              "poles": "3P", "icn_kA": 10,
+              "children": [
+                {
+                  "id": "KM1", "type": "contactor", "ref": "-KM1", "in_A": 12, "poles": "3P", "coil_V": 24,
+                  "contacts": ["NO"],
+                  "children": [
+                    {
+                      "id": "F1", "type": "thermal_relay", "ref": "-F1", "range_A": "7-10", "setting_A": 8.2,
+                      "children": [
+                        {
+                          "id": "M1", "type": "motor", "ref": "-M1", "label": "Conveyor 3", "p_kW": 4, "in_A": 8.2,
+                          "cable": {
+                            "ref": "W11", "cores": "4G", "section_mm2": 2.5, "length_m": 35, "material": "Cu",
+                            "insulation": "PVC", "install": "C"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "Q2", "type": "breaker", "ref": "-Q2", "label": "Control supply", "curve": "C", "in_A": 2,
+              "poles": "1P+N", "phase": "L1",
+              "children": [
+                {"id": "T1", "type": "power_supply", "ref": "-T1", "u1_V": 230, "u2_V": 24, "in_A": 2.5}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "id": "A1", "type": "plc", "ref": "-A1", "label": "Conveyor PLC",
+      "onboard": [
+        {"slot": 0, "kind": "di", "channels": 8, "un_V": 24, "channel_labels": {"1": "KM1 running"}},
+        {"slot": 0, "kind": "do", "channels": 4, "un_V": 24, "channel_labels": {"1": "KM1 command"}}
+      ]
+    }
+  ],
+  "terminal_strips": [
+    {
+      "id": "X1", "ref": "-X1", "enclosure": "CP", "label": "Conveyor 3 terminals",
+      "product": {"manufacturer": "Phoenix Contact", "part_number": "UT 4", "description": "Feed-through terminal 4 mm²"},
+      "terminals": [
+        {"no": "1", "label": "M1 U1", "section_max_mm2": 4},
+        {"no": "2", "label": "M1 V1", "section_max_mm2": 4},
+        {"no": "3", "label": "M1 W1", "section_max_mm2": 4},
+        {"no": "PE", "kind": "earth", "label": "M1 PE", "section_max_mm2": 4,
+         "product": {"manufacturer": "Phoenix Contact", "part_number": "UT 4-PE", "description": "Ground terminal 4 mm²"}},
+        {"no": "10", "label": "24 V", "bridge_group": "P24"},
+        {"no": "11", "label": "24 V", "bridge_group": "P24"},
+        {"no": "20", "label": "0 V", "bridge_group": "M"},
+        {"no": "21", "label": "0 V", "bridge_group": "M"}
+      ]
+    }
+  ],
+  "wires": [
+    {"id": "w1", "from": "F1#2", "to": "X1#1", "conductor": "L1", "section_mm2": 2.5, "color": "BK", "mark": "U"},
+    {"id": "w2", "from": "F1#4", "to": "X1#2", "conductor": "L2", "section_mm2": 2.5, "color": "BK", "mark": "V"},
+    {"id": "w3", "from": "F1#6", "to": "X1#3", "conductor": "L3", "section_mm2": 2.5, "color": "BK", "mark": "W"},
+    {"id": "w4", "from": "X1#1", "to": "M1#U1", "conductor": "L1", "cable": "M1.cable", "core": "BN", "wiring": "site"},
+    {"id": "w5", "from": "X1#2", "to": "M1#V1", "conductor": "L2", "cable": "M1.cable", "core": "BK", "wiring": "site"},
+    {"id": "w6", "from": "X1#3", "to": "M1#W1", "conductor": "L3", "cable": "M1.cable", "core": "GY", "wiring": "site"},
+    {"id": "w7", "from": "X1#PE", "to": "M1#PE", "conductor": "PE", "cable": "M1.cable", "core": "GNYE", "wiring": "site"},
+    {"id": "w10", "from": "T1#L+", "to": "X1#10", "section_mm2": 1, "color": "BU", "mark": "24V"},
+    {"id": "w11", "from": "X1#11", "to": "A1#L+", "section_mm2": 0.75, "color": "BU", "mark": "24V"},
+    {"id": "w12", "from": "T1#L-", "to": "X1#20", "section_mm2": 1, "color": "WH", "mark": "0V"},
+    {"id": "w13", "from": "X1#21", "to": "A1#M", "section_mm2": 0.75, "color": "WH", "mark": "0V"},
+    {"id": "w20", "from": "A1#0.9", "to": "F1#95", "section_mm2": 0.75, "color": "BU", "mark": "101"},
+    {"id": "w21", "from": "F1#96", "to": "KM1#A1", "section_mm2": 0.75, "color": "BU", "mark": "102"},
+    {"id": "w22", "from": "KM1#A2", "to": "X1#21", "section_mm2": 0.75, "color": "WH", "mark": "0V"},
+    {"id": "w23", "from": "X1#11", "to": "KM1#13", "section_mm2": 0.75, "color": "BU", "mark": "24V"},
+    {"id": "w24", "from": "KM1#14", "to": "A1#0.1", "section_mm2": 0.75, "color": "BU", "mark": "103"}
+  ],
+  "views": [
+    {"id": "ml", "kind": "multi-line", "title": "Conveyor 3 starter, multi-line", "paper": "A3", "orientation": "landscape"},
+    {"id": "sld", "title": "Conveyor 3 starter, single-line", "paper": "A3", "orientation": "landscape"},
+    {"id": "x", "kind": "terminals", "paper": "A3", "orientation": "landscape"}
+  ]
+}

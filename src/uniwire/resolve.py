@@ -156,6 +156,12 @@ def _assign_ids(doc: Document) -> list[str]:
             if n.id in seen:
                 issues.append(_t("validation.duplicate_id", id=n.id))
             seen[n.id] = 1
+    doc._explicit_ids = set(seen)  # the ids written in the file: only they can be referenced by a port reference
+    for owner in (*doc.terminal_strips, *(w for w in doc.wires if w.id is not None)):  # one namespace (1.1)
+        if owner.id in seen:
+            issues.append(_t("validation.duplicate_id", id=owner.id))
+        seen[owner.id] = 1  # type: ignore[index]
+        doc._explicit_ids.add(owner.id)  # type: ignore[arg-type]
     counters: dict[str, int] = {}
     for n in nodes:
         if n.id is None:
@@ -167,6 +173,13 @@ def _assign_ids(doc: Document) -> list[str]:
                 counters[base] = counters.get(base, 1) + 1
                 cand = f"{base}_{counters[base]}"
             n.id = cand
+            seen[cand] = 1
+    for k, w in enumerate(doc.wires, 1):
+        if w.id is None:
+            cand = f"w{k}"
+            while cand in seen:
+                cand += "_"
+            w.id = cand
             seen[cand] = 1
     for link in doc.links:
         for end in (link.from_, link.to):
