@@ -591,3 +591,32 @@ def test_gfci_not_repeated_when_already_shown():
         NORTH_AMERICAN.reset(token)
     assert shown.count("GFCI") == 1  # the range says it
     assert "GFCI" in hidden  # the label is not drawn beside a breaker: the kind is
+
+
+def test_label_of_a_link_between_close_loads_clear_of_their_symbols():
+    # labels wider than the gap between two loads: the link runs under the loads, its label clear of the symbols
+    def feeder(ref, load):
+        return {"type": "breaker", "ref": ref, "in_A": 10, "poles": "1P+N", "children": [load]}
+    doc = load({"installation": {"system": "3P+N"}, "sources": [{"type": "grid", "children": [
+        {"type": "board", "ref": "PS1", "children": [{"type": "busbar", "children": [
+            feeder("-Q1", {"type": "motor", "id": "P1", "label": "Lift pump"}),
+            feeder("-Q2", {"type": "load", "id": "CTL", "label": "Pump controller"}),
+            feeder("-Q3", {"type": "motor", "id": "P2", "label": "Dosing pump"})]}]}]}],
+        "links": [{"kind": "data", "from": "P1", "to": "CTL", "label": "Level probes L1-L2-L3"},
+                  {"kind": "control", "from": "CTL", "to": "P2", "label": "Dosing command"}]})
+    lay = _layout(doc)[0]
+    syms = []
+    for g in _items_groups(lay.group):
+        if "uw-node" in (g.cls or "") and g.id in ("P1", "CTL", "P2"):
+            pts = [p for i in _items(g) for p in ([i.a, i.b] if isinstance(i, Line) else getattr(i, "points", []))]
+            pts += [(c.c[0] + dx, c.c[1] + dy) for c in _items(g) if hasattr(c, "r")
+                    for dx, dy in ((-c.r, -c.r), (c.r, c.r))]
+            syms.append((min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts)))
+    for g in _items_groups(lay.group):
+        if "uw-link" not in (g.cls or ""):
+            continue
+        for t in (i for i in _items(g) if isinstance(i, Text)):
+            w = text_width(t.text, t.size)
+            x0 = t.p[0] - (w if t.anchor == "end" else 0.0)
+            box = (x0, t.p[1] - t.size, x0 + w, t.p[1])
+            assert not any(_hit(box, s) for s in syms), t.text

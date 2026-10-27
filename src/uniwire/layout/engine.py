@@ -2245,6 +2245,11 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 hi = max(e.y for e in ends) + 30.0
                 if max(e.y for e in ends) < y_max:
                     hi = min(hi, y_max)
+        if (not ml and a.bottom and b.bottom and link.label and port_label is None
+                and abs(ends[0].x - ends[1].x) < text_width(link.label, 1.6) + 2.0):
+            # two loads too close for the label between them: under the loads, where the label has room
+            lo = max(lo, max(a.y + a.sym.height, b.y + b.sym.height) + 1.5)
+            hi = max(hi, lo + 0.01)
         if not obs.grid or not pts:
             pts = route(obs, ends[0], ends[1], lo, hi, **opts)
         if not pts and on_conductor:  # e.g. a feeder leaving downwards: the channel must go below it after all

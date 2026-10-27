@@ -40,6 +40,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   their own tap on top of it, routed on separate channels without crossing (the second one ended on a stub of
   conductor that did not exist), the board frame enclosing the taps.
 
+* Single-line view: a control or data link between two loads too close for its label runs under the loads, where
+  the label has room (it was written over the symbols).
+
 * Profile `iec60364`: rule `iec60364.rcd-30mA` (IEC 60364-4-41:2005+AMD1:2017, 411.3.3 and 411.3.4), socket-outlets
   up to 32 A and, in dwellings, lighting circuits protected by an RCD of at most 30 mA, except below the isolation
   transformer of a medical IT system; left to `nfc15100` and `vde0100` when the document declares one of them. Rule
