@@ -190,3 +190,25 @@ def test_bridges_side_by_side_only_where_they_overlap():
         return {x for p in render_pages(doc, View(kind="terminals")) for x in walk(p.root)}
     assert len(xs(["A", "A", "B", "B"])) == 1  # one after the other: on one line
     assert len(xs(["A", "B", "A", "B"])) == 2  # interleaved: side by side
+
+
+def test_strip_terminals_drawn_on_the_conductors_they_cross_in_the_multi_line_view():
+    from uniwire import render_pages
+    from uniwire.render import default_view
+    from uniwire.render.scene import Group
+
+    doc = load(ROOT / "examples" / "54_motor_starter_terminals_wires.uniwire.json")
+    (page,) = render_pages(doc, default_view(doc, kind="multi-line"))
+
+    def walk(item):
+        if isinstance(item, Group):
+            yield item
+            for i in item.items:
+                yield from walk(i)
+    drawn = {g.attrs["data-uw-cond"]: g.attrs["data-uw-terminal"] for g in walk(page.root)
+             if "data-uw-terminal" in g.attrs}
+    assert drawn == {"L1": "-X1:1", "L2": "-X1:2", "L3": "-X1:3", "PE": "-X1:PE"}  # the motor cable leaves through -X1
+    # a strip terminal joined to the node only, not to the cabinet side, is not on its feeder
+    lone = _starter(wires=[{"from": "X1#1", "to": "M1#U1"}])
+    from uniwire.layout.multiline import _Assigner, strip_terminals
+    assert strip_terminals(lone, Ports(lone).index, _Assigner(lone, True).info) == {}

@@ -2218,7 +2218,8 @@ def _layout(doc: Document, view: View, spec: SheetSpec, index: Index, info: dict
             incoming: Optional[str] = None,
             incoming_ref: tuple[Optional[int], Optional[str]] = (None, None),
             marks: Optional[dict[str, dict[str, str]]] = None,
-            node_folio: Callable[[str], Optional[int]] | None = None, annex: bool = True) -> SheetLayout:
+            node_folio: Callable[[str], Optional[int]] | None = None, annex: bool = True,
+            terminals: Optional[dict[str, dict[str, str]]] = None) -> SheetLayout:
     lang = normalize_lang(doc.meta.lang)
     roots = _build_roots(spec, index, info)
     for r in roots:
@@ -2267,6 +2268,9 @@ def _layout(doc: Document, view: View, spec: SheetSpec, index: Index, info: dict
             if holder is not None and holder is not n and holder.id in marks and n.id not in marks:
                 marks[n.id] = marks.pop(holder.id)
         _draw_wire_marks(g, marks, tops)
+    if terminals:
+        bottoms = [_frame_bottom(n) for r in roots for n in r.walk() if n.is_board]
+        _draw_strip_terminals(g, terminals, bottoms)
     box = bbox(g) or (0.0, 0.0, 10.0, 10.0)
     g = transform(g, -box[0], -box[1])  # type: ignore[assignment]
     return SheetLayout(spec, g, box[2] - box[0], box[3] - box[1], [], [])  # type: ignore[arg-type]
@@ -2326,6 +2330,69 @@ def _draw_wire_marks(g: Group, marks: dict[str, dict[str, str]], tops: dict[str,
         if room:  # written only when every conductor of the edge has room (else data-uw-mark only)
             for cg, txt in texts:
                 cg.add(txt)
+
+
+TERMINAL_R = 0.75  # a terminal of a strip on a conductor: a small open circle, its designation beside it
+
+
+def strip_terminals(doc: Document, index: Index, info: dict[int, Conductors]) -> dict[str, dict[str, str]]:
+    """The strip terminals the power conductors cross (format 1.1): {id of the node fed: {conductor: '-X1:1'}}.
+    A strip terminal is drawn on the feeder of a node when a wire joins it to that node and another wire joins it
+    to a node above (the cable leaves the cabinet through the strip). The conductor is the wire's ``conductor``,
+    else that of the node's terminal, else the phase of the terminal's pole rank."""
+    from ..ports import Ports, Target  # noqa: PLC0415
+
+    if not doc.wires:
+        return {}
+    ports = Ports(doc, index)
+    ends: dict[tuple[str, str], list[tuple[Target, Any]]] = {}  # strip terminal -> (node terminal, wire)
+    for w in doc.wires:
+        a, b = ports.resolve(w.from_), ports.resolve(w.to)
+        if isinstance(a, str) or isinstance(b, str) or a.strip == b.strip:
+            continue
+        t, n = (a, b) if a.strip else (b, a)
+        ends.setdefault((t.owner, t.port), []).append((n, w))
+    out: dict[str, dict[str, str]] = {}
+    for (strip, no), nodes in ends.items():
+        for n, w in nodes:
+            node = index.nodes[n.owner]
+            above = {a.id for a in index.ancestors(n.owner)}
+            if not any(m.owner in above for m, _ in nodes):
+                continue
+            cond = w.conductor or n.info.conductor
+            if cond is None and n.info.pole and id(node) in info:
+                phases = [c for c in info[id(node)].inp if c[:1] == "L"]
+                cond = phases[n.info.pole - 1] if n.info.pole <= len(phases) else None
+            if cond is None and n.port == "PE":
+                cond = "PE"
+            if cond:
+                out.setdefault(n.owner, {})[cond] = f"{ports.strips[strip].ref or strip}:{no}"
+    return out
+
+
+def _draw_strip_terminals(g: Group, terminals: dict[str, dict[str, str]], bottoms: list[float]) -> None:
+    """A strip terminal on each conductor of the edge feeding a node: inside the cabinet, just above the bottom of
+    the frame the conductor leaves, else near the top of the conductor's last vertical segment."""
+    for it in g.items:
+        if not isinstance(it, Group):
+            continue
+        nid = it.attrs.get("data-uw-edge")
+        if nid is None or nid not in terminals:
+            _draw_strip_terminals(it, terminals, bottoms)
+            continue
+        for cg in list(it.items):
+            if not isinstance(cg, Group) or "data-uw-cond" not in cg.attrs:
+                continue
+            label = terminals[nid].get(cg.attrs["data-uw-cond"])
+            end = _lowest(cg.items)
+            if not label or end is None:
+                continue
+            x, y_low, y_top = end
+            crossing = [b for b in bottoms if y_top + 2.0 < b < y_low - 1.0]
+            y = (min(crossing) - 2.5) if crossing else y_top + 3.0
+            cg.attrs["data-uw-terminal"] = label
+            cg.add(Circle((x, y), TERMINAL_R, Style(width=THIN, fill="#FFFFFF")),
+                   Text((x + 1.1, y), label, MARK_SIZE, "start", "middle", rotate=90, color="#333333"))
 
 
 def layout_multiline(doc: Document, view: View, spec: SheetSpec, index: Index | None = None,
@@ -2460,6 +2527,7 @@ def multiline_layouts(doc: Document, view: View, index: Index | None = None) -> 
             for c in w.drawn:
                 if w.mark:
                     marks.setdefault(w.node, {})[c] = w.mark
+    terminals = strip_terminals(doc, index, info)
     folio_by_root: dict[str, int] = {}
     for i, s in enumerate(specs, 1):
         if s.roots and not s.continuation and i > 1:
@@ -2483,5 +2551,6 @@ def multiline_layouts(doc: Document, view: View, index: Index | None = None) -> 
             what = _t("render.incoming_from", lang, ref=feeder.ref) if feeder is not None else _t("render.incoming", lang)
             incoming = _t("render.incoming_folio", lang, what=what, folio=src) if src else what
         out.append(_layout(doc, view, spec, index, info, folio_of=folio_by_root.get, continuation=(prev_f, next_f),
-                           incoming=incoming, incoming_ref=incoming_ref, marks=marks, node_folio=sheet_of.get))
+                           incoming=incoming, incoming_ref=incoming_ref, marks=marks, node_folio=sheet_of.get,
+                           terminals=terminals))
     return out

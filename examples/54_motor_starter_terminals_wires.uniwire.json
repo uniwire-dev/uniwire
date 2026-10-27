@@ -88,6 +88,7 @@
     {"id": "w5", "from": "X1#2", "to": "M1#V1", "conductor": "L2", "cable": "M1.cable", "core": "BK", "wiring": "site"},
     {"id": "w6", "from": "X1#3", "to": "M1#W1", "conductor": "L3", "cable": "M1.cable", "core": "GY", "wiring": "site"},
     {"id": "w7", "from": "X1#PE", "to": "M1#PE", "conductor": "PE", "cable": "M1.cable", "core": "GNYE", "wiring": "site"},
+    {"id": "w8", "from": "CP#PE", "to": "X1#PE", "conductor": "PE", "section_mm2": 2.5, "color": "GNYE"},
     {"id": "w10", "from": "T1#L+", "to": "X1#10", "section_mm2": 1, "color": "BU", "mark": "24V"},
     {"id": "w11", "from": "X1#11", "to": "A1#L+", "section_mm2": 0.75, "color": "BU", "mark": "24V"},
     {"id": "w12", "from": "T1#L-", "to": "X1#20", "section_mm2": 1, "color": "WH", "mark": "0V"},

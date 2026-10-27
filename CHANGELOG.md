@@ -15,7 +15,7 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   `KM1#A1`, displayed `-KM1:A1`. Rules `port.unknown`, `wire.endpoints`, `port.capacity`, `port.unconnected`,
   `port.conductor`, `strip.terminal`, `strip.capacity`, `strip.bridge`, only for documents that use these
   sections. `uniwire wires` and `uniwire markers` list the declared wires; new export `uniwire terminals` (terminal
-  plan), also drawn as sheets by a view of the new kind `terminals`, in the usual layout of a terminal diagram (function, cable columns, external target, part, terminal and bridges, internal target; site wiring starred; the terminals counted by kind and part under the table), with text of 2.5 mm for an A3 print. Example 54: a motor starter with its terminal strip and its wires. Everything is optional: a 1.0
+  plan), also drawn as sheets by a view of the new kind `terminals`, in the usual layout of a terminal diagram (function, cable columns, external target, part, terminal and bridges, internal target; site wiring starred; the terminals counted by kind and part under the table), with text of 2.5 mm for an A3 print. The multi-line view draws the strip terminals that the power conductors cross (`-X1:1`). Example 54: a motor starter with its terminal strip and its wires. Everything is optional: a 1.0
   document reads the same. Not yet: cables as objects, potentials, auxiliaries, control devices, drawing of the
   wires.
 

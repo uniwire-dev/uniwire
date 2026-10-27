@@ -314,6 +314,9 @@ errors, except `strip.bridge`.
 inside (cabinet side) and outside (field side: a wire made on site, a cable core, or the other end in another
 enclosure).
 
+In the `multi-line` view, a strip terminal that a power conductor crosses (a wire joins it to a node, another to
+a node above) is drawn on that conductor, inside the cabinet, with its designation (`-X1:1`).
+
 A view of kind `terminals` draws the same terminal plan as sheets, in the usual layout of a terminal diagram:
 one table per strip, its designation heading the middle columns; from left
 to right the function, one column per external cable (its tag at the top, its type below, the core on the line of
