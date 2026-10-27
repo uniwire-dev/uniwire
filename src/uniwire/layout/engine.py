@@ -2607,13 +2607,24 @@ def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: 
                 for k, ch in enumerate(chars):
                     cg.add(Text(((cx0 + cx1) / 2, y + 1.0 + (k + 0.85) * size * 1.05), ch, size, "middle"))
             elif field_ == "label":
-                size = 2.0
-                tw = text_width(v, size)
-                if tw > h - 2:
-                    size = max(1.3, size * (h - 2) / tw)
-                while len(v) > 4 and text_width(v, size) > h - 2:
-                    v = v[:-2] + "…"
-                cg.add(Text(((cx0 + cx1) / 2 + 0.7, y + h - 1.0), v, size, "start", "alphabetic", 90))
+                size, room = 2.0, h - 2
+                lines = [v]
+                if text_width(v, size) > room:  # too long for the cell: on 2 or 3 lines side by side, then smaller
+                    words = text_units(v)
+                    across = int((cx1 - cx0 - 1.0) // (size * 1.2))
+                    for k in range(2, min(3, across, len(words)) + 1):
+                        lines = _wrap_words(words, k, lambda u, sz=size: text_width(u, sz))
+                        if max(text_width(u, size) for u in lines) <= room:
+                            break
+                widest = max(text_width(u, size) for u in lines)
+                if widest > room:
+                    size = max(1.3, size * room / widest)
+                step = size * 1.2
+                for i, line in enumerate(lines):
+                    while len(line) > 4 and text_width(line, size) > room:
+                        line = line[:-2] + "…"
+                    x = (cx0 + cx1) / 2 + 0.7 + (i - (len(lines) - 1) / 2) * step
+                    cg.add(Text((x, y + h - 1.0), line, size, "start", "alphabetic", 90))
             else:
                 size = 1.8
                 avail = cx1 - cx0 - 1.0

@@ -45,12 +45,15 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   is taken to its own sheet; such a sheet no longer shows an incoming feed, and a bus tie between two sheets ends on
   an off-page reference at each end (it was not drawn). The board taken to its own sheet is the smallest one that
   makes the sheet fit (it was the widest: a first sheet could hold only the incomer, the next one only the main
-  board). An instrument above a busbar (`measure`
+  board), and a main board as wide as the whole sheet stays with its supply, its busbar going on over the next
+  sheets under the board's name (the first sheet held only the supply; the continuation was named after the device
+  at the head of the busbar, a meter for instance). An instrument above a busbar (`measure`
   link) is connected straight down onto it; auxiliary devices are placed off the channels of the feeds tapping a
   busbar, and these channels pass below an off-sheet reference hanging over them.
   Feeder table: the cells of a column stay under its feeder when a long board name widens the drawing (they were
   centred between the feeders), and a board with a single outgoing (a panel fed through a transformer, an enclosure
-  around one load) shows the protection and cable of the feeder above it (its cells were empty).
+  around one load) shows the protection and cable of the feeder above it (its cells were empty). A description too
+  long for its cell goes on 2 or 3 lines before its text gets smaller (it shrank to a few tenths of a millimetre).
 
 * Single-line view: a control or data link between two loads too close for its label runs under the loads, where
   the label has room (it was written over the symbols).

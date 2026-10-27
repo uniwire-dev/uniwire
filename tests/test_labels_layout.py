@@ -641,3 +641,17 @@ def test_label_of_a_link_between_close_loads_clear_of_their_symbols():
             x0 = t.p[0] - (w if t.anchor == "end" else 0.0)
             box = (x0, t.p[1] - t.size, x0 + w, t.p[1])
             assert not any(_hit(box, s) for s in syms), t.text
+
+
+def test_long_description_in_the_table_wraps_before_it_shrinks():
+    long = "Compressor of the cold room with its condensing unit and the defrost heaters of the evaporator"
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 32, "children": [{"type": "load", "label": long}]},
+        {"type": "breaker", "ref": "-Q2", "in_A": 16, "children": [{"type": "load", "label": "Lights"}]}]}]}],
+        "views": [{"cartouche": ["label", "ref", "protection"]}]})
+    (lay,) = _layout(doc)
+    cells = [g for g in _items_groups(lay.group) if g.attrs.get("data-uw-field") == "label"]
+    texts = [t for g in cells for t in _items(g) if isinstance(t, Text)]
+    parts = [t for t in texts if t.text != "Lights"]
+    assert len(parts) in (2, 3) and " ".join(t.text for t in parts) == long  # every word kept, none cut
+    assert all(t.size == 2.0 for t in texts)  # at the size of the others
