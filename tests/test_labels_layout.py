@@ -655,3 +655,13 @@ def test_long_description_in_the_table_wraps_before_it_shrinks():
     parts = [t for t in texts if t.text != "Lights"]
     assert len(parts) in (2, 3) and " ".join(t.text for t in parts) == long  # every word kept, none cut
     assert all(t.size == 2.0 for t in texts)  # at the size of the others
+
+
+def test_power_supply_output_is_marked_with_its_two_poles_not_its_input():
+    doc = load({"installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
+                "sources": [{"type": "grid", "children": [{"type": "board", "children": [
+                    {"type": "breaker", "ref": "-Q2", "in_A": 2, "poles": "1P+N", "phase": "L1", "children": [
+                        {"type": "power_supply", "ref": "-T1", "u1_V": 230, "u2_V": 24}]},
+                    {"type": "socket", "label": "Sockets", "phase": "L2"}]}]}]})
+    texts = _texts(render_pages(doc)[0].root)
+    assert "L1+N" not in texts and "L2" in texts  # the socket keeps its phase; the 24 V output is not "L1+N"

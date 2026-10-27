@@ -47,7 +47,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   makes the sheet fit (it was the widest: a first sheet could hold only the incomer, the next one only the main
   board), and a main board as wide as the whole sheet stays with its supply, its busbar going on over the next
   sheets under the board's name (the first sheet held only the supply; the continuation was named after the device
-  at the head of the busbar, a meter for instance). An instrument above a busbar (`measure`
+  at the head of the busbar, a meter for instance). The output of a power supply with nothing drawn below is marked with its two poles
+  (it was marked with its input, 'L1+N' under a 24 V DC supply). An instrument above a busbar (`measure`
   link) is connected straight down onto it; auxiliary devices are placed off the channels of the feeds tapping a
   busbar, and these channels pass below an off-sheet reference hanging over them.
   Feeder table: the cells of a column stay under its feeder when a long board name widens the drawing (they were

@@ -1263,9 +1263,11 @@ def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: 
         if not chain:
             continue
         mark = feeder_mark(chain, "DC" if _dc_line(chain[0], index) else _supply_system(ln, index, doc))
+        phase = next((getattr(c, "phase", None) for c in chain if getattr(c, "phase", None)), None)
+        if ln.open_feeder and ln.node is not None and ln.type in ("power_supply", "dc_converter"):
+            mark, phase = (2, False), None  # what leaves a power supply: its two output poles (L+ L-), not its input
         if not mark:
             continue
-        phase = next((getattr(c, "phase", None) for c in chain if getattr(c, "phase", None)), None)
         above = next((drawn[id(c)] for c in chain if id(c) in drawn), None)
         if above == mark and not (phase and phase != "L1L2L3"):
             continue
