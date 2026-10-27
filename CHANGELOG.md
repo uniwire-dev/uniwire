@@ -48,6 +48,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   board). An instrument above a busbar (`measure`
   link) is connected straight down onto it; auxiliary devices are placed off the channels of the feeds tapping a
   busbar, and these channels pass below an off-sheet reference hanging over them.
+  Feeder table: the cells of a column stay under its feeder when a long board name widens the drawing (they were
+  centred between the feeders), and a board with a single outgoing (a panel fed through a transformer, an enclosure
+  around one load) shows the protection and cable of the feeder above it (its cells were empty).
 
 * Single-line view: a control or data link between two loads too close for its label runs under the loads, where
   the label has room (it was written over the symbols).

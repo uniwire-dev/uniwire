@@ -103,6 +103,27 @@ def test_spare_fed_by_its_own_breaker_shows_the_breaker():
     assert texts.count("C20") == 2
 
 
+def test_board_fed_through_shows_its_feeder_and_cells_stay_under_their_feeders():
+    cab = {"cores": "5G", "section_mm2": 6, "length_m": 20}
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "ref": "TGBT", "children": [
+        {"type": "breaker", "ref": "-Q3", "in_A": 40, "curve": "C", "cable": cab, "children": [
+            {"type": "transformer", "ref": "-T3", "sn_kVA": 20, "children": [
+                {"type": "board", "ref": "TD-N", "label": "Lighting and small power panel of the north workshop",
+                 "children": [{"type": "offpage", "label": "TD-N schedule", "target": "sheet 4"}]}]}]},
+        {"type": "breaker", "ref": "-Q4", "in_A": 32, "curve": "C", "cable": cab, "children": [
+            {"type": "board", "ref": "CT-1", "kind": "enclosure", "children": [
+                {"type": "heating", "ref": "-E4", "label": "Dryer heater", "p_kW": 12}]}]},
+        {"type": "socket", "label": "Sockets"}]}]}],
+        "views": [{"cartouche": ["label", "ref", "protection", "cable"]}]})
+    texts = _texts(render_pages(doc)[0].root)
+    assert texts.count("C40") == 2 and texts.count("C32") == 2  # annotation + the cell of the board's column
+    (lay,) = _layout(doc)
+    xs = sorted(c.x for c in lay.columns)  # before the sheet is moved to the origin: compare spacings
+    cells = [g for g in _items_groups(lay.group) if g.attrs.get("data-uw-field") == "protection"]
+    centres = sorted(t.p[0] for g in cells for t in _items(g) if isinstance(t, Text))
+    assert len(centres) == 2 and abs((centres[1] - centres[0]) - (xs[1] - xs[0])) < 0.01
+
+
 def test_generator_symbol_follows_supply_system():
     def sub(system):
         doc = load({"installation": {"system": system}, "sources": [{"type": "generator", "id": "G", "children": [

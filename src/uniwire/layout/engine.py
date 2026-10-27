@@ -2482,10 +2482,11 @@ def _column_info(ln: LNode, index: Index, lang: str) -> dict[str, Any]:
     if leaf is None:
         return info
     chain = [leaf] + index.ancestors(leaf.id or "")
-    # walk up to the first busbar node (excluded)
+    # walk up to the first busbar node (excluded); a board with a single outgoing (a panel fed through, an
+    # enclosure around one load) is crossed: the feeder's protection and cable are above it
     path = []
     for n in chain:
-        if n is not leaf and (len(n.children) >= 2 or n.type in ("busbar", "board")):  # type: ignore[attr-defined]
+        if n is not leaf and (len(n.children) >= 2 or n.type == "busbar"):  # type: ignore[attr-defined]
             break
         path.append(n)
     prots = [n for n in path if n.type in PROTECTIVE]  # type: ignore[attr-defined]
@@ -2557,11 +2558,11 @@ def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: 
         if r and len(others) > 1 and board is not None and (board.ref or board.label):
             b = board.ref or board.label or ""
             i["own_ref"] = f"{b}{r}" if b[0] in "=+" else f"{b} {r}"
-    # column boundaries
+    # column boundaries: a column widened by a long board name keeps the extra room on its right, as in the drawing
     xs = [c.x for c in columns]
     bounds = [xs[0] - pitch / 2]
     for a, b in zip(xs, xs[1:]):
-        bounds.append((a + b) / 2)
+        bounds.append(max((a + b) / 2, b - pitch / 2))
     bounds.append(xs[-1] + pitch / 2)
     header_w = 24.0
     x_start = bounds[0] - header_w
@@ -2587,6 +2588,9 @@ def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: 
         for i, v in enumerate(values):
             cx0, cx1 = bounds[i], bounds[i + 1]
             cg = Group([Rect(cx0, y, cx1 - cx0, h, small)], attrs={"data-uw-field": field_})
+            # the text stays under its feeder: centred on the column, as wide as the cell allows on both sides
+            half = min(xs[i] - cx0, cx1 - xs[i])
+            cx0, cx1 = xs[i] - half, xs[i] + half
             if field_ == "label" and columns[i].kind == "stub":  # "-> sheet n": reference to the board's sheet
                 cg = ref_group(columns[i].target_folio, columns[i].target, cg.items)
                 cg.attrs["data-uw-field"] = field_
