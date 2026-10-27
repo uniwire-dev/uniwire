@@ -265,6 +265,13 @@ def _is_dc(node: NodeBase) -> bool:
         n = n.children[0]
 
 
+def _bus_name(node: NodeBase, index: Index) -> str:
+    """Name of the busbar a node feeds: its board's (or busbar's), not the device at its head (a meter, a breaker)."""
+    owner = next((a for a in [node] + index.ancestors(node.id or "")
+                  if a.type in ("board", "busbar")), node)  # type: ignore[attr-defined]
+    return owner.ref or owner.label or node.ref or node.label or node.id or ""
+
+
 def _build_sheet_roots(spec: SheetSpec, index: Index) -> list[LNode]:
     if spec.continuation:
         nid, s, e = spec.continuation
@@ -272,7 +279,7 @@ def _build_sheet_roots(spec: SheetSpec, index: Index) -> list[LNode]:
         kids = parent.children[s:e]
         bus_sym = Symbol("bus_in", [], 0.0, 0.0, 0.0)
         root = LNode(None, "bus_in", bus_sym, [_build(c, spec, False) for c in kids],
-                     label=parent.ref or parent.label or nid, target=nid, bus_out=e < len(parent.children))
+                     label=_bus_name(parent, index), target=nid, bus_out=e < len(parent.children))
         return [root]
     return [_build(r, spec, True) for r in spec.roots if r.id not in spec.moved]
 
@@ -2702,8 +2709,9 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
                     continue
             boards = [n for n in lay.lnodes if n.is_board and n.node is not None and n.node.id not in root_ids
                       and n.node.id not in spec.detached and n.width >= 3 * view.pitch_mm]
-            if boards:
-                spec.detached.add(_board_to_detach(boards, lay, view).node.id)  # type: ignore[union-attr]
+            board = _board_to_detach(boards, lay, view, keep_whole=allow_bus_split)
+            if board is not None:
+                spec.detached.add(board.node.id)  # type: ignore[union-attr]
                 continue
             if allow_bus_split:
                 conts = _split_bus(spec, lay, view, index, normalize_lang(doc.meta.lang))
@@ -2729,17 +2737,20 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
     return process(first)
 
 
-def _board_to_detach(boards: list[LNode], lay: SheetLayout, view: View) -> LNode:
-    """The board to draw on its own sheet: the narrowest whose departure makes the sheet fit (the rest of the tree
-    keeps its upstream boards: not a sheet holding only an incomer), otherwise the widest that is not nearly the
-    whole sheet, otherwise the widest."""
+def _board_to_detach(boards: list[LNode], lay: SheetLayout, view: View, keep_whole: bool = False) -> Optional[LNode]:
+    """The board to draw on its own sheet: among those that are not nearly the whole sheet, the narrowest whose
+    departure makes the sheet fit, otherwise the widest (the rest of the tree keeps its upstream boards: not a sheet
+    holding only an incomer). A board that is nearly the whole sheet (the main board) stays with its supply when
+    ``keep_whole``: its busbar is continued on the next sheets instead; ``None`` then."""
     _, _, aw, _ = drawing_area(view)
     excess = lay.width - aw / view.min_scale
-    enough = [n for n in boards if n.width - view.pitch_mm >= excess]
+    part = [n for n in boards if n.width < 0.85 * lay.width]
+    enough = [n for n in part if n.width - view.pitch_mm >= excess]
     if enough:
         return min(enough, key=lambda n: n.width)
-    part = [n for n in boards if n.width < 0.85 * lay.width]
-    return max(part or boards, key=lambda n: n.width)
+    if part:
+        return max(part, key=lambda n: n.width)
+    return None if keep_whole or not boards else max(boards, key=lambda n: n.width)
 
 
 def _walk_nodes(n: NodeBase) -> Iterator[NodeBase]:
@@ -2841,7 +2852,7 @@ def _split_bus(spec: SheetSpec, lay: SheetLayout, view: View, index: Index, lang
     prev = spec
     for s, e in chunks[1:]:
         c = SheetSpec([], detached=set(spec.detached), continuation=(node.id, s, e),  # type: ignore[arg-type]
-                      name=_t("render.continuation_name", lang, name=node.ref or node.label or node.id), prev=prev)
+                      name=_t("render.continuation_name", lang, name=_bus_name(node, index)), prev=prev)
         prev.next = c
         out.append(c)
         prev = c

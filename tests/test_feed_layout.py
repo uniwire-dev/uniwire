@@ -194,3 +194,16 @@ def test_board_taken_to_its_own_sheet_is_the_one_that_makes_the_sheet_fit():
     first = {n.node.id for n in lays[0].lnodes if n.node is not None and n.node.id}
     assert {"Q0", "MDB", "GDB"} <= first  # the supply keeps its boards
     assert len(lays) == 2 and all(fit_scale(lay, view) >= view.min_scale for lay in lays)
+
+
+def test_main_board_too_wide_stays_with_its_supply_and_continues_under_its_name():
+    # one main board, no sub-board to take away: not a first sheet with the supply alone, the board's busbar goes
+    # on over the next sheets, named after the board (not after the meter at its head)
+    feeders = [_br(f"Q{k}", [{"type": "load", "label": f"Machine {k}"}]) for k in range(1, 61)]
+    doc = _doc([{"type": "grid", "id": "G", "children": [{"type": "main_breaker", "id": "Q0", "ref": "-Q0",
+                "in_A": 630, "children": [{"type": "board", "id": "MSB", "ref": "MSB", "children": [
+                    {"type": "meter", "id": "P1", "ref": "P1", "children": feeders}]}]}]}], [])
+    lays, _ = _sheets(doc)
+    first = {n.node.id for n in lays[0].lnodes if n.node is not None and n.node.id}
+    assert {"Q0", "MSB", "P1", "Q1"} <= first and len(lays) >= 2
+    assert all(lay.spec.name.startswith("MSB") for lay in lays[1:])
