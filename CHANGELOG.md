@@ -6,7 +6,7 @@ The format and the library are versioned separately: the format follows `1.y.z` 
 version. Before the library's 1.0, a `0.x.y` release adds features and fixes that keep existing documents and
 code working, and a `0.x.0` release may break compatibility (described here, with what to change).
 
-## Unreleased
+## 0.1.4 (2026-10-28)
 
 * PDF: a page "About this document" may follow the sheets. It is not a sheet of the diagram (no folio number): the
   rule profiles applied and the number of findings, the scope of automatic checks, where the online copy is and how
