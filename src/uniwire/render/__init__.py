@@ -12,7 +12,7 @@ from typing import Any, Optional
 
 from ..i18n import normalize_lang
 from ..i18n import t as _t
-from ..layout.engine import drawing_area, layout_sheet, plan_sheets, sheet_node_ids
+from ..layout.engine import PAPER, drawing_area, layout_sheet, plan_sheets, sheet_node_ids
 from ..model import Document, View
 from ..resolve import build_index
 from .colors import colorize
@@ -221,14 +221,26 @@ def render_svg(doc: Document, out_dir: str | Path, stem: str = "sld", view: Opti
     return paths
 
 
-def render_pdf(doc: Document, path: str | Path, view: Optional[View] = None, all_views: bool = False) -> Path:
+def render_pdf(doc: Document, path: str | Path, view: Optional[View] = None, all_views: bool = False,
+               about: Optional[Any] = None) -> Path:
     """Render the sheets of ``view`` into one PDF at ``path`` (one page per sheet, bookmarks and clickable
     cross-sheet references); with ``all_views``, the sheets of every view of the document (:func:`render_views`).
+    ``about`` (:class:`~uniwire.render.about.About`): add the page "About this document" after the sheets.
     Needs the ``pdf`` extra (reportlab). Returns the path."""
     from .pdf import write_pdf
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     pages = render_views(doc) if all_views else render_pages(doc, view)
+    if about is not None:
+        pages = with_about(doc, pages, about)
     write_pdf(pages, path, normalize_lang(doc.meta.lang), doc.meta.title)
     return path
+
+
+def with_about(doc: Document, pages: list[Page], about: Any) -> list[Page]:
+    """``pages`` followed by the page "About this document", at the size of the first sheet."""
+    from .about import about_page
+
+    w, h = (pages[0].width, pages[0].height) if pages else PAPER["A4"]
+    return [*pages, about_page(doc, w, h, [p.title for p in pages], about)]

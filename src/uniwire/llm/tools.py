@@ -385,12 +385,14 @@ def pdf_filename(title: Optional[str]) -> str:
 
 
 def pdf_file(document: Any, kind: Optional[str] = None, color: Optional[str] = None,
-             conductor_colors: Optional[str] = None) -> dict[str, Any]:
+             conductor_colors: Optional[str] = None, about: Optional[dict[str, str]] = None) -> dict[str, Any]:
     """The PDF of a document and its file name: ``{pdf_base64, filename}``. Every view of the document, one after
     the other (a drawing set: multi-line power diagram, single-line diagram with the links...), or only its ``kind``
     views; ``color`` / ``conductor_colors`` override their colour mode. Not an assistant tool: the hosted server
-    serves it at ``GET /pdf/<id>`` (the ``pdf_url`` links, ``?kind=multi-line&color=phase``)."""
-    from ..render import default_view, render_views
+    serves it at ``GET /pdf/<id>`` (the ``pdf_url`` links, ``?kind=multi-line&color=phase``). ``about``
+    (``{"doc_id", "site"}``): the page "About this document" after the sheets (left out with ``?about=0``)."""
+    from ..render import default_view, render_views, with_about
+    from ..render.about import About
 
     for name, value in (("kind", kind), ("color", color), ("conductor_colors", conductor_colors)):
         if value is not None and value not in LINK_VIEW[name]:
@@ -404,6 +406,8 @@ def pdf_file(document: Any, kind: Optional[str] = None, color: Optional[str] = N
     pages = render_views(doc, [_with_colors(v, color, conductor_colors) for v in views])
     if PUBLIC and len(pages) > MAX_SHEETS:
         raise ToolError(f"too many sheets for this server: {len(pages)} (at most {MAX_SHEETS})")
+    if about is not None:
+        pages = with_about(doc, pages, About(about.get("doc_id"), about.get("site") or About.site))
     data = _pdf_bytes(doc, pages)
     if PUBLIC and len(data) > MAX_OUTPUT_BYTES:
         raise ToolError(f"output too large for this server (at most {MAX_OUTPUT_BYTES} bytes per rendering)")

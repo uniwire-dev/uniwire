@@ -11,6 +11,7 @@ from pathlib import Path
 
 from ..i18n import t as _t
 from .scene import Circle, Ellipse, Group, Item, Line, Page, Polyline, Rect, Style, Text, bbox
+from .scene import Path as Outline
 from .semantics import HIT_COLOR, has_cls
 from .svg import xml_safe
 
@@ -139,11 +140,16 @@ def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None, 
             c.setFillColorRGB(fr, fg, fb)
 
     refs: list[tuple[int, tuple[float, float, float, float]]] = []  # (target sheet, box in mm) on the current page
+    hrefs: list[tuple[str, tuple[float, float, float, float]]] = []  # (web address, box in mm) on the current page
 
     def draw(it: Item) -> None:
         if isinstance(it, Group):
             if has_cls(it, "uw-hit"):  # invisible hover path of the SVG output
                 return
+            if has_cls(it, "uw-href"):  # a web address (page "About this document")
+                box = bbox(it)
+                if box is not None and it.attrs.get("data-uw-href"):
+                    hrefs.append((it.attrs["data-uw-href"], box))
             if has_cls(it, "uw-ref"):
                 target = it.attrs.get("data-uw-target-sheet", "")
                 box = bbox(it)
@@ -170,6 +176,26 @@ def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None, 
             style(it.style)
             c.ellipse(it.c[0] - it.rx, it.c[1] - it.ry, it.c[0] + it.rx, it.c[1] + it.ry, stroke=1,
                       fill=1 if it.style.fill else 0)
+        elif isinstance(it, Outline):
+            r, g, b = (int(it.fill[i:i + 2], 16) / 255 for i in (1, 3, 5))
+            c.setFillColorRGB(r, g, b)
+            p = c.beginPath()
+            x0 = y0 = 0.0
+            for seg in it.segments:
+                if seg[0] == "M":
+                    p.moveTo(seg[1], seg[2])
+                    x0, y0 = seg[1], seg[2]
+                elif seg[0] == "L":
+                    p.lineTo(seg[1], seg[2])
+                    x0, y0 = seg[1], seg[2]
+                elif seg[0] == "Q":  # quadratic -> cubic Bezier
+                    qx, qy, x1, y1 = seg[1:]
+                    p.curveTo(x0 + 2 / 3 * (qx - x0), y0 + 2 / 3 * (qy - y0), x1 + 2 / 3 * (qx - x1),
+                              y1 + 2 / 3 * (qy - y1), x1, y1)
+                    x0, y0 = x1, y1
+                else:
+                    p.close()
+            c.drawPath(p, stroke=0, fill=1)
         elif isinstance(it, Rect):
             style(it.style)
             c.rect(it.x, it.y, it.w, it.h, stroke=1, fill=1 if it.style.fill else 0)
@@ -202,20 +228,27 @@ def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None, 
     for n, page in enumerate(pages, 1):
         c.setPageSize((page.width * mm, page.height * mm))
         c.bookmarkPage(_dest(n), fit="Fit")
-        c.addOutlineEntry(_t("render.sheet_bookmark", lang, number=n, title=xml_safe(page.title)) if page.title else
-                          _t("render.sheet_bookmark_untitled", lang, number=n), _dest(n), level=0)
+        if page.attrs.get("data-uw-about"):  # page "About this document": no sheet number
+            c.addOutlineEntry(xml_safe(page.title), _dest(n), level=0)
+        else:
+            c.addOutlineEntry(_t("render.sheet_bookmark", lang, number=n, title=xml_safe(page.title)) if page.title else
+                              _t("render.sheet_bookmark_untitled", lang, number=n), _dest(n), level=0)
         c.saveState()
         c.translate(0, page.height * mm)
         c.scale(mm, -mm)  # mm, y pointing down like the scene
         c.setLineCap(1)
         c.setLineJoin(1)
         refs.clear()
+        hrefs.clear()
         draw(page.root)
         c.restoreState()
         for target, (x0, y0, x1, y1) in refs:  # clickable area, in absolute PDF coordinates (pt, y up)
             pad = 0.8
             c.linkAbsolute("", _dest(target), ((x0 - pad) * mm, (page.height - y1 - pad) * mm,
                                                (x1 + pad) * mm, (page.height - y0 + pad) * mm), thickness=0)
+        for url, (x0, y0, x1, y1) in hrefs:
+            c.linkURL(url, (x0 * mm, (page.height - y1) * mm, x1 * mm, (page.height - y0) * mm), relative=0,
+                      thickness=0)
         c.showPage()
     if pages:
         c.showOutline()

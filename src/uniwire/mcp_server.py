@@ -498,7 +498,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             _add_icon_route(server)
         if store is not None:
             _add_doc_route(server, store)
-            _add_pdf_route(server, store, pool)
+            _add_pdf_route(server, store, pool, pdf_base.rpartition("/pdf/")[0] if pdf_base else None)
             _add_svg_route(server, store, pool)
         server.run("streamable-http", host=a.host, port=a.port, streamable_http_path=a.path,
                    stateless_http=True, json_response=True, transport_security=security, **extra)
@@ -526,9 +526,10 @@ def _add_icon_route(server) -> None:
         return RedirectResponse(ICON_URL, status_code=302)
 
 
-def _add_pdf_route(server, store, pool) -> None:
+def _add_pdf_route(server, store, pool, site: Optional[str] = None) -> None:
     """``GET /pdf/<id>`` -> the PDF of a stored document, drawn by the library (in a worker process with
-    ``pool``), shown inline with the document title as file name; 404 when unknown or expired."""
+    ``pool``), shown inline with the document title as file name; 404 when unknown or expired. With ``site``
+    (the address the links point to), the PDF ends with the page "About this document", unless ``?about=0``."""
     import base64
 
     from starlette.concurrency import run_in_threadpool
@@ -536,7 +537,7 @@ def _add_pdf_route(server, store, pool) -> None:
 
     headers = {"Cache-Control": "no-store", "X-Robots-Tag": "noindex", "X-Content-Type-Options": "nosniff"}
 
-    def make(text: str, view: dict[str, str]) -> dict[str, Any]:
+    def make(text: str, view: dict[str, Any]) -> dict[str, Any]:
         args = {"document": text, **view}
         return pool.call("pdf_file", args) if pool is not None else T.pdf_file(**args)
 
@@ -546,7 +547,10 @@ def _add_pdf_route(server, store, pool) -> None:
         if text is None:
             return _missing(store, request.path_params["doc_id"], headers)
         # ?kind=multi-line&color=phase: known options only, anything else is ignored
-        view = {k: v for k, v in request.query_params.items() if k in T.LINK_VIEW and v in T.LINK_VIEW[k]}
+        view: dict[str, Any] = {k: v for k, v in request.query_params.items()
+                                if k in T.LINK_VIEW and v in T.LINK_VIEW[k]}
+        if site and request.query_params.get("about") != "0":
+            view["about"] = {"doc_id": request.path_params["doc_id"], "site": site}
         t0 = time.monotonic()
         try:
             r = await run_in_threadpool(make, text, view)
