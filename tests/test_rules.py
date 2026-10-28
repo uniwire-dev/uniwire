@@ -40,6 +40,16 @@ def test_core_rules_without_profile():
     assert {"core.rating-cascade", "core.transfer-source"} <= r
 
 
+
+def test_battery_as_the_only_source_feeds_the_installation():
+    d = load({"installation": {"system": "DC", "un_V": 24}, "sources": [
+        {"type": "battery", "un_V": 24, "children": [{"type": "fuse", "in_A": 10, "children": [{"type": "load"}]}]}]})
+    assert "core.terminal-node" not in rules_of(check(d))
+    d = load({"sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 32, "children": [
+        {"type": "battery", "children": [{"type": "load"}]}]}]}]})
+    assert "core.terminal-node" in rules_of(check(d))  # below a device, it still feeds nothing
+
+
 # --- sources and NF C 15-100 rules ------- ----------------------------------------------
 
 def test_nfc15100_rules_carry_source_and_confidence():
