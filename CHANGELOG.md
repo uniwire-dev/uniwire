@@ -10,6 +10,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 This release also ships the changes of 0.1.2, which was not published on its own (see below).
 
+* Cable texts: a protective conductor run beside the cores (`pe_section_mm2` with a composition such as `4x`) is
+  written with them, `4x25+PE16`, in the drawings, the feeder tables, the bill of materials and the cable lists; it
+  was left out, so that a cable with its own PE read as a cable without one.
+
 * Multi-line view: the auxiliary devices (`devices`) and the control, interlock, trip, measure, data, key and earth
   links are drawn, placed and routed as in the single-line view (beside the node they are linked to, clear of the
   conductor bundles and the symbols), with a band above the feeder cables for their channels; a PLC is drawn with
