@@ -83,7 +83,7 @@ def test_layout_reused_for_the_same_document_and_never_shared():
 
     from uniwire.render import _PAGES
     path = sorted((ROOT / "examples").glob("01_*.uniwire.json"))[0]
-    first = render_pages(load(json.loads(path.read_text())))
+    first = render_pages(load(json.loads(path.read_text(encoding="utf-8"))))
     first[0].root.items.clear()  # a caller altering its pages does not alter the next caller's
-    second = render_pages(load(json.loads(path.read_text())))
+    second = render_pages(load(json.loads(path.read_text(encoding="utf-8"))))
     assert len(_PAGES) == 1 and second[0].root.items
