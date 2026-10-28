@@ -52,6 +52,9 @@ in `uniwire.rules.RULE_INFO`. See [Rules](rules.md).
 ```python
 paths = uniwire.render_svg(doc, "out/house", stem="house")   # list of SVG files, one per sheet
 pdf = uniwire.render_pdf(doc, "out/house.pdf")               # one multi-page PDF (needs uniwire[pdf])
+# with the page "About this document" after the sheets (checks, contact; About(doc_id) names the online copy)
+from uniwire.render.about import About
+pdf = uniwire.render_pdf(doc, "out/house.pdf", about=About())
 pages = uniwire.render_pages(doc)                            # in-memory pages (layout primitives)
 ```
 
