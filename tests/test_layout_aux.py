@@ -73,6 +73,11 @@ def test_devices_keep_clear_of_load_axes(monkeypatch):
 def test_bare_core_count_and_plc_family():
     assert cable_text(Cable(cores="2", section_mm2=1.5)) == "2x1.5"
     assert cable_text(Cable(cores="3G", section_mm2=2.5)) == "3G2.5"
+    # a protective conductor run beside the cores is written with them; a 'G' composition already holds it
+    assert cable_text(Cable(cores="4x", section_mm2=25, pe_section_mm2=16)) == "4x25+PE16"
+    assert cable_text(Cable(cores="4x", section_mm2=120, pe_section_mm2=70, parallel=2)) == "2x(4x120+PE70)"
+    assert cable_text(Cable(cores="5G", section_mm2=16, pe_section_mm2=16)) == "5G16"
+    assert cable_text(Cable(cores="3x150+70", section_mm2=150, pe_section_mm2=70)) == "3x150+70"
     plc = load(DOC).sources[0].children[0].children[0].children[0].children[0].children[0]
     sym = symbol_for(plc)
     head = next(i for i in sym.items if isinstance(i, Rect))

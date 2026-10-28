@@ -200,7 +200,7 @@ def cable_in_awg(c: Optional[Cable]) -> bool:
 
 
 def cable_text(c: Optional[Cable]) -> str:
-    """'3G2,5', '4x(2x1x240)', '2x(5G16)'; North-American sizes when given, unless the composition is written the
+    """'3G2,5', '4x(2x1x240)', '2x(5G16)', '4x25+PE16'; North-American sizes when given, unless the composition is written the
     IEC way ('3G' + mm²): '2-#12', '3x(4-600 kcmil)' (the section in mm² then only serves the checks)."""
     if c is None:
         return ""
@@ -215,6 +215,8 @@ def cable_text(c: Optional[Cable]) -> str:
             s = cores  # the composition already has its sections ('3x150+70', '4x(1x240)')
         else:
             s = f"{cores}{glue}{sec}" if cores else sec
+        if c.pe_section_mm2 and "G" not in cores.upper() and "+" not in s:
+            s += f"+PE{fmt(c.pe_section_mm2)}"  # protective conductor run beside the cores: '4x25+PE16'
     elif c.size_awg:
         size = awg_text(c.size_awg)
         if not cores:
