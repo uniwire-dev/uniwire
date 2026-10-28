@@ -50,6 +50,18 @@ def test_battery_as_the_only_source_feeds_the_installation():
     assert "core.terminal-node" in rules_of(check(d))  # below a device, it still feeds nothing
 
 
+
+def test_profile_without_any_cable_size_says_cables_were_not_checked():
+    feeders = [{"type": "breaker", "in_A": 32, "children": [{"type": "load"}]}]
+    d = load({"profiles": ["iec60364"], "sources": [{"type": "grid", "children": feeders}]})
+    assert "core.no-cables" in rules_of(check(d))
+    feeders[0]["cable"] = {"cores": "3G", "section_mm2": 6}
+    d = load({"profiles": ["iec60364"], "sources": [{"type": "grid", "children": feeders}]})
+    assert "core.no-cables" not in rules_of(check(d))
+    d = load({"sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 32}]}]})
+    assert "core.no-cables" not in rules_of(check(d))  # no profile: core.no-profile says it already
+
+
 # --- sources and NF C 15-100 rules ------- ----------------------------------------------
 
 def test_nfc15100_rules_carry_source_and_confidence():
