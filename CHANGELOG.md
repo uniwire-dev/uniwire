@@ -21,6 +21,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   side no longer touch the next one).
 * Checks: a battery at the root of `sources`, the only source of a DC system (vehicle, boat, off-grid site), may
   feed the installation: no `core.terminal-node` warning.
+* Checks: `core.no-cables` (info) when a profile that checks cables is active but no circuit gives its cable size,
+  so that an empty result is not read as cables checked.
+* Drawings: a link label with no clear place on one line (a short link) goes on two lines, clear of the symbols;
+  a wrapped line no longer starts with a separator (a dash, `/`, `:`).
+* Drawings: a device text that repeats its label in another case (`Type 2` under `… type 2`) is not repeated.
+* Reference card for assistants: socket-outlets are entered as `socket` nodes even on a shared circuit (so the RCD
+  rules see them), and a feeder continued elsewhere ends on an `offpage` node, not a `spare`.
 
 ## 0.1.4 (2026-10-28)
 
