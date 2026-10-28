@@ -14,6 +14,6 @@ from .render import render_pages, render_pdf, render_svg
 from .resolve import UniwireError, dump, load
 from .rules import check
 
-__version__ = "0.1.1"
+__version__ = "0.1.3"
 __all__ = ["FORMAT_VERSION", "Document", "UniwireError", "check", "dump", "load", "render_pages",
            "render_pdf", "render_svg"]

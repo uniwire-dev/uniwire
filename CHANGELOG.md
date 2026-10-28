@@ -6,7 +6,9 @@ The format and the library are versioned separately: the format follows `1.y.z` 
 version. Before the library's 1.0, a `0.x.y` release adds features and fixes that keep existing documents and
 code working, and a `0.x.0` release may break compatibility (described here, with what to change).
 
-## Unreleased
+## 0.1.3 (2026-10-28)
+
+This release also ships the changes of 0.1.2, which was not published on its own (see below).
 
 * Multi-line view: the auxiliary devices (`devices`) and the control, interlock, trip, measure, data, key and earth
   links are drawn, placed and routed as in the single-line view (beside the node they are linked to, clear of the
@@ -261,7 +263,7 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   * Examples 15 and 36: lighting and socket circuits spread over two RCDs; the reference card example and the
     quickstart use two RCDs.
 
-## 0.1.2 (not released yet)
+## 0.1.2 (not published: shipped in 0.1.3)
 
 * Bill of materials: equipment without a product reference is grouped by type and main characteristics (new
   `spec` key, e.g. `C16 1P+N 6kA`, `40A 30mA 2P type A`) and cables by type, composition and material (new
