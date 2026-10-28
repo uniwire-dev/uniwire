@@ -3,7 +3,7 @@ import json
 import pytest
 
 from uniwire import UniwireError, dump, load
-from uniwire.units import fmt, parse_quantity
+from uniwire.units import fmt, fmt_power, parse_quantity
 
 MINI = {
     "templates": {"C16": {"type": "breaker", "in_A": 16, "curve": "C"}},
@@ -127,3 +127,8 @@ def test_cli_version(capsys):
     assert exc.value.code == 0
     out = capsys.readouterr().out
     assert uniwire.__version__ in out and uniwire.FORMAT_VERSION in out
+
+
+def test_fmt_power_in_watts_below_1_kw():
+    assert fmt_power(0.0162) == "16.2 W" and fmt_power(0.00075) == "0.75 W" and fmt_power(0.5) == "500 W"
+    assert fmt_power(1) == "1 kW" and fmt_power(3.5) == "3.5 kW" and fmt_power(None) == ""

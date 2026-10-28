@@ -11,7 +11,7 @@ from . import registry
 from .i18n import DECIMAL_COMMA, normalize_lang, render_lang
 from .i18n import t as _t
 from .model import Cable, NodeBase
-from .units import fmt, fmt_sensitivity
+from .units import fmt, fmt_power, fmt_sensitivity
 
 PROTECTIVE = {"breaker", "rcbo", "main_breaker", "fuse", "fuse_switch", "rcd", "switch_disconnector",
               "disconnector", "motor_starter"}
@@ -334,6 +334,8 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
     elif t == "pv_array":
         mod = f"{g('modules')} x {fmt(g('module_W'))} {_t('ann.peak_power_unit', lang)}" if g("modules") and g("module_W") else ""
         lines += [mod, fmt(g("p_kW"), " " + _t("ann.peak_power_kunit", lang)) if g("p_kW") else ""]
+    elif t == "dc_converter":
+        lines += [fmt(g("un_V"), " V") if g("un_V") else "", fmt(g("in_A"), " A") if g("in_A") else ""]
     elif t == "battery":
         lines += [fmt(g("capacity_kWh"), " kWh") if g("capacity_kWh") else "", fmt(g("un_V"), " V") if g("un_V") else ""]
     elif t == "motor":
@@ -411,8 +413,8 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
     if field == "p_kW":
         p = _g(leaf, "p_kW")
         if not p and _g(leaf, "p_max_kW"):
-            return f"≤ {fmt(_g(leaf, 'p_max_kW'), ' kW')}"
-        return fmt(p, " kW") if p else ""
+            return f"≤ {fmt_power(_g(leaf, 'p_max_kW'))}"
+        return fmt_power(p) if p else ""
     if field == "phase":
         ph = _g(leaf, "phase") or _g(prot, "phase")
         if not ph and (_g(prot, "poles") in THREE_PHASE_POLES or _g(leaf, "phases") == 3):

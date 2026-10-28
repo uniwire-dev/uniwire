@@ -44,7 +44,10 @@ def links_consistency(doc: Document, idx: Index):
 
 @rule("core")
 def leaf_after_source(doc: Document, idx: Index):
+    roots = {s.id for s in doc.sources}
     for nid, n in idx.nodes.items():
+        if n.type == "battery" and nid in roots:  # the only source of a DC system (vehicle, boat, off-grid site)
+            continue
         if n.type in ("pv_array", "battery", "spd", "earth") and n.children:  # type: ignore[attr-defined]
             yield Finding("warning", "core.terminal-node", _t("core.terminal_node", type=n.type), nid)  # type: ignore[attr-defined]
 
