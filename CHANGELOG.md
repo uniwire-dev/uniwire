@@ -6,6 +6,18 @@ The format and the library are versioned separately: the format follows `1.y.z` 
 version. Before the library's 1.0, a `0.x.y` release adds features and fixes that keep existing documents and
 code working, and a `0.x.0` release may break compatibility (described here, with what to change).
 
+## Unreleased
+
+* PDF: a page "About this document" may follow the sheets. It is not a sheet of the diagram (no folio number): the
+  rule profiles applied and the number of findings, the scope of automatic checks, where the online copy is and how
+  to delete it, and how to write to the uniwire team, with a QR code. Every address on it is a link. In the 10
+  languages of the drawings. The hosted server adds it to `GET /pdf/<id>` (`?about=0` leaves it out), the web
+  editor offers it with a box in the Download menu (remembered by the browser), and the command line with
+  `uniwire render -f pdf --about` (`--doc-id` names the online copy); `render_pdf(..., about=About(...))`.
+* PDF and SVG: web addresses can be links (groups of class `uw-href`); the drawings can hold filled outlines
+  (`Path`, used for the logo).
+* Web editor: a short link whose document was deleted says so.
+
 ## 0.1.3 (2026-10-28)
 
 This release also ships the changes of 0.1.2, which was not published on its own (see below).

@@ -25,6 +25,7 @@ const state = {
   initialSheet: null,  // sheet number requested by the URL (#sheet=n), applied on the first render
   hashDoc: null,       // #doc= payload last loaded
   hashShort: null,     // #d= id last loaded (short link)
+  shortText: null,     // its text as loaded: the PDF names the online copy only while the document is unchanged
   pendingDownload: null, // export requested by the URL (#doc=…&download=pdf), run after the first valid render
   sheet: 0,
   view: "",            // requested view id ("" = first)
@@ -1012,13 +1013,24 @@ async function onDownload(kind) {
   if (kind === "pdf") {
     toast(t("msg.pdf_wait"), 60000);
     try {
-      const r = await call("pdf", { text, view: state.view, kind: state.kind, lang: lang(), options: viewOverrides() });
+      const r = await call("pdf", { text, view: state.view, kind: state.kind, lang: lang(), options: viewOverrides(),
+                                    about: aboutPage(text) });
       download(`${state.stem}${suffix()}.pdf`, new Blob([r.bytes], { type: "application/pdf" }));
       hideToast();
     } catch (err) {
       toast(t("msg.pdf_failed", { error: err.message || err }), 8000);
     }
   }
+}
+
+/** The page "About this document" of the PDF (null when unticked): the short link's id while the document is the
+ * one it opened, and the site the links point to (this one, or uniwire.sh for a copy of the editor on this machine). */
+function aboutPage(text) {
+  const box = $("#dl-about");
+  if (!box || !box.checked) return null;
+  const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || !location.protocol.startsWith("http");
+  return { doc_id: state.hashShort && text === state.shortText ? state.hashShort : null,
+           site: local ? "https://uniwire.sh" : location.origin };
 }
 
 function closeMenu() {
@@ -1099,6 +1111,11 @@ function setupUi() {
     if (!list.hidden) list.querySelector("button").focus();
   });
   document.querySelectorAll("#dl-list [data-dl]").forEach((b) => b.addEventListener("click", () => onDownload(b.dataset.dl)));
+  const aboutBox = $("#dl-about");
+  try { aboutBox.checked = localStorage.getItem("uniwire-about") !== "0"; } catch (e) { /* storage blocked: ticked */ }
+  aboutBox.addEventListener("change", () => {
+    try { localStorage.setItem("uniwire-about", aboutBox.checked ? "1" : "0"); } catch (e) { /* not remembered */ }
+  });
   document.addEventListener("click", (e) => { if (!e.target.closest("#dl-menu")) closeMenu(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
 
@@ -1233,8 +1250,10 @@ async function openInitialDocument(fromHashChange) {
       showPreview(`/api/svg/${state.hashShort}`);
       const r = await fetch(`/api/doc/${state.hashShort}`, { cache: "no-store" });
       if (r.status === 404) return sharedFailed(t("msg.short_missing"));
+      if (r.status === 410) return sharedFailed(t("msg.short_deleted"));
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return openShared(prettyJson(await r.text()), fromHashChange);
+      state.shortText = prettyJson(await r.text());
+      return openShared(state.shortText, fromHashChange);
     } catch (err) {
       return sharedFailed(t("msg.short_error", { error: err.message || err }));
     }

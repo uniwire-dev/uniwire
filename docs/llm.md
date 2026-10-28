@@ -99,6 +99,11 @@ document title. It works without the editor and cannot be mistaken for `viewer_u
 (default: the editor URL with `/viewer/` replaced by `/pdf/`). `GET /svg/<id>` serves the first sheet as SVG, which
 the web editor shows while its engine starts, and `GET /doc/<id>` the document text.
 
+The PDF of `GET /pdf/<id>` ends with a page "About this document", which is not a sheet of the diagram: the rule
+profiles applied and the findings, the scope of the checks, the links of the online copy and how to delete it, and
+how to write to the uniwire team. `?about=0` leaves it out. Whoever holds a link can delete its document before it
+expires (`POST /doc/<id>/delete`, never a GET); the links of a deleted document answer 410.
+
 ## Reference card
 
 ```bash

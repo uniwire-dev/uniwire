@@ -225,5 +225,10 @@ def export_pdf(request: str) -> str:
         view = default_view(doc, None, req.get("kind") or None)
     view = _apply_options(view, req.get("options"))
     path = "/tmp/uniwire-export.pdf"
-    render_pdf(doc, path, view)
+    about = req.get("about")
+    if about:
+        from uniwire.render.about import About
+
+        about = About(about.get("doc_id"), about.get("site") or About.site)
+    render_pdf(doc, path, view, about=about or None)
     return path

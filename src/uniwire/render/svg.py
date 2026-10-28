@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from xml.sax import saxutils
 
-from .scene import Circle, Ellipse, Group, Item, Line, Page, Polyline, Rect, Style, Text
+from .scene import Circle, Ellipse, Group, Item, Line, Page, Path, Polyline, Rect, Style, Text
 
 FONT = "Arial, Helvetica, 'Liberation Sans', sans-serif"
 
@@ -57,10 +57,15 @@ def _item(it: Item, out: list[str], indent: str) -> None:
             attrs += f" class={quoteattr(it.cls)}"
         for k, v in it.attrs.items():
             attrs += f" {k}={quoteattr(v)}"
+        href = it.attrs.get("data-uw-href") if it.cls == "uw-href" else None
+        if href:
+            out.append(f"{indent}<a href={quoteattr(href)}>")
         out.append(f"{indent}<g{attrs}>")
         for c in it.items:
             _item(c, out, indent + " ")
         out.append(f"{indent}</g>")
+        if href:
+            out.append(f"{indent}</a>")
     elif isinstance(it, Line):
         out.append(f'{indent}<line x1="{_n(it.a[0])}" y1="{_n(it.a[1])}" x2="{_n(it.b[0])}" y2="{_n(it.b[1])}" '
                    f'{_style(it.style)} stroke-linecap="round"/>')
@@ -76,6 +81,9 @@ def _item(it: Item, out: list[str], indent: str) -> None:
     elif isinstance(it, Rect):
         out.append(f'{indent}<rect x="{_n(it.x)}" y="{_n(it.y)}" width="{_n(it.w)}" height="{_n(it.h)}" '
                    f'{_style(it.style)}/>')
+    elif isinstance(it, Path):
+        d = " ".join(seg[0] + " ".join(_n(v) for v in seg[1:]) for seg in it.segments)
+        out.append(f'{indent}<path d="{d}" fill={quoteattr(it.fill)}/>')
     elif isinstance(it, Text):
         base = {"middle": "central", "hanging": "hanging"}.get(it.baseline, "auto")
         tr = f' transform="rotate({_n(-it.rotate)} {_n(it.p[0])} {_n(it.p[1])})"' if it.rotate else ""
