@@ -87,10 +87,10 @@
                   ]
                 },
                 {
-                  "id": "QF", "type": "breaker", "ref": "-QF", "use": "SAF", "in_A": 160, "ir_A": 125,
+                  "id": "QF", "type": "breaker", "ref": "-QF", "use": "SAF", "in_A": 160, "ir_A": 125, "poles": "4P",
                   "label": "FIRE SERVICES: DO NOT SWITCH OFF",
                   "cable": {
-                    "cores": "4G", "section_mm2": 50, "length_m": 25, "designation": "FP400 / PH120 fire-resistant",
+                    "cores": "5G", "section_mm2": 50, "length_m": 25, "designation": "FP400 / PH120 fire-resistant",
                     "material": "Cu", "cpr_class": "B2ca-s1a,d1,a1"
                   },
                   "priority": "safety",
@@ -243,7 +243,7 @@
         {
           "id": "QG", "type": "breaker", "ref": "-QG", "use": "SAF", "in_A": 250, "ir_A": 200, "poles": "4P",
           "cable": {
-            "cores": "4G", "section_mm2": 70, "length_m": 30, "designation": "FP400 / PH120 fire-resistant",
+            "cores": "5G", "section_mm2": 70, "length_m": 30, "designation": "FP400 / PH120 fire-resistant",
             "material": "Cu", "cpr_class": "B2ca-s1a,d1,a1"
           }
         }

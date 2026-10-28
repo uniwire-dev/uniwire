@@ -1,0 +1,235 @@
+{
+ "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
+ "uniwire": "1.0.0",
+ "meta": {
+  "title": "Example office: hybrid inverter with rooftop PV, battery and essential loads board",
+  "project": "EX-53",
+  "client": "Example Office",
+  "author": "uniwire examples",
+  "lang": "en",
+  "notes": [
+   "Demonstrates: hybrid inverter drawn as a source of its own, AC input fed from the main board through an 'infeed' link, DC side with two PV strings (each with its disconnector and surge protector) and a battery, an essential loads board on the backup output, an export-limiting CT (measure link) and a narrow rooftop enclosure with a long label",
+   "The inverter takes its AC input from -Q3 of the main board and backs up the essential loads board when the grid fails",
+   "String disconnectors and DC surge protectors in a rooftop enclosure next to the array"
+  ]
+ },
+ "installation": {
+  "earthing": "TN-S",
+  "system": "3P+N",
+  "un_V": 400,
+  "uln_V": 230,
+  "f_Hz": 50,
+  "supply": "Public LV network 63 A",
+  "ik3_kA": 6,
+  "standard": "IEC 60364-7-712 (informative)"
+ },
+ "sources": [
+  {
+   "type": "grid",
+   "label": "LV network",
+   "children": [
+    {
+     "type": "meter",
+     "id": "MTR",
+     "ref": "P1",
+     "label": "Energy meter",
+     "kind": "Import / export",
+     "bidirectional": true,
+     "children": [
+      {
+       "type": "board",
+       "id": "MDB",
+       "ref": "MDB",
+       "label": "Main distribution board",
+       "system": "3P+N",
+       "children": [
+        {
+         "type": "switch_disconnector",
+         "ref": "-Q0",
+         "label": "Main switch",
+         "in_A": 63,
+         "poles": "4P",
+         "children": [
+          {
+           "type": "busbar",
+           "id": "MDB_BB",
+           "ref": "W1",
+           "children": [
+            {
+             "type": "rcbo",
+             "id": "QINV",
+             "ref": "-Q3",
+             "label": "Hybrid inverter AC input",
+             "in_A": 25,
+             "curve": "C",
+             "idn_mA": 30,
+             "rcd_type": "A",
+             "poles": "1P+N",
+             "phase": "L1",
+             "cable": {"cores": "3G", "section_mm2": 6, "length_m": 8}
+            },
+            {
+             "type": "rcd",
+             "ref": "-F1",
+             "label": "Offices",
+             "in_A": 40,
+             "idn_mA": 30,
+             "rcd_type": "A",
+             "poles": "4P",
+             "children": [
+              {
+               "type": "breaker",
+               "ref": "-Q11",
+               "in_A": 10,
+               "curve": "C",
+               "poles": "1P+N",
+               "phase": "L2",
+               "children": [{"type": "lighting", "label": "Open-plan lighting", "points": 14}]
+              },
+              {
+               "type": "breaker",
+               "ref": "-Q12",
+               "in_A": 16,
+               "curve": "C",
+               "poles": "1P+N",
+               "phase": "L3",
+               "children": [{"type": "socket", "label": "Desk sockets", "points": 8}]
+              },
+              {
+               "type": "breaker",
+               "ref": "-Q13",
+               "in_A": 16,
+               "curve": "C",
+               "poles": "1P+N",
+               "phase": "L2",
+               "children": [{"type": "spare", "label": "Spare"}]
+              }
+             ]
+            },
+            {
+             "type": "breaker",
+             "ref": "-Q20",
+             "label": "Air conditioning",
+             "in_A": 20,
+             "curve": "C",
+             "poles": "3P+N",
+             "children": [{"type": "ventilation", "label": "Split air conditioning", "p_kW": 7.5}]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "inverter",
+   "id": "INV",
+   "ref": "-U1",
+   "label": "Hybrid inverter",
+   "kind": "hybrid",
+   "p_kVA": 6,
+   "mppt": 2,
+   "un_V": 230,
+   "children": [
+    {
+     "type": "switch_disconnector",
+     "id": "QS1",
+     "ref": "-QS1",
+     "label": "String 1",
+     "in_A": 25,
+     "poles": "2P",
+     "dc": true,
+     "children": [
+      {"type": "spd", "id": "FS1", "ref": "-FS1", "spd_type": "2", "imax_kA": 40},
+      {"type": "pv_array", "ref": "PV1", "label": "South roof", "modules": 9, "module_W": 420, "p_kW": 3.8}
+     ]
+    },
+    {
+     "type": "switch_disconnector",
+     "id": "QS2",
+     "ref": "-QS2",
+     "label": "String 2",
+     "in_A": 25,
+     "poles": "2P",
+     "dc": true,
+     "children": [
+      {"type": "spd", "id": "FS2", "ref": "-FS2", "spd_type": "2", "imax_kA": 40},
+      {"type": "pv_array", "ref": "PV2", "label": "West roof", "modules": 7, "module_W": 420, "p_kW": 2.9}
+     ]
+    },
+    {
+     "type": "fuse_switch",
+     "ref": "-FB1",
+     "label": "Battery",
+     "in_A": 125,
+     "fuse_A": 100,
+     "poles": "2P",
+     "children": [
+      {"type": "battery", "id": "BAT", "ref": "-G2", "label": "Battery 10 kWh", "capacity_kWh": 10, "technology": "LFP", "un_V": 51.2}
+     ]
+    },
+    {
+     "type": "breaker",
+     "ref": "-Q4",
+     "label": "Backup output",
+     "in_A": 32,
+     "curve": "C",
+     "poles": "1P+N",
+     "cable": {"cores": "3G", "section_mm2": 6, "length_m": 4},
+     "children": [
+      {
+       "type": "board",
+       "id": "EDB",
+       "ref": "EDB",
+       "label": "Essential loads board",
+       "system": "1P+N",
+       "children": [
+        {
+         "type": "rcbo",
+         "ref": "-Q41",
+         "in_A": 16,
+         "curve": "C",
+         "idn_mA": 30,
+         "rcd_type": "A",
+         "children": [{"type": "socket", "label": "Server rack", "points": 2}]
+        },
+        {
+         "type": "rcbo",
+         "ref": "-Q42",
+         "in_A": 10,
+         "curve": "C",
+         "idn_mA": 30,
+         "rcd_type": "A",
+         "children": [{"type": "lighting", "label": "Emergency lighting", "points": 6}]
+        },
+        {
+         "type": "rcbo",
+         "ref": "-Q43",
+         "in_A": 16,
+         "curve": "C",
+         "idn_mA": 30,
+         "rcd_type": "A",
+         "children": [{"type": "appliance", "label": "Kitchen fridge", "kind": "fridge"}]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "links": [
+  {"id": "L_IN", "kind": "infeed", "from": "QINV", "to": "INV", "label": "W3 AC input"},
+  {"id": "L_CT", "kind": "measure", "from": "MTR", "to": "INV", "label": "Export limiting CT"}
+ ],
+ "enclosures": [
+  {"id": "E_ROOF", "ref": "+R1", "label": "Rooftop DC isolator enclosure", "kind": "box", "nodes": ["QS1", "FS1"]}
+ ],
+ "views": [
+  {"id": "sld", "paper": "A3", "cartouche": ["label", "ref", "protection", "poles", "idn_mA", "cable", "phase", "p_kW"]}
+ ]
+}

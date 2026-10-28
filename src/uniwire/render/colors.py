@@ -15,6 +15,7 @@ from typing import Any, Optional
 
 from .. import registry
 from ..i18n import t as _t
+from ..labels import north_american
 from ..model import Document, NodeBase, View
 from ..resolve import Index
 from .scene import Circle, Ellipse, Group, Item, Line, Polyline, Rect, Style, Text
@@ -67,10 +68,7 @@ def conductor_preset(doc: Document, view: View) -> str:
     """``view.conductor_colors``, else 'us' for a document following the NEC / CEC, else 'iec'."""
     if view.conductor_colors:
         return view.conductor_colors
-    std = (doc.installation.standard or "").upper()
-    if any(k in std for k in ("NEC", "NFPA", "CEC", "CSA")) or any(p.lower().startswith("nec") for p in doc.profiles):
-        return "us"
-    return "iec"
+    return "us" if north_american(doc) else "iec"
 
 
 def _phases(text: Optional[str]) -> list[str]:

@@ -69,7 +69,9 @@ uniwire.render_svg(doc, "out/house-ml", stem="house-ml", view=view)
 ```
 
 The language of the drawing (title block, table headings, type labels) follows `meta.lang` of the
-document: `"en"` (default) or `"fr"`.
+document: `"en"` (default), `"fr"`, `"de"`, `"es"`, `"pt"`, `"it"`, `"pl"`, `"tr"`, `"ru"` or `"zh"` (Simplified
+Chinese). Another language falls back to English for the texts uniwire writes; the texts of the document are drawn
+as written.
 
 Colours: a view with `color` set (`conductors`, `phase`, `source`, `status`, `voltage`, SPEC §7) recolours
 the strokes and adds a legend on each sheet, in SVG and PDF alike:
@@ -95,7 +97,7 @@ new classes / attributes may be added.
 | node | `<g class="sym sym-… uw-node" data-uw-id="ID">` (multi-line: `ml-sym …`); a board is its frame and name: `<g class="board uw-node" data-uw-id="ID">` | symbol of a node of the tree, of an auxiliary device (`devices`), of a device carried by a link (then also `data-uw-link="KEY"`, and `data-uw-id` only if the device has an `id`) |
 | tree edge | `<g class="uw-edge" data-uw-edge="CHILD" data-uw-parent="PARENT">` | the conductor(s) feeding `CHILD` from its parent or from the busbar tap; multi-line: one sub-group per conductor (`data-uw-cond`) |
 | busbar | `<g class="uw-busbar" data-uw-id="OWNER">`; multi-line: one per rail, with `data-uw-cond` | busbar of the node with several outgoing feeders (riser from its output included) |
-| link | `<g class="uw-link" data-uw-link="KEY" data-uw-kind="KIND" data-uw-from="ID" data-uw-to="ID">` | drawn path(s), carried device, label, plus a last child `<g class="uw-hit" pointer-events="stroke">`: the same paths with `stroke="transparent"`, 3 mm wide, for easy hovering. `KEY` = link `id`, else its index in `links` |
+| link | `<g class="uw-link" data-uw-link="KEY" data-uw-kind="KIND" data-uw-from="ID" data-uw-to="ID">` | drawn path(s) (an interrupted line: its two stubs, arrows and texts), carried device, label, plus a last child `<g class="uw-hit" pointer-events="stroke">`: the same paths with `stroke="transparent"`, 3 mm wide, for easy hovering. `KEY` = link `id`, else its index in `links` |
 | conductor | `data-uw-cond="L1"` (`L2`, `L3`, `N`, `PE`, `PEN`, `L+`, `L-`) on a small `<g>` (or on a pole group `class="pole"`) | multi-line only: one conductor segment, inside the edge / busbar / link / node it belongs to. With wire marking (SPEC §7.2), the conductor groups of the edge fed by a marked cable also carry `data-uw-mark="101"` (the mark, also written next to the line when there is room) |
 | reference | `<g class="uw-ref" data-uw-target-sheet="n" data-uw-target-id="ID">` (`n` empty when unknown) | off-page arrow of a board drawn on its own sheet (and its "→ sheet n" schedule label), busbar continuation, cross-sheet link end, incoming feed of a detached board (target: the feeding node) |
 | schedule column | `<g class="uw-cell" data-uw-id="ID">`, one `<g data-uw-field="FIELD">` per cell | feeder-table column of a leaf / feeder node |
@@ -189,7 +191,8 @@ uniwire marks mcc.uniwire.json --view marks --write              # freeze the ge
 ```
 
 CLI output, validation errors and rule findings follow the `UNIWIRE_LANG` environment variable
-(`en` by default, `fr` available):
+(`en` by default). French covers everything; German, Spanish, Portuguese, Russian and Chinese cover the rule
+findings, the CLI and validation messages staying in English:
 
 ```bash
 UNIWIRE_LANG=fr uniwire check house.uniwire.json

@@ -46,6 +46,10 @@ INSTRUCTIONS = (
     "Workflow: write the document, call check (it validates too), fix the findings (apply_patch edits nodes by "
     "id), then give the user the links. describe gives a compact outline with the stable ids to use in patches; "
     "the examples (list_examples, get_example) are good starting points to adapt to the user's project. "
+    "For a panel or cabinet to be built or wired (machine, PLC, pump or HVAC control panel), declare two views: "
+    "'multi-line' first (the power conductors), then 'single-line' (it also shows the auxiliary devices and "
+    "links); pdf_url holds every view. uniwire does not draw control schematics (coils, contacts, push buttons, "
+    "current paths): say so before you start and offer the power side. "
     "validate, check, apply_patch and render return 'viewer_url' and 'pdf_url': always give them to the user as "
     "clickable links. viewer_url opens the document in the uniwire web editor (drawing, findings, PDF and SVG "
     "downloads); pdf_url gives the PDF drawn by uniwire. They are two different links: when the user asks for a "
@@ -109,14 +113,19 @@ def _shorten(result: Any, store, base: str, pdf_base: Optional[str] = None) -> A
     ``pdf_url`` is ``<pdf_base><id>``, the PDF served by :func:`_add_pdf_route`: a plain link that does not depend
     on the editor running in the browser, and that cannot be mistaken for ``viewer_url``."""
     from .llm.link import document_from_link
+    from .llm.tools import LINK_VIEW
 
     if not (isinstance(result, dict) and "viewer_url" in result):
         return result
     id_ = store.put(document_from_link(result["viewer_url"]))
     if id_ is None:
         return result
-    url = f"{base}#d={id_}"
-    return {**result, "viewer_url": url, "pdf_url": f"{pdf_base}{id_}" if pdf_base else url + "&download=pdf"}
+    # view options of the long link (&kind=multi-line&color=phase) carry over to both short links
+    opts = [p for p in result["viewer_url"].partition("#")[2].split("&")[1:]
+            if p.partition("=")[0] in LINK_VIEW and p.partition("=")[2] in LINK_VIEW[p.partition("=")[0]]]
+    url = f"{base}#d={id_}" + "".join(f"&{p}" for p in opts)
+    pdf = f"{pdf_base}{id_}" + ("?" + "&".join(opts) if opts else "") if pdf_base else url + "&download=pdf"
+    return {**result, "viewer_url": url, "pdf_url": pdf}
 
 
 def _pdf_base(link_base: str) -> Optional[str]:
@@ -337,7 +346,7 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
 
     @tool("List the example installations")
     def list_examples() -> list[dict[str, Any]]:
-        """List the 52 example installations (dwellings, shops, offices, workshops, PV, EV charging, UPS, MV/LV
+        """List the 53 example installations (dwellings, shops, offices, workshops, PV, EV charging, UPS, MV/LV
         substations, PLCs): name, title, language, profiles, earthing, system."""
         return T.list_examples()
 
@@ -527,17 +536,20 @@ def _add_pdf_route(server, store, pool) -> None:
 
     headers = {"Cache-Control": "no-store", "X-Robots-Tag": "noindex", "X-Content-Type-Options": "nosniff"}
 
-    def make(text: str) -> dict[str, Any]:
-        return pool.call("pdf_file", {"document": text}) if pool is not None else T.pdf_file(text)
+    def make(text: str, view: dict[str, str]) -> dict[str, Any]:
+        args = {"document": text, **view}
+        return pool.call("pdf_file", args) if pool is not None else T.pdf_file(**args)
 
     @server.custom_route("/pdf/{doc_id}", methods=["GET"], include_in_schema=False)
     async def get_pdf(request):
         text = store.get(request.path_params["doc_id"])
         if text is None:
-            return PlainTextResponse("unknown or expired document", status_code=404, headers=headers)
+            return _missing(store, request.path_params["doc_id"], headers)
+        # ?kind=multi-line&color=phase: known options only, anything else is ignored
+        view = {k: v for k, v in request.query_params.items() if k in T.LINK_VIEW and v in T.LINK_VIEW[k]}
         t0 = time.monotonic()
         try:
-            r = await run_in_threadpool(make, text)
+            r = await run_in_threadpool(make, text, view)
         except Exception as e:  # noqa: BLE001  (worker errors and timeouts: a short message, no stack trace)
             log.info("route=pdf status=error ms=%d", (time.monotonic() - t0) * 1000)
             return PlainTextResponse(f"cannot draw this document: {e}", status_code=422, headers=headers)
@@ -564,7 +576,7 @@ def _add_svg_route(server, store, pool) -> None:
     async def get_svg(request):
         text = store.get(request.path_params["doc_id"])
         if text is None:
-            return PlainTextResponse("unknown or expired document", status_code=404, headers=headers)
+            return _missing(store, request.path_params["doc_id"], headers)
         t0 = time.monotonic()
         try:
             r = await run_in_threadpool(make, text)
@@ -575,9 +587,21 @@ def _add_svg_route(server, store, pool) -> None:
         return Response(r["svg"], media_type="image/svg+xml; charset=utf-8", headers=headers)
 
 
+def _missing(store, doc_id: str, headers: dict[str, str]):
+    """Answer for a document that cannot be served: 410 when a link holder deleted it, else 404."""
+    from starlette.responses import PlainTextResponse
+
+    if store.deleted(doc_id):
+        return PlainTextResponse("deleted at the request of a link holder", 410, headers=headers)
+    return PlainTextResponse("not found (links expire 30 days after their last use)", 404, headers=headers)
+
+
 def _add_doc_route(server, store) -> None:
-    """``GET /doc/<id>`` -> the stored document text (JSON), 404 when unknown or expired."""
-    from starlette.responses import PlainTextResponse, Response
+    """``GET /doc/<id>`` -> the stored document text (JSON), 404 when unknown or expired, 410 when deleted.
+    ``POST /doc/<id>/delete`` -> deletes it (204; 404 when there is nothing to delete): whoever holds a link can
+    already read and copy the document, so the link is enough to remove it. A POST, never a GET, so that link
+    checkers and previews cannot delete anything."""
+    from starlette.responses import Response
 
     headers = {"Cache-Control": "no-store", "X-Robots-Tag": "noindex", "X-Content-Type-Options": "nosniff"}
 
@@ -585,8 +609,15 @@ def _add_doc_route(server, store) -> None:
     async def get_doc(request):
         text = store.get(request.path_params["doc_id"])
         if text is None:
-            return PlainTextResponse("not found (links expire 30 days after their last use)", 404, headers=headers)
+            return _missing(store, request.path_params["doc_id"], headers)
         return Response(text, media_type="application/json", headers=headers)
+
+    @server.custom_route("/doc/{doc_id}/delete", methods=["POST"], include_in_schema=False)
+    async def delete_doc(request):
+        if not store.delete(request.path_params["doc_id"]):
+            return _missing(store, request.path_params["doc_id"], headers)
+        log.info("route=delete status=ok")
+        return Response(status_code=204, headers=headers)
 
 
 if __name__ == "__main__":

@@ -135,7 +135,7 @@ def describe(doc: DocLike, lang: str = "en", *, findings: bool = True, max_findi
     from ..rules import check
 
     lang = normalize_lang(lang)
-    T = _TEXT[lang]
+    T = _TEXT.get(lang, _TEXT["en"])
     d: Document = doc if isinstance(doc, Document) else load(as_dict(doc))
     L: list[str] = []
     add = L.append

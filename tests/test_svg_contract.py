@@ -184,3 +184,20 @@ def test_wire_marks_on_conductors():
     edges = {g.get("data-uw-edge") for g in _groups(svg, "uw-edge") for k in g if k.get("data-uw-mark")}
     assert {"M1", "M2", "M3"} <= edges
     assert not any(g.get("data-uw-mark") for s in _svgs(doc, "multi-line") for g in s.iter(NS + "g"))
+
+
+def test_pdf_cjk_text(tmp_path, monkeypatch):
+    pytest.importorskip("reportlab")
+    from uniwire.render import pdf
+    from uniwire.render.scene import Page, Text, text_width
+
+    assert pdf._runs("照明 Q1", "Helvetica", None) == [("STSong-Light", "照明"), ("Helvetica", " Q1")]
+    assert pdf._runs("キッチン 照明", "Helvetica", None)[0][0] == "HeiseiKakuGo-W5"
+    assert pdf._runs("조명", "Helvetica", None)[0][0] == "HYGothic-Medium"
+    assert pdf._runs("Q1 16 A", "Helvetica", None) == [("Helvetica", "Q1 16 A")]
+    assert text_width("照明", 10) == 20
+    monkeypatch.setattr(pdf, "_FONT_CANDIDATES", [])  # a system without fonts, like a slim container
+    page = Page(100, 30)
+    page.root.add(Text((5, 10), "照明 客厅", 5))
+    pdf.write_pdf([page], tmp_path / "t.pdf")
+    assert b"STSong-Light" in (tmp_path / "t.pdf").read_bytes()

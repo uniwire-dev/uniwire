@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 
 from ..i18n import t as _t
@@ -67,6 +68,34 @@ def rating_cascade(doc: Document, idx: Index):
                                   _t("core.rating_cascade", in_a=in_a, up=a.ref or a.id, up_in_a=a.in_A), nid)  # type: ignore[attr-defined]
                 break
 
+
+
+# Control circuits entered in the power tree: switching devices fed by a control power supply that switch nothing
+# (their coils drawn as power devices), and coils, push buttons and signal lamps entered as loads (IEC 81346 letter codes K, S, H).
+# Control links of a distribution diagram (load shedding, off-peak contactor, PLC command) are not concerned.
+CONTROL_FED = {"contactor", "impulse_relay", "thermal_relay", "motor_starter"}
+CONTROL_REF = re.compile(r"^-?(K[AMT]?|S[ABQ]?|HL?)\d", re.I)
+CONTROL_WORDS = ("coil", "relay", "push button", "pushbutton", "emergency stop", "e-stop", "bobine", "relais",
+                 "bouton", "arrêt d'urgence", "voyant", "线圈", "继电器", "按钮", "急停", "指示灯")
+
+
+def _control_node(nid: str, n, idx: Index) -> bool:
+    if n.type == "load":  # type: ignore[attr-defined]
+        return bool(CONTROL_REF.match(n.ref or "")) or any(w in (n.label or "").lower() for w in CONTROL_WORDS)
+    if n.type not in CONTROL_FED or n.children:  # type: ignore[attr-defined]
+        return False
+    up = next((a for a in idx.ancestors(nid) if a.type in VOLTAGE_CONVERTERS), None)  # type: ignore[attr-defined]
+    return up is not None and up.type == "power_supply"  # type: ignore[attr-defined]
+
+
+@rule("core")
+def control_scope(doc: Document, idx: Index):
+    """uniwire draws power distribution, not control schematics: say so once when the document describes
+    control circuits, so that the reader knows they are only summarized."""
+    nodes = [nid for nid, n in idx.nodes.items() if _control_node(nid, n, idx)]
+    if nodes:
+        names = [idx.nodes[i].ref or i for i in nodes[:3]] + (["..."] if len(nodes) > 3 else [])
+        yield Finding("info", "core.scope", _t("core.control_scope", nodes=", ".join(names)), nodes[0])
 
 
 def _closed_node(n) -> bool:

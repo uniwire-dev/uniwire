@@ -84,11 +84,15 @@ def test_dedicated_circuits_and_ev():
     assert ev == {"error", "info"}
 
 
-def test_rcd_type_dryer_and_rcd_count():
+def test_rcd_type_washing_machine_and_rcd_count():
     d = doc([{"type": "rcd", "idn_mA": 30, "rcd_type": "AC", "children": [
-        {"type": "breaker", "in_A": 20, "children": [{"type": "appliance", "kind": "dryer"}]}]}])
+        {"type": "breaker", "in_A": 20, "children": [{"type": "appliance", "kind": "washing_machine"}]}]}])
     r = rules_of(check(d))
     assert {"nfc15100.rcd-type-A", "nfc15100.rcd-count"} <= r
+    # the dryer is not among the uses that need a type A RCD (table 10-1G rule 2)
+    d = doc([{"type": "rcd", "idn_mA": 30, "rcd_type": "AC", "children": [
+        {"type": "breaker", "in_A": 20, "children": [{"type": "appliance", "kind": "dryer"}]}]}])
+    assert "nfc15100.rcd-type-A" not in rules_of(check(d))
 
 
 # --- profil iec60364 ------------------------------------------------------------------------
@@ -117,6 +121,23 @@ def test_iz_rule():
     assert not [f for f in check(iz_doc({"section_mm2": 2.5}, 63)) if f.rule == "iec60364.iz"]
     odd = dict(cable, install="Z9")
     assert {f.level for f in check(iz_doc(odd, 20)) if f.rule == "iec60364.iz"} == {"info"}
+
+
+def test_iz_reads_the_ambient_temperature_and_the_iec_name_d1():
+    cable = {"section_mm2": 2.5, "material": "Cu", "insulation": "PVC", "install": "B1"}  # 21 A at 40 °C
+
+    def iz_findings(c, in_A=24):
+        return [f for f in check(iz_doc(c, in_A)) if f.rule == "iec60364.iz"]
+    fs = iz_findings(cable)  # no ambient_C: 40 °C, and the message says so
+    assert len(fs) == 1 and fs[0].level == "warning" and "ambient_C" in fs[0].message
+    assert not iz_findings(dict(cable, ambient_C=30))  # 21 / 0.87 = 24.1 A at 30 °C
+    fs = iz_findings(dict(cable, ambient_C=35))  # between the two: the values at 40 °C, on the safe side
+    assert len(fs) == 1 and fs[0].level == "warning" and "40 °C" in fs[0].message and "ambient_C" not in fs[0].message
+    fs = iz_findings(dict(cable, ambient_C=45))  # hotter than the table: not checked, and said
+    assert [f.level for f in fs] == ["info"] and "45" in fs[0].message
+    duct = iz_findings(dict(cable, install="D-duct"), 32)
+    assert [f.message for f in iz_findings(dict(cable, install="D1"), 32)] == [f.message for f in duct]
+    assert not [f for f in iz_findings(dict(cable, install="D1"), 32) if "not covered" in f.message]
 
 
 def test_iz_profile_not_active_by_default():
@@ -254,3 +275,167 @@ def test_check_scope_premises():
     shop = tools.check({**base, "installation": {"premises": "commercial"}})["scope"]
     assert "premises 'commercial': only the general rules" in shop and "ERP" in shop
     assert "7-771" not in tools.check({**base, "profiles": ["iec60364"]})["scope"]
+
+
+# --- nfc15100: part 10-1 (amendment A5) ----------------------------------------------------------
+def _rcd(children, rtype="A", in_a=40, **kw):
+    return {"type": "rcd", "idn_mA": 30, "rcd_type": rtype, "in_A": in_a, **kw, "children": children}
+
+
+def _circuit(in_a, load, section=None, poles="1P+N", **kw):
+    b = {"type": "breaker", "in_A": in_a, "poles": poles, **kw, "children": [load]}
+    if section:
+        b["cable"] = {"section_mm2": section}
+    return b
+
+
+def test_30ma_and_rcd_count_in_three_phase_dwellings():
+    d = doc([_circuit(16, {"type": "lighting", "points": 2}, 1.5)], system="3P+N")
+    r = rules_of(check(d))
+    assert "nfc15100.rcd-30mA" in r  # no longer single-phase only
+    d = doc([_rcd([_circuit(16, {"type": "lighting", "points": 2}, 1.5)])], system="3P+N")
+    assert {f.level for f in check(d) if f.rule == "nfc15100.rcd-count"} == {"error"}
+
+
+def test_points_added_up_per_circuit():
+    d = doc([_rcd([{"type": "breaker", "in_A": 16, "poles": "1P+N", "cable": {"section_mm2": 1.5}, "children": [
+        {"type": "lighting", "points": 5}, {"type": "lighting", "points": 4}]}]),
+        _rcd([_circuit(16, {"type": "lighting", "points": 1}, 1.5)], rtype="AC")])
+    assert "nfc15100.points" in rules_of(check(d))  # 9 points on one circuit
+
+
+def test_circuits_per_rcd_counted_through_a_comb():
+    comb = {"type": "busbar", "children": [_circuit(16, {"type": "lighting", "points": 1}, 1.5) for _ in range(9)]}
+    d = doc([_rcd([comb]), _rcd([], rtype="AC")])
+    assert "nfc15100.rcd-circuits" in rules_of(check(d))
+
+
+def test_dedicated_circuit_sections_and_ratings():
+    d = doc([_rcd([_circuit(20, {"type": "appliance", "kind": "washing_machine"}, 1.5),
+                   _circuit(40, {"type": "cooking", "kind": "hob"}, 10)]), _rcd([], rtype="AC")])
+    msgs = [f for f in check(d) if f.rule == "nfc15100.circuit-section"]
+    assert len(msgs) == 2  # 1.5 mm² washing machine, 40 A hob
+    d = doc([_rcd([_circuit(20, {"type": "cooking", "kind": "hob"}, 2.5, poles="3P+N")]), _rcd([], rtype="AC")],
+            system="3P+N")
+    assert "nfc15100.circuit-section" not in rules_of(check(d))  # three-phase cooking: 2.5 mm², 20 A
+
+
+def test_lighting_and_sockets_spread_over_two_rcds():
+    one = doc([_rcd([_circuit(16, {"type": "lighting", "points": 2}, 1.5),
+                     _circuit(16, {"type": "lighting", "points": 2}, 1.5)]), _rcd([], rtype="AC")])
+    assert "nfc15100.rcd-spread" in rules_of(check(one))
+    two = doc([_rcd([_circuit(16, {"type": "lighting", "points": 2}, 1.5)]),
+               _rcd([_circuit(16, {"type": "lighting", "points": 2}, 1.5)], rtype="AC")])
+    assert "nfc15100.rcd-spread" not in rules_of(check(two))
+
+
+def test_rcd_rating_from_its_circuits():
+    heavy = [_circuit(32, {"type": "heating", "p_kW": 5}, 6), _circuit(32, {"type": "heating", "p_kW": 5}, 6)]
+    d = doc([_rcd(heavy, in_a=40), _rcd([], rtype="AC")])
+    assert {f.level for f in check(d) if f.rule == "nfc15100.rcd-rating"} == {"warning"}  # 64 A > 40 A
+
+
+def test_spd_at_the_origin_not_behind_30ma():
+    d = doc([_rcd([{"type": "spd"}, _circuit(16, {"type": "lighting", "points": 2}, 1.5)]), _rcd([], rtype="AC")])
+    assert "nfc15100.spd-rcd" in rules_of(check(d))
+
+
+def test_service_breaker_rcd_and_selectivity():
+    agcp = {"type": "main_breaker", "in_A": 45, "idn_mA": 650, "idn_range_mA": "30-1000", "children": [
+        _rcd([_circuit(16, {"type": "lighting", "points": 2}, 1.5)]), _rcd([], rtype="AC")]}
+    fs = check(doc([agcp]))
+    assert "nfc15100.agcp-rcd" in rules_of(fs)
+    assert {f.level for f in fs if f.rule == "nfc15100.selectivity"} == {"error"}  # dwelling: error
+
+
+def test_earth_resistance_in_tt():
+    def d(r):
+        return load({"profiles": ["nfc15100"], "installation": {"earthing": "TT", "earth_resistance_ohm": r},
+                     "sources": [{"type": "grid", "children": [{"type": "main_breaker", "in_A": 45, "idn_mA": 500,
+                                                                "selective": True}]}]})
+    assert "nfc15100.earth-resistance" in rules_of(check(d(150)))  # 150 Ω × 0.5 A = 75 V
+    assert "nfc15100.earth-resistance" not in rules_of(check(d(80)))
+
+
+def test_neutral_pole_and_supply_section():
+    d = doc([{"type": "main_breaker", "in_A": 60, "idn_mA": 500, "selective": True, "children": [
+        {"type": "board", "cable": {"section_mm2": 10}, "children": [
+            _rcd([_circuit(16, {"type": "lighting", "points": 2}, 1.5, poles="1P")]), _rcd([], rtype="AC")]}]}])
+    r = rules_of(check(d))
+    assert {"nfc15100.neutral-pole", "nfc15100.supply-section"} <= r  # 60 A needs 16 mm²
+
+
+def test_control_scope():
+    def d(*children):
+        return load({"sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 2, "children": [
+            {"type": "power_supply", "u2_V": 24, "children": list(children)}]}]}]})
+
+    coil = {"type": "contactor", "ref": "-KA1"}  # a relay coil fed by the 24 V supply, switching nothing
+    lamp = {"type": "load", "ref": "-HL1", "label": "fault"}
+    stop = {"type": "load", "label": "Emergency stop"}
+    for c in (coil, lamp, stop):
+        fs = [f for f in check(d(c)) if f.rule == "core.scope"]
+        assert len(fs) == 1 and fs[0].level == "info"
+    assert len([f for f in check(d(coil, lamp, stop)) if f.rule == "core.scope"]) == 1  # said once
+    # power devices are not control: a contactor switching a load, a load shedding link, a DC load
+    shed = load({"sources": [{"type": "grid", "children": [
+        {"type": "controller", "id": "PDL", "function": "load shedder"},
+        {"type": "contactor", "id": "KM1", "ref": "-KM1", "children": [{"type": "water_heater"}]}]}],
+        "links": [{"kind": "control", "from": "PDL", "to": "KM1"}]})
+    assert "core.scope" not in rules_of(check(shed))
+    assert "core.scope" not in rules_of(check(d({"type": "contactor", "children": [{"type": "load"}]},
+                                                {"type": "load", "ref": "-E1", "label": "router"})))
+
+
+def test_main_breaker_symbol_follows_rcd():
+    from uniwire.symbols import symbol_for
+
+    def texts(**kw):
+        node = load({"sources": [{"type": "grid", "children": [{"type": "main_breaker", "id": "Q0", **kw}]}]})
+        return [i.text for i in symbol_for(node.sources[0].children[0]).items if hasattr(i, "text")]
+
+    assert "IΔ" in texts(idn_mA=500)
+    assert "IΔ" not in texts(in_A=45)  # no sensitivity: a plain circuit breaker
+
+
+def test_no_profile_said_so():
+    base = {"sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 16, "children": [{"type": "load"}]}]}]}
+    f = [x for x in check(load(base)) if x.rule == "core.no-profile"]
+    assert len(f) == 1 and f[0].level == "info" and "'iec60364'" in f[0].message
+    us = [x for x in check(load({**base, "installation": {"standard": "NEC 2023"}})) if x.rule == "core.no-profile"]
+    assert "no rule profile covers NEC 2023" in us[0].message and "'iec60364'" not in us[0].message
+    assert "core.no-profile" not in rules_of(check(load({**base, "profiles": ["iec60364"]})))
+
+
+def test_iz_estimated_when_the_cable_is_incomplete():
+    # section only: copper, PVC, the most favourable method in air at 30 °C (1.5 mm², 2 loaded: 20 / 0.87 = 23 A)
+    fs = [f for f in check(iz_doc({"section_mm2": 1.5}, 25)) if f.rule == "iec60364.iz-estimate"]
+    assert [f.level for f in fs] == ["warning", "info"] and "23" in fs[0].message
+    fs = [f for f in check(iz_doc({"section_mm2": 1.5}, 16)) if f.rule == "iec60364.iz-estimate"]
+    assert [f.level for f in fs] == ["info"]  # within the estimate: still said to be estimated only
+    # a stated method is used (A1, PVC, 2 loaded: 13 / 0.87 = 14.9 A)
+    fs = [f for f in check(iz_doc({"section_mm2": 1.5, "install": "A1"}, 16)) if f.level == "warning"]
+    assert [f.rule for f in fs] == ["iec60364.iz-estimate"] and "14.9" in fs[0].message
+    # a complete cable is checked exactly, not estimated
+    full = {"section_mm2": 2.5, "material": "Cu", "insulation": "PVC", "install": "B1"}
+    assert not [f for f in check(iz_doc(full, 20)) if f.rule == "iec60364.iz-estimate"]
+
+
+def test_iec60364_sockets_need_30ma():
+    def d(children, premises="commercial", profiles=("iec60364",)):
+        return load({"profiles": list(profiles), "installation": {"premises": premises},
+                     "sources": [{"type": "grid", "children": children}]})
+
+    def mcb(load, in_a=16):
+        return {"type": "breaker", "in_A": in_a, "children": [load]}
+
+    rcd = {"type": "rcd", "idn_mA": 30, "in_A": 40, "children": [mcb({"type": "socket"})]}
+    assert [f.node for f in check(d([mcb({"type": "socket", "id": "S"})])) if f.rule == "iec60364.rcd-30mA"] == ["S"]
+    assert not [f for f in check(d([rcd])) if f.rule == "iec60364.rcd-30mA"]
+    assert not [f for f in check(d([mcb({"type": "socket"}, 63)])) if f.rule == "iec60364.rcd-30mA"]
+    # luminaires: dwellings only
+    assert [f for f in check(d([mcb({"type": "lighting"})], "dwelling")) if f.rule == "iec60364.rcd-30mA"]
+    assert not [f for f in check(d([mcb({"type": "lighting"})])) if f.rule == "iec60364.rcd-30mA"]
+    # with a national profile, left to it (no duplicate)
+    both = d([mcb({"type": "socket"})], profiles=("vde0100", "iec60364"))
+    assert [f.rule for f in check(both) if f.rule.endswith("rcd-30mA")] == ["vde0100.rcd-30mA"]

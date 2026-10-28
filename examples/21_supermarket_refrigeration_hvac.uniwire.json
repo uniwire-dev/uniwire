@@ -43,10 +43,10 @@
               "product": {"manufacturer": "Siemens", "range": "3WA", "description": "ACB 4P 1250 A"},
               "children": [
                 {
-                  "id": "Q1", "type": "breaker", "ref": "-Q1", "use": "MC", "in_A": 250, "ir_A": 250, "poles": "3P",
+                  "id": "Q1", "type": "breaker", "ref": "-Q1", "use": "MC", "in_A": 250, "ir_A": 250,
                   "label": "Refrigeration", "priority": "essential",
                   "cable": {
-                    "cores": "4G", "section_mm2": 120, "length_m": 20, "material": "Cu", "insulation": "XLPE",
+                    "cores": "5G", "section_mm2": 120, "length_m": 20, "material": "Cu", "insulation": "XLPE",
                     "install": "E", "pe_section_mm2": 70
                   },
                   "children": [

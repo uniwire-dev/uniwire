@@ -96,8 +96,32 @@
                               },
                               "children": [
                                 {
-                                  "type": "socket", "label": "Treatment rooms (via RCBOs)", "points": 24,
-                                  "priority": "essential"
+                                  "type": "rcbo", "ref": "-F111", "in_A": 16, "curve": "B", "idn_mA": 30,
+                                  "rcd_type": "A", "poles": "1P+N", "phase": "L1",
+                                  "cable": {
+                                    "cores": "3G", "section_mm2": 2.5, "length_m": 30, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "socket", "label": "Treatment rooms 1-6", "points": 12,
+                                      "priority": "essential"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "rcbo", "ref": "-F112", "in_A": 16, "curve": "B", "idn_mA": 30,
+                                  "rcd_type": "A", "poles": "1P+N", "phase": "L2",
+                                  "cable": {
+                                    "cores": "3G", "section_mm2": 2.5, "length_m": 30, "material": "Cu",
+                                    "insulation": "XLPE", "install": "E"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "socket", "label": "Treatment rooms 7-12", "points": 12,
+                                      "priority": "essential"
+                                    }
+                                  ]
                                 }
                               ]
                             },

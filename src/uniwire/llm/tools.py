@@ -135,11 +135,24 @@ def _doc(document: Any) -> Document:
         raise ToolError("invalid document:\n" + "\n".join(f"- {i}" for i in _issues(raw, e))) from None
 
 
-def _link(raw: dict[str, Any]) -> dict[str, str]:
+#: View options a link may carry (editor ``#...&kind=multi-line&color=phase``, hosted ``/pdf/<id>?kind=...``).
+LINK_VIEW = {"kind": ("single-line", "multi-line"), "color": ("none", "conductors", "phase", "source", "status", "voltage"),
+             "conductor_colors": ("iec", "us")}
+
+
+def _view_params(kind: Optional[str] = None, color: Optional[str] = None,
+                 conductor_colors: Optional[str] = None) -> str:
+    """``&kind=multi-line&color=phase``: the view options of a link, empty for the document's own view."""
+    given = {"kind": kind, "color": color, "conductor_colors": conductor_colors}
+    return "".join(f"&{k}={v}" for k, v in given.items() if v and v in LINK_VIEW[k])
+
+
+def _link(raw: dict[str, Any], params: str = "") -> dict[str, str]:
     """``{"viewer_url", "pdf_url"}`` for a raw document, empty when the links would be too long to pass around.
     ``pdf_url`` opens the same editor page and downloads the PDF drawn by the library (on the hosted server, a
-    plain PDF link instead: see :func:`uniwire.mcp_server._shorten`)."""
-    url = _viewer_link(raw)
+    plain PDF link instead: see :func:`uniwire.mcp_server._shorten`). ``params``: view options
+    (:func:`_view_params`), so that both links show the view that was asked for."""
+    url = _viewer_link(raw) + params
     return {"viewer_url": url, "pdf_url": url + "&download=pdf"} if len(url) <= MAX_LINK_CHARS else {}
 
 
@@ -304,7 +317,7 @@ def render(document: Any, kind: str = "single-line", format: str = "svg",  # noq
             doc = _load(raw)
         except UniwireError as e:
             raise ToolError("invalid document:\n" + "\n".join(f"- {i}" for i in _issues(raw, e))) from None
-        link = _link(raw)
+        link = _link(raw, _view_params(kind if kind == "multi-line" else None, color, conductor_colors))
     try:
         v = default_view(doc, view, kind)
     except KeyError as e:
@@ -371,17 +384,24 @@ def pdf_filename(title: Optional[str]) -> str:
     return f"{slug or 'uniwire'}.pdf"
 
 
-def pdf_file(document: Any, kind: str = "single-line") -> dict[str, Any]:
-    """The PDF of a document (all sheets of the default ``kind`` view) and its file name: ``{pdf_base64,
-    filename}``. Not an assistant tool: the hosted server serves it at ``GET /pdf/<id>`` (the ``pdf_url`` links)."""
-    from ..render import default_view, render_pages
+def pdf_file(document: Any, kind: Optional[str] = None, color: Optional[str] = None,
+             conductor_colors: Optional[str] = None) -> dict[str, Any]:
+    """The PDF of a document and its file name: ``{pdf_base64, filename}``. Every view of the document, one after
+    the other (a drawing set: multi-line power diagram, single-line diagram with the links...), or only its ``kind``
+    views; ``color`` / ``conductor_colors`` override their colour mode. Not an assistant tool: the hosted server
+    serves it at ``GET /pdf/<id>`` (the ``pdf_url`` links, ``?kind=multi-line&color=phase``)."""
+    from ..render import default_view, render_views
 
+    for name, value in (("kind", kind), ("color", color), ("conductor_colors", conductor_colors)):
+        if value is not None and value not in LINK_VIEW[name]:
+            raise ToolError(f"{name} must be one of: {', '.join(LINK_VIEW[name])}")
     raw = _raw(document)
     try:
         doc = _load(raw)
     except UniwireError as e:
         raise ToolError("invalid document:\n" + "\n".join(f"- {i}" for i in _issues(raw, e))) from None
-    pages = render_pages(doc, default_view(doc, None, kind))
+    views = [v for v in doc.views if kind is None or v.kind == kind] or [default_view(doc, None, kind)]
+    pages = render_views(doc, [_with_colors(v, color, conductor_colors) for v in views])
     if PUBLIC and len(pages) > MAX_SHEETS:
         raise ToolError(f"too many sheets for this server: {len(pages)} (at most {MAX_SHEETS})")
     data = _pdf_bytes(doc, pages)

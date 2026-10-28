@@ -36,7 +36,7 @@ house.uniwire.json: 2 finding(s)
 
 In Python, a `Finding` has the attributes `level`, `rule`, `message`, `node` and `source`. Rules based on a
 standard carry a `source` (the document and clause the rule relies on) and a `confidence` (`high` or
-`medium`), available in `uniwire.rules.RULE_INFO`. Messages are translated: set `UNIWIRE_LANG=fr` for French.
+`medium`), available in `uniwire.rules.RULE_INFO`. Messages are translated: set `UNIWIRE_LANG` to `fr`, `de`, `es`, `pt`, `ru` or `zh`.
 
 An unknown profile name produces a `profile` warning.
 
@@ -49,6 +49,7 @@ An unknown profile name produces a `profile` warning.
 | `core.transfer-target` | A `transfer` link ends on a `transfer_switch` | error |
 | `core.transfer-source` | A transfer switch receives a second source (`transfer` link) | warning |
 | `core.tie-device` | A `tie` link describes its coupling device | info |
+| `core.scope` | The document describes control circuits (contactors or relays fed by a control power supply and switching nothing, coils, push buttons or signal lamps entered as loads): uniwire draws power distribution, not control schematics, so they are only summarized | info |
 | `core.terminal-node` | PV arrays, batteries, SPDs and earth electrodes feed nothing | warning |
 | `core.normalized` | A near-miss value was read in its canonical form on load: `poles: 2` as `"2P"`, `cable.cores: 3` as `"3G"`, `"3G2.5"` as `"3G"` plus `section_mm2: 2.5`, a `[15, 45]` range as `"15-45"`, a view `type`/`single_line` as `kind`/`single-line`, `meta.description` as a note. Ambiguous values are not guessed: validation rejects them. `uniwire normalize` writes the canonical form | warning |
 | `core.interlock` | Nodes and links sharing a `locks` key: no more members closed in normal operation than the interlock has `keys` (SPEC §4.1); a declared interlock is used by at least 2 members; an undeclared lock is not alone | error / warning |
@@ -68,42 +69,101 @@ Modular PLCs (`plc`) are checked whenever they appear in a document.
 
 ## `nfc15100`: French low-voltage installations
 
-Checks of a French low-voltage installation under NF C 15-100, which covers every kind of premises. The rules
-of part 7-771 (dwellings) apply when `installation.premises` is `dwelling` or not set. For other premises
-(`commercial`, `office`, `industrial`, `public`, `agricultural`, `other`) only the general rules apply: 30 mA
-protection of socket-outlet and charging circuits (part 4-41, 411.3.3), EV charging (part 7-722) and
-selectivity; the residential cable table becomes a warning to size the cable for its installation method
-(part 5-52, guide UTE C 15-105). Rules marked *dwelling* below are skipped for other premises.
+Checks of a French low-voltage installation under NF C 15-100, which covers every kind of premises. The version
+that gives presumption of conformity (order of 3 August 2016, art. 4) is the 2002 edition with its 2005 update
+and amendments A1 to A5; for dwellings, part 10-1 of amendment A5 (June 2015) replaces the former parts 7-771
+and 7-772. The rules of dwellings (marked *dwelling*) apply when `installation.premises` is `dwelling` or not
+set. For other premises (`commercial`, `office`, `industrial`, `public`, `agricultural`, `other`) only the
+general rules apply, and the residential cable table becomes a warning to size the cable for its installation
+method (part 5-52, guide UTE C 15-105).
 
 | Rule | Check | Level |
 |---|---|---|
-| `nfc15100.section` | Copper cross-section ↔ rating: 1.5 → 16 A, 2.5 → 20 A, 4 → 25 A, 6 → 32 A; outside dwellings, a warning to check the cable for its installation method | error (dwelling) / warning |
-| `nfc15100.points` | *Dwelling*. Lighting: at most 8 points. Sockets: at most 8 on 1.5 mm², at most 12 on 2.5 mm² | error |
-| `nfc15100.lighting-rating` | *Dwelling*. Lighting protected at 16 A at most | error |
-| `nfc15100.rcd-30mA` | 30 mA protection for sockets and EV charging (all premises) and for every dwelling circuit | error |
-| `nfc15100.rcd-type-A` | No type AC RCD for EV charging (all premises) and, in dwellings, for washing machine, dryer, hob / cooker | error |
-| `nfc15100.rcd-count` | *Dwelling*. At least 2 30 mA RCDs per dwelling, including 1 type A | warning |
-| `nfc15100.rcd-circuits` | *Dwelling*. At most 8 circuits per 30 mA RCD | error |
-| `nfc15100.heating` | *Dwelling*. Heating power per circuit: 3.5 / 4.5 / 5.75 / 7.25 kW at 16 / 20 / 25 / 32 A | warning |
-| `nfc15100.dedicated-circuit` | *Dwelling*. Dedicated circuits: washing machine, dishwasher, dryer, freezer, oven, hob, water heater, EV charging (one load per circuit), heating and shutters (circuit reserved for that use) | error |
-| `nfc15100.ev-rcd` | EV charging: type B in three-phase mode 2 (error); in mode 3 with a type A or F RCD, reminder of 6 mA DC fault detection (info) | error / info |
-| `nfc15100.selectivity` | Selective (type S) incoming RCD upstream of other RCDs | warning |
+| `nfc15100.section` | Copper cross-section ↔ rating: 1.5 → 16 A, 2.5 → 20 A, 4 → 25 A, 6 → 32 A (table 10-1F); outside dwellings, a warning to check the cable for its installation method | error (dwelling) / warning |
+| `nfc15100.circuit-section` | *Dwelling*. Minimum section and maximum protection of dedicated circuits (table 10-1F): washing machine, dishwasher, dryer, oven, water heater 2.5 mm² and 20 A; single-phase cooking 6 mm² and 32 A; three-phase cooking 2.5 mm² and 20 A; 16 A EV charging 2.5 mm² and 20 A; roller shutters 1.5 mm² and 16 A | error |
+| `nfc15100.points` | *Dwelling*. Points added up per circuit: lighting at most 8; 16 A sockets at most 8 on 1.5 mm², 12 on 2.5 mm² (10.1.3.2.3, 10.1.3.3.3) | error |
+| `nfc15100.lighting-rating` | *Dwelling*. Lighting protected at 16 A at most (table 10-1F) | error |
+| `nfc15100.rcd-30mA` | 30 mA protection of every final circuit of a dwelling, single-phase or three-phase (order of 3 August 2016, 10.1.4.7.3.1); in all premises, socket-outlets up to 32 A (411.3.3, A4) and EV charging points | error |
+| `nfc15100.rcd-type-A` | Type A (not AC) for cooker / hob, washing machine and EV charging circuits (table 10-1G rule 2) | error |
+| `nfc15100.rcd-count` | *Dwelling*. At least 2 30 mA RCDs, single-phase or three-phase (table 10-1G rule 1) | error |
+| `nfc15100.rcd-circuits` | *Dwelling*. At most 8 circuits per 30 mA RCD, counted down to the next RCD, through combs and boards (table 10-1G rule 3) | error |
+| `nfc15100.rcd-rating` | *Dwelling*. Rated current of a 30 mA RCD at least the current of the service breaker (from the subscribed power when known), or 1 × its heating, water heater and EV circuits + 0.5 × the others (table 10-1G rule 4) | warning |
+| `nfc15100.rcd-spread` | *Dwelling*. Lighting circuits on at least 2 RCDs, socket-outlet circuits too (table 10-1G rule 5) | error |
+| `nfc15100.heating` | *Dwelling*. Heating power per circuit: 3.5 / 4.5 / 5.75 / 7.25 kW at 16 / 20 / 25 / 32 A (table 10-1B) | warning |
+| `nfc15100.dedicated-circuit` | *Dwelling*. Dedicated circuits: washing machine, dishwasher, dryer, oven, hob, water heater, EV charging (one load per circuit), heating and shutters (circuit reserved for that use); freezer recommended (10.1.3.4) | error (freezer: warning) |
+| `nfc15100.neutral-pole` | *Dwelling*. No 1P breaker on a circuit with a neutral: every circuit is isolated on all its live conductors (10.1.4.7.1.1) | error |
+| `nfc15100.spd-rcd` | *Dwelling*. The surge protective device at the origin is not behind a 30 mA RCD (10.1.4.7.3.1) | error |
+| `nfc15100.agcp-rcd` | *Dwelling*, limited-power supply. Service breaker and intermediate RCDs at 500 mA at most, without adjustable sensitivity (10.1.2.2.1) | error |
+| `nfc15100.supply-section` | *Dwelling*. Copper link from the service breaker to the main board: 10 mm² at 30 and 45 A, 16 mm² at 60 A, 25 mm² at 90 A (table 10-1D) | error |
+| `nfc15100.selectivity` | A residual-current device with other RCDs downstream is selective (type S): error in a dwelling (10.1.2.2.1), warning elsewhere (535.4.3.1) | error / warning |
+| `nfc15100.earth-resistance` | TT: earth electrode resistance × highest RCD sensitivity ≤ 50 V, i.e. 100 Ω with a 500 mA service breaker (411.5.3) | error |
+| `nfc15100.ev-rcd` | EV charging: type B in three-phase mode 2 (error); in mode 3 with a type A or F, reminder of 6 mA DC detection (info). Source: IEC 60364-7-722 / guide UTE C 15-722, not part of the 2002 edition and its amendments | error / info |
 
-## `iec60364`: current-carrying capacity
+## `vde0100`: German low-voltage installations
 
-One rule, `iec60364.iz`: the rating of the protective device feeding a cable (`ir_A`, otherwise
+DIN VDE 0100 is the German adoption of IEC 60364, with the same part numbers. The profile checks the German
+requirements that go beyond the general rules; combine it with `iec60364` for the current-carrying capacity of
+cables. Dwelling rules apply when `installation.premises` is `"dwelling"` or not set.
+
+| Rule | Check | Level |
+|---|---|---|
+| `vde0100.rcd-30mA` | Socket-outlet circuits up to 32 A protected by an RCD of at most 30 mA, all premises (DIN VDE 0100-410:2018, 411.3.3); lighting circuits of dwellings, the same (411.3.4) | error |
+| `vde0100.bathroom` | Every circuit of a room with a bath or a shower protected by an RCD of at most 30 mA, except a circuit supplying only a permanently connected water heater (DIN VDE 0100-701). The room is read from the load's `room` or `label` (Bad, Badezimmer, Dusche...) | error |
+| `vde0100.ev-circuit` | Each charging point supplied by its own final circuit and protected by its own RCD of at most 30 mA (DIN VDE 0100-722) | error |
+| `vde0100.ev-rcd` | RCD of a charging point: type AC or not stated (error); type A or F, reminder that the charging point must include 6 mA DC fault detection, RDC-DD, IEC 62955 (info) | error / info |
+| `vde0100.spd` | No surge protective device in the installation: required for most buildings (DIN VDE 0100-443 and -534, 2016) | warning |
+| `vde0100.pen-section` | A cable whose `conductors` include a PEN: at least 10 mm² copper or 16 mm² aluminium (DIN VDE 0100-540, 543.4) | warning |
+
+Not checked: arc fault detection devices (DIN VDE 0100-420, required in some premises only), the connection
+rules of VDE-AR-N 4100 (meter cabinet, selective main circuit breaker) and the minimum equipment of dwellings
+(DIN 18015-2). The rules were written from the structure of the standard, without its text: report any
+difference with the edition you apply.
+
+## `iec60364`: current-carrying capacity and 30 mA RCDs
+
+### `iec60364.iz`
+
+The rating of the protective device feeding a cable (`ir_A`, otherwise
 `fuse_A`, otherwise `in_A`) must not exceed the cable's current-carrying capacity Iz (multiplied by
 `parallel`).
 
 * Applies when the cable specifies `section_mm2`, `material`, `insulation` and `install`.
 * Coverage: copper, PVC or XLPE (`PR` and `EPR` are treated as XLPE); installation methods `A1`, `A2`,
-  `B1`, `B2`, `C`, `E`, `F` with 2 or 3 loaded conductors, 1.5 to 300 mm²; `D-duct` (buried in duct)
-  for copper and aluminium. Combinations outside the table produce an `info`.
+  `B1`, `B2`, `C`, `E`, `F` with 2 or 3 loaded conductors, 1.5 to 300 mm²; `D-duct` (buried in duct, also
+  written `D1`, its IEC name) for copper and aluminium. Combinations outside the table produce an `info`.
+* Ambient temperature: the cable's `ambient_C`. In air, 30 °C or less takes the values brought back to 30 °C
+  (IEC 60364-5-52, table B.52.14: 0.87 for PVC, 0.91 for XLPE at 40 °C), up to 40 °C the values at 40 °C (the next
+  temperature tabulated above), above 40 °C Iz is not checked (`info`). In the ground, up to 25 °C; above, not
+  checked. Without `ambient_C`: 40 °C in air, and the message says it.
 * Loaded conductors: 3 when the protective device is `3P`, `3P+N` or `4P`, otherwise 2; without poles,
   `installation.system` decides.
 * Level: **warning**, never error. The tables (`src/uniwire/registry/data/iz_tables.json`, read with
-  `uniwire.registry.iz_tables()`) are given at 40 °C ambient and are therefore conservative compared with
-  IEC tables at 30 °C; no grouping or temperature correction factor is applied.
+  `uniwire.registry.iz_tables()`) are given at 40 °C in air and 25 °C in the ground; no grouping factor is
+  applied.
+
+### `iec60364.iz-estimate`
+
+A cable that gives `section_mm2` but not its `material`, `insulation` or `install` is not left unchecked:
+
+* Iz is estimated with copper and PVC unless stated, and the most favourable installation method in air
+  (`A1` to `F`) unless `install` is given; the table values are brought back to 30 °C (IEC 60364-5-52,
+  table B.52.14: 0.87 for PVC, 0.91 for XLPE at 40 °C), or taken as for `iec60364.iz` when `ambient_C` is given.
+* A protection above that Iz is too high under these assumptions: **warning**, with the
+  assumptions in the message.
+* One **info** finding lists the cables estimated: give their material, insulation and installation method for
+  the exact check of `iec60364.iz`.
+
+### `iec60364.rcd-30mA`
+
+IEC 60364-4-41:2005+AMD1:2017, 411.3.3 and 411.3.4: additional protection by an RCD of at most 30 mA (**error**
+when missing; the 2005 edition without its amendment stopped at socket-outlets up to 20 A):
+
+* socket-outlets up to 32 A (their own rating, otherwise the rating of their protection), in all premises;
+* lighting circuits when `installation.premises` is `dwelling`.
+
+Not applied below an isolation transformer (`kind: "isolation"`) feeding an IT system (`earthing: "IT"`): a
+medical IT system (IEC 60364-7-710) is monitored by an insulation monitoring device instead. When the document
+also declares `nfc15100` or `vde0100`, this rule leaves the check to them (their national rules go further).
 
 See the [specification](SPEC.md) §10 for the data source and its limitations.
 

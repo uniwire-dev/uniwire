@@ -91,9 +91,9 @@ def test_upstream_rcd_marked_in_the_feeder_table():
     rcd = load({"sources": [{"type": "grid", "children": [
         {"type": "rcd", "id": "F0", "idn_mA": 300, "children": [{"type": "load"}]}]}]}).sources[0].children[0]
     col = {"leaf": None, "prot": None, "cable": None, "rcd": rcd, "rcd_upstream": True}
-    assert cell("idn_mA", col, "en") == "300mA (upstream)"
-    assert cell("idn_mA", col, "fr") == "300mA (amont)"
-    assert cell("idn_mA", {**col, "rcd_upstream": False}, "en") == "300mA"
+    assert cell("idn_mA", col, "en") == "300 mA (upstream)"
+    assert cell("idn_mA", col, "fr") == "300 mA (amont)"
+    assert cell("idn_mA", {**col, "rcd_upstream": False}, "en") == "300 mA"
 
 
 def test_rcd_of_the_feeder_itself_not_marked():
@@ -106,7 +106,7 @@ def test_rcd_of_the_feeder_itself_not_marked():
         "views": [{"id": "sld", "cartouche": ["label", "idn_mA"]}],
     })
     texts = [i.text for i in _items(_sld(doc)[0].group) if isinstance(i, Text)]
-    assert "30mA" in texts and "300mA (upstream)" in texts
+    assert "30 mA" in texts and "300 mA (upstream)" in texts
 
 
 # ------------------------------------------------------------------ busway
@@ -153,9 +153,9 @@ def test_multiline_link_conductors_and_poles():
     poles = [g for g in _groups(dev) if (g.cls or "").split()[:1] == ["pole"]]
     assert len(poles) == 4  # 4P removable links: one open contact per conductor (L1 L2 L3 N)
     dashed = [i for i in _items(link) if isinstance(i, Polyline) and i.style.dash and len(i.points) >= 2]
-    assert len(dashed) == 2 * 4  # each conductor routed (split around its pole), long-dashed: normally open
+    assert not dashed  # the open contacts show the normal state: the conductors stay solid
     dots = [i for i in _items(link) if isinstance(i, Circle)]
-    assert len(dots) == 2 * 4  # taps on the source rails + junctions on the target input conductors
+    assert len(dots) == 2 * 5  # taps on the source rails + junctions on the target input conductors (PE too)
 
 
 def test_multiline_tie_and_parallel_links_drawn():

@@ -1,7 +1,7 @@
 {
   "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
   "uniwire": "1.0.0",
-  "profiles": ["iec60364"],
+  "profiles": ["vde0100", "iec60364"],
   "meta": {
     "lang": "en",
     "title": "Single-family house (Germany): meter cabinet and distribution board",

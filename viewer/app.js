@@ -188,7 +188,13 @@ function applyResult(res, text) {
   }
   state.editor.setDiagnostics(diags);
 
-  if (res.options) state.viewOptions = res.options;
+  if (res.options) {
+    const before = JSON.stringify(viewOverrides());
+    state.viewOptions = res.options;
+    // colours asked by the link are only known valid once the options came back: draw again with them
+    if (state.linkColors && JSON.stringify(viewOverrides()) !== before) scheduleRender(0);
+    state.linkColors = false;
+  }
   if (res.ok) {
     state.nodes = res.nodes;
     state.links = res.links || [];
@@ -1176,6 +1182,22 @@ function openShared(text, fromHashChange) {
   }
   loadText(text, titleStem(text), { keepDraft: true });
   $("#examples").value = "";
+  applyLinkView();
+}
+
+/** View asked by the link: &kind=multi-line (or single-line), &color=<mode> (phase, source, conductors...) and
+ * &conductor_colors=iec|us, so that an assistant can link straight to the multi-line diagram in colour. */
+function applyLinkView() {
+  const kind = /(?:^#|&)kind=(single-line|multi-line)(?=&|$)/.exec(location.hash);
+  if (kind) {
+    state.kind = kind[1];
+    document.querySelectorAll("#kind-toggle button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.kind === kind[1])));
+  }
+  const color = /(?:^#|&)color=(none|conductors|phase|source|status|voltage)(?=&|$)/.exec(location.hash);
+  if (color) state.colors = { ...state.colors, color: color[1] };
+  const preset = /(?:^#|&)conductor_colors=(iec|us)(?=&|$)/.exec(location.hash);
+  if (preset) state.colors = { ...state.colors, preset: preset[1] };
+  state.linkColors = Boolean(color || preset);
 }
 
 /** File name stem from the document title ("Small bakery, 400 V" -> "small-bakery-400-v"), as the PDF links of

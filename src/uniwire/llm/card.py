@@ -67,6 +67,11 @@ _TEXT: dict[str, dict[str, str]] = {
                    "declares how many members sharing a key may be closed at once (default 1 = mutually exclusive). "
                    "`normal_state` (nodes) / `normally_open` (links) give the normal position.",
         "views": "Views (optional; rendering preferences)",
+        "views_note": "Single-line for a distribution overview. For a panel or cabinet to build or wire (machine, PLC or "
+                      "pump control panel), declare two views: multi-line first (`kind: \"multi-line\"`, power "
+                      "conductors only), then single-line (also auxiliary devices and links); pdf_url holds every "
+                      "view. Colours: `color`, `conductor_colors`. Control schematics (coils, contacts, current paths) "
+                      "are not drawn: say so first, offer the power side.",
         "profiles": "Rule profiles (`profiles`; `core` always applies)",
         "nfc_note": "French installations (NF C 15-100); set `installation.premises`: the rules of dwellings (part 7-771) "
                     "apply only to `dwelling` or when it is absent",
@@ -133,6 +138,11 @@ _TEXT: dict[str, dict[str, str]] = {
                    "temps (1 par défaut = exclusion mutuelle). `normal_state` (nœuds) / `normally_open` (liens) "
                    "donnent la position normale.",
         "views": "Vues (facultatives ; préférences de rendu)",
+        "views_note": "Unifilaire pour une vue d'ensemble. Pour un tableau ou une armoire à fabriquer ou câbler "
+                      "(machine, automate, pompes), déclarer deux vues : multifilaire d'abord (`kind: "
+                      "\"multi-line\"`, conducteurs de puissance), puis unifilaire (appareils annexes et liaisons) ; "
+                      "pdf_url contient toutes les vues. Couleurs : `color`, `conductor_colors`. Pas de schéma de "
+                      "commande (bobines, contacts) : le dire d'abord, proposer la partie puissance.",
         "profiles": "Profils de règles (`profiles` ; `core` s'applique toujours)",
         "nfc_note": "installations françaises (NF C 15-100) ; préciser `installation.premises` : les règles du logement "
                     "(partie 7-771) ne s'appliquent qu'à `dwelling` ou en son absence",
@@ -334,11 +344,12 @@ EXAMPLE_HOUSE: dict[str, Any] = {
     "sources": [{"type": "grid", "id": "grid", "children": [
         {"type": "main_breaker", "id": "Q0", "ref": "-Q0", "in_A": 45, "idn_mA": 500, "selective": True,
          "children": [{"type": "board", "id": "TD", "ref": "TD", "children": [
-             {"type": "rcd", "id": "F1", "ref": "-F1", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "children": [
+             {"type": "rcd", "id": "F1", "ref": "-F1", "in_A": 40, "idn_mA": 30, "rcd_type": "AC", "children": [
                  {"type": "breaker", "id": "Q11", "ref": "-Q11", "use": "C16",
                   "cable": {"cores": "3G", "section_mm2": 1.5},
-                  "children": [{"type": "lighting", "id": "L1", "label": "Lighting", "points": 6}]},
-                 {"type": "breaker", "id": "Q12", "ref": "-Q12", "in_A": 20, "curve": "C", "poles": "1P+N",
+                  "children": [{"type": "lighting", "id": "L1", "label": "Lighting", "points": 6}]}]},
+             {"type": "rcd", "id": "F2", "ref": "-F2", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "children": [
+                 {"type": "breaker", "id": "Q21", "ref": "-Q21", "in_A": 20, "curve": "C", "poles": "1P+N",
                   "cable": {"cores": "3G", "section_mm2": 2.5},
                   "children": [{"type": "socket", "id": "S1", "label": "Sockets", "points": 8}]}]}]}]}]}],
 }
@@ -477,6 +488,7 @@ def card(lang: str = "en", level: Level = "compact") -> str:
 
     # --- views
     add(f"## {T['views']}")
+    add(T["views_note"])
     view_fields = View.model_fields if full else {k: View.model_fields[k] for k in (
         "id", "kind", "title", "root", "paper", "orientation", "cartouche")}
     add(", ".join(field_spec(k, f, inline_max=99 if k != "cartouche" else 7) for k, f in view_fields.items()

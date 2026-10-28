@@ -1,10 +1,11 @@
 """Displayed texts and placement of auxiliary devices, link routes, frames and notes."""
 
+from tests.conftest import ROOT
 from uniwire import load, render_pages
 from uniwire.labels import annotation, cable_text, cell
 from uniwire.layout import layout_sheet, plan_sheets
 from uniwire.render import default_view
-from uniwire.render.scene import BUS, Group, Line, Polyline, Text
+from uniwire.render.scene import BUS, Group, Line, Polyline, Text, text_width
 
 
 def _items(item):
@@ -17,6 +18,13 @@ def _items(item):
 
 def _texts(item) -> list[str]:
     return [i.text for i in _items(item) if isinstance(i, Text)]
+
+
+def _items_groups(item):
+    if isinstance(item, Group):
+        yield item
+        for i in item.items:
+            yield from _items_groups(i)
 
 
 def _hit(a, b, pad=0.0):
@@ -80,7 +88,40 @@ def test_spare_imd_and_busway_taps_have_table_cells():
     texts = _texts(render_pages(doc)[0].root)
     assert texts.count("-Q1") == 3  # the protection itself + both trunking tap-offs
     assert texts.count("C25") == 3  # annotation + both tap-off cells
-    assert "16A" in texts and "2P" in texts and "-B1" in texts
+    assert "16 A" in texts and "2P" in texts and "-B1" in texts
+
+
+def test_spare_fed_by_its_own_breaker_shows_the_breaker():
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "rcd", "ref": "-F1", "in_A": 40, "idn_mA": 30, "children": [
+            {"type": "breaker", "ref": "-Q7", "in_A": 20, "curve": "C", "poles": "2P", "children": [
+                {"type": "spare", "label": "Spare workshop"}]}]},
+        {"type": "socket", "label": "Sockets"}]}]}],
+        "views": [{"cartouche": ["ref", "label", "protection", "poles"]}]})
+    texts = _texts(render_pages(doc)[0].root)
+    assert texts.count("-Q7") == 2  # annotation + table cell
+    assert texts.count("C20") == 2
+
+
+def test_board_fed_through_shows_its_feeder_and_cells_stay_under_their_feeders():
+    cab = {"cores": "5G", "section_mm2": 6, "length_m": 20}
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "ref": "TGBT", "children": [
+        {"type": "breaker", "ref": "-Q3", "in_A": 40, "curve": "C", "cable": cab, "children": [
+            {"type": "transformer", "ref": "-T3", "sn_kVA": 20, "children": [
+                {"type": "board", "ref": "TD-N", "label": "Lighting and small power panel of the north workshop",
+                 "children": [{"type": "offpage", "label": "TD-N schedule", "target": "sheet 4"}]}]}]},
+        {"type": "breaker", "ref": "-Q4", "in_A": 32, "curve": "C", "cable": cab, "children": [
+            {"type": "board", "ref": "CT-1", "kind": "enclosure", "children": [
+                {"type": "heating", "ref": "-E4", "label": "Dryer heater", "p_kW": 12}]}]},
+        {"type": "socket", "label": "Sockets"}]}]}],
+        "views": [{"cartouche": ["label", "ref", "protection", "cable"]}]})
+    texts = _texts(render_pages(doc)[0].root)
+    assert texts.count("C40") == 2 and texts.count("C32") == 2  # annotation + the cell of the board's column
+    (lay,) = _layout(doc)
+    xs = sorted(c.x for c in lay.columns)  # before the sheet is moved to the origin: compare spacings
+    cells = [g for g in _items_groups(lay.group) if g.attrs.get("data-uw-field") == "protection"]
+    centres = sorted(t.p[0] for g in cells for t in _items(g) if isinstance(t, Text))
+    assert len(centres) == 2 and abs((centres[1] - centres[0]) - (xs[1] - xs[0])) < 0.01
 
 
 def test_generator_symbol_follows_supply_system():
@@ -185,6 +226,55 @@ def test_frame_label_kept_off_the_busbar():
     assert bus_ys and all(not (top - 0.5 < y < bottom + 0.5) for y in bus_ys)
 
 
+def _hybrid_doc():
+    """Example 53: hybrid inverter drawn as a source of its own, PV strings with their surge protectors and a
+    battery on the DC side, AC input fed from the main board by an infeed link, a narrow rooftop enclosure."""
+    return load(ROOT / "examples" / "53_office_hybrid_inverter_pv_battery.uniwire.json")
+
+
+def _segments(group):
+    for i in _items(group):
+        if isinstance(i, Line):
+            yield i.a, i.b
+        elif isinstance(i, Polyline) and not i.closed:
+            yield from zip(i.points, i.points[1:])
+
+
+def test_inverter_dc_side_keeps_a_string_with_its_surge_protector():
+    lay = _layout(_hybrid_doc())[0]
+    inv = next(n for n in lay.lnodes if n.node is not None and n.node.id == "INV")
+    assert [c.node.ref for c in inv.children[:inv.dc_side]] == ["-QS1", "-QS2", "-FB1"]
+
+
+def test_long_frame_label_wrapped_clear_of_conductors():
+    lay = _layout(_hybrid_doc())[0]
+    lines = [i for i in _items(lay.group) if isinstance(i, Text) and i.bold and i.text
+             and i.text.split()[0] in ("+R1", "Rooftop", "DC", "isolator", "enclosure")]
+    assert len(lines) >= 2  # too wide for the box: wrapped
+    for t in lines:
+        w = text_width(t.text, t.size)
+        x0 = t.p[0] - w if t.anchor == "end" else t.p[0]
+        box = (x0, t.p[1] - t.size * 0.8, x0 + w, t.p[1] + t.size * 0.2)
+        for (ax, ay), (bx, by) in _segments(lay.group):
+            seg = (min(ax, bx), min(ay, by), max(ax, bx), max(ay, by))
+            assert not _hit(box, seg, 0.05), (t.text, seg)
+
+
+def test_infeed_to_inverter_lands_on_its_input_away_from_the_busbars():
+    lay = _layout(_hybrid_doc())[0]
+    inv = next(g for g in _items_groups(lay.group) if g.id == "INV")
+    sym = [p for i in _items(inv) for p in ([i.a, i.b] if isinstance(i, Line) else getattr(i, "points", []))]
+    left, top, right = min(p[0] for p in sym), min(p[1] for p in sym), max(p[0] for p in sym)
+    link = next(g for g in _items_groups(lay.group) if g.attrs.get("data-uw-link") == "L_IN")
+    pts = next(i.points for i in _items(link) if isinstance(i, Polyline))
+    assert left < pts[-1][0] < right and pts[-1][1] <= top + 0.01  # on top: the side is the DC terminal
+    buses = [(i.a, i.b) for i in _items(lay.group) if isinstance(i, Line) and i.style.width == BUS]
+    for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+        if abs(ay - by) < 1e-9 and abs(ax - bx) > 20:  # long horizontal run: not along a busbar
+            assert all(not (abs(a[1] - ay) < 5.0 and min(max(a[0], b[0]), max(ax, bx))
+                            - max(min(a[0], b[0]), min(ax, bx)) > 20) for a, b in buses)
+
+
 def test_conductor_count():
     from uniwire.labels import conductor_count
     d = load({"sources": [{"type": "grid", "children": [
@@ -208,7 +298,7 @@ def _sld(view=None, **inst):
 def test_conductor_marks_and_phase_on_feeders():
     texts = _texts(render_pages(_sld({"cartouche": ["label", "phase"]}))[0].root)
     assert "L2+N" in texts and "+N" in texts  # phase + uncut neutral (1P+N), uncut neutral of the 3P+N feeder
-    assert "L1L2L3" in texts  # phase cell of the three-phase feeder
+    assert "L1-L2-L3" in texts  # phase cell of the three-phase feeder
     marks = [g for g in _items_groups(render_pages(_sld())[0].root) if g.cls == "conductors"]
     assert marks and len(marks[0].items) > 0
     off = [g for g in _items_groups(render_pages(_sld({"conductor_marks": False}))[0].root) if g.cls == "conductors"]
@@ -275,3 +365,303 @@ def test_pen_split_marker():
             {"type": "board", "pen_split": True, "children": [{"type": "breaker"}, {"type": "breaker"}]}]}]}]}]})
     lay = _layout(doc)[0]
     assert _texts(lay.group).count("PEN") == 1
+
+
+def _standby_doc():
+    """A board on a generator, also reachable from the main board through a normally open infeed."""
+    return load({"sources": [
+        {"type": "grid", "children": [{"type": "board", "id": "MB", "children": [
+            {"type": "breaker", "id": "Q1", "ref": "-Q1", "in_A": 63, "children": [{"type": "load", "label": "Workshop"}]},
+            {"type": "breaker", "id": "Q2", "ref": "-Q2", "in_A": 100, "poles": "4P"}]}]},
+        {"type": "generator", "id": "G1", "ref": "G1", "children": [
+            {"type": "breaker", "id": "QG", "ref": "-QG", "in_A": 100, "poles": "4P", "children": [
+                {"type": "board", "id": "SB", "ref": "SB", "label": "Standby board", "children": [
+                    {"type": "breaker", "ref": "-Q21", "in_A": 16, "children": [{"type": "load", "label": "Pumps"}]}]}]}]}],
+        "links": [{"id": "L_SB", "kind": "infeed", "from": "Q2", "to": "SB", "normally_open": True}]})
+
+
+def test_infeed_without_a_channel_above_its_feeder_still_drawn(monkeypatch):
+    import uniwire.layout.engine as engine
+    route, capped = engine.route, []
+
+    def no_channel_above(obs, a, b, y_min=None, y_max=None, **kw):
+        if y_max is not None and y_max < max(a.y, b.y) + 1.0:  # channel kept above the feeder: none free
+            capped.append(1)
+            return []
+        return route(obs, a, b, y_min, y_max, **kw)
+
+    monkeypatch.setattr(engine, "route", no_channel_above)
+    lay = _layout(_standby_doc())[0]
+    assert capped
+    link = next(g for g in _items_groups(lay.group) if g.attrs.get("data-uw-link") == "L_SB")
+    assert any(isinstance(i, Polyline) and len(i.points) >= 2 for i in _items(link))
+
+
+def test_link_without_any_channel_left_out_not_fatal(monkeypatch):
+    import uniwire.layout.engine as engine
+    monkeypatch.setattr(engine, "route", lambda *a, **kw: [])
+    assert render_pages(_standby_doc(), default_view(_standby_doc()))
+
+
+def _wings_doc(n, own_sheet=None):
+    """Building wings, each on a transfer switch with its own standby generator."""
+    def wing(c):
+        board = {"type": "board", "id": f"SB{c}", "ref": f"SB-{c}", "children": [
+            {"type": "transfer_switch", "id": f"ATS{c}", "ref": f"-QA{c}", "in_A": 250, "poles": "4P", "children": [
+                {"type": "breaker", "ref": f"-Q{c}1", "in_A": 32, "children": [{"type": "load", "label": f"Wing {c} loads"}]}]}]}
+        if c == own_sheet:
+            board["own_sheet"] = True
+        return {"type": "breaker", "id": f"Q{c}", "ref": f"-Q{c}", "in_A": 250, "poles": "4P", "children": [board]}
+    cs = "ABCD"[:n]
+    return load({"sources": [{"type": "grid", "children": [{"type": "board", "id": "MSB", "ref": "MSB",
+                                                             "children": [wing(c) for c in cs]}]}]
+                 + [{"type": "generator", "id": f"G{c}", "ref": f"-G{c}", "children": [
+                     {"type": "breaker", "id": f"QG{c}", "ref": f"-QG{c}", "in_A": 250, "poles": "4P"}]} for c in cs],
+                 "links": [{"kind": "transfer", "from": f"QG{c}", "to": f"ATS{c}"} for c in cs]})
+
+
+def _bbox(g):
+    pts = [p for i in _items(g) for p in ([i.a, i.b] if isinstance(i, Line) else getattr(i, "points", []))]
+    return min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts)
+
+
+def test_standby_generators_of_several_transfer_switches_side_by_side():
+    lay = _layout(_wings_doc(3))[0]
+    gens = sorted(_bbox(g) for g in _items_groups(lay.group) if g.id in ("GA", "GB", "GC"))
+    assert len(gens) == 3
+    assert all(b[0] >= a[2] + 3.0 for a, b in zip(gens, gens[1:]))  # no two drawn on top of each other
+
+
+def test_standby_generator_follows_its_board_to_another_sheet():
+    doc = _wings_doc(2, own_sheet="B")
+    sheets = _layout(doc)
+    ids = [{g.id for g in _items_groups(lay.group)} for lay in sheets]
+    assert "GA" in ids[0] and "GB" not in ids[0]
+    assert any("GB" in s and "ATSB" in s for s in ids[1:])
+
+
+def _audit_kinds(doc):
+    from tests.drawing_audit import audit
+    return [f for pg in render_pages(doc, default_view(doc)) for f in audit(pg.root)]
+
+
+def test_transfer_links_of_aligned_switches_each_on_their_own_channel():
+    assert not [f for f in _audit_kinds(_wings_doc(3)) if f.kind == "shared_run"]
+
+
+def _test_bench_doc(own_sheet=False):
+    """Three trains, each able to feed a common test bench through a normally open infeed."""
+    def train(c):
+        board = {"type": "board", "id": f"TB{c}", "ref": f"TB-{c}", "label": f"Train {c} board", "children": [
+            {"type": "busbar", "id": f"BB{c}", "children": [
+                {"type": "breaker", "ref": f"-Q{c}1", "in_A": 400, "children": [{"type": "load", "label": f"Train {c} loads"}]},
+                {"type": "breaker", "id": f"QT{c}", "ref": f"-QT{c}", "in_A": 800, "poles": "4P"}]}]}
+        if own_sheet:
+            board["own_sheet"] = True
+        return {"type": "breaker", "ref": f"-QM{c}", "in_A": 800, "poles": "4P", "children": [board]}
+    return load({"sources": [
+        {"type": "grid", "children": [{"type": "board", "id": "MB", "ref": "MB", "children": [
+            {"type": "busbar", "id": "MBB", "children": [train(c) for c in "ABC"] + [
+                {"type": "breaker", "id": "QB", "ref": "-QB", "in_A": 800, "poles": "4P", "children": [
+                    {"type": "board", "id": "BENCH", "ref": "TEST", "label": "Test bench board", "children": [
+                        {"type": "breaker", "ref": "-QB1", "in_A": 800, "children": [{"type": "load", "label": "Test bench"}]}]}]}]}]}]}],
+        "links": [{"kind": "infeed", "from": f"QT{c}", "to": "BENCH", "normally_open": True, "label": "to bench"}
+                  for c in "ABC"]})
+
+
+def test_several_infeeds_on_one_input_land_one_above_the_other():
+    lay = _layout(_test_bench_doc())[0]
+    ends = [next(i.points[-1] for i in _items(g) if isinstance(i, Polyline))
+            for g in _items_groups(lay.group) if g.attrs.get("data-uw-link") in ("0", "1", "2")]
+    assert len(ends) == 3 and len({round(p[1], 1) for p in ends}) == 3
+    assert not [f for f in _audit_kinds(_test_bench_doc()) if f.kind == "text_overlap"]
+
+
+def test_off_sheet_stubs_on_one_node_drawn_side_by_side():
+    findings = _audit_kinds(_test_bench_doc(own_sheet=True))
+    assert not [f for f in findings if f.kind == "text_overlap"], findings
+
+
+def test_link_to_a_board_lands_on_the_nearer_end_of_its_busbar():
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "id": "MB", "ref": "MB", "children": [
+        {"type": "busbar", "id": "MBB", "children": [
+            {"type": "breaker", "ref": "-Q1", "in_A": 400, "poles": "4P", "children": [
+                {"type": "board", "id": "DB", "ref": "DB", "children": [
+                    {"type": "busbar", "id": "DBB", "ref": "W2", "children": [
+                        {"type": "breaker", "ref": f"-Q1{k}", "in_A": 63, "children": [{"type": "load", "label": f"Load {k}"}]}
+                        for k in range(1, 4)]}]}]},
+            {"type": "breaker", "ref": "-Q2", "in_A": 400, "poles": "4P", "children": [
+                {"type": "ups", "ref": "-U1", "children": [
+                    {"type": "breaker", "id": "QU", "ref": "-Q3", "in_A": 400, "poles": "4P"}]}]}]}]}]}],
+        "links": [{"id": "L_PAR", "kind": "parallel", "from": "QU", "to": "DBB", "label": "UPS parallel"}]})
+    lay = _layout(doc)[0]
+    link = next(g for g in _items_groups(lay.group) if g.attrs.get("data-uw-link") == "L_PAR")
+    pts = next(i.points for i in _items(link) if isinstance(i, Polyline))
+    start, end = pts[0], pts[-1]
+    assert start[0] > end[0]
+    assert sum(abs(q[0] - p[0]) for p, q in zip(pts, pts[1:])) <= abs(start[0] - end[0]) + 6.0  # no detour
+    label = next(t for t in _items(link) if isinstance(t, Text) and t.text == "UPS parallel")
+    buses = [(i.a, i.b) for i in _items(lay.group) if isinstance(i, Line) and i.style.width == BUS]
+    assert all(abs(a[1] - label.p[1]) > 1.0 or not min(a[0], b[0]) < label.p[0] < max(a[0], b[0]) for a, b in buses)
+
+
+def test_small_texts_rcbo_rating_transformer_ratio_and_tag_once():
+    from uniwire.labels import _ratio, protection_short, ref_label, without_ref
+    d = load({"sources": [{"type": "grid", "children": [
+        {"type": "rcbo", "in_A": 20, "idn_mA": 5}, {"type": "rcbo", "in_A": 16, "curve": "C", "idn_mA": 30}]}]})
+    assert [protection_short(n) for n in d.sources[0].children] == ["20 A 5 mA", "C16 30 mA"]
+    assert [_ratio(20000, 400), _ratio(400, 230), _ratio(22000, 11000)] == ["20 kV/400 V", "400/230 V", "22/11 kV"]
+    assert ref_label("TGBT", "TGBT") == "TGBT" and ref_label("MSB", "Main board") == "MSB Main board"
+    assert without_ref("TX-A 3150 kVA", "TX-A") == "3150 kVA" and without_ref("-QA12 x", "-QA1") == "-QA12 x"
+
+
+def test_text_units_break_cjk_between_characters():
+    from uniwire.render.scene import text_units
+    units = text_units("TD 公寓配电箱 28 m²")
+    assert units[:3] == ["TD", " 公", "寓"] and "".join(units).strip() == "TD 公寓配电箱 28 m²"
+
+
+def test_long_cjk_note_stays_in_the_notes_cell():
+    doc = load({"meta": {"lang": "zh", "notes": ["这是一个非常长的没有任何空格的中文注释" * 6]},
+                "sources": [{"type": "grid", "children": [{"type": "breaker", "children": [{"type": "load"}]}]}]})
+    page = render_pages(doc)[0]
+    notes = next(g for g in _items_groups(page.root) if g.cls == "notes")
+    texts = [t for t in _items(notes) if isinstance(t, Text)]
+    assert len(texts) > 2 and all(t.size >= 1.6 for t in texts[1:])  # wrapped, not shrunk to fit one line
+
+
+def test_feeder_of_a_sub_board_shows_its_cable_and_the_board_incoming_cable():
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "id": "MB", "children": [
+        {"type": "breaker", "id": "QF", "ref": "-Q1", "in_A": 40, "cable": {"cores": "5G", "section_mm2": 10, "length_m": 15},
+         "children": [{"type": "board", "id": "SB", "ref": "SB", "cable": {"ref": "W7", "cores": "5x", "section_mm2": 6},
+                       "children": [{"type": "breaker", "ref": "-Q11", "in_A": 16, "children": [{"type": "load"}]},
+                                    {"type": "breaker", "ref": "-Q12", "in_A": 16, "children": [{"type": "load"}]}]}]},
+        {"type": "breaker", "ref": "-Q2", "in_A": 16, "children": [{"type": "load"}]}]}]}]})
+    texts = _texts(render_pages(doc)[0].root)
+    assert "5G10 15 m" in texts and "W7 5x6" in texts
+
+
+def test_reversing_and_star_delta_starters_drawn_with_their_contactors():
+    from uniwire.render.scene import Group as G
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "system": "3P", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 10, "poles": "3P", "children": [
+            {"type": "motor_starter", "ref": "-KM1", "method": "reversing", "children": [{"type": "motor", "phases": 3}]}]},
+        {"type": "breaker", "ref": "-Q2", "in_A": 63, "poles": "3P", "children": [
+            {"type": "motor_starter", "ref": "-KM2", "method": "star_delta", "children": [{"type": "motor", "phases": 3}]}]}]}]}],
+        "views": [{"kind": "multi-line"}]})
+    page = render_pages(doc)[0]
+    sets = [g for g in _items_groups(page.root) if isinstance(g, G) and g.cls == "starter-contactors"]
+    assert len(sets) == 2
+    assert {"W2", "U2", "V2"} <= set(_texts(sets[1]))
+
+
+def _us_board(**inst):
+    return load({"installation": {"system": "split-phase", **inst}, "sources": [
+        {"type": "grid", "children": [{"type": "board", "id": "P", "children": [
+            {"type": "breaker", "id": "PV", "ref": "PV", "in_A": 30, "poles": "2P"},
+            {"type": "breaker", "in_A": 30, "poles": "2P",
+             "cable": {"cores": "2x", "section_mm2": 5.26, "size_awg": "10"}, "children": [{"type": "water_heater"}]},
+            {"type": "rcbo", "id": "G", "in_A": 20, "idn_mA": 5, "rcd_type": "A", "poles": "1P+N",
+             "cable": {"cores": "3G", "section_mm2": 3.31, "size_awg": "12"}, "children": [{"type": "socket"}]}]}]},
+        {"type": "inverter", "id": "INV", "label": "Rooftop solar array string inverter (south roof)"}],
+        "links": [{"id": "L_PV", "from": "INV", "kind": "infeed", "to": "PV"}]})
+
+
+def test_nec_document_written_with_awg_sizes_and_gfci():
+    texts = [t for p in render_pages(_us_board(standard="NEC 2023")) for t in _texts(p.root)]
+    assert "2x#10" in texts and "2-#12+G" in texts and "5 mA GFCI" in texts
+    assert not any("type A" in t for t in texts)
+    iec = [t for p in render_pages(_us_board()) for t in _texts(p.root)]  # same data, IEC practice
+    assert "2x#10" in iec and "3G3.31" in iec and "type A" in iec
+
+
+def test_infeed_to_a_breaker_feeding_nothing_lands_on_its_output():
+    lay = _layout(_us_board())[0]
+    pv = next(g for g in _items_groups(lay.group) if g.id == "PV")
+    ys = [p[1] for i in _items(pv) for p in ([i.a, i.b] if isinstance(i, Line) else getattr(i, "points", []))]
+    link = next(g for g in _items_groups(lay.group) if g.attrs.get("data-uw-link") == "L_PV")
+    end = next(i.points for i in _items(link) if isinstance(i, Polyline))[-1]
+    assert end[1] >= max(ys) - 0.01  # below the contact (load side), not on the busbar side
+
+
+def test_untagged_label_wrapped_rather_than_cut():
+    texts = [t for p in render_pages(_us_board()) for t in _texts(p.root)]
+    assert not any(t.endswith("…") and t.startswith("Rooftop") for t in texts)
+    assert any(t.startswith("Rooftop") for t in texts)
+
+
+def test_multiline_infeed_to_a_breaker_feeding_nothing_lands_on_its_outputs():
+    doc = _us_board()
+    page = render_pages(doc, default_view(doc).model_copy(update={"kind": "multi-line"}))[0]
+    pv = next(g for g in _items_groups(page.root) if g.id == "PV")
+    ys = [p[1] for i in _items(pv) for p in ([i.a, i.b] if isinstance(i, Line) else getattr(i, "points", []))]
+    link = next(g for g in _items_groups(page.root) if g.attrs.get("data-uw-link") == "L_PV")
+    ends = [i.points[-1] for i in _items(link) if isinstance(i, Polyline)]
+    assert ends and all(e[1] > max(ys) - 0.01 for e in ends)  # below the contacts: the load side
+
+
+def test_gfci_not_repeated_when_already_shown():
+    from uniwire.labels import NORTH_AMERICAN
+    d = load({"sources": [{"type": "grid", "children": [
+        {"type": "rcbo", "ref": "3", "range": "GFCI", "in_A": 20, "idn_mA": 5, "children": [{"type": "socket"}]},
+        {"type": "rcbo", "ref": "5", "label": "Kitchen GFCI", "in_A": 20, "idn_mA": 5, "children": [{"type": "socket"}]}]}]})
+    token = NORTH_AMERICAN.set(True)
+    try:
+        shown, hidden = (annotation(n) for n in d.sources[0].children)
+    finally:
+        NORTH_AMERICAN.reset(token)
+    assert shown.count("GFCI") == 1  # the range says it
+    assert "GFCI" in hidden  # the label is not drawn beside a breaker: the kind is
+
+
+def test_label_of_a_link_between_close_loads_clear_of_their_symbols():
+    # labels wider than the gap between two loads: the link runs under the loads, its label clear of the symbols
+    def feeder(ref, load):
+        return {"type": "breaker", "ref": ref, "in_A": 10, "poles": "1P+N", "children": [load]}
+    doc = load({"installation": {"system": "3P+N"}, "sources": [{"type": "grid", "children": [
+        {"type": "board", "ref": "PS1", "children": [{"type": "busbar", "children": [
+            feeder("-Q1", {"type": "motor", "id": "P1", "label": "Lift pump"}),
+            feeder("-Q2", {"type": "load", "id": "CTL", "label": "Pump controller"}),
+            feeder("-Q3", {"type": "motor", "id": "P2", "label": "Dosing pump"})]}]}]}],
+        "links": [{"kind": "data", "from": "P1", "to": "CTL", "label": "Level probes L1-L2-L3"},
+                  {"kind": "control", "from": "CTL", "to": "P2", "label": "Dosing command"}]})
+    lay = _layout(doc)[0]
+    syms = []
+    for g in _items_groups(lay.group):
+        if "uw-node" in (g.cls or "") and g.id in ("P1", "CTL", "P2"):
+            pts = [p for i in _items(g) for p in ([i.a, i.b] if isinstance(i, Line) else getattr(i, "points", []))]
+            pts += [(c.c[0] + dx, c.c[1] + dy) for c in _items(g) if hasattr(c, "r")
+                    for dx, dy in ((-c.r, -c.r), (c.r, c.r))]
+            syms.append((min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts)))
+    for g in _items_groups(lay.group):
+        if "uw-link" not in (g.cls or ""):
+            continue
+        for t in (i for i in _items(g) if isinstance(i, Text)):
+            w = text_width(t.text, t.size)
+            x0 = t.p[0] - (w if t.anchor == "end" else 0.0)
+            box = (x0, t.p[1] - t.size, x0 + w, t.p[1])
+            assert not any(_hit(box, s) for s in syms), t.text
+
+
+def test_long_description_in_the_table_wraps_before_it_shrinks():
+    long = "Compressor of the cold room with its condensing unit and the defrost heaters of the evaporator"
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 32, "children": [{"type": "load", "label": long}]},
+        {"type": "breaker", "ref": "-Q2", "in_A": 16, "children": [{"type": "load", "label": "Lights"}]}]}]}],
+        "views": [{"cartouche": ["label", "ref", "protection"]}]})
+    (lay,) = _layout(doc)
+    cells = [g for g in _items_groups(lay.group) if g.attrs.get("data-uw-field") == "label"]
+    texts = [t for g in cells for t in _items(g) if isinstance(t, Text)]
+    parts = [t for t in texts if t.text != "Lights"]
+    assert len(parts) in (2, 3) and " ".join(t.text for t in parts) == long  # every word kept, none cut
+    assert all(t.size == 2.0 for t in texts)  # at the size of the others
+
+
+def test_power_supply_output_is_marked_with_its_two_poles_not_its_input():
+    doc = load({"installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
+                "sources": [{"type": "grid", "children": [{"type": "board", "children": [
+                    {"type": "breaker", "ref": "-Q2", "in_A": 2, "poles": "1P+N", "phase": "L1", "children": [
+                        {"type": "power_supply", "ref": "-T1", "u1_V": 230, "u2_V": 24}]},
+                    {"type": "socket", "label": "Sockets", "phase": "L2"}]}]}]})
+    texts = _texts(render_pages(doc)[0].root)
+    assert "L1+N" not in texts and "L2" in texts  # the socket keeps its phase; the 24 V output is not "L1+N"
