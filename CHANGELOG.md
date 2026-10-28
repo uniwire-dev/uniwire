@@ -14,6 +14,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   their cells, Portuguese made consistently Brazilian (NBR 5410 vocabulary), Russian number agreement and no dash.
   The page "About this document" no longer names the button of the web page, which is in English and French only.
   `--lang` lists the ten languages. Web editor: the PDF error message names the current menu entry.
+* Drawings: a load power below 1 kW is written in watts (`16.2 W`, `500 W`), from 1 kW in kilowatts; small DC loads
+  no longer round to `0.016 kW`.
+* Drawings: a DC converter shows its output voltage (`un_V`) and its current (`in_A`).
+* Drawings: the text beside a device stops before the symbol on its right, however wide it is (converters side by
+  side no longer touch the next one).
+* Checks: a battery at the root of `sources`, the only source of a DC system (vehicle, boat, off-grid site), may
+  feed the installation: no `core.terminal-node` warning.
 
 ## 0.1.4 (2026-10-28)
 

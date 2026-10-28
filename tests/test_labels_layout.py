@@ -665,3 +665,34 @@ def test_power_supply_output_is_marked_with_its_two_poles_not_its_input():
                     {"type": "socket", "label": "Sockets", "phase": "L2"}]}]}]})
     texts = _texts(render_pages(doc)[0].root)
     assert "L1+N" not in texts and "L2" in texts  # the socket keeps its phase; the 24 V output is not "L1+N"
+
+
+def _dc_doc():
+    def branch(ref, label, volts, *loads):
+        return {"type": "dc_converter", "ref": ref, "kind": "dcdc", "label": label, "un_V": volts, "children": [
+            {"type": "fuse", "in_A": 5, "un_V": volts, "children": [
+                {"type": "load", "label": n, "p_kW": p, "un_V": volts} for n, p in loads]}]}
+    return load({"installation": {"system": "DC", "un_V": 48},
+                 "sources": [{"type": "battery", "id": "BAT", "ref": "G1", "un_V": 48, "children": [
+                     {"type": "fuse", "ref": "F1", "in_A": 20, "children": [{"type": "terminal_block", "children": [
+                         branch("U1", "Step-down converter - instruments (meters + loggers)", 12,
+                                ("Meter", 0.0125), ("Logger", 0.004)),
+                         branch("U2", "Step-down converter - lighting and radio", 12, ("Lamps", 0.0162)),
+                         branch("U3", "Step-down converter - controller", 5, ("Controller", 0.00075))]}]}]}]})
+
+
+def test_label_of_a_converter_stops_before_the_next_one():
+    (lay,) = _layout(_dc_doc())
+    conv = [n for n in lay.lnodes if n.node is not None and n.node.type == "dc_converter"]
+    for a, b in zip(conv, conv[1:]):
+        assert a.ann_box()[2] <= b.sym_box()[0] - 0.5, a.node.ref
+
+
+def test_dc_converter_shows_its_output_voltage():
+    texts = _texts(render_pages(_dc_doc())[0].root)
+    assert texts.count("12 V") >= 2 and "5 V" in texts
+
+
+def test_power_below_1_kw_in_watts_in_the_table():
+    texts = _texts(render_pages(_dc_doc())[0].root)
+    assert {"12.5 W", "4 W", "16.2 W", "0.75 W"} <= set(texts)
