@@ -6,7 +6,240 @@ The format and the library are versioned separately: the format follows `1.y.z` 
 version. Before the library's 1.0, a `0.x.y` release adds features and fixes that keep existing documents and
 code working, and a `0.x.0` release may break compatibility (described here, with what to change).
 
-## Unreleased
+## 0.1.3 (2026-10-28)
+
+This release also ships the changes of 0.1.2, which was not published on its own (see below).
+
+* Cable texts: a protective conductor run beside the cores (`pe_section_mm2` with a composition such as `4x`) is
+  written with them, `4x25+PE16`, in the drawings, the feeder tables, the bill of materials and the cable lists; it
+  was left out, so that a cable with its own PE read as a cable without one.
+* Hosted MCP server (`--store`): whoever holds a short link can delete its document before it expires
+  (`POST /doc/<id>/delete`, never a GET, so that link checkers cannot delete anything). The links of a deleted
+  document answer 410 instead of 404, so that the web editor and the PDF link can say it was deleted; storing the
+  same document again (a new request from an assistant) makes it available again.
+
+* Multi-line view: the auxiliary devices (`devices`) and the control, interlock, trip, measure, data, key and earth
+  links are drawn, placed and routed as in the single-line view (beside the node they are linked to, clear of the
+  conductor bundles and the symbols), with a band above the feeder cables for their channels; a PLC is drawn with
+  its modules, its links leaving from the module they use (port label); a link whose other end is on another sheet
+  ends on a sheet reference.
+
+* Multi-line view fixes: an earth or equipotential bar in a board is on the PE only (it took every conductor), drawn
+  with its symbol; a single-phase transformer has a single-phase secondary (two unearthed conductors at 50 V or
+  less); a power link from a source with a PEN feeds the neutral of a target with N and PE (the genset neutral of a
+  4-pole changeover was missing); a current transformer is a ring on each phase, a connector a socket and plug on
+  each conductor (no box repeating the tag); a mechanical interlock carries its triangle (it was missing in PDFs),
+  between the delta and star contactors of a star-delta starter too. Split-phase (120/240 V): a "2P" breaker
+  switches L1 and L2, the neutral going straight through, and a 240 V motor takes L1 L2 (L2 was lost). The PEN
+  splits into N and PE at the entry of a board declared TN-S or TN-C-S (residual-current devices took the PEN). A
+  genset of a TN-C-S installation has its own N and PE (its 4-pole breaker was drawn with 3 poles). An inverter or
+  UPS at the head of the tree takes its AC input on top (it landed on its backup outputs). A power link carries the
+  PE of its cable (solid, never drawn open) and its label, runs below the bars of a sub-board beside its source, and
+  reaches the outputs of the last device of a board from its right (it wound round the device). An equipped spare
+  way is its grey device with its rating, not a load fed straight from the bars. A control link leaves the operating
+  line of a contactor by turning down at once, never as its continuation. A drive fed in single phase delivers the
+  three phases of its three-phase motor (U V W, it delivered one phase and the neutral); a DC motor is marked "=";
+  the PE passes beside a transformer to its earthed secondary side, or ends on the earthed enclosure when no PE
+  leaves it (it ran into the windings); the cable of a feeder is no longer written on the run behind a drive or
+  converter; the conductors of a power link stay solid when its device shows the normally open contacts.
+
+* Single-line view, feeds between trees: a tree that only adds a supply to another one (a genset, a charger, a
+  storage converter whose `infeed` lands on a busbar of that tree) is drawn beside it, whatever its place in
+  `sources`; a link between two trees with a third tree between them is drawn as an interrupted line, a stub at
+  each end naming the other end, instead of a run across the sheet; several feeds landing on one busbar each get
+  their own tap on top of it, routed on separate channels without crossing (the second one ended on a stub of
+  conductor that did not exist), the board frame enclosing the taps.
+
+* Single-line view, sheets: several trees too wide for one sheet are cut into groups of whole trees that each fit
+  (the fewest sheets, then the fewest links between them, each ending on an off-page reference), before any board
+  is taken to its own sheet; such a sheet no longer shows an incoming feed, and a bus tie between two sheets ends on
+  an off-page reference at each end (it was not drawn). The board taken to its own sheet is the smallest one that
+  makes the sheet fit (it was the widest: a first sheet could hold only the incomer, the next one only the main
+  board), and a main board as wide as the whole sheet stays with its supply, its busbar going on over the next
+  sheets under the board's name (the first sheet held only the supply; the continuation was named after the device
+  at the head of the busbar, a meter for instance). The output of a power supply with nothing drawn below is marked with its two poles
+  (it was marked with its input, 'L1+N' under a 24 V DC supply). An instrument above a busbar (`measure`
+  link) is connected straight down onto it; auxiliary devices are placed off the channels of the feeds tapping a
+  busbar, and these channels pass below an off-sheet reference hanging over them.
+  Feeder table: the cells of a column stay under its feeder when a long board name widens the drawing (they were
+  centred between the feeders), and a board with a single outgoing (a panel fed through a transformer, an enclosure
+  around one load) shows the protection and cable of the feeder above it (its cells were empty). A description too
+  long for its cell goes on 2 or 3 lines before its text gets smaller (it shrank to a few tenths of a millimetre).
+
+* Single-line view: a control or data link between two loads too close for its label runs under the loads, where
+  the label has room (it was written over the symbols).
+
+* Profile `iec60364`: rule `iec60364.rcd-30mA` (IEC 60364-4-41:2005+AMD1:2017, 411.3.3 and 411.3.4), socket-outlets
+  up to 32 A and, in dwellings, lighting circuits protected by an RCD of at most 30 mA, except below the isolation
+  transformer of a medical IT system; left to `nfc15100` and `vde0100` when the document declares one of them. Rule
+  `iec60364.iz-estimate`: a cable without its material, insulation or installation method was not checked at all;
+  its current-carrying capacity is now estimated (copper, PVC, the most favourable method in air, 30 °C) and one
+  info finding lists the cables estimated. Example 27 draws the RCBOs of its treatment rooms. Rule `iec60364.iz`
+  takes the cable's `ambient_C` (30 °C: the values brought back to 30 °C; up to 40 °C: the values at 40 °C; hotter:
+  not checked, said in an info), and reads `D1`, the IEC name of cables in ducts in the ground, as `D-duct`;
+  without `ambient_C` its message says that 40 °C was assumed (a cable at 30 °C was checked at 40 °C).
+
+* Rule `core.terminal-node` (a PV array, a battery, an SPD or an earth electrode with children) says how to draw it:
+  below the device that connects it, the power may flow both ways.
+
+* PLC annotation: the protocols are cut on whole names, with an ellipsis ("Modbus TC" was printed).
+
+* Rule checks: when no rule profile applies, an info finding `core.no-profile` says that only the consistency of the
+  document was checked (an empty result read as a checked installation); for a standard no profile covers (NEC,
+  for example) it says that the protections, cables, residual-current devices and earthing were not checked
+  against it.
+
+* North-American documents (NEC / CEC): cables are written with their AWG / kcmil size whenever it is given
+  ("2x#6", "3G" with #12 written "2-#12+G"; the section in mm² was printed), and residual-current protection is
+  written "GFCI" (6 mA or less) or "GFPE" instead of an IEC type ("5mA type A" was printed for a GFCI).
+
+* An `infeed` link to a device that feeds nothing (the back-feed breaker of a PV inverter) lands on its output
+  terminals, in both views (it arrived on the busbar side). A label without a tag goes on two lines rather than
+  being cut when the room beside the symbol is short.
+
+* Units: a number and its unit are written apart everywhere ("100 A", "20 A 30 mA", "C16 30 mA", "gG 32 A",
+  "6 kA", "Ir 63 A", a spare way "125 A"), in the drawings, the circuit tables and the bill of materials; the
+  ratings of protective devices were written "100A" and "30mA" beside "200 A" and "250 kVA". Curve designations
+  ("C16") are unchanged.
+
+* Examples 21 and 29: the feeders of the refrigeration board and of the smoke-control board carry a neutral
+  (their 1P+N circuits need one).
+
+* Drawings in Spanish (`meta.lang` "es") and Simplified Chinese ("zh"): title block, notes, legends, table
+  headings, type names and the short texts in symbols, with IEC 60050 terms (GB/T terms for Chinese; neutral terms
+  where Spain and Argentina differ). Spanish numbers take a decimal comma. Messages stay in English.
+
+* Drawings in German (`meta.lang` "de", "de-AT", "de-CH"...): title block, notes, legends, table headings ("BMK",
+  "Stromkreis"), type names and the short texts in symbols ("FU", "SPS", "USV"), with the terms of DIN EN 60617 and
+  IEC 60050-826 practice. German numbers take a decimal comma. Messages stay in English.
+
+* Rule profile `vde0100` (German installations, DIN VDE 0100): 30 mA RCD for socket-outlets up to 32 A and for
+  the lighting of dwellings (410), circuits of bathrooms (701, a fixed water heater exempt), charging points with
+  their own circuit and RCD of type B or A/F with 6 mA DC detection (722), surge protection (443/534) and PEN
+  cross-section (540). Combine it with `iec60364`. Example 06 uses it. A document following DIN VDE 0100 without
+  a profile is pointed to it.
+
+* Rule findings in German, Spanish, Portuguese, Russian and Chinese (`UNIWIRE_LANG`), with the terms of each
+  practice (RCD/FI, diferencial, DR, УЗО, 剩余电流保护器); CLI and validation messages stay in English.
+
+* Drawings in Portuguese (`meta.lang` "pt", "pt-BR", "pt-PT"): title block, notes, legends, table headings
+  ("Identificação", "Circuito"), type names and the short texts in symbols ("DR", "DPS", "CLP"), with the terms of
+  ABNT NBR 5410 practice. Portuguese numbers take a decimal comma. Messages stay in English.
+
+* Drawings in Italian (`meta.lang` "it", "it-IT"): title block, notes, legends, table headings ("Sigla",
+  "Circuito"), type names and the short texts in symbols ("INV", "PLC", "UPS"), with the terms of CEI 64-8
+  practice. Italian numbers take a decimal comma. Messages stay in English.
+
+* Drawings in Polish (`meta.lang` "pl", "pl-PL"): title block, notes, legends, table headings ("Oznaczenie",
+  "Obwód"), type names and the short texts in symbols ("PCZ", "PLC", "UPS"), with the terms of PN-HD 60364 and
+  PN-EN 60617 practice. Polish numbers take a decimal comma. Messages stay in English.
+
+* Drawings in Turkish (`meta.lang` "tr", "tr-TR"): title block, notes, legends, table headings ("Etiket",
+  "Devre"), type names and the short texts in symbols ("SRÜ", "PLC", "KGK"), with the terms of TS HD 60364 and
+  Elektrik İç Tesisleri Yönetmeliği practice. Turkish numbers take a decimal comma. Messages stay in English.
+
+* A cable written in a device text comes after the device's own lines (settings, poles, vector group) and never
+  replaces one; a composition ending with its section ("4x35+PE16") is not followed by the section again.
+  "Safety circuit" is not repeated on every feeder of a safety board, nor a data link protocol already in a device
+  text. Sheet references between the views of one PDF point to the right sheet numbers.
+
+* Circuit table: "(upstream)" no longer marks the group RCD of a board on the columns of the boards it feeds on other
+  sheets; a tag is prefixed with its board only when the same tag comes from different boards.
+
+* The surge limiter's "L" no longer runs into its text; bold CJK text is drawn bold in PDFs.
+
+* Formats: thousands grouped from 10 000 ("20 000 V"); phases separated ("L1-L2-L3"); the RCD type not repeated
+  in the RCD cell when the table has its own row for it.
+
+* A busbar that has feeders is no longer drawn twice (a short bar on the incoming conductor and the busbar).
+
+* Circuit table: a tag found in two boards of the same table is prefixed with the board's ("PDU-A -Q1").
+  Chinese and Japanese descriptions are written upright, one character under another.
+
+* Information now shown: the drawing number (title block), the earth electrode resistance taken from an earth node,
+  the setting of an overload relay ("Ir 48.5 A"), "Safety circuit" on the feeder of a safety service, and the
+  protocol of a data link that has no label.
+
+* Cables the circuit table does not show (feeder of a sub-board, a transformer or an inverter, incoming cable of a
+  board) are written in the text of the device feeding them ("5G10 15 m", "W7 5x6 38 m").
+
+* Multi-line view: a motor starter is drawn with contactor contacts; a reversing starter with its reverse contactor
+  (phases L1 and L3 swapped, mechanical interlock), a star-delta starter with its delta contactor (to W2 U2 V2) and
+  its star contactor.
+
+* `uniwire render -f pdf` writes every view of the document in one PDF unless `--view` or `--kind` is given; the
+  sheets of a drawing set are numbered across its views (1 / 3, 2 / 3, 3 / 3).
+
+* CJK text (Chinese, Japanese) is wrapped between characters, not only at spaces: notes, title block values, frame
+  labels and off-drawing targets stay in their cells. A device text too wide for its column goes on two lines before
+  being cut with an ellipsis.
+
+* Russian: device type names (circuit table and elsewhere) and "тип" for the RCD type.
+
+* Small texts: an RCBO without a curve reads "20A 5mA"; transformer ratios in one unit where possible ("20 kV/400 V",
+  "400/230 V"); a name whose label starts with its tag shows the tag once ("TGBT", not "TGBT TGBT"), and a device
+  text no longer repeats its tag or a line already in its label; rule profiles named in the title block ("IEC 60364").
+
+* PDF: characters the font lacks are replaced (subscript digits by digits, clocks by a circle) or left out, never
+  drawn as empty boxes.
+
+* North-American cables are written with their AWG / kcmil size when given, even with a section in mm² for the
+  checks (unless the composition is written the IEC way, "3G" + mm²).
+
+* The title block of a board drawn on its own sheet shows that board's voltage and short-circuit current.
+
+* Fix: the breaker drawn for an equipped spare way has a stable id in the SVG (`<spare id>.breaker`).
+
+* Link routes: control, data and measure links keep clear of dashed frames and busbars, no longer share
+  segments or run along a conductor, and leave a device by its left or right side, whichever gives the clearer
+  route; boards get room at the bottom of their frame for these links. Several links landing on one input
+  conductor get one point each.
+
+* An equipped spare way (`spare` with a rating) is drawn with its breaker, tag and rating.
+
+* Circuit table: a feeder shows its overcurrent protection (breaker, fuse) rather than an RCD or switch below it;
+  a way of a small sub-busbar shows the breaker or fuse feeding it, with its own tag.
+
+* Off-sheet arrows carry their sheet reference or target drawing on the drawing itself.
+
+* Fix: a node text moved by a view's `label_offset` is now avoided by link routes and labels.
+
+* Rendering the same document again reuses its layout (a PDF after a check is drawn at once).
+
+* Standby sources on several transfer switches (one generator per switch) are drawn side by side instead of on
+  top of each other, and on the sheet of their switch when its board has a sheet of its own; a link with no free
+  route no longer makes the drawing fail (internal error, PDF refused): it is routed below its feeder, or left out.
+
+* Drawing of inverters and links: a PV string or battery way that also carries its surge protector, meter or
+  insulation monitor stays on the DC side of the inverter (it was drawn on the AC busbar); an `infeed` link to an
+  inverter or UPS at the head of the tree lands on its input, on top, the side being the DC terminal; a power link
+  drawn as a plain line no longer runs along a busbar; links of different kinds no longer share one end point.
+
+* Frame labels (`enclosures`, view `frames`) too long for their frame are written on two or three lines between
+  the conductors that cross the frame, the frame widening over free room if need be, instead of crossing a
+  busbar or a conductor.
+
+* Circuit table: a `spare` way without its own rating, fed by its own breaker, shows that breaker (tag, rating,
+  curve, poles); the columns were empty.
+
+* New example 53: office with a hybrid inverter, rooftop PV, battery and an essential loads board.
+
+* New `core.scope` finding (info): when a document describes control circuits (contactors or relays fed by a
+  control power supply and switching nothing, coils, push buttons or signal lamps entered as loads), `check` says
+  that uniwire draws power distribution and not control schematics, so that these circuits are only summarized.
+  `llms.txt` and the assistants page state the same scope.
+
+* A `main_breaker` without `idn_mA` is drawn as a circuit breaker, no longer with the residual-current toroid and
+  "IΔ" of a residual-current breaker (the multi-line view already did so).
+
+* Conductor-count marks of DC lines: a line behind a DC source, a DC box or a device declared `dc` is marked with
+  its two poles, never with a "+N" neutral, whatever the poles of its devices (up to an inverter).
+
+* French messages write decimals with a comma ("disjoncteur 32 A sur 1,5 mm²"), like the drawings.
+
+* PDF: Chinese, Japanese and Korean texts are drawn with the CID fonts every PDF reader knows (they were missing
+  before); Liberation Sans is used when installed (Linux), with the widths of Arial that the layout expects. The
+  MCP server images install it.
 
 * New rule profile `enedis` (opt-in): connection of a low-voltage installation to the French public network,
   following the Enedis technical reference (Enedis-NMO-RAC_001E) and NF C 14-100, separate from `nfc15100`,
@@ -20,7 +253,25 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   storage inverters). The French examples on a Tarif Bleu supply
   declare it.
 
-## 0.1.2 (not released yet)
+* `nfc15100` profile checked against the text that gives presumption of conformity (NF C 15-100 2002 with its
+  2005 update and amendments A1 to A5): the rules of dwellings now cite part 10-1 of amendment A5, which
+  replaces part 7-771.
+  * Fixes: the 30 mA protection of dwelling circuits and the minimum of 2 RCDs (now an error) are checked in
+    three-phase dwellings too; lighting and socket points are added up per circuit; the circuits behind an RCD
+    are counted through combs and boards, with `count`; the dryer no longer requires a type A RCD; a shared
+    freezer circuit is a warning; outside dwellings, socket-outlets above 32 A no longer require 30 mA; a
+    non-selective RCD upstream of other RCDs is an error in a dwelling.
+  * New rules: `nfc15100.circuit-section` (section and protection of dedicated circuits), `nfc15100.rcd-rating`
+    (rating of the 30 mA RCDs, warning), `nfc15100.rcd-spread` (lighting and sockets over at least 2 RCDs),
+    `nfc15100.spd-rcd` (surge protector at the origin not behind 30 mA), `nfc15100.agcp-rcd` (500 mA at most,
+    no adjustable sensitivity on a limited-power supply), `nfc15100.earth-resistance` (TT, 50 V),
+    `nfc15100.neutral-pole` (no 1P breaker in a dwelling) and `nfc15100.supply-section` (link from the
+    service breaker to the main board).
+  * EV charging rules cite IEC 60364-7-722 / guide UTE C 15-722, which are not part of that text.
+  * Examples 15 and 36: lighting and socket circuits spread over two RCDs; the reference card example and the
+    quickstart use two RCDs.
+
+## 0.1.2 (not published: shipped in 0.1.3)
 
 * Bill of materials: equipment without a product reference is grouped by type and main characteristics (new
   `spec` key, e.g. `C16 1P+N 6kA`, `40A 30mA 2P type A`) and cables by type, composition and material (new

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import contextvars
 import re
 from collections.abc import Iterable
 from typing import Any, Optional
 
 from . import registry
-from .i18n import normalize_lang
+from .i18n import DECIMAL_COMMA, normalize_lang, render_lang
 from .i18n import t as _t
 from .model import Cable, NodeBase
 from .units import fmt, fmt_sensitivity
@@ -20,12 +21,31 @@ def _g(node: Any, name: str) -> Any:
     return getattr(node, name, None)
 
 
+#: Whether the document being drawn follows North-American practice (NEC / CEC): set by the renderer.
+NORTH_AMERICAN: contextvars.ContextVar[bool] = contextvars.ContextVar("uniwire_north_american", default=False)
+
+
+def north_american(doc: Any) -> bool:
+    """A document following the NEC / CEC (installation standard or rule profile)."""
+    std = (doc.installation.standard or "").upper()
+    return any(k in std for k in ("NEC", "NFPA", "CEC", "CSA")) or any(p.lower().startswith("nec") for p in doc.profiles)
+
+
+def rcd_kind(node: Any) -> str:
+    """The kind of residual-current protection as written: 'type A' (IEC), or under North-American practice
+    'GFCI' (personnel protection, 6 mA or less) and 'GFPE' (equipment), where the IEC types do not apply."""
+    if NORTH_AMERICAN.get():
+        idn = _g(node, "idn_mA")
+        return "" if idn is None else "GFCI" if idn <= 6 else "GFPE"
+    return _t("label.rcd_type", render_lang(), type=node.rcd_type) if _g(node, "rcd_type") else ""
+
+
 def _rcd_text(node: Any) -> str:
     parts = []
     if _g(node, "idn_mA") is not None:
         parts.append(fmt_sensitivity(node.idn_mA))
-    if _g(node, "rcd_type"):
-        parts.append(f"type {node.rcd_type}")
+    if rcd_kind(node):
+        parts.append(rcd_kind(node))
     delay = str(_g(node, "delay") or "").strip()
     if delay.upper() == "S" or _g(node, "selective"):
         parts.append("S")
@@ -42,29 +62,53 @@ def part_number(node: Any) -> Optional[str]:
 
 
 def protection_short(node: Any) -> str:
-    """'C16', '40A 30mA A', 'gG 32A', 'IS 63A'..."""
+    """'C16', '40 A 30 mA', 'gG 32 A', '63 A / 32 A'...: the number and its unit apart, as everywhere on the drawing."""
     t = node.type
     in_a = _g(node, "in_A")
     if t == "breaker":
-        return f"{node.curve or ''}{fmt(in_a)}" if node.curve else (fmt(in_a, "A") if in_a else "")
-    if t == "rcbo":
-        return f"{node.curve or ''}{fmt(in_a)} {fmt_sensitivity(node.idn_mA)}".strip()
+        return f"{node.curve or ''}{fmt(in_a)}" if node.curve else (fmt(in_a, " A") if in_a else "")
+    if t == "rcbo":  # 'C16 30 mA', or '20 A 5 mA' without a curve
+        rating = f"{node.curve}{fmt(in_a)}" if node.curve else (fmt(in_a, " A") if in_a else "")
+        return f"{rating} {fmt_sensitivity(node.idn_mA)}".strip()
     if t == "main_breaker":
         r = node.range_A or fmt(in_a)
-        return f"{r}A {fmt_sensitivity(node.idn_mA)}".strip()
+        return f"{r} A {fmt_sensitivity(node.idn_mA)}".strip()
     if t == "rcd":
-        return f"{fmt(in_a, 'A')} {fmt_sensitivity(node.idn_mA)}".strip()
+        return f"{fmt(in_a, ' A')} {fmt_sensitivity(node.idn_mA)}".strip()
     if t == "fuse":
-        return f"{node.fuse_class or ''} {fmt(in_a, 'A')}".strip()
+        return f"{node.fuse_class or ''} {fmt(in_a, ' A')}".strip()
     if t == "fuse_switch":
-        return f"{fmt(in_a, 'A')} / {fmt(node.fuse_A, 'A')}".strip(" /")
+        return f"{fmt(in_a, ' A')} / {fmt(node.fuse_A, ' A')}".strip(" /")
     if t in ("switch_disconnector", "disconnector"):
-        return fmt(in_a, "A")
+        return fmt(in_a, " A")
     if t == "motor_starter":
-        return f"{fmt(in_a, 'A')}"
+        return f"{fmt(in_a, ' A')}"
     if t == "spare":
-        return fmt(in_a, "A") if in_a else ""
+        return fmt(in_a, " A") if in_a else ""
     return ""
+
+
+def _ratio(u1: float, u2: float) -> str:
+    """Voltage ratio of a transformer, in one unit when both sides allow it: '22/11 kV', '400/230 V', '20 kV/400 V'."""
+    if u1 >= 1000 and u2 >= 1000:
+        return f"{fmt(u1 / 1000)}/{fmt(u2 / 1000)} kV"
+    if u1 < 1000 and u2 < 1000:
+        return f"{fmt(u1)}/{fmt(u2)} V"
+    return f"{fmt(u1 / 1000)} kV/{fmt(u2)} V" if u1 >= 1000 else f"{fmt(u1)} V/{fmt(u2 / 1000)} kV"
+
+
+def ref_label(ref: Optional[str], label: Optional[str]) -> str:
+    """Name of a node from its tag and label, the tag once when the label already starts with it."""
+    if ref and label and (label == ref or label.startswith(ref + " ")):
+        return label
+    return " ".join(x for x in (ref, label) if x)
+
+
+def without_ref(label: str, ref: Optional[str]) -> str:
+    """``label`` without a leading copy of the tag printed above it ('TX-A 3150 kVA' under 'TX-A')."""
+    if ref and label.startswith(ref) and (len(label) == len(ref) or label[len(ref)] in " -:,/"):
+        return label[len(ref):].strip(" -:,/")
+    return label
 
 
 def awg_text(size: str) -> str:
@@ -131,31 +175,56 @@ def poles_mark(poles: Optional[str], neutral_downstream: bool = False) -> Option
 
 def feeder_mark(chain: list[Any], system: Optional[str] = None) -> Optional[Mark]:
     """Mark of an outgoing cable: :func:`conductor_count`, with the neutral shown apart ('3+N', '1+N') when
-    the nearest switching device leaves it uncut."""
+    the nearest switching device leaves it uncut. A DC feeder has no neutral: its two poles are counted."""
     n = conductor_count(chain, system)
     if not n:
         return None
+    if system == "DC":
+        return (n, False)
     poles = next((_g(c, "poles") for c in chain if c.type in SWITCHING | {"spare"} and _g(c, "poles")), None)
     if poles in ("1P", "1P+N", "3P", "3P+N") and n == int(poles[0]) + 1:
         return (n - 1, True)
     return (n, False)
 
 
+def cable_in_awg(c: Optional[Cable]) -> bool:
+    """Whether a cable is written with its North-American size: an AWG / kcmil size, unless the composition is
+    written the IEC way with a section in mm² ('3G' + 2.5; a count of conductors '2x' takes the AWG size). A
+    document following the NEC is always written with its AWG sizes."""
+    if c is None or not c.size_awg:
+        return False
+    if NORTH_AMERICAN.get():
+        return True
+    cores = (c.cores or "").rstrip()
+    return c.section_mm2 is None or not cores.endswith("G")
+
+
 def cable_text(c: Optional[Cable]) -> str:
-    """'3G2,5', '4x(2x1x240)', '2x(5G16)'; North-American sizes when no section is given: '2-#12', '3x(4-600 kcmil)'."""
+    """'3G2,5', '4x(2x1x240)', '2x(5G16)', '4x25+PE16'; North-American sizes when given, unless the composition is written the
+    IEC way ('3G' + mm²): '2-#12', '3x(4-600 kcmil)' (the section in mm² then only serves the checks)."""
     if c is None:
         return ""
     s = ""
     cores = c.cores or ""
-    if c.section_mm2 is not None:
+    if c.section_mm2 is not None and not cable_in_awg(c):
         sec = fmt(c.section_mm2)
-        s = f"{cores}{sec}" if cores and not cores.endswith(")") else (cores or sec)
+        if cores.isdigit():  # a bare count of conductors: '2' and 1.5 mm² -> '2x1.5', not '21.5'
+            cores += "x"
+        glue = "" if cores[-1:] in ("G", "x", "×", "-") else " "  # '5G2.5', '2x1.5'; 'busbar 2000'
+        if cores and (cores.endswith(")") or re.search(r"\d$", cores)):
+            s = cores  # the composition already has its sections ('3x150+70', '4x(1x240)')
+        else:
+            s = f"{cores}{glue}{sec}" if cores else sec
+        if c.pe_section_mm2 and "G" not in cores.upper() and "+" not in s:
+            s += f"+PE{fmt(c.pe_section_mm2)}"  # protective conductor run beside the cores: '4x25+PE16'
     elif c.size_awg:
         size = awg_text(c.size_awg)
         if not cores:
             s = size
         elif c.size_awg.strip().lstrip("#") in cores:  # composition already spells the size: '2-#12+G'
             return cores
+        elif re.fullmatch(r"\d+G", cores.strip()) and int(cores.strip()[:-1]) > 1:  # '3G' + #12: '2-#12+G'
+            s = f"{int(cores.strip()[:-1]) - 1}-{size}+G"
         else:
             s = f"{cores}{size}" if cores[-1] in "-x×" else f"{cores} {size}"
     elif cores:
@@ -163,6 +232,17 @@ def cable_text(c: Optional[Cable]) -> str:
     if s and c.parallel and c.parallel > 1:
         s = f"{c.parallel}x({s})"
     return s
+
+
+def _protocols(names: list[str], width: int = 24) -> str:
+    """The protocols of a PLC on one short line: whole names only, an ellipsis for the ones left out."""
+    text = ""
+    for name in names:
+        joined = f"{text}, {name}" if text else name
+        if len(joined) > width and text:
+            return text + " …"
+        text = joined
+    return text
 
 
 def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> list[str]:
@@ -186,7 +266,7 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
         lines.append(node.label)
     if t == "transformer":
         lines += [fmt(g("sn_kVA"), " kVA") if g("sn_kVA") else "",
-                  f"{fmt(g('u1_V') / 1000 if g('u1_V') else None)}kV/{fmt(g('u2_V'))}V" if g("u1_V") and g("u2_V") else "",
+                  _ratio(g("u1_V"), g("u2_V")) if g("u1_V") and g("u2_V") else "",
                   " ".join(x for x in (g("coupling"), f"ucc {fmt(g('ucc_pct'))}%" if g("ucc_pct") else "") if x)]
     elif t == "generator":
         lines += [fmt(g("sn_kVA"), " kVA") if g("sn_kVA") else fmt(g("p_kW"), " kW") if g("p_kW") else "",
@@ -205,17 +285,20 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
         lines.append(protection_short(node))
         extra = []
         if g("icn_kA"):
-            extra.append(fmt(g("icn_kA"), "kA"))
+            extra.append(fmt(g("icn_kA"), " kA"))
         if g("poles"):
             extra.append(g("poles"))
         if extra:
             lines.append(" ".join(extra))
         if t == "rcbo":
-            lines.append(_rcd_text(node).replace(fmt_sensitivity(g("idn_mA")), "").strip())
+            kind = _rcd_text(node).replace(fmt_sensitivity(g("idn_mA")), "").strip()
+            shown = " ".join([*lines, node.ref or "", g("range") or ""]).split()
+            if not (kind == rcd_kind(node) and kind in shown):
+                lines.append(kind)  # not when the text shown (label, tag, range) already says it
             if g("idn_range_mA"):
                 lines.append(f"IΔn {g('idn_range_mA')} mA")
         if g("ir_A"):
-            lines.append(f"Ir {fmt(g('ir_A'))}A")
+            lines.append(f"Ir {fmt(g('ir_A'))} A")
         if g("range") and len(lines) < 4:
             lines.insert(0, g("range"))
     elif t == "main_breaker":
@@ -232,7 +315,10 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
     elif t == "impulse_relay":
         lines += [fmt(g("in_A"), " A") if g("in_A") else ""]
     elif t == "thermal_relay":
-        lines += [f"{g('range_A')} A" if g("range_A") else ""]
+        rng = str(g("range_A") or "")
+        if normalize_lang(lang) in DECIMAL_COMMA:  # the decimal comma of the rest of the text
+            rng = re.sub(r"(?<=\d)\.(?=\d)", ",", rng)
+        lines += [f"{rng} A" if rng else "", f"Ir {fmt(g('setting_A'))} A" if g("setting_A") else ""]
     elif t == "motor_starter":
         lines += [fmt(g("p_kW"), " kW") if g("p_kW") else "", fmt(g("in_A"), " A") if g("in_A") else ""]
     elif t == "transfer_switch":
@@ -257,7 +343,7 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
     elif t == "plc":
         mods = g("modules") or []
         lines += [part_number(node) or "", _t("ann.modules", lang, count=len(mods)) if mods else "",
-                  ", ".join(g("protocols") or [])[:24]]
+                  _protocols(g("protocols") or [])]
     elif t == "power_supply":
         u = f"{fmt(g('u1_V'))}/{fmt(g('u2_V'))} V {g('output') or ''}".strip() if g("u1_V") and g("u2_V") else ""
         lines += [u, fmt(g("in_A"), " A") if g("in_A") else ""]
@@ -287,6 +373,8 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
         return column.get("label") or ""
     if field == "ref":
         # tag of the feeder protection, else of the final node itself (spare way, IMD, busway tap-off...)
+        if column.get("own_ref"):  # protected from upstream (sub-busbar way, busway tap-off): its own tag
+            return column["own_ref"]
         return (prot.ref if prot is not None and prot.ref else _g(leaf, "ref")) or ""
     if field == "protection":
         return protection_short(prot) if prot is not None else ""
@@ -300,10 +388,16 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
         src = prot if _g(prot, "idn_mA") else rcd_node
         if src is None or not _g(src, "idn_mA"):
             return ""
-        txt = fmt_sensitivity(_g(src, "idn_mA")) + (f" {_g(src, 'rcd_type')}" if _g(src, "rcd_type") else "")
+        rcd_type = _g(src, "rcd_type") if not column.get("rcd_type_column") else None  # else in its own row
+        if NORTH_AMERICAN.get():
+            rcd_type = rcd_kind(src)
+        txt = fmt_sensitivity(_g(src, "idn_mA")) + (f" {rcd_type}" if rcd_type else "")
         # residual-current protection carried by a device upstream of the feeder (incomer, group RCD): marked
         return _t("cell.upstream", lang, value=txt) if src is rcd_node and column.get("rcd_upstream") else txt
     if field == "rcd_type":
+        if NORTH_AMERICAN.get():
+            src = prot if _g(prot, "idn_mA") else rcd_node
+            return rcd_kind(src) if src is not None else ""
         src = prot if _g(prot, "rcd_type") else rcd_node
         return _g(src, "rcd_type") or ""
     if field == "poles":
@@ -323,7 +417,7 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
         ph = _g(leaf, "phase") or _g(prot, "phase")
         if not ph and (_g(prot, "poles") in THREE_PHASE_POLES or _g(leaf, "phases") == 3):
             ph = "L1L2L3"  # three-phase feeder
-        return ph or ""
+        return re.sub(r"(?<=\d)(?=L)", "-", ph) if ph else ""  # 'L1-L2-L3'
     if field == "room":
         return _g(leaf, "room") or ""
     if field == "points":
@@ -366,6 +460,69 @@ CARTOUCHE_TITLES = {
         "points": "Points", "circuit": "Circuit", "ib_A": "Ib", "cos_phi": "cos φ", "count": "Nombre",
         "un_V": "Tension", "frame_A": "Boîtier", "cable_type": "Type de câble", "cable_ref": "Repère câble",
         "install": "Mode de pose",
+    },
+    "ru": {
+        "label": "Наименование", "ref": "Обозначение", "protection": "Защита", "in_A": "Ном. ток", "curve": "Хар-ка",
+        "icn_kA": "Откл. способн.", "idn_mA": "УЗО", "rcd_type": "Тип УЗО", "poles": "Полюса", "cable": "Кабель (мм²)", "cable_awg": "Кабель",
+        "section_mm2": "Сечение", "length_m": "Длина", "p_kW": "Мощность", "phase": "Фаза", "room": "Помещение",
+        "points": "Точки", "circuit": "Группа", "ib_A": "Ib", "cos_phi": "cos φ", "count": "Кол-во",
+        "un_V": "Напряжение", "frame_A": "Корпус", "cable_type": "Марка кабеля", "cable_ref": "Обозн. кабеля",
+        "install": "Способ прокладки",
+    },
+    "zh": {
+        "label": "名称", "ref": "编号", "protection": "保护", "in_A": "额定电流", "curve": "脱扣曲线", "icn_kA": "分断能力",
+        "idn_mA": "IΔn", "rcd_type": "剩余电流类型", "poles": "极数", "cable": "电缆（mm²）", "cable_awg": "电缆",
+        "section_mm2": "截面", "length_m": "长度", "p_kW": "功率", "phase": "相别", "room": "房间", "points": "点数",
+        "circuit": "回路", "ib_A": "Ib", "cos_phi": "功率因数", "count": "数量", "un_V": "电压", "frame_A": "壳架",
+        "cable_type": "电缆型号", "cable_ref": "电缆编号", "install": "敷设方式",
+    },
+    "es": {
+        "label": "Descripción", "ref": "Designación", "protection": "Protección", "in_A": "Calibre", "curve": "Curva",
+        "icn_kA": "P. de corte", "idn_mA": "Diferencial", "rcd_type": "Tipo dif.", "poles": "Polos",
+        "cable": "Cable (mm²)", "cable_awg": "Cable", "section_mm2": "Sección", "length_m": "Longitud",
+        "p_kW": "Potencia", "phase": "Fase", "room": "Local", "points": "Puntos", "circuit": "Circuito", "ib_A": "Ib",
+        "cos_phi": "cos φ", "count": "Cant.", "un_V": "Tensión", "frame_A": "Caja", "cable_type": "Tipo de cable",
+        "cable_ref": "Ref. cable", "install": "Mét. instalación",
+    },
+    "de": {
+        "label": "Bezeichnung", "ref": "BMK", "protection": "Schutzorgan", "in_A": "Nennstrom", "curve": "Charakteristik",
+        "icn_kA": "Schaltverm.", "idn_mA": "RCD", "rcd_type": "RCD-Typ", "poles": "Pole",
+        "cable": "Leitung (mm²)", "cable_awg": "Leitung", "section_mm2": "Querschnitt", "length_m": "Länge",
+        "p_kW": "Leistung", "phase": "Außenleiter", "room": "Raum", "points": "Auslässe", "circuit": "Stromkreis",
+        "ib_A": "Ib", "cos_phi": "cos φ", "count": "Anz.", "un_V": "Spannung", "frame_A": "Baugröße",
+        "cable_type": "Leitungstyp", "cable_ref": "Leitungs-BMK", "install": "Verlegeart",
+    },
+    "pt": {
+        "label": "Descrição", "ref": "Ident.", "protection": "Proteção", "in_A": "Corr. nominal",
+        "curve": "Curva", "icn_kA": "Cap. interrupção", "idn_mA": "DR", "rcd_type": "Tipo DR", "poles": "Polos",
+        "cable": "Cabo (mm²)", "cable_awg": "Cabo", "section_mm2": "Seção", "length_m": "Comprimento",
+        "p_kW": "Potência", "phase": "Fase", "room": "Local", "points": "Pontos", "circuit": "Circuito", "ib_A": "Ib",
+        "cos_phi": "cos φ", "count": "Qtd.", "un_V": "Tensão", "frame_A": "Carcaça", "cable_type": "Tipo de cabo",
+        "cable_ref": "Ident. cabo", "install": "Mét. instalação",
+    },
+    "it": {
+        "label": "Descrizione", "ref": "Sigla", "protection": "Protezione", "in_A": "In",
+        "curve": "Curva", "icn_kA": "P.d.I.", "idn_mA": "Diff.", "rcd_type": "Tipo diff.", "poles": "Poli",
+        "cable": "Cavo (mm²)", "cable_awg": "Cavo", "section_mm2": "Sezione", "length_m": "Lunghezza",
+        "p_kW": "Potenza", "phase": "Fase", "room": "Locale", "points": "Punti", "circuit": "Circuito", "ib_A": "Ib",
+        "cos_phi": "cos φ", "count": "Q.tà", "un_V": "Tensione", "frame_A": "Taglia", "cable_type": "Tipo cavo",
+        "cable_ref": "Sigla cavo", "install": "Posa",
+    },
+    "pl": {
+        "label": "Opis", "ref": "Oznaczenie", "protection": "Zabezpieczenie", "in_A": "In",
+        "curve": "Charakt.", "icn_kA": "Zdolność wył.", "idn_mA": "RCD", "rcd_type": "Typ RCD",
+        "poles": "Bieguny", "cable": "Przewód (mm²)", "cable_awg": "Przewód", "section_mm2": "Przekrój",
+        "length_m": "Długość", "p_kW": "Moc", "phase": "Faza", "room": "Pomieszczenie", "points": "Punkty",
+        "circuit": "Obwód", "ib_A": "Ib", "cos_phi": "cos φ", "count": "Liczba", "un_V": "Napięcie",
+        "frame_A": "Obudowa", "cable_type": "Typ przewodu", "cable_ref": "Ozn. przewodu", "install": "Sposób ułożenia",
+    },
+    "tr": {
+        "label": "Açıklama", "ref": "Etiket", "protection": "Koruma", "in_A": "Anma akımı", "curve": "Eğri",
+        "icn_kA": "Kesme kap.", "idn_mA": "KAKR", "rcd_type": "KAKR tipi", "poles": "Kutup",
+        "cable": "Kablo (mm²)", "cable_awg": "Kablo", "section_mm2": "Kesit", "length_m": "Uzunluk",
+        "p_kW": "Güç", "phase": "Faz", "room": "Mahal", "points": "Nokta", "circuit": "Devre", "ib_A": "Ib",
+        "cos_phi": "cos φ", "count": "Adet", "un_V": "Gerilim", "frame_A": "Kasa", "cable_type": "Kablo tipi",
+        "cable_ref": "Kablo etiketi", "install": "Döşeme şekli",
     },
     "en": {
         "label": "Description", "ref": "Tag", "protection": "Protection", "in_A": "Rating", "curve": "Curve",

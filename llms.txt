@@ -4,6 +4,12 @@
 
 For assistants: the reference card of the format (generated from the model) follows this file at https://uniwire.sh/llms.txt, so one read gives you everything needed. Locally, `uniwire card` prints the same card.
 
+## What uniwire draws
+
+uniwire draws power distribution: single-line and multi-line diagrams of installations and panels, from the sources to the loads, with their protections, cables and RCDs. It does not draw control schematics (relay coils and contacts, push buttons, signal lamps, current paths). When the user asks for a control schematic, tell them so before you start, offer to draw the power side of the installation instead, and write the control logic in `meta.notes`; never present a single-line diagram as the control schematic they asked for. `check` reports `core.scope` when a document describes control circuits: pass that message on to the user.
+
+Choose the views for the drawing asked for: the single-line diagram for a distribution overview; for a panel or cabinet to be built or wired (machine control panel, PLC cabinet, pump or HVAC control panel, assembly drawing), two views: a view with `"kind": "multi-line"` first (one line per conductor, with the auxiliary devices and the control, data and measure links), then a single-line view (overview and circuit table). The editor opens on the first view and switches between them; add `&kind=multi-line` or `&kind=single-line` to the editor link below to open a given one, `&color=phase` (or `source`, `conductors`) to colour it, and `&download=pdf` to download the view shown as a PDF.
+
 ## How to produce a document
 
 Use the first way that works for you:
@@ -45,7 +51,7 @@ When the user asks for a PDF, add `&download=pdf` at the end of the link: the ed
 
 - [JSON Schema](https://uniwire.sh/schema/v1/uniwire.schema.json): draft 2020-12
 - [Type registry](https://github.com/uniwire-dev/uniwire/blob/main/src/uniwire/registry/core.json): node types, categories, IEC 81346 letters, CIM / IFC mappings
-- [Examples](https://uniwire.sh/viewer/examples/index.json): 52 documents, each at `https://uniwire.sh/viewer/examples/<file>` (dwellings, commercial, industrial, PV, EV, UPS, MV/LV substations, PLCs)
+- [Examples](https://uniwire.sh/viewer/examples/index.json): 53 documents, each at `https://uniwire.sh/viewer/examples/<file>` (dwellings, commercial, industrial, PV, EV, UPS, MV/LV substations, PLCs)
 
 ## Optional
 

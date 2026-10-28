@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import copy
+import hashlib
+import re
+from collections import OrderedDict
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, Optional
 
@@ -12,7 +17,7 @@ from ..model import Document, View
 from ..resolve import build_index
 from .colors import colorize
 from .frame import compose_page
-from .scene import Page
+from .scene import Group, Item, Page, Text
 from .svg import page_to_svg
 
 
@@ -35,19 +40,82 @@ def default_view(doc: Document, view_id: Optional[str] = None, kind: Optional[st
     return base.model_copy(update={"kind": kind, "title": None, "id": "ml" if kind == "multi-line" else base.id})
 
 
+_PAGES: OrderedDict[str, list[Page]] = OrderedDict()  # recent layouts: the same document is often drawn
+_PAGES_MAX = 16                                        # several times in a row (check, render, then its PDF)
+
+
 def render_pages(doc: Document, view: Optional[View] = None) -> list[Page]:
     """Plan the sheets, lay them out and compose each page."""
     view = view or default_view(doc)
     lang = normalize_lang(doc.meta.lang)
+    try:
+        key: Optional[str] = hashlib.sha256((doc.model_dump_json() + "\0" + view.model_dump_json() + "\0" + lang)
+                                            .encode()).hexdigest()
+    except ValueError:  # text that cannot be encoded (lone surrogates): drawn, not cached
+        key = None
+    if key in _PAGES:
+        _PAGES.move_to_end(key)
+        return copy.deepcopy(_PAGES[key])
     from ..i18n import RENDER_LANG
-    token = RENDER_LANG.set(lang)
+    from ..labels import NORTH_AMERICAN, north_american
+    token, na_token = RENDER_LANG.set(lang), NORTH_AMERICAN.set(north_american(doc))
     try:
         pages = _render_pages(doc, view, lang)
     finally:
         RENDER_LANG.reset(token)
+        NORTH_AMERICAN.reset(na_token)
     for i, page in enumerate(pages, 1):
         page.attrs.update({"data-uw-sheet": str(i), "data-uw-view-kind": view.kind})
+    if key is not None:
+        _PAGES[key] = copy.deepcopy(pages)
+    while len(_PAGES) > _PAGES_MAX:
+        _PAGES.popitem(last=False)
     return pages
+
+
+def render_views(doc: Document, views: Optional[Iterable[View]] = None) -> list[Page]:
+    """Sheets of several views, one view after the other (default: every view of the document, or the default view
+    when it declares none): a drawing set such as the multi-line power diagram then the single-line diagram with the
+    auxiliary devices and links. The cross-sheet references of each view keep pointing at its own sheets."""
+    views = list(views) if views is not None else (list(doc.views) or [default_view(doc)])
+    out: list[Page] = []
+    for v in views:
+        pages = render_pages(doc, v)
+        if out:
+            for page in pages:
+                _shift_refs(page.root, len(out))
+        out += pages
+    if len(views) > 1:  # one drawing set: sheets numbered across the views
+        for i, page in enumerate(out, 1):
+            page.attrs["data-uw-sheet"] = str(i)
+            _renumber(page.root, i, len(out))
+    return out
+
+
+def _renumber(item: Item, folio: int, total: int) -> None:
+    """Write ``folio / total`` in the sheet cell of a title block (the last text of its ``tb-sheet`` group)."""
+    if isinstance(item, Group):
+        if item.cls == "tb-sheet":
+            texts = [t for t in item.items if isinstance(t, Text)]
+            if texts:
+                texts[-1].text = f"{folio} / {total}"
+            return
+        for c in item.items:
+            _renumber(c, folio, total)
+
+
+def _shift_refs(item: Item, offset: int) -> None:
+    """Add ``offset`` to the target sheet of the cross-sheet references under ``item``, in their link and in the
+    sheet number written in their text ('=RA → sheet 2', 'from -P3 (sheet 1)')."""
+    if isinstance(item, Group):
+        target = item.attrs.get("data-uw-target-sheet", "")
+        if target.isdigit():
+            item.attrs["data-uw-target-sheet"] = str(int(target) + offset)
+            for t in item.items:
+                if isinstance(t, Text):
+                    t.text = re.sub(rf"(?<!\d){target}(?!\d)(?!.*(?<!\d){target}(?!\d))", str(int(target) + offset), t.text)
+        for c in item.items:
+            _shift_refs(c, offset)
 
 
 #: Largest enlargement of a drawing that leaves most of its sheet empty (annotations 2 mm -> 2.5 mm).
@@ -103,8 +171,8 @@ def _render_sheets(doc: Document, view: View, lang: str) -> tuple[list[Page], li
         next_f = number.get(id(spec.next)) if spec.next is not None else None
         incoming = None
         incoming_ref: tuple[Optional[int], Optional[str]] = (None, None)
-        if i > 1 and spec.roots and not spec.continuation:
-            rid = spec.roots[0].id
+        if i > 1 and spec.roots and not spec.continuation and index.parent.get(spec.roots[0].id or ""):
+            rid = spec.roots[0].id  # a board drawn on its own sheet (not a group of trees): fed from another one
             src = next((j for j, s in enumerate(specs, 1) if rid in s.detached and j != i), None)
             incoming_ref = (src, index.parent.get(rid or ""))
             feeder = next((a for a in index.ancestors(rid or "") if a.ref), None)
@@ -153,12 +221,14 @@ def render_svg(doc: Document, out_dir: str | Path, stem: str = "sld", view: Opti
     return paths
 
 
-def render_pdf(doc: Document, path: str | Path, view: Optional[View] = None) -> Path:
+def render_pdf(doc: Document, path: str | Path, view: Optional[View] = None, all_views: bool = False) -> Path:
     """Render the sheets of ``view`` into one PDF at ``path`` (one page per sheet, bookmarks and clickable
-    cross-sheet references). Needs the ``pdf`` extra (reportlab). Returns the path."""
+    cross-sheet references); with ``all_views``, the sheets of every view of the document (:func:`render_views`).
+    Needs the ``pdf`` extra (reportlab). Returns the path."""
     from .pdf import write_pdf
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    write_pdf(render_pages(doc, view), path, normalize_lang(doc.meta.lang), doc.meta.title)
+    pages = render_views(doc) if all_views else render_pages(doc, view)
+    write_pdf(pages, path, normalize_lang(doc.meta.lang), doc.meta.title)
     return path

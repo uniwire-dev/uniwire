@@ -46,11 +46,11 @@
               {"type": "breaker", "ref": "-Q11", "use": "C16", "circuit": "1", "cable": {"cores": "3G", "section_mm2": 1.5},
                "children": [{"type": "lighting", "label": "Éclairage", "points": 8}]},
               {"type": "breaker", "ref": "-Q12", "use": "C20", "circuit": "2", "cable": {"cores": "3G", "section_mm2": 2.5},
-               "children": [{"type": "socket", "label": "Prises séjour", "points": 7}]},
-              {"type": "breaker", "ref": "-Q13", "use": "C20", "circuit": "3", "cable": {"cores": "3G", "section_mm2": 2.5},
-               "children": [{"type": "socket", "label": "Prises chambres", "points": 9}]}
+               "children": [{"type": "socket", "label": "Prises séjour", "points": 7}]}
             ]},
             {"type": "rcd", "ref": "-Q2", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "2P", "children": [
+              {"type": "breaker", "ref": "-Q13", "use": "C20", "circuit": "3", "cable": {"cores": "3G", "section_mm2": 2.5},
+               "children": [{"type": "socket", "label": "Prises chambres", "points": 9}]},
               {"type": "breaker", "ref": "-Q21", "use": "C20", "circuit": "4", "cable": {"cores": "3G", "section_mm2": 2.5},
                "children": [{"type": "appliance", "label": "Lave-linge", "kind": "washing_machine"}]},
               {"type": "breaker", "ref": "-Q22", "use": "C20", "in_A": 32, "circuit": "5", "cable": {"cores": "3G", "section_mm2": 6},

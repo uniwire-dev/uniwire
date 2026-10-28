@@ -8,7 +8,15 @@
    "iec81346_class": null,
    "label": {
     "fr": "Réseau",
-    "en": "Utility grid"
+    "en": "Utility grid",
+    "ru": "Электросеть",
+    "zh": "电网",
+    "es": "Red de distribución",
+    "de": "Netz",
+    "pt": "Rede de distribuição",
+    "it": "Rete di distribuzione",
+    "pl": "Sieć zasilająca",
+    "tr": "Dağıtım şebekesi"
    },
    "symbol": "grid",
    "map": {
@@ -22,7 +30,15 @@
    "iec81346_class": "TAA",
    "label": {
     "fr": "Transformateur",
-    "en": "Transformer"
+    "en": "Transformer",
+    "ru": "Трансформатор",
+    "zh": "变压器",
+    "es": "Transformador",
+    "de": "Transformator",
+    "pt": "Transformador",
+    "it": "Trasformatore",
+    "pl": "Transformator",
+    "tr": "Transformatör"
    },
    "symbol": "transformer",
    "map": {
@@ -37,7 +53,15 @@
    "iec81346_class": "GAA",
    "label": {
     "fr": "Groupe électrogène",
-    "en": "Generator"
+    "en": "Generator",
+    "ru": "Генератор",
+    "zh": "发电机组",
+    "es": "Grupo electrógeno",
+    "de": "Stromerzeuger",
+    "pt": "Grupo gerador",
+    "it": "Gruppo elettrogeno",
+    "pl": "Zespół prądotwórczy",
+    "tr": "Jeneratör"
    },
    "symbol": "generator",
    "map": {
@@ -52,7 +76,15 @@
    "iec81346_class": "RBA",
    "label": {
     "fr": "ASI",
-    "en": "UPS"
+    "en": "UPS",
+    "ru": "ИБП",
+    "zh": "不间断电源（UPS）",
+    "es": "SAI / UPS",
+    "de": "USV",
+    "pt": "Nobreak (UPS)",
+    "it": "UPS (gruppo di continuità)",
+    "pl": "UPS (zasilacz bezprzerwowy)",
+    "tr": "Kesintisiz güç kaynağı (KGK)"
    },
    "symbol": "ups",
    "map": {
@@ -65,7 +97,15 @@
    "iec81346_class": "GC",
    "label": {
     "fr": "Champ PV",
-    "en": "PV array"
+    "en": "PV array",
+    "ru": "Фотоэлектрическая батарея",
+    "zh": "光伏方阵",
+    "es": "Generador fotovoltaico",
+    "de": "PV-Generator",
+    "pt": "Gerador fotovoltaico",
+    "it": "Generatore fotovoltaico",
+    "pl": "Generator fotowoltaiczny",
+    "tr": "Fotovoltaik generatör"
    },
    "symbol": "pv_array",
    "map": {
@@ -79,7 +119,15 @@
    "iec81346_class": "GBA",
    "label": {
     "fr": "Batterie",
-    "en": "Battery"
+    "en": "Battery",
+    "ru": "Аккумуляторная батарея",
+    "zh": "蓄电池",
+    "es": "Batería",
+    "de": "Batterie",
+    "pt": "Bateria",
+    "it": "Batteria",
+    "pl": "Bateria akumulatorów",
+    "tr": "Akü"
    },
    "symbol": "battery",
    "map": {
@@ -94,7 +142,15 @@
    "iec81346_class": "TBB",
    "label": {
     "fr": "Onduleur",
-    "en": "Inverter"
+    "en": "Inverter",
+    "ru": "Инвертор",
+    "zh": "逆变器",
+    "es": "Inversor",
+    "de": "Wechselrichter",
+    "pt": "Inversor",
+    "it": "Inverter",
+    "pl": "Falownik",
+    "tr": "İnvertör"
    },
    "symbol": "inverter",
    "map": {
@@ -108,7 +164,15 @@
    "iec81346_class": "PGH",
    "label": {
     "fr": "Compteur",
-    "en": "Meter"
+    "en": "Meter",
+    "ru": "Счётчик",
+    "zh": "电能表",
+    "es": "Contador / medidor",
+    "de": "Zähler",
+    "pt": "Medidor",
+    "it": "Contatore",
+    "pl": "Licznik",
+    "tr": "Sayaç"
    },
    "symbol": "meter",
    "map": {
@@ -122,7 +186,15 @@
    "iec81346_class": "QAB",
    "label": {
     "fr": "Disjoncteur",
-    "en": "Circuit breaker"
+    "en": "Circuit breaker",
+    "ru": "Автоматический выключатель",
+    "zh": "断路器",
+    "es": "Interruptor automático",
+    "de": "Leitungsschutzschalter / Leistungsschalter",
+    "pt": "Disjuntor",
+    "it": "Interruttore automatico",
+    "pl": "Wyłącznik nadprądowy",
+    "tr": "Otomatik sigorta"
    },
    "symbol": "breaker",
    "map": {
@@ -137,7 +209,15 @@
    "iec81346_class": "FBA",
    "label": {
     "fr": "Interrupteur différentiel",
-    "en": "Residual current switch"
+    "en": "Residual current switch",
+    "ru": "УЗО",
+    "zh": "不带过电流保护的剩余电流动作断路器（RCCB）",
+    "es": "Interruptor diferencial",
+    "de": "Fehlerstrom-Schutzschalter (RCD)",
+    "pt": "Interruptor diferencial-residual (IDR)",
+    "it": "Interruttore differenziale",
+    "pl": "Wyłącznik różnicowoprądowy",
+    "tr": "Kaçak akım koruma rölesi (KAKR)"
    },
    "symbol": "rcd",
    "map": {
@@ -151,7 +231,15 @@
    "iec81346_class": "FBA",
    "label": {
     "fr": "Disjoncteur différentiel",
-    "en": "RCBO"
+    "en": "RCBO",
+    "ru": "Дифференциальный автомат (АВДТ)",
+    "zh": "带过电流保护的剩余电流动作断路器（RCBO）",
+    "es": "Interruptor automático diferencial (RCBO)",
+    "de": "FI/LS-Schalter (RCBO)",
+    "pt": "Disjuntor diferencial-residual (DDR)",
+    "it": "Interruttore magnetotermico differenziale",
+    "pl": "Wyłącznik różnicowonadprądowy (RCBO)",
+    "tr": "Kaçak akım korumalı otomatik sigorta (RCBO)"
    },
    "symbol": "rcbo",
    "map": {
@@ -166,7 +254,15 @@
    "iec81346_class": "QAB",
    "label": {
     "fr": "Disjoncteur de branchement / AGCP",
-    "en": "Main breaker"
+    "en": "Main breaker",
+    "ru": "Вводной автомат",
+    "zh": "总断路器",
+    "es": "Interruptor automático general",
+    "de": "Hauptschalter / selektiver Hauptleitungsschutzschalter",
+    "pt": "Disjuntor geral",
+    "it": "Interruttore generale",
+    "pl": "Wyłącznik główny",
+    "tr": "Ana şalter"
    },
    "symbol": "main_breaker",
    "map": {
@@ -181,7 +277,15 @@
    "iec81346_class": "FCA",
    "label": {
     "fr": "Fusible",
-    "en": "Fuse"
+    "en": "Fuse",
+    "ru": "Предохранитель",
+    "zh": "熔断器",
+    "es": "Fusible",
+    "de": "Sicherung",
+    "pt": "Fusível",
+    "it": "Fusibile",
+    "pl": "Bezpiecznik",
+    "tr": "Eriyen telli sigorta"
    },
    "symbol": "fuse",
    "map": {
@@ -195,7 +299,15 @@
    "iec81346_class": "QBB",
    "label": {
     "fr": "Interrupteur-sectionneur fusibles",
-    "en": "Fuse switch-disconnector"
+    "en": "Fuse switch-disconnector",
+    "ru": "Выключатель-разъединитель с предохранителями",
+    "zh": "熔断器式隔离开关",
+    "es": "Interruptor-seccionador con fusibles",
+    "de": "Sicherungslasttrennschalter",
+    "pt": "Interruptor-seccionador com fusíveis",
+    "it": "Interruttore di manovra-sezionatore con fusibili",
+    "pl": "Rozłącznik bezpiecznikowy",
+    "tr": "Sigortalı yük ayırıcı"
    },
    "symbol": "fuse_switch",
    "map": {
@@ -209,7 +321,15 @@
    "iec81346_class": "QBA",
    "label": {
     "fr": "Interrupteur-sectionneur",
-    "en": "Switch-disconnector"
+    "en": "Switch-disconnector",
+    "ru": "Выключатель-разъединитель",
+    "zh": "负荷隔离开关",
+    "es": "Interruptor-seccionador",
+    "de": "Lasttrennschalter",
+    "pt": "Interruptor-seccionador",
+    "it": "Interruttore di manovra-sezionatore",
+    "pl": "Rozłącznik izolacyjny",
+    "tr": "Yük ayırıcı"
    },
    "symbol": "switch_disconnector",
    "map": {
@@ -224,7 +344,15 @@
    "iec81346_class": "QBA",
    "label": {
     "fr": "Sectionneur",
-    "en": "Disconnector"
+    "en": "Disconnector",
+    "ru": "Разъединитель",
+    "zh": "隔离器",
+    "es": "Seccionador",
+    "de": "Trennschalter",
+    "pt": "Seccionador",
+    "it": "Sezionatore",
+    "pl": "Odłącznik",
+    "tr": "Ayırıcı"
    },
    "symbol": "disconnector",
    "map": {
@@ -239,7 +367,15 @@
    "iec81346_class": "QAA",
    "label": {
     "fr": "Contacteur",
-    "en": "Contactor"
+    "en": "Contactor",
+    "ru": "Контактор",
+    "zh": "接触器",
+    "es": "Contactor",
+    "de": "Schütz",
+    "pt": "Contator",
+    "it": "Contattore",
+    "pl": "Stycznik",
+    "tr": "Kontaktör"
    },
    "symbol": "contactor",
    "map": {
@@ -253,7 +389,15 @@
    "iec81346_class": "KFA",
    "label": {
     "fr": "Télérupteur",
-    "en": "Impulse relay"
+    "en": "Impulse relay",
+    "ru": "Импульсное реле",
+    "zh": "脉冲继电器",
+    "es": "Telerruptor",
+    "de": "Stromstoßschalter",
+    "pt": "Relé de impulso",
+    "it": "Relè passo-passo",
+    "pl": "Przekaźnik bistabilny",
+    "tr": "İmpuls röle"
    },
    "symbol": "impulse_relay",
    "map": {
@@ -267,7 +411,15 @@
    "iec81346_class": "FC",
    "label": {
     "fr": "Relais thermique",
-    "en": "Overload relay"
+    "en": "Overload relay",
+    "ru": "Тепловое реле",
+    "zh": "热过载继电器",
+    "es": "Relé térmico",
+    "de": "Motorschutzrelais",
+    "pt": "Relé de sobrecarga",
+    "it": "Relè termico",
+    "pl": "Przekaźnik termiczny",
+    "tr": "Termik röle"
    },
    "symbol": "thermal_relay",
    "map": {
@@ -280,7 +432,15 @@
    "iec81346_class": "QA",
    "label": {
     "fr": "Départ moteur",
-    "en": "Motor starter"
+    "en": "Motor starter",
+    "ru": "Пускатель двигателя",
+    "zh": "电动机起动器",
+    "es": "Arrancador de motor",
+    "de": "Motorabgang",
+    "pt": "Partida de motor",
+    "it": "Avviatore motore",
+    "pl": "Układ rozruchowy silnika",
+    "tr": "Motor yol verici"
    },
    "symbol": "motor_starter",
    "map": {
@@ -293,7 +453,15 @@
    "iec81346_class": "QA",
    "label": {
     "fr": "Inverseur de source",
-    "en": "Transfer switch"
+    "en": "Transfer switch",
+    "ru": "Переключатель источников питания",
+    "zh": "转换开关电器（TSE）",
+    "es": "Conmutador de transferencia",
+    "de": "Netzumschalter",
+    "pt": "Chave de transferência",
+    "it": "Commutatore di rete",
+    "pl": "Przełącznik zasilania (SZR)",
+    "tr": "Transfer şalteri"
    },
    "symbol": "transfer_switch",
    "map": {
@@ -307,7 +475,15 @@
    "iec81346_class": "FAD",
    "label": {
     "fr": "Parafoudre",
-    "en": "Surge protective device"
+    "en": "Surge protective device",
+    "ru": "УЗИП",
+    "zh": "电涌保护器（SPD）",
+    "es": "Protector contra sobretensiones (DPS)",
+    "de": "Überspannungsschutzgerät (SPD)",
+    "pt": "Dispositivo de proteção contra surtos (DPS)",
+    "it": "Scaricatore di sovratensione (SPD)",
+    "pl": "Ogranicznik przepięć (SPD)",
+    "tr": "Parafudr (SPD)"
    },
    "symbol": "spd",
    "map": {
@@ -321,7 +497,15 @@
    "iec81346_class": "KEB",
    "label": {
     "fr": "Appareil de commande",
-    "en": "Controller"
+    "en": "Controller",
+    "ru": "Устройство управления",
+    "zh": "控制装置",
+    "es": "Controlador",
+    "de": "Steuergerät",
+    "pt": "Controlador",
+    "it": "Apparecchio di comando",
+    "pl": "Sterownik",
+    "tr": "Kontrol cihazı"
    },
    "symbol": "controller",
    "map": {
@@ -334,7 +518,15 @@
    "iec81346_class": "WDA",
    "label": {
     "fr": "Jeu de barres",
-    "en": "Busbar"
+    "en": "Busbar",
+    "ru": "Шина",
+    "zh": "母线",
+    "es": "Juego de barras",
+    "de": "Sammelschiene",
+    "pt": "Barramento",
+    "it": "Sbarre",
+    "pl": "Szyny zbiorcze",
+    "tr": "Bara"
    },
    "symbol": "busbar",
    "map": {
@@ -348,7 +540,15 @@
    "iec81346_class": "UC",
    "label": {
     "fr": "Tableau",
-    "en": "Distribution board"
+    "en": "Distribution board",
+    "ru": "Щит",
+    "zh": "配电箱",
+    "es": "Cuadro / tablero",
+    "de": "Verteiler",
+    "pt": "Quadro de distribuição",
+    "it": "Quadro elettrico",
+    "pl": "Rozdzielnica",
+    "tr": "Dağıtım panosu"
    },
    "symbol": "board",
    "map": {
@@ -362,7 +562,15 @@
    "iec81346_class": "XEE",
    "label": {
     "fr": "Prise de terre",
-    "en": "Earth electrode"
+    "en": "Earth electrode",
+    "ru": "Заземлитель",
+    "zh": "接地极",
+    "es": "Toma de tierra",
+    "de": "Erder",
+    "pt": "Eletrodo de aterramento",
+    "it": "Dispersore",
+    "pl": "Uziom",
+    "tr": "Topraklama elektrodu"
    },
    "symbol": "earth",
    "map": {
@@ -376,7 +584,15 @@
    "iec81346_class": "EAA",
    "label": {
     "fr": "Éclairage",
-    "en": "Lighting"
+    "en": "Lighting",
+    "ru": "Освещение",
+    "zh": "照明",
+    "es": "Iluminación",
+    "de": "Beleuchtung",
+    "pt": "Iluminação",
+    "it": "Illuminazione",
+    "pl": "Oświetlenie",
+    "tr": "Aydınlatma"
    },
    "symbol": "lighting",
    "map": {
@@ -390,7 +606,15 @@
    "iec81346_class": "XDB",
    "label": {
     "fr": "Prises de courant",
-    "en": "Socket outlets"
+    "en": "Socket outlets",
+    "ru": "Розетки",
+    "zh": "插座",
+    "es": "Tomas de corriente",
+    "de": "Steckdosen",
+    "pt": "Tomadas",
+    "it": "Prese",
+    "pl": "Gniazda wtyczkowe",
+    "tr": "Prizler"
    },
    "symbol": "socket",
    "map": {
@@ -404,7 +628,15 @@
    "iec81346_class": "EB",
    "label": {
     "fr": "Chauffage",
-    "en": "Heating"
+    "en": "Heating",
+    "ru": "Отопление",
+    "zh": "采暖",
+    "es": "Calefacción",
+    "de": "Heizung",
+    "pt": "Aquecimento",
+    "it": "Riscaldamento",
+    "pl": "Ogrzewanie",
+    "tr": "Isıtma"
    },
    "symbol": "heating",
    "map": {
@@ -418,7 +650,15 @@
    "iec81346_class": "EB",
    "label": {
     "fr": "Chauffe-eau",
-    "en": "Water heater"
+    "en": "Water heater",
+    "ru": "Водонагреватель",
+    "zh": "热水器",
+    "es": "Calentador de agua",
+    "de": "Warmwasserbereiter",
+    "pt": "Aquecedor de água",
+    "it": "Scaldacqua",
+    "pl": "Podgrzewacz wody",
+    "tr": "Termosifon"
    },
    "symbol": "water_heater",
    "map": {
@@ -432,7 +672,15 @@
    "iec81346_class": "EB",
    "label": {
     "fr": "Cuisson",
-    "en": "Cooking"
+    "en": "Cooking",
+    "ru": "Плита",
+    "zh": "烹饪",
+    "es": "Cocina y horno",
+    "de": "Herd / Kochfeld",
+    "pt": "Cocção",
+    "it": "Cottura",
+    "pl": "Kuchnia elektryczna",
+    "tr": "Pişirme"
    },
    "symbol": "cooking",
    "map": {
@@ -446,7 +694,15 @@
    "iec81346_class": null,
    "label": {
     "fr": "Appareil électroménager",
-    "en": "Appliance"
+    "en": "Appliance",
+    "ru": "Бытовой прибор",
+    "zh": "家用电器",
+    "es": "Electrodoméstico",
+    "de": "Haushaltsgerät",
+    "pt": "Eletrodoméstico",
+    "it": "Elettrodomestico",
+    "pl": "Urządzenie AGD",
+    "tr": "Ev aleti"
    },
    "symbol": "appliance",
    "map": {
@@ -460,7 +716,15 @@
    "iec81346_class": "MAA",
    "label": {
     "fr": "Moteur",
-    "en": "Motor"
+    "en": "Motor",
+    "ru": "Двигатель",
+    "zh": "电动机",
+    "es": "Motor",
+    "de": "Motor",
+    "pt": "Motor",
+    "it": "Motore",
+    "pl": "Silnik",
+    "tr": "Motor"
    },
    "symbol": "motor",
    "map": {
@@ -475,7 +739,15 @@
    "iec81346_class": null,
    "label": {
     "fr": "Borne de recharge (IRVE)",
-    "en": "EV charger"
+    "en": "EV charger",
+    "ru": "Зарядная станция электромобилей",
+    "zh": "电动汽车充电桩",
+    "es": "Punto de recarga de vehículo eléctrico",
+    "de": "Ladepunkt (E-Fahrzeug)",
+    "pt": "Carregador de veículo elétrico",
+    "it": "Stazione di ricarica (EV)",
+    "pl": "Stacja ładowania pojazdów (EV)",
+    "tr": "Elektrikli araç şarj ünitesi"
    },
    "symbol": "ev_charger",
    "map": {
@@ -489,7 +761,15 @@
    "iec81346_class": "GQB",
    "label": {
     "fr": "Ventilation (VMC)",
-    "en": "Ventilation"
+    "en": "Ventilation",
+    "ru": "Вентиляция",
+    "zh": "通风",
+    "es": "Ventilación",
+    "de": "Lüftung",
+    "pt": "Ventilação",
+    "it": "Ventilazione",
+    "pl": "Wentylacja",
+    "tr": "Havalandırma"
    },
    "symbol": "ventilation",
    "map": {
@@ -503,7 +783,15 @@
    "iec81346_class": "RQG",
    "label": {
     "fr": "Volets roulants",
-    "en": "Shutters"
+    "en": "Shutters",
+    "ru": "Рольставни",
+    "zh": "电动卷帘",
+    "es": "Persianas motorizadas",
+    "de": "Rollläden",
+    "pt": "Persianas",
+    "it": "Tapparelle",
+    "pl": "Rolety",
+    "tr": "Panjurlar"
    },
    "symbol": "shutter",
    "map": {
@@ -517,7 +805,15 @@
    "iec81346_class": null,
    "label": {
     "fr": "Récepteur",
-    "en": "Load"
+    "en": "Load",
+    "ru": "Электроприёмник",
+    "zh": "负载",
+    "es": "Carga",
+    "de": "Verbraucher",
+    "pt": "Carga",
+    "it": "Utilizzatore",
+    "pl": "Odbiornik",
+    "tr": "Yük"
    },
    "symbol": "load",
    "map": {
@@ -531,7 +827,15 @@
    "iec81346_class": null,
    "label": {
     "fr": "Réserve",
-    "en": "Spare"
+    "en": "Spare",
+    "ru": "Резерв",
+    "zh": "备用",
+    "es": "Reserva",
+    "de": "Reserve",
+    "pt": "Reserva",
+    "it": "Riserva",
+    "pl": "Rezerwa",
+    "tr": "Yedek"
    },
    "symbol": "spare",
    "map": {}
@@ -542,7 +846,15 @@
    "iec81346_class": null,
    "label": {
     "fr": "Renvoi de folio",
-    "en": "Off-page reference"
+    "en": "Off-page reference",
+    "ru": "Ссылка на лист",
+    "zh": "跨页连接",
+    "es": "Referencia a otra hoja",
+    "de": "Blattverweis",
+    "pt": "Referência de folha",
+    "it": "Rimando ad altro foglio",
+    "pl": "Odsyłacz do arkusza",
+    "tr": "Sayfa bağlantısı"
    },
    "symbol": "offpage",
    "map": {}
@@ -552,7 +864,15 @@
    "iec81346": "B",
    "label": {
     "fr": "Transformateur de mesure (TC/TT)",
-    "en": "Instrument transformer"
+    "en": "Instrument transformer",
+    "ru": "Измерительный трансформатор (ТТ/ТН)",
+    "zh": "互感器",
+    "es": "Transformador de medida",
+    "de": "Messwandler (Strom-/Spannungswandler)",
+    "pt": "Transformador de instrumento (TC / TP)",
+    "it": "Trasformatore di misura (TA/TV)",
+    "pl": "Przekładnik (prądowy/napięciowy)",
+    "tr": "Ölçü transformatörü (AT/GT)"
    },
    "symbol": "instrument_transformer",
    "map": {
@@ -566,7 +886,15 @@
    "iec81346": "K",
    "label": {
     "fr": "Relais de protection",
-    "en": "Protection relay"
+    "en": "Protection relay",
+    "ru": "Реле защиты",
+    "zh": "保护继电器",
+    "es": "Relé de protección",
+    "de": "Schutzrelais",
+    "pt": "Relé de proteção",
+    "it": "Relè di protezione",
+    "pl": "Przekaźnik zabezpieczeniowy",
+    "tr": "Koruma rölesi"
    },
    "symbol": "protection_relay",
    "map": {
@@ -580,7 +908,15 @@
    "iec81346": "Q",
    "label": {
     "fr": "Sectionneur de terre",
-    "en": "Earthing switch"
+    "en": "Earthing switch",
+    "ru": "Заземляющий разъединитель",
+    "zh": "接地开关",
+    "es": "Seccionador de puesta a tierra",
+    "de": "Erdungsschalter",
+    "pt": "Chave de aterramento",
+    "it": "Sezionatore di terra",
+    "pl": "Uziemnik",
+    "tr": "Topraklama ayırıcısı"
    },
    "symbol": "earthing_switch",
    "map": {
@@ -594,7 +930,15 @@
    "iec81346": "P",
    "label": {
     "fr": "Indicateur de présence de tension",
-    "en": "Voltage presence indicator"
+    "en": "Voltage presence indicator",
+    "ru": "Индикатор наличия напряжения",
+    "zh": "带电显示装置",
+    "es": "Indicador de presencia de tensión",
+    "de": "Spannungsanzeige",
+    "pt": "Indicador de presença de tensão",
+    "it": "Indicatore di presenza tensione",
+    "pl": "Wskaźnik obecności napięcia",
+    "tr": "Gerilim varlık göstergesi"
    },
    "symbol": "voltage_indicator",
    "map": {
@@ -607,7 +951,15 @@
    "iec81346": "B",
    "label": {
     "fr": "Contrôleur permanent d'isolement",
-    "en": "Insulation monitoring device"
+    "en": "Insulation monitoring device",
+    "ru": "Устройство контроля изоляции",
+    "zh": "绝缘监测装置",
+    "es": "Dispositivo de vigilancia de aislamiento",
+    "de": "Isolationsüberwachungsgerät",
+    "pt": "Dispositivo supervisor de isolamento (DSI)",
+    "it": "Dispositivo di controllo dell'isolamento",
+    "pl": "Urządzenie do monitorowania stanu izolacji",
+    "tr": "İzolasyon izleme cihazı"
    },
    "symbol": "insulation_monitor",
    "map": {
@@ -620,7 +972,15 @@
    "iec81346": "F",
    "label": {
     "fr": "Limiteur de surtension",
-    "en": "Surge limiter"
+    "en": "Surge limiter",
+    "ru": "Пробивной предохранитель",
+    "zh": "过电压限制器（击穿保险器）",
+    "es": "Limitador de sobretensión (esquema IT)",
+    "de": "Überspannungsbegrenzer",
+    "pt": "Limitador de sobretensão",
+    "it": "Limitatore di sovratensione",
+    "pl": "Bezpiecznik iskiernikowy",
+    "tr": "Aşırı gerilim sınırlayıcı"
    },
    "symbol": "surge_limiter",
    "map": {
@@ -634,7 +994,15 @@
    "iec81346": "R",
    "label": {
     "fr": "Impédance de neutre",
-    "en": "Neutral earthing impedance"
+    "en": "Neutral earthing impedance",
+    "ru": "Резистор заземления нейтрали",
+    "zh": "中性点接地阻抗",
+    "es": "Impedancia de puesta a tierra del neutro",
+    "de": "Sternpunkterdungsimpedanz",
+    "pt": "Impedância de aterramento do neutro",
+    "it": "Impedenza di neutro",
+    "pl": "Impedancja uziemiająca punkt neutralny",
+    "tr": "Nötr topraklama empedansı"
    },
    "symbol": "neutral_impedance",
    "map": {
@@ -647,7 +1015,15 @@
    "iec81346": "X",
    "label": {
     "fr": "Bornier",
-    "en": "Terminal block"
+    "en": "Terminal block",
+    "ru": "Клеммник",
+    "zh": "端子排",
+    "es": "Bornera / regleta de bornes",
+    "de": "Klemmleiste",
+    "pt": "Régua de bornes",
+    "it": "Morsettiera",
+    "pl": "Listwa zaciskowa",
+    "tr": "Klemens grubu"
    },
    "symbol": "terminal_block",
    "map": {
@@ -661,7 +1037,15 @@
    "iec81346": "X",
    "label": {
     "fr": "Boîte de jonction",
-    "en": "Junction box"
+    "en": "Junction box",
+    "ru": "Распределительная коробка",
+    "zh": "接线盒",
+    "es": "Caja de derivación",
+    "de": "Abzweigdose",
+    "pt": "Caixa de passagem",
+    "it": "Cassetta di derivazione",
+    "pl": "Puszka rozgałęźna",
+    "tr": "Buat"
    },
    "symbol": "junction_box",
    "map": {
@@ -675,7 +1059,15 @@
    "iec81346": "X",
    "label": {
     "fr": "Connecteur",
-    "en": "Connector"
+    "en": "Connector",
+    "ru": "Разъём",
+    "zh": "连接器",
+    "es": "Conector",
+    "de": "Steckverbinder",
+    "pt": "Conector",
+    "it": "Connettore",
+    "pl": "Złącze",
+    "tr": "Konnektör"
    },
    "symbol": "connector",
    "map": {
@@ -689,7 +1081,15 @@
    "iec81346": "T",
    "label": {
     "fr": "Convertisseur DC (optimiseur, MPPT)",
-    "en": "DC converter"
+    "en": "DC converter",
+    "ru": "DC-преобразователь (оптимизатор, MPPT)",
+    "zh": "直流变换器",
+    "es": "Convertidor CC",
+    "de": "DC-Wandler (Optimierer, MPPT)",
+    "pt": "Conversor CC (otimizador, MPPT)",
+    "it": "Convertitore DC (ottimizzatore, MPPT)",
+    "pl": "Przekształtnik DC (optymalizator, MPPT)",
+    "tr": "DC dönüştürücü (optimizer, MPPT)"
    },
    "symbol": "dc_converter",
    "map": {
@@ -703,7 +1103,15 @@
    "iec81346": "X",
    "label": {
     "fr": "Barrette de terre / barre PE",
-    "en": "Earth bar"
+    "en": "Earth bar",
+    "ru": "Шина заземления (PE)",
+    "zh": "接地排",
+    "es": "Barra de tierra",
+    "de": "Potentialausgleichsschiene / PE-Schiene",
+    "pt": "Barramento de proteção (PE) / BEP",
+    "it": "Collettore di terra",
+    "pl": "Szyna uziemiająca (PE)",
+    "tr": "Topraklama barası"
    },
    "symbol": "earth_bar",
    "map": {
@@ -717,7 +1125,15 @@
    "iec81346_class": null,
    "label": {
     "fr": "Automate programmable",
-    "en": "Programmable controller"
+    "en": "Programmable controller",
+    "ru": "Программируемый контроллер (ПЛК)",
+    "zh": "可编程控制器",
+    "es": "Controlador lógico programable",
+    "de": "Speicherprogrammierbare Steuerung (SPS)",
+    "pt": "Controlador lógico programável (CLP)",
+    "it": "Controllore programmabile (PLC)",
+    "pl": "Sterownik programowalny (PLC)",
+    "tr": "Programlanabilir kontrolör (PLC)"
    },
    "symbol": "plc",
    "map": {
@@ -731,7 +1147,15 @@
    "iec81346_class": null,
    "label": {
     "fr": "Alimentation (AC/DC)",
-    "en": "Power supply"
+    "en": "Power supply",
+    "ru": "Блок питания (AC/DC)",
+    "zh": "电源装置",
+    "es": "Fuente de alimentación",
+    "de": "Netzteil (AC/DC)",
+    "pt": "Fonte de alimentação (CA/CC)",
+    "it": "Alimentatore (AC/DC)",
+    "pl": "Zasilacz (AC/DC)",
+    "tr": "Güç kaynağı (AC/DC)"
    },
    "symbol": "power_supply",
    "map": {

@@ -27,6 +27,7 @@ from ..render.scene import (
     Style,
     Text,
     arc_points,
+    text_width,
 )
 
 M = 2.5  # IEC 60617 module
@@ -145,7 +146,8 @@ def rcbo(node: Any = None) -> Symbol:
 
 
 def main_breaker(node: Any = None) -> Symbol:
-    s = rcbo()
+    """Main breaker: residual-current (as an RCBO) only when it has a sensitivity, else a plain circuit breaker."""
+    s = rcbo() if getattr(node, "idn_mA", None) else breaker()
     s.name = "main_breaker"
     return s
 
@@ -180,6 +182,44 @@ ABBREVIATIONS: dict[str, dict[str, str]] = {
            "starter.": "MS", "impulse_relay": "IR", "water_heater": "WH", "oven": "OVEN", "washing_machine": "WM",
            "dishwasher": "DW", "dryer": "DRY", "freezer": "FRZ", "fridge": "FRG", "appliance": "APP",
            "ev_charger": "EV", "shutter": "SHUT", "insulation_monitor": "IMD", "plc": "PLC", "ups": "UPS"},
+    "ru": {"starter.vfd": "ПЧ", "starter.soft_starter": "УПП", "starter.star_delta": "Y/Δ", "starter.reversing": "РЕВ",
+           "starter.": "ПУСК", "impulse_relay": "ИР", "water_heater": "ЭВН", "oven": "ДШ", "washing_machine": "СМ",
+           "dishwasher": "ПММ", "dryer": "СУШ", "freezer": "МРЗ", "fridge": "ХОЛ", "appliance": "ПРИБ",
+           "ev_charger": "ЭЗС", "shutter": "РОЛ", "insulation_monitor": "УКИ", "plc": "ПЛК", "ups": "ИБП"},
+    "zh": {"starter.vfd": "变频", "starter.soft_starter": "软起", "starter.star_delta": "Y/Δ", "starter.reversing": "正反",
+           "starter.": "起动", "impulse_relay": "脉冲", "water_heater": "热水", "oven": "烤箱", "washing_machine": "洗衣",
+           "dishwasher": "洗碗", "dryer": "干衣", "freezer": "冷冻", "fridge": "冰箱", "appliance": "电器", "ev_charger": "充电",
+           "shutter": "卷帘", "insulation_monitor": "IMD", "plc": "PLC", "ups": "UPS"},
+    "es": {"starter.vfd": "VDF", "starter.soft_starter": "AS", "starter.star_delta": "Y/Δ",
+           "starter.reversing": "REV", "starter.": "ARR", "impulse_relay": "TL", "water_heater": "CAL",
+           "oven": "HOR", "washing_machine": "LAV", "dishwasher": "LVJ", "dryer": "SEC", "freezer": "CONG",
+           "fridge": "REF", "appliance": "APAR", "ev_charger": "VE", "shutter": "PERS", "insulation_monitor": "DVA",
+           "plc": "PLC", "ups": "UPS"},
+    "de": {"starter.vfd": "FU", "starter.soft_starter": "SAN", "starter.star_delta": "Y/Δ",
+           "starter.reversing": "WEND", "starter.": "DA", "impulse_relay": "STS", "water_heater": "WW",
+           "oven": "OFEN", "washing_machine": "WM", "dishwasher": "GSP", "dryer": "WT", "freezer": "GEF",
+           "fridge": "KS", "appliance": "GER", "ev_charger": "LP", "shutter": "ROL", "insulation_monitor": "IMD",
+           "plc": "SPS", "ups": "USV"},
+    "pt": {"starter.vfd": "INV", "starter.soft_starter": "SS", "starter.star_delta": "Y/Δ",
+           "starter.reversing": "REV", "starter.": "PD", "impulse_relay": "RI", "water_heater": "AQ",
+           "oven": "FOR", "washing_machine": "MLR", "dishwasher": "MLL", "dryer": "SEC", "freezer": "FRZ",
+           "fridge": "GEL", "appliance": "APAR", "ev_charger": "VE", "shutter": "PERS", "insulation_monitor": "DSI",
+           "plc": "CLP", "ups": "UPS"},
+    "it": {"starter.vfd": "INV", "starter.soft_starter": "SS", "starter.star_delta": "Y/Δ",
+           "starter.reversing": "TINV", "starter.": "AVV", "impulse_relay": "RI", "water_heater": "SCA",
+           "oven": "FOR", "washing_machine": "LAV", "dishwasher": "LST", "dryer": "ASC", "freezer": "CONG",
+           "fridge": "FRIG", "appliance": "ELD", "ev_charger": "EV", "shutter": "TAP", "insulation_monitor": "IMD",
+           "plc": "PLC", "ups": "UPS"},
+    "pl": {"starter.vfd": "PCZ", "starter.soft_starter": "SOFT", "starter.star_delta": "Y/Δ",
+           "starter.reversing": "NAWR", "starter.": "ROZR", "impulse_relay": "PB", "water_heater": "BOJ",
+           "oven": "PIEK", "washing_machine": "PRAL", "dishwasher": "ZMYW", "dryer": "SUSZ", "freezer": "ZAMR",
+           "fridge": "LOD", "appliance": "AGD", "ev_charger": "EV", "shutter": "ROL", "insulation_monitor": "UKI",
+           "plc": "PLC", "ups": "UPS"},
+    "tr": {"starter.vfd": "SÜR", "starter.soft_starter": "YYV", "starter.star_delta": "Y/Δ",
+           "starter.reversing": "TERS", "starter.": "YV", "impulse_relay": "İR", "water_heater": "TERM",
+           "oven": "FIR", "washing_machine": "ÇM", "dishwasher": "BM", "dryer": "KM", "freezer": "DOND",
+           "fridge": "BUZ", "appliance": "CİH", "ev_charger": "ŞARJ", "shutter": "PANJ", "insulation_monitor": "IMD",
+           "plc": "PLC", "ups": "UPS"},
     "fr": {"starter.vfd": "VAR", "starter.soft_starter": "DÉM", "starter.star_delta": "Y/Δ", "starter.reversing": "INV",
            "starter.": "DM", "impulse_relay": "TL", "water_heater": "CE", "oven": "Four", "washing_machine": "LL",
            "dishwasher": "LV", "dryer": "SL", "freezer": "CONG", "fridge": "FRIG", "appliance": "APP",
@@ -545,6 +585,7 @@ def surge_limiter(node: Any = None) -> Symbol:
     s = spd(node)
     s.name = "surge_limiter"
     s.items.append(_text((2.8, 2.0 * M), "L", 1.5))
+    s.right = max(s.right, 3.6)  # the 'L' beside the box: the device text starts after it
     return s
 
 
@@ -595,13 +636,15 @@ def plc(node: Any = None) -> Symbol:
     """PLC (automate): head + strip of modules (one rectangle per slot), ports addressed by slot."""
     modules = list(getattr(node, "modules", None) or [])
     h = 4.0 * M
-    head_w = 7.0
+    label = getattr(node, "family", None) or _abbr("plc")
+    if len(label) > 10:  # 'Automation Series 7' -> 'Automation': the head shows the family, the annotation the rest
+        label = label.split()[0][:12]
+    head_w = max(7.0, text_width(label, 1.5) * 1.1 + 1.2)  # wide enough for the family name (bold)
     n = len(modules)
     w = head_w + n * PLC_SLOT_W
     x0 = -head_w / 2  # the supply axis arrives at the centre of the head
     y0 = 0.8 * M
     body = h - 1.6 * M
-    label = (getattr(node, "family", None) or _abbr("plc"))[:8]
     head = {"coupler": "I/O", "expansion": "I/O", "hmi": "HMI"}.get(getattr(node, "role", None) or "", "CPU")
     items: list[Item] = [_lead(0, y0), Rect(x0, y0, head_w, body, Style(fill="#ffffff")),
                          _text((0, y0 + body / 2 - 0.9), label, 1.5, True), _text((0, y0 + body / 2 + 1.1), head, 1.2)]

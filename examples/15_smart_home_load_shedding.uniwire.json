@@ -42,8 +42,6 @@
                "children": [{"type": "impulse_relay", "ref": "-KL11", "use": "TL", "children": [{"type": "lighting", "label": "Éclairage séjour", "points": 6}]}]},
               {"type": "breaker", "ref": "-Q12", "use": "C10", "cable": {"cores": "3G", "section_mm2": 1.5},
                "children": [{"type": "impulse_relay", "ref": "-KL12", "use": "TL", "children": [{"type": "lighting", "label": "Éclairage couloir/entrée", "points": 5}]}]},
-              {"type": "breaker", "ref": "-Q13", "use": "C10", "cable": {"cores": "3G", "section_mm2": 1.5},
-               "children": [{"type": "impulse_relay", "ref": "-KL13", "use": "TL", "children": [{"type": "lighting", "label": "Éclairage chambres", "points": 6}]}]},
               {"type": "breaker", "ref": "-Q14", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
                "children": [{"type": "socket", "label": "Prises séjour", "points": 9}]},
               {"type": "breaker", "ref": "-Q15", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
@@ -79,12 +77,14 @@
                "children": [{"type": "contactor", "id": "KD33", "ref": "-KD33", "use": "KD",
                              "children": [{"type": "heating", "label": "Sèche-serviettes SdB", "p_kW": 1.5, "pilot_wire": true}]}]}
             ]},
-            {"type": "rcd", "ref": "-F4", "label": "ID4 ECS / gestion", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "2P", "children": [
+            {"type": "rcd", "ref": "-F4", "label": "ID4 ECS / éclairage chambres / gestion", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "poles": "2P", "children": [
               {"type": "breaker", "ref": "-Q41", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
                "children": [{"type": "contactor", "id": "KM41", "ref": "-KM41", "in_A": 20, "poles": "2P", "coil_V": 230, "function": "HC", "manual": true,
                              "children": [{"type": "water_heater", "label": "Chauffe-eau 200 L", "volume_L": 200, "p_kW": 3}]}]},
               {"type": "breaker", "ref": "-Q43", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
-               "children": [{"type": "socket", "label": "Prises box internet / VDI", "points": 3}]}
+               "children": [{"type": "socket", "label": "Prises box internet / VDI", "points": 3}]},
+              {"type": "breaker", "ref": "-Q13", "use": "C10", "cable": {"cores": "3G", "section_mm2": 1.5},
+               "children": [{"type": "impulse_relay", "ref": "-KL13", "use": "TL", "children": [{"type": "lighting", "label": "Éclairage chambres", "points": 6}]}]}
             ]}
           ]}
         ]}

@@ -33,8 +33,9 @@ review and diff.
   derived automatically, with CIM, IFC and IEC 61850 SCL mappings.
 * **Closed typing and unit-suffixed fields**: `in_A`, `idn_mA`, `section_mm2`, `p_kW`; unknown fields are
   errors (`calibre` instead of `in_A` is caught), extensions live in `ext`. Templates declare a device once.
-* **Rule profiles**: `core` (always), `nfc15100` (French dwellings), `iec60364` (cable current-carrying
-  capacity), `enedis` (connection to the French public network), plus PLC consistency checks.
+* **Rule profiles**: `core` (always), `nfc15100` (French dwellings), `vde0100` (German installations),
+  `iec60364` (cable current-carrying capacity), `enedis` (connection to the French public network), plus PLC
+  consistency checks.
 * **Bill of materials**: structured `product` references (manufacturer, part number, range, accessories)
   on any node or PLC module, aggregated to CSV (`uniwire bom`).
 * **Wire and cable marking**: marking rules per view (manual, sequential, per potential, pattern), marks
@@ -45,7 +46,8 @@ review and diff.
 * **Sheets**: paper size, sub-tree views, automatic sheet splitting with cross-references, circuit schedule,
   enclosure frames, title block, revisions and notes. **SVG** output is deterministic and diff-friendly;
   the multi-sheet **PDF** has clickable links between sheets.
-* **English and French rendering**, selected per document with `meta.lang`.
+* **Drawings in English, French, German, Spanish, Portuguese, Italian, Polish, Turkish, Russian and Simplified
+  Chinese**, selected per document with `meta.lang`.
 * **LLM tooling**: a reference card generated from the model (`uniwire card`), a text outline with
   stable ids (`uniwire describe`), id-based edits (`uniwire patch`), an MCP server (`uniwire-mcp`, stdio)
   and a hosted MCP endpoint at <https://mcp.uniwire.sh/mcp>, plus
@@ -71,7 +73,7 @@ review and diff.
 </tr>
 </table>
 
-All 52 examples are in [examples/](https://github.com/uniwire-dev/uniwire/tree/main/examples) and listed in the
+All 53 examples are in [examples/](https://github.com/uniwire-dev/uniwire/tree/main/examples) and listed in the
 [documentation](https://uniwire.sh/docs/examples/); open any of them in the [web viewer](https://uniwire.sh/viewer/).
 
 ## Install
@@ -101,10 +103,12 @@ A document in JSON:
     { "type": "grid", "label": "Utility", "children": [
       { "type": "main_breaker", "ref": "-Q0", "range_A": "15-45", "in_A": 45, "idn_mA": 500, "selective": true,
         "children": [
-          { "type": "rcd", "ref": "-Q1", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "children": [
+          { "type": "rcd", "ref": "-Q1", "in_A": 40, "idn_mA": 30, "rcd_type": "AC", "children": [
             { "type": "breaker", "ref": "-Q11", "use": "C16", "cable": { "cores": "3G", "section_mm2": 1.5 },
-              "children": [ { "type": "lighting", "label": "Lighting", "points": 6 } ] },
-            { "type": "breaker", "ref": "-Q12", "in_A": 20, "curve": "C", "cable": { "cores": "3G", "section_mm2": 2.5 },
+              "children": [ { "type": "lighting", "label": "Lighting", "points": 6 } ] }
+          ] },
+          { "type": "rcd", "ref": "-Q2", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "children": [
+            { "type": "breaker", "ref": "-Q21", "in_A": 20, "curve": "C", "cable": { "cores": "3G", "section_mm2": 2.5 },
               "children": [ { "type": "socket", "label": "Sockets", "points": 8 } ] }
           ] }
       ] }
@@ -134,9 +138,10 @@ from uniwire.build import *
 
 with Installation("Small house", earthing="TT", system="1P+N", un="230 V", profiles=["nfc15100"]) as inst:
     with Grid("Utility"), MainBreaker("-Q0", "15-45 A", idn="500 mA", selective=True):
-        with RCD("-Q1", "40 A", "30 mA", type="A"):
+        with RCD("-Q1", "40 A", "30 mA", type="AC"):
             Breaker("-Q11", "C16", cable="3G1,5") >> Lighting("Lighting", points=6)
-            Breaker("-Q12", "C20", cable="3G2,5 18 m") >> Socket("Sockets", points=8)
+        with RCD("-Q2", "40 A", "30 mA", type="A"):
+            Breaker("-Q21", "C20", cable="3G2,5 18 m") >> Socket("Sockets", points=8)
 
 for finding in inst.check():
     print(finding)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Optional
+from typing import Any, Optional
 
 from ..i18n import normalize_lang
 from ..i18n import t as _t
@@ -18,9 +18,25 @@ from ..layout.engine import (
     notes_beside,
 )
 from ..model import Document, View
+from ..resolve import iter_nodes
 from ..units import fmt
 from .colors import Legend
-from .scene import NORMAL, THICK, THIN, Group, Item, Line, Page, Rect, Style, Text, bbox, text_width, transform
+from .scene import (
+    NORMAL,
+    THICK,
+    THIN,
+    Group,
+    Item,
+    Line,
+    Page,
+    Rect,
+    Style,
+    Text,
+    bbox,
+    text_units,
+    text_width,
+    transform,
+)
 
 
 def _generator() -> str:
@@ -72,7 +88,9 @@ def compose_page(doc: Document, view: View, lay: SheetLayout, folio: int, total:
     band_y = h - MARGIN - TITLE_BAND
     root.add(Line((MARGIN, band_y), (w - MARGIN, band_y), Style(width=NORMAL)))
     tb_w = min(TITLE_BLOCK_W, w - 2 * MARGIN)
-    _title_block(root, doc, w - MARGIN - tb_w, band_y, tb_w, TITLE_BAND, folio, total, sheet_title, lang)
+    first = lay.spec.roots[0] if lay.spec.roots else None
+    here = first if first is not None and all(first is not s for s in doc.sources) else None  # a board on its sheet
+    _title_block(root, doc, w - MARGIN - tb_w, band_y, tb_w, TITLE_BAND, folio, total, sheet_title, lang, here)
     if notes_beside(view):
         _notes(root, doc, MARGIN + 2.0, band_y, w - 2 * MARGIN - tb_w - 6.0, TITLE_BAND, lang)
     else:  # narrow sheet (A4 portrait): notes in a band above the title block
@@ -86,11 +104,36 @@ def _cell(g: Group, x: float, y: float, w: float, h: float, label: str, value: s
     g.add(Rect(x, y, w, h, Style(width=THIN)))
     g.add(Text((x + 1.0, y + 2.4), label, 1.5, color="#555555"))
     if value:
-        g.add(Text((x + 1.0, y + h - 1.6), value, _fit(value, size, (w - 4.0) * (0.9 if bold else 1.0)), bold=bold))
+        lines, s = _fit_lines(value, size, (w - 4.0) * (0.9 if bold else 1.0), (h - 4.4) / 2.4)
+        for i, line in enumerate(reversed(lines)):
+            g.add(Text((x + 1.0, y + h - 1.6 - i * s * 1.2), line, s, bold=bold))
+
+
+def _fit_lines(text: str, size: float, width: float, two_line_size: float) -> tuple[list[str], float]:
+    """Lines and size of a title block value: one line, reduced down to a readable size, else two lines
+    (at most ``two_line_size``), else one line cut with an ellipsis; never wider than the cell."""
+    s = _fit(text, size, width)
+    words = text_units(text)  # words, and each CJK character
+    if s < min(size, 1.6) and len(words) > 1:
+        splits = [("".join(words[:i]).strip(), "".join(words[i:]).strip()) for i in range(1, len(words))]
+        pair = min(splits, key=lambda p: max(text_width(p[0], 1.0), text_width(p[1], 1.0)))
+        s2 = min(two_line_size, size, *(_fit(t, size, width) for t in pair))
+        if s2 > s:
+            return list(pair), s2
+    if text_width(text, s) > width:
+        while len(text) > 1 and text_width(text + "…", s) > width:
+            text = text[:-1].rstrip()
+        text += "…"
+    return [text], s
+
+
+_PROFILE_NAMES = {"iec60364": "IEC 60364", "nfc15100": "NF C 15-100", "enedis": "Enedis"}
 
 
 def _title_block(g: Group, doc: Document, x: float, y: float, w: float, h: float, folio: int, total: Optional[int],
-                 sheet_title: str, lang: str = "en") -> None:
+                 sheet_title: str, lang: str = "en", here: Any = None) -> None:
+    """``here``: the node a sheet of its own is drawn from (a board behind a transformer has its own voltage and
+    short-circuit current, shown instead of the installation's)."""
     L = lambda key: _t(key, lang)  # noqa: E731
     m, inst = doc.meta, doc.installation
     rev = m.revisions[-1] if m.revisions else None
@@ -100,19 +143,24 @@ def _title_block(g: Group, doc: Document, x: float, y: float, w: float, h: float
     c1 = w * 0.48
     _cell(tb, x, y, c1, rh * 2, L("tb.title"), m.title or "", 3.2, True)
     _cell(tb, x, y + rh * 2, c1, rh, L("tb.sheet_title"), sheet_title or L("tb.default_sheet_title"), 2.2)
-    _cell(tb, x, y + rh * 3, c1 / 2, rh, L("tb.project"), m.project or "")
+    _cell(tb, x, y + rh * 3, c1 / 2, rh, L("tb.project"), " · ".join(v for v in (m.project, m.drawing_number) if v))
     _cell(tb, x + c1 / 2, y + rh * 3, c1 / 2, rh, L("tb.client"), m.client or "")
     # middle column: installation
     c2x, c2 = x + c1, w * 0.30
     half = c2 / 2
-    sys = " ".join(v for v in (inst.system or "", fmt(inst.un_V, " V") if inst.un_V else "") if v)
+    un = getattr(here, "un_V", None) or inst.un_V
+    ik = getattr(here, "ik_kA", None) or inst.ik3_kA
+    sys = " ".join(v for v in (getattr(here, "system", None) or inst.system or "", fmt(un, " V") if un else "") if v)
     _cell(tb, c2x, y, half, rh, L("tb.earthing"), inst.earthing or "")
     _cell(tb, c2x + half, y, half, rh, L("tb.voltage"), sys)
     pw = inst.subscribed_kVA or inst.planned_kVA
     _cell(tb, c2x, y + rh, half, rh, L("tb.power"), fmt(pw, " kVA") if pw else "")
-    _cell(tb, c2x + half, y + rh, half, rh, L("tb.ik_max"), fmt(inst.ik3_kA, " kA") if inst.ik3_kA else "")
-    _cell(tb, c2x, y + rh * 2, half, rh, L("tb.earth_electrode"), fmt(inst.earth_resistance_ohm, " Ω") if inst.earth_resistance_ohm else "")
-    _cell(tb, c2x + half, y + rh * 2, half, rh, L("tb.standard"), inst.standard or ", ".join(doc.profiles))
+    _cell(tb, c2x + half, y + rh, half, rh, L("tb.ik_max"), fmt(ik, " kA") if ik else "")
+    earth = inst.earth_resistance_ohm or next((getattr(n, "resistance_ohm", None) for n, _, _ in iter_nodes(doc)
+                                                if n.type == "earth" and getattr(n, "resistance_ohm", None)), None)
+    _cell(tb, c2x, y + rh * 2, half, rh, L("tb.earth_electrode"), fmt(earth, " Ω") if earth else "")
+    _cell(tb, c2x + half, y + rh * 2, half, rh, L("tb.standard"),
+          inst.standard or ", ".join(_PROFILE_NAMES.get(p, p) for p in doc.profiles))
     _cell(tb, c2x, y + rh * 3, half, rh, L("tb.drawn_by"), m.author or "")
     _cell(tb, c2x + half, y + rh * 3, half, rh, L("tb.checked_by"), m.checked_by or "")
     # right column
@@ -120,7 +168,9 @@ def _title_block(g: Group, doc: Document, x: float, y: float, w: float, h: float
     _cell(tb, c3x, y, c3, rh, L("tb.company"), m.company or "")
     _cell(tb, c3x, y + rh, c3 / 2, rh, L("tb.date"), (rev.date if rev and rev.date else m.date) or "")
     _cell(tb, c3x + c3 / 2, y + rh, c3 / 2, rh, L("tb.revision"), rev.index if rev else "")
-    _cell(tb, c3x, y + rh * 2, c3, rh, L("tb.sheet"), f"{folio} / {total}" if total else str(folio), 3.0, True)
+    sheet = Group(cls="tb-sheet")  # the sheet number: renumbered when several views make one drawing set
+    _cell(sheet, c3x, y + rh * 2, c3, rh, L("tb.sheet"), f"{folio} / {total}" if total else str(folio), 3.0, True)
+    tb.add(sheet)
     _cell(tb, c3x, y + rh * 3, c3, rh, L("tb.generated_by"), _generator(), 1.8)
     g.add(tb)
 
@@ -141,15 +191,15 @@ def _notes(g: Group, doc: Document, x: float, y: float, w: float, h: float, lang
     size = 1.7
     max_lines = int((h - 6.0) / (size * 1.35))
     wrapped: list[str] = []
-    for t in lines:  # word wrap to the available width
-        words, cur = t.split(), ""
-        for wd in words:
-            cand = f"{cur} {wd}".strip()
+    for t in lines:  # wrap to the available width, between words or CJK characters
+        cur = ""
+        for u in text_units(t):
+            cand = (cur + u) if cur else u.strip()
             if text_width(cand, size) <= w or not cur:
                 cur = cand
             else:
                 wrapped.append(cur)
-                cur = "  " + wd
+                cur = u.strip()
         wrapped.append(cur)
     if len(wrapped) > max_lines:
         wrapped = wrapped[: max_lines - 1] + [_t("notes.more", lang, count=len(wrapped) - max_lines + 1)]

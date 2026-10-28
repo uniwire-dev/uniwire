@@ -102,16 +102,18 @@ def Q(unit: str, description: str | None = None, **kw: Any) -> Any:
 
 
 def fmt(value: float | None, unit: str = "", sep: str = "") -> str:
-    """16.0 -> '16', 2.5 -> '2.5' (English) or '2,5' (French: decimal comma), following the render language."""
-    from .i18n import render_lang
+    """16.0 -> '16', 2.5 -> '2.5' (English) or '2,5' (French, Russian: decimal comma), following the render language."""
+    from .i18n import DECIMAL_COMMA, render_lang
 
     if value is None:
         return ""
     if float(value).is_integer():
         s = str(int(value))
+        if abs(int(value)) >= 10000:  # 20 000 V: thousands grouped (no-break space), as IEC 80000 writes them
+            s = f"{int(value):,}".replace(",", "\u00a0")
     else:
         s = f"{value:.3f}".rstrip("0").rstrip(".")
-        if render_lang() == "fr":
+        if render_lang() in DECIMAL_COMMA:
             s = s.replace(".", ",")
     return f"{s}{sep}{unit}" if unit else s
 
@@ -120,12 +122,12 @@ def fmt_current(a: float | None) -> str:
     """30 mA stays in mA, 300 mA stays in mA, 1000 mA -> 1 A."""
     if a is None:
         return ""
-    return fmt(a, "A")
+    return fmt(a, " A")
 
 
 def fmt_sensitivity(ma: float | None) -> str:
     if ma is None:
         return ""
     if ma >= 1000:
-        return fmt(ma / 1000, "A")
-    return fmt(ma, "mA")
+        return fmt(ma / 1000, " A")
+    return fmt(ma, " mA")

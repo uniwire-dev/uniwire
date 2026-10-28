@@ -1,7 +1,7 @@
 # Examples
 
 The [`examples/`](https://github.com/uniwire-dev/uniwire/tree/main/examples) folder of the repository holds
-52 complete `*.uniwire.json` documents (some are built with the
+53 complete `*.uniwire.json` documents (some are built with the
 [code-first API](build.md) from a script in `examples/code/`), validated against the schema and rendered
 by the continuous integration. Open any of them in the [web viewer](https://uniwire.sh/viewer/).
 
@@ -59,6 +59,7 @@ by the continuous integration. Open any of them in the [web viewer](https://uniw
 | 50 | [Example telecom shelter: -48 V DC power plant with battery backup and genset inlet](https://github.com/uniwire-dev/uniwire/blob/main/examples/50_telecom_shelter_48vdc.uniwire.json) | en | TT | 3P+N | 1 |
 | 51 | [Station de pompage : TD process avec automate WAGO PFC200](https://github.com/uniwire-dev/uniwire/blob/main/examples/51_pumping_station_plc_fr.uniwire.json) | fr | TN-S | 3P+N | 1 |
 | 52 | [Example workshop: dual supply, feeders selectable by removable links](https://github.com/uniwire-dev/uniwire/blob/main/examples/52_dual_source_selectable_feeders.uniwire.json) | en | TN-S | 3P+N | 1 |
+| 53 | [Example office: hybrid inverter with rooftop PV, battery and essential loads board](https://github.com/uniwire-dev/uniwire/blob/main/examples/53_office_hybrid_inverter_pv_battery.uniwire.json) | en | TN-S | 3P+N | 1 |
 
 To render an example yourself:
 

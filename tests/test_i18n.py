@@ -1,5 +1,7 @@
+import re
+
 from uniwire import load, render_pages
-from uniwire.i18n import CATALOGS, EN, FR, normalize_lang, t
+from uniwire.i18n import CATALOGS, DE, EN, ES, FR, IT, PL, PT, RU, TR, ZH, normalize_lang, t
 from uniwire.render.scene import Group, Text
 from uniwire.rules import check
 
@@ -18,7 +20,88 @@ def _texts(item) -> list[str]:
 
 def test_catalogs_have_same_keys():
     assert set(EN) == set(FR)
-    assert set(CATALOGS) == {"en", "fr"}
+    assert set(CATALOGS) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr"}
+    drawing = {k for k in EN if k.split(".")[0] in ("tb", "notes", "legend", "ann", "cell")}
+    rules = {k for k in EN if k.split(".")[0] in ("core", "rules", "nfc15100", "vde0100", "iec60364", "enedis", "plc")}
+    for cat in (RU, ZH, ES, DE, PT, IT, PL, TR):  # the drawing texts in every language
+        assert drawing <= set(cat) <= set(EN)
+        for k, v in cat.items():  # same placeholders as the English text (the order follows each language)
+            assert sorted(re.findall(r"{\w+}", v)) == sorted(re.findall(r"{\w+}", EN[k])), k
+    for cat in (RU, ZH, ES, DE, PT):  # and the rule messages (English for the CLI and validation)
+        assert rules <= set(cat)
+        assert set(cat) == set(RU)
+
+
+def test_rule_messages_follow_the_language(monkeypatch):
+    d = load({"profiles": ["vde0100"], "sources": [{"type": "grid", "children": [
+        {"type": "breaker", "in_A": 16, "children": [{"type": "socket", "id": "S"}]}]}]})
+    for lang, word in (("de", "Steckdosenstromkreis"), ("es", "diferencial"), ("pt", "DR"), ("ru", "УЗО"),
+                       ("zh", "剩余电流保护器")):
+        monkeypatch.setenv("UNIWIRE_LANG", lang)
+        msg = next(f.message for f in check(d) if f.rule == "vde0100.rcd-30mA")
+        assert word in msg, (lang, msg)
+
+
+def test_russian_drawing_texts():
+    doc = load({**DOC, "meta": {"lang": "ru", "title": "Щит"}, "views": [{"id": "sld", "title_block": True,
+                                                                          "cartouche": ["ref", "cable"]}]})
+    texts = [s for p in render_pages(doc) for s in _texts(p.root)]
+    assert {"Примечания", "Обозначение", "Кабель (мм²)", "Лист"} <= set(texts)
+    assert "1,5" in " ".join(texts)  # decimal comma
+    assert t("tb.title", lang="ru-RU") == "Наименование"
+    assert t("validation.unknown_node_type", lang="ru", type="x") == t("validation.unknown_node_type", lang="en", type="x")
+
+
+def test_chinese_and_spanish_drawing_texts():
+    view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
+    zh = [s for p in render_pages(load({**DOC, "meta": {"lang": "zh-CN"}, "views": [view]})) for s in _texts(p.root)]
+    assert {"说明", "编号", "电缆（mm²）", "张次"} <= set(zh)
+    assert "1.5" in " ".join(zh)
+    es = [s for p in render_pages(load({**DOC, "meta": {"lang": "es-AR"}, "views": [view]})) for s in _texts(p.root)]
+    assert {"Notas", "Designación", "Cable (mm²)", "Hoja"} <= set(es)
+    assert "1,5" in " ".join(es)  # decimal comma
+
+
+def test_german_drawing_texts():
+    view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
+    de = [s for p in render_pages(load({**DOC, "meta": {"lang": "de-AT"}, "views": [view]})) for s in _texts(p.root)]
+    assert {"Hinweise", "BMK", "Leitung (mm²)", "Blatt"} <= set(de)
+    assert "1,5" in " ".join(de)  # decimal comma
+
+
+def test_portuguese_drawing_texts():
+    view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
+    pt = [s for p in render_pages(load({**DOC, "meta": {"lang": "pt-BR"}, "views": [view]})) for s in _texts(p.root)]
+    assert {"Observações", "Ident.", "Cabo (mm²)", "Folha"} <= set(pt)
+    assert "1,5" in " ".join(pt)  # decimal comma
+
+
+def test_italian_drawing_texts():
+    view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
+    it = [s for p in render_pages(load({**DOC, "meta": {"lang": "it-IT"}, "views": [view]})) for s in _texts(p.root)]
+    assert {"Note", "Sigla", "Cavo (mm²)", "Foglio"} <= set(it)
+    assert "1,5" in " ".join(it)  # decimal comma
+
+
+def test_polish_drawing_texts():
+    view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
+    pl = [s for p in render_pages(load({**DOC, "meta": {"lang": "pl-PL"}, "views": [view]})) for s in _texts(p.root)]
+    assert {"Uwagi", "Oznaczenie", "Przewód (mm²)", "Arkusz"} <= set(pl)
+    assert "1,5" in " ".join(pl)  # decimal comma
+
+
+def test_turkish_drawing_texts():
+    view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
+    tr = [s for p in render_pages(load({**DOC, "meta": {"lang": "tr-TR"}, "views": [view]})) for s in _texts(p.root)]
+    assert {"Notlar", "Etiket", "Kablo (mm²)", "Sayfa"} <= set(tr)
+    assert "1,5" in " ".join(tr)  # decimal comma
+
+
+def test_type_labels_in_every_language():
+    from uniwire import registry
+
+    for type_, info in registry.registry()["types"].items():
+        assert set(info["label"]) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr"}, type_
 
 
 def test_lang_selection(monkeypatch):
@@ -38,7 +121,7 @@ def test_rule_messages_follow_env(monkeypatch):
     fr = {f.rule: f.message for f in check(doc)}
     assert set(en) == set(fr)  # rule ids are language-independent
     assert "32 A breaker on 1.5 mm²" in en["nfc15100.section"]
-    assert "disjoncteur 32 A sur 1.5 mm²" in fr["nfc15100.section"]
+    assert "disjoncteur 32 A sur 1,5 mm²" in fr["nfc15100.section"]  # decimal comma
 
 
 def test_title_block_follows_meta_lang():

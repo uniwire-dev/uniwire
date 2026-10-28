@@ -51,7 +51,7 @@ The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are to be interpret
 |---|---|---|
 | `$schema` | no | Schema URL (the major version appears in the path: `/v1/`) |
 | `uniwire` | no (default `1.0.0`) | Format version, semver `1.x.y` |
-| `profiles` | no | Business rule profiles to apply (`nfc15100`, `iec60364`, `enedis`…) |
+| `profiles` | no | Business rule profiles to apply (`nfc15100`, `vde0100`, `iec60364`, `enedis`…) |
 | `meta` | no | Title, project, client, author, date, `revisions[]`, `notes[]`, `lang` |
 | `installation` | no | `earthing` (TT, TN-C, TN-S, TN-C-S, IT), `system` (1P+N, 3P+N…), `un_V`, `f_Hz`, `supply`, `subscribed_kVA`, `planned_kVA`, `ik3_kA`, `earth_resistance_ohm`, `surface_m2`, `standard`, `premises` (dwelling, commercial, office, industrial, public, agricultural, other: dwelling rules apply to `dwelling` or when absent) |
 | `templates` | no | Named attribute templates |
@@ -263,6 +263,11 @@ A power link (`transfer`, `tie`, `bypass`, `parallel`, `infeed`) with `normally_
 **long dash** (control links use a short dash). Its `device` is drawn on the route, in its normal state, with
 its tag, rating and state (`N.O.`, interlock keys) placed beside it.
 
+Single-line view: a tree that only adds a supply to another one (its `infeed` links all land below the head of
+that tree) is drawn beside it. A link between two trees with a third tree drawn between them is an interrupted
+line: a short stub at each end naming the other end (its tag) and the link's `label`. Several feeds landing on
+one busbar each get their own tap on top of it, beyond its end, inside the frame of the board.
+
 ### 4.1 Interlocks (`locks`, `interlocks`)
 
 `locks[]` (on any node and on any link) lists the interlock keys engaged by a device. Trapped-key principle:
@@ -346,8 +351,8 @@ Common enumerations: `poles` ∈ {1P, 1P+N, 2P, 3P, 3P+N, 4P}.
 | `paper` / `orientation` | `A3` / `landscape` | Sheet format. When `paper` is absent, a renderer may choose the smallest format that holds the drawing at full size (the reference library: A4 landscape when it fits, else A3) |
 | `direction` | `down` | Direction of power flow (future values reserved) |
 | `pitch_mm` | 20 | Width of an outgoing feeder column |
-| `cartouche` | `label, ref, protection, idn_mA, cable, p_kW` | Rows of the circuit schedule (among `label`, `ref`, `protection`, `in_A`, `curve`, `icn_kA`, `idn_mA`, `rcd_type`, `poles`, `cable`, `section_mm2`, `length_m`, `p_kW`, `phase`, `room`, `points`, and the 1.2 rows below, e.g. `cable_ref` "Cable tag"); an `idn_mA` value carried by a device upstream of the feeder (incomer, group RCD), not by its own protection, reads "30mA (upstream)" |
-| `folio_split` | `auto` | `auto`: split across sheets if needed; `none`: everything on one sheet |
+| `cartouche` | `label, ref, protection, idn_mA, cable, p_kW` | Rows of the circuit schedule (among `label`, `ref`, `protection`, `in_A`, `curve`, `icn_kA`, `idn_mA`, `rcd_type`, `poles`, `cable`, `section_mm2`, `length_m`, `p_kW`, `phase`, `room`, `points`, and the 1.2 rows below, e.g. `cable_ref` "Cable tag"); an `idn_mA` value carried by a device upstream of the feeder (incomer, group RCD), not by its own protection, reads "30 mA (upstream)" |
+| `folio_split` | `auto` | `auto`: split across sheets if needed (several trees side by side: groups of whole trees first, then sub-distribution boards on their own sheet, then busbars cut into continuation sheets); `none`: everything on one sheet |
 | `min_scale` | 0.7 | Maximum reduction before splitting |
 | `annotations` | `true` | Reference designation and characteristics next to the symbols |
 | `tag_field` | `ref` | Displayed identifier: `ref` or `part_number` (diagrams that print only catalogue part numbers) |
@@ -486,29 +491,22 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
      `core.interlock` (§4.1): **error** when more members of an interlock are closed in normal operation than it
      has keys (or when a key is declared twice), **warning** when a declared interlock is used by fewer than
      2 members, or when an undeclared `locks` key is used by a single member (it interlocks nothing);
-   * `nfc15100`: checks of a French low-voltage installation under NF C 15-100. The rules of part 7-771
-     (dwellings, marked *dwelling*) apply when `installation.premises` is `dwelling` or absent; for other
-     premises only the general rules apply (30 mA on socket-outlet and charging circuits, part 4-41 411.3.3;
-     EV charging, part 7-722; selectivity), and the cable table becomes a warning to size the cable for its
-     installation method (part 5-52, guide UTE C 15-105). Each rule carries a `source` (document and page) and
-     a `confidence` (`high` / `medium`), available in `uniwire.rules.RULE_INFO`. Each `Finding` repeats the
-     source.
+   * `nfc15100`: checks of a French low-voltage installation under NF C 15-100 (2002 edition with its 2005
+     update and amendments A1 to A5, the version that gives presumption of conformity under the order of
+     3 August 2016). The rules of dwellings (part 10-1 of amendment A5, marked *dwelling*) apply when
+     `installation.premises` is `dwelling` or absent; for other premises only the general rules apply (30 mA
+     on socket-outlets up to 32 A and charging points, selectivity, earth electrode resistance in TT), and
+     the cable table becomes a warning to size the cable for its installation method (part 5-52, guide
+     UTE C 15-105). Each rule carries a `source` (document and clause) and a `confidence` (`high` /
+     `medium`), available in `uniwire.rules.RULE_INFO`; each `Finding` repeats the source. Rules, checks and
+     levels: [Rules](rules.md#nfc15100-french-low-voltage-installations).
 
-     | Rule | Check | Level |
-     |---|---|---|
-     | `nfc15100.section` | Copper cross-section ↔ rating: 1.5 → 16 A, 2.5 → 20 A, 4 → 25 A, 6 → 32 A; outside dwellings, a warning to check the cable for its installation method | error (dwelling) / warning |
-     | `nfc15100.points` | *Dwelling*. Lighting: at most 8 points. Sockets: at most 8 on 1.5 mm², at most 12 on 2.5 mm² | error |
-     | `nfc15100.lighting-rating` | *Dwelling*. Lighting protected at 16 A at most | error |
-     | `nfc15100.rcd-30mA` | 30 mA protection for sockets and EV charging (all premises) and for every dwelling circuit | error |
-     | `nfc15100.rcd-type-A` | No type AC RCD for EV charging (all premises) and, in dwellings, for washing machine, dryer, hob / cooker | error |
-     | `nfc15100.rcd-count` | *Dwelling*. At least 2 30 mA RCCBs (ID) per dwelling, including 1 type A | warning |
-     | `nfc15100.rcd-circuits` | *Dwelling*. At most 8 circuits per 30 mA RCCB | error |
-     | `nfc15100.heating` | *Dwelling*. Heating power per circuit: 3.5 / 4.5 / 5.75 / 7.25 kW at 16 / 20 / 25 / 32 A | warning |
-     | `nfc15100.dedicated-circuit` | *Dwelling*. Dedicated circuits: washing machine, dishwasher, dryer, freezer, oven, hob, water heater, EV charging (one load per circuit), heating and shutters (circuit reserved for that use) | error |
-     | `nfc15100.ev-rcd` | EV charging: type B in three-phase mode 2 (error). In mode 3 with a type A or F, reminder of 6 mA DC detection (info) | error / info |
-     | `nfc15100.selectivity` | Selective (S) incoming residual current device upstream of other RCDs | warning |
+   * `vde0100` *(optional, must be declared in `profiles`)*: German installations (DIN VDE 0100): 30 mA RCDs
+     for socket-outlets, the lighting of dwellings and bathrooms, charging points, surge protection, PEN
+     cross-section. Rules, checks and levels: [Rules](rules.md#vde0100-german-low-voltage-installations).
 
-   * `iec60364` *(optional, must be declared in `profiles`)*: current-carrying capacity of cables.
+   * `iec60364` *(optional, must be declared in `profiles`)*: current-carrying capacity of cables and the
+     30 mA RCD of socket-outlets.
      * **Rule `iec60364.iz`**
        * Condition: the cable specifies `section_mm2`, `material`, `insulation` and `install`.
        * Check: the rating of the protective device supplying the cable does not exceed Iz. The rating
@@ -524,15 +522,25 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
        * Copper, PVC or XLPE (`PR` and `EPR` are treated as XLPE).
        * Installation methods `A1`, `A2`, `B1`, `B2`, `C`, `E`, `F`, with 2 or 3 loaded conductors.
        * Cross-sections from 1.5 to 300 mm².
-       * Method `D-duct` (buried in duct, XLPE): copper and aluminium.
+       * Method `D-duct` (buried in duct, XLPE), also written `D1` (its IEC name): copper and aluminium.
        * Non-buried aluminium is not provided by the source: the rule then emits an info.
      * **Number of loaded conductors**: 3 if the protective device is `3P`, `3P+N` or `4P`. Otherwise 2.
        If the poles are not specified, `installation.system` is used.
      * **Limitations**
-       * Referenced to **40 °C ambient**, versus 30 °C in IEC: Iz is therefore about 9 to 13 %
-         lower.
-       * No grouping or temperature correction factor is applied.
+       * Referenced to **40 °C** in air and 25 °C in the ground. The cable's `ambient_C` picks the values: 30 °C
+         or less in air, brought back to 30 °C (IEC 60364-5-52, table B.52.14); up to 40 °C, the values at
+         40 °C; above 40 °C in air or 25 °C in the ground, Iz is not checked (info). Without `ambient_C`, 40 °C.
+       * No grouping factor is applied.
        * The IEC 60364-5-52:2009 edition may differ slightly.
+     * **Rule `iec60364.iz-estimate`**: a cable giving `section_mm2` without its `material`, `insulation`
+       or `install` is estimated: copper and PVC unless stated, the most favourable method in air (`A1` to
+       `F`) unless stated, the table values brought back to 30 °C (IEC 60364-5-52, table B.52.14: 0.87 for
+       PVC, 0.91 for XLPE). A rating above that Iz: **warning**. One **info** lists the cables estimated, so
+       that an empty result is not read as a checked cable.
+     * **Rule `iec60364.rcd-30mA`** (IEC 60364-4-41:2005+AMD1:2017, 411.3.3 and 411.3.4): a socket-outlet
+       up to 32 A, in all premises, and a lighting circuit when `installation.premises` is `dwelling`, protected
+       by an RCD of at most 30 mA: **error**. Not applied below an isolation transformer feeding an IT system
+       (medical IT, IEC 60364-7-710), nor when the document also declares `nfc15100` or `vde0100` (they check it).
 
    * `enedis` *(optional, must be declared in `profiles`)*: connection of a low-voltage installation to the
      French public network (NF C 14-100, Enedis technical reference Enedis-NMO-RAC_001E), separate from

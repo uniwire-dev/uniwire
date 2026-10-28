@@ -2,6 +2,7 @@ import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from tests.conftest import ROOT
 from uniwire import load, render_pages, render_pdf, render_svg
 from uniwire.graph import to_graph
 
@@ -75,3 +76,14 @@ def test_small_drawing_enlarged_on_a_given_paper():
     svg = page_to_svg(render_pages(load(doc))[0])
     assert 'width="420mm"' in svg
     assert 'font-size="2.5"' in svg  # annotations: 2 mm x 1.25
+
+
+def test_layout_reused_for_the_same_document_and_never_shared():
+    import json
+
+    from uniwire.render import _PAGES
+    path = sorted((ROOT / "examples").glob("01_*.uniwire.json"))[0]
+    first = render_pages(load(json.loads(path.read_text(encoding="utf-8"))))
+    first[0].root.items.clear()  # a caller altering its pages does not alter the next caller's
+    second = render_pages(load(json.loads(path.read_text(encoding="utf-8"))))
+    assert len(_PAGES) == 1 and second[0].root.items
