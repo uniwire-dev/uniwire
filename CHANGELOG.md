@@ -26,6 +26,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Drawings: a link label with no clear place on one line (a short link) goes on two lines, clear of the symbols;
   a wrapped line no longer starts with a separator (a dash, `/`, `:`).
 * Drawings: a device text that repeats its label in another case (`Type 2` under `… type 2`) is not repeated.
+* Reference card for assistants: socket-outlets are entered as `socket` nodes even on a shared circuit (so the RCD
+  rules see them), and a feeder continued elsewhere ends on an `offpage` node, not a `spare`.
 
 ## 0.1.4 (2026-10-28)
 
