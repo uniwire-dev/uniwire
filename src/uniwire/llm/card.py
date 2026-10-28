@@ -91,6 +91,8 @@ _TEXT: dict[str, dict[str, str]] = {
             "to: <transfer_switch id>}`; the 2nd source is another root of `sources`.",
             "- Give an explicit `id` to every node you will reference (links, patches). Keep ids stable when editing.",
             "- Auxiliary devices outside the power tree (relays, CTs, IMDs) go in `devices` and connect through links.",
+            "- Socket-outlets are `socket` nodes, even mixed with other loads (RCD rules).",
+            "- A feeder continued elsewhere ends on `offpage`, not `spare` (a free way).",
         ]),
         "examples": "Examples",
         "ex1": "Minimal dwelling board",
@@ -165,6 +167,8 @@ _TEXT: dict[str, dict[str, str]] = {
             "- Donner un `id` explicite à tout nœud référencé (liens, patchs). Garder les ids stables en édition.",
             "- Les appareils annexes hors arbre de puissance (relais, TC, CPI) vont dans `devices` et se "
             "raccordent par des liens.",
+            "- Prises : nœuds `socket`, même mêlées à d'autres récepteurs (règles différentielles).",
+            "- Départ continué ailleurs : `offpage`, pas `spare` (une réserve).",
         ]),
         "examples": "Exemples",
         "ex1": "Tableau de logement minimal",
