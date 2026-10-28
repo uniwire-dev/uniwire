@@ -544,7 +544,7 @@ def _add_pdf_route(server, store, pool) -> None:
     async def get_pdf(request):
         text = store.get(request.path_params["doc_id"])
         if text is None:
-            return PlainTextResponse("unknown or expired document", status_code=404, headers=headers)
+            return _missing(store, request.path_params["doc_id"], headers)
         # ?kind=multi-line&color=phase: known options only, anything else is ignored
         view = {k: v for k, v in request.query_params.items() if k in T.LINK_VIEW and v in T.LINK_VIEW[k]}
         t0 = time.monotonic()
@@ -576,7 +576,7 @@ def _add_svg_route(server, store, pool) -> None:
     async def get_svg(request):
         text = store.get(request.path_params["doc_id"])
         if text is None:
-            return PlainTextResponse("unknown or expired document", status_code=404, headers=headers)
+            return _missing(store, request.path_params["doc_id"], headers)
         t0 = time.monotonic()
         try:
             r = await run_in_threadpool(make, text)
@@ -587,9 +587,21 @@ def _add_svg_route(server, store, pool) -> None:
         return Response(r["svg"], media_type="image/svg+xml; charset=utf-8", headers=headers)
 
 
+def _missing(store, doc_id: str, headers: dict[str, str]):
+    """Answer for a document that cannot be served: 410 when a link holder deleted it, else 404."""
+    from starlette.responses import PlainTextResponse
+
+    if store.deleted(doc_id):
+        return PlainTextResponse("deleted at the request of a link holder", 410, headers=headers)
+    return PlainTextResponse("not found (links expire 30 days after their last use)", 404, headers=headers)
+
+
 def _add_doc_route(server, store) -> None:
-    """``GET /doc/<id>`` -> the stored document text (JSON), 404 when unknown or expired."""
-    from starlette.responses import PlainTextResponse, Response
+    """``GET /doc/<id>`` -> the stored document text (JSON), 404 when unknown or expired, 410 when deleted.
+    ``POST /doc/<id>/delete`` -> deletes it (204; 404 when there is nothing to delete): whoever holds a link can
+    already read and copy the document, so the link is enough to remove it. A POST, never a GET, so that link
+    checkers and previews cannot delete anything."""
+    from starlette.responses import Response
 
     headers = {"Cache-Control": "no-store", "X-Robots-Tag": "noindex", "X-Content-Type-Options": "nosniff"}
 
@@ -597,8 +609,15 @@ def _add_doc_route(server, store) -> None:
     async def get_doc(request):
         text = store.get(request.path_params["doc_id"])
         if text is None:
-            return PlainTextResponse("not found (links expire 30 days after their last use)", 404, headers=headers)
+            return _missing(store, request.path_params["doc_id"], headers)
         return Response(text, media_type="application/json", headers=headers)
+
+    @server.custom_route("/doc/{doc_id}/delete", methods=["POST"], include_in_schema=False)
+    async def delete_doc(request):
+        if not store.delete(request.path_params["doc_id"]):
+            return _missing(store, request.path_params["doc_id"], headers)
+        log.info("route=delete status=ok")
+        return Response(status_code=204, headers=headers)
 
 
 if __name__ == "__main__":

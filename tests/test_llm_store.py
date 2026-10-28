@@ -29,6 +29,22 @@ def test_store_put_get_expire(tmp_path):
     assert store.get(id_) is None and not (tmp_path / f"{id_}.json").exists()
 
 
+def test_store_delete(tmp_path):
+    store = DocStore(tmp_path, ttl_days=1)
+    text = STUDIO.read_text("utf-8")
+    id_ = store.put(text)
+    assert not store.deleted(id_) and store.delete(id_)
+    assert store.get(id_) is None and store.deleted(id_) and not list(tmp_path.glob("*.json"))
+    assert not store.delete(id_) and not store.delete("../../etc/passwd")  # nothing (left) to delete
+    assert store.put(text) == id_ and store.get(id_) == text and not store.deleted(id_)  # stored again: a new request
+    store.delete(id_)
+    old = time.time() - 2 * 86400
+    os.utime(tmp_path / f"{id_}.deleted", (old, old))
+    assert not store.deleted(id_)
+    store.prune()
+    assert not list(tmp_path.iterdir())  # the marker goes with the expiry
+
+
 def test_store_limits(tmp_path):
     store = DocStore(tmp_path, max_total_bytes=200, max_doc_bytes=100)  # 4 documents of 78 bytes
     assert store.put("x" * 101) is None
@@ -128,6 +144,28 @@ def test_svg_route(tmp_path):
     bad_id = store.put('{"uniwire": "1.0.0"}')
     bad = client.get(f"/svg/{bad_id}")
     assert bad.status_code == 422
+
+
+def test_delete_route(tmp_path):
+    """A link holder deletes the document with a POST; its links then answer 410 instead of 404."""
+    pytest.importorskip("mcp.server.mcpserver")
+    from starlette.testclient import TestClient
+
+    from uniwire.mcp_server import _add_doc_route, _add_svg_route, build_server
+
+    store = DocStore(tmp_path)
+    id_ = store.put(STUDIO.read_text("utf-8"))
+    server = build_server(None, store)
+    _add_doc_route(server, store)
+    _add_svg_route(server, store, None)
+    client = TestClient(server.streamable_http_app())
+    assert client.get(f"/doc/{id_}/delete").status_code in (404, 405)  # a GET never deletes
+    assert client.get(f"/doc/{id_}").status_code == 200
+    r = client.post(f"/doc/{id_}/delete")
+    assert r.status_code == 204 and r.headers["cache-control"] == "no-store"
+    assert client.get(f"/doc/{id_}").status_code == 410 and client.get(f"/svg/{id_}").status_code == 410
+    assert client.post(f"/doc/{id_}/delete").status_code == 410
+    assert client.post("/doc/AAAAAAAAAAAA/delete").status_code == 404 and client.get("/doc/AAAAAAAAAAAA").status_code == 404
 
 
 def test_linked_tools_not_read_only_with_store(tmp_path):

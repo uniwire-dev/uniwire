@@ -13,6 +13,10 @@ This release also ships the changes of 0.1.2, which was not published on its own
 * Cable texts: a protective conductor run beside the cores (`pe_section_mm2` with a composition such as `4x`) is
   written with them, `4x25+PE16`, in the drawings, the feeder tables, the bill of materials and the cable lists; it
   was left out, so that a cable with its own PE read as a cable without one.
+* Hosted MCP server (`--store`): whoever holds a short link can delete its document before it expires
+  (`POST /doc/<id>/delete`, never a GET, so that link checkers cannot delete anything). The links of a deleted
+  document answer 410 instead of 404, so that the web editor and the PDF link can say it was deleted; storing the
+  same document again (a new request from an assistant) makes it available again.
 
 * Multi-line view: the auxiliary devices (`devices`) and the control, interlock, trip, measure, data, key and earth
   links are drawn, placed and routed as in the single-line view (beside the node they are linked to, clear of the
