@@ -696,3 +696,39 @@ def test_dc_converter_shows_its_output_voltage():
 def test_power_below_1_kw_in_watts_in_the_table():
     texts = _texts(render_pages(_dc_doc())[0].root)
     assert {"12.5 W", "4 W", "16.2 W", "0.75 W"} <= set(texts)
+
+
+
+def test_label_repeating_the_name_in_another_case_is_not_repeated():
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [{"type": "busbar", "children": [
+        {"type": "spd", "ref": "-F1", "label": "Surge arrester type 2", "spd_type": "2"},
+        {"type": "breaker", "ref": "-Q1", "in_A": 16, "children": [{"type": "load", "label": "Lights"}]}]}]}]}]})
+    (lay,) = _layout(doc)
+    ann = next(n.ann for n in lay.lnodes if n.node is not None and n.node.type == "spd")
+    assert "Type 2" not in ann
+
+
+def test_link_label_too_long_for_its_run_goes_on_two_lines_clear_of_the_symbols():
+    feeders = [{"type": "breaker", "ref": f"-Q{k}", "in_A": 32, "children": [{"type": "load", "label": f"Line {k}"}]}
+               for k in range(1, 4)]
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "ref": "MB", "label": "Main board",
+        "children": [{"type": "main_breaker", "id": "QF", "ref": "-Q0", "label": "Incomer 250 A, 4P", "in_A": 250,
+                      "poles": "4P", "children": feeders}]}]}],
+        "devices": [{"id": "R1", "type": "protection_relay", "ref": "-K1", "label": "Leakage relay",
+                     "functions": ["earth leakage"]}],
+        "links": [{"kind": "trip", "from": "R1", "to": "QF", "label": "Relay trip to the incomer, wiring to be confirmed"}]})
+    (lay,) = _layout(doc)
+    syms = []  # the drawn symbols of the relay and of the incomer, in the frame of the texts
+    for g in _items_groups(lay.group):
+        if "uw-node" in (g.cls or "") and g.id in ("R1", "QF"):
+            pts = [p for i in _items(g) for p in ([i.a, i.b] if isinstance(i, Line) else getattr(i, "points", []))]
+            pts += [(r.x + dx, r.y + dy) for r in _items(g) if hasattr(r, "w") and hasattr(r, "h")
+                    for dx, dy in ((0, 0), (r.w, r.h))]
+            syms.append((min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts)))
+    assert len(syms) == 2
+    texts = [t for g in _items_groups(lay.group) if "uw-link" in (g.cls or "") for t in _items(g) if isinstance(t, Text)]
+    assert texts and " ".join(t.text for t in texts) == "Relay trip to the incomer, wiring to be confirmed"
+    for t in texts:
+        w = text_width(t.text, t.size)
+        x0 = t.p[0] - (w if t.anchor == "end" else 0.0)
+        assert not any(_hit((x0, t.p[1] - 0.8 * t.size, x0 + w, t.p[1] + 0.2 * t.size), s) for s in syms), t.text

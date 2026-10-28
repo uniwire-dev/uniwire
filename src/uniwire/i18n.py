@@ -48,6 +48,7 @@ EN: dict[str, str] = {
     "units.incompatible": "unit {unit!r} is incompatible with {target!r}",
     # --- rules engine
     "rules.unknown_profile": "unknown profile: {profile!r}",
+    "rules.no_cables": "no cable cross-section given: the cables were not checked against their protection; give the cable (cross-section) of each circuit to have them checked",
     "rules.no_profile": "no rule profile applied: only the consistency of the document was checked (tags, links, "
                         "interlocks, ratings in cascade), not the protections, cables and RCDs; profiles: 'nfc15100' "
                         "(France), 'vde0100' (Germany), 'iec60364'",
@@ -352,6 +353,7 @@ FR: dict[str, str] = {
     "units.unknown_unit": "unité inconnue : {unit!r}",
     "units.incompatible": "unité {unit!r} incompatible avec {target!r}",
     "rules.unknown_profile": "profil inconnu : {profile!r}",
+    "rules.no_cables": "aucune section de câble indiquée : les câbles n'ont pas été vérifiés par rapport à leur protection ; indiquer le câble (section) de chaque circuit pour qu'ils le soient",
     "rules.no_profile": "aucun profil de règles appliqué : seule la cohérence du document a été vérifiée (repères, "
                         "liens, verrouillages, calibres en cascade), pas les protections, câbles et différentiels ; "
                         "profils : 'nfc15100' (France), 'vde0100' (Allemagne), 'iec60364'",
@@ -737,6 +739,7 @@ RU: dict[str, str] = {
     "symbols.heading": "Библиотека символов uniwire (сетка M = 2,5 мм)",
     # rule messages
     "rules.unknown_profile": "неизвестный профиль: {profile!r}",
+    "rules.no_cables": "сечения кабелей не указаны: кабели не проверены на соответствие защитным аппаратам; укажите кабель (сечение) каждой цепи, чтобы они были проверены",
     "rules.no_profile": "профиль правил не применён: проверена только согласованность документа (обозначения, связи, "
                         "блокировки, ступенчатость номиналов), но не аппараты защиты, кабели и УЗО; профили: "
                         "'nfc15100' (Франция), 'vde0100' (Германия), 'iec60364'",
@@ -964,6 +967,7 @@ ZH: dict[str, str] = {
     "symbols.heading": "uniwire 图形符号库（网格 M = 2.5 mm）",
     # rule messages
     "rules.unknown_profile": "未知规则配置：{profile!r}",
+    "rules.no_cables": "未给出电缆截面：未按保护电器校核电缆；请填写每个回路的电缆（截面），以便进行校核",
     "rules.no_profile": "未应用规则配置：仅检查了文档的一致性（编号、连接、联锁、额定电流逐级配合），未检查保护电器、电缆和剩余电流"
                         "保护器；可用配置：'nfc15100'（法国）、'vde0100'（德国）、'iec60364'",
     "rules.standard_not_covered": "没有规则配置涵盖 {standard}：仅检查了文档的一致性（编号、连接、联锁、额定电流逐级配合）；保护"
@@ -1169,6 +1173,7 @@ ES: dict[str, str] = {
     "symbols.heading": "Biblioteca de símbolos uniwire (cuadrícula M = 2,5 mm)",
     # rule messages
     "rules.unknown_profile": "perfil desconocido: {profile!r}",
+    "rules.no_cables": "no se indica ninguna sección de cable: los cables no se verificaron frente a su protección; indicar el cable (sección) de cada circuito para que se verifiquen",
     "rules.no_profile": "ningún perfil de reglas aplicado: solo se verificó la coherencia del documento (designaciones, "
                         "enlaces, enclavamientos, calibres en cascada), no las protecciones, los cables ni los "
                         "diferenciales; perfiles: 'nfc15100' (Francia), 'vde0100' (Alemania), 'iec60364'",
@@ -1409,6 +1414,7 @@ DE: dict[str, str] = {
     "symbols.heading": "uniwire-Symbolbibliothek (Raster M = 2,5 mm)",
     # rule messages
     "rules.unknown_profile": "unbekanntes Profil: {profile!r}",
+    "rules.no_cables": "keine Leiterquerschnitte angegeben: die Kabel wurden nicht gegen ihre Schutzorgane geprüft; für jeden Stromkreis das Kabel (Querschnitt) angeben, damit sie geprüft werden",
     "rules.no_profile": "kein Regelprofil angewendet: nur die Konsistenz des Dokuments wurde geprüft (BMK, "
                         "Verbindungen, Verriegelungen, Staffelung der Nennströme), nicht die Schutzorgane, "
                         "Leitungen und RCDs; Profile: 'nfc15100' (Frankreich), 'vde0100' (Deutschland), 'iec60364'",
@@ -1648,6 +1654,7 @@ PT: dict[str, str] = {
     "symbols.heading": "Biblioteca de símbolos uniwire (grade M = 2,5 mm)",
     # rule messages
     "rules.unknown_profile": "perfil desconhecido: {profile!r}",
+    "rules.no_cables": "nenhuma seção de cabo informada: os cabos não foram verificados em relação à sua proteção; informe o cabo (seção) de cada circuito para que sejam verificados",
     "rules.no_profile": "nenhum perfil de regras aplicado: só a coerência do documento foi verificada (identificações, ligações, intertravamentos, correntes nominais em cascata), e não as proteções, os cabos e os DR; perfis: 'nfc15100' (França), 'vde0100' (Alemanha), 'iec60364'",
     "rules.standard_not_covered": "nenhum perfil de regras cobre {standard}: só a coerência do documento foi verificada "
                                   "(identificações, ligações, intertravamentos, correntes nominais em cascata); as "

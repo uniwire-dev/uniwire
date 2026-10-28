@@ -349,7 +349,7 @@ def _ann_lines(ln: LNode, view: View, lang: str) -> list[str]:
     if node.label and node.label in lines:  # the label: not repeating the tag above it, nor the lines below it
         label = without_ref(node.label, node.ref) if tag == node.ref else node.label
         lines = [label if t == node.label else t for t in lines]
-        lines = [t for t in lines if t and (t == label or t not in label)]
+        lines = [t for t in lines if t and (t == label or t.casefold() not in label.casefold())]  # 'Type 2' in 'type 2'
     if tag:
         lines.insert(0, tag)
     # the cable it feeds, when the circuit table does not show it (feeder of a sub-board, a transformer...), and
@@ -1494,10 +1494,15 @@ def _frame_label_tries(label: str, size: float, width: float) -> Iterator[tuple[
                 yield s, lines, widen
 
 
+NO_LINE_START = {"—", "–", "-", "/", ":", ";", "!", "?", "»", ")"}  # a separator ends a line, never starts one
+
+
 def _wrap_words(words: list[str], n: int, width: Callable[[str], float]) -> list[str]:
     """``words`` (:func:`text_units`: words, CJK characters) on ``n`` lines, the widest line as narrow as possible."""
     best: Optional[list[str]] = None
     for cuts in _cuts(len(words), n):
+        if any(words[c].strip() in NO_LINE_START for c in cuts) and len(words) > n + 1:
+            continue  # a dash or a slash ends the line before it, never starts the next one
         lines = ["".join(words[a:b]).strip() for a, b in zip((0,) + cuts, cuts + (len(words),))]
         if best is None or max(map(width, lines)) < max(map(width, best)):
             best = lines
@@ -2335,6 +2340,17 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             labels.append((i, seq, text, 1.6, "#000000"))
     # labels once every route is known, near the far end of their link (port labels: near the controlled device)
     for i, seq, txt, size, color in labels:
+        units = text_units(txt)
+        if color == "#000000" and len(units) > 1 and place_label(obs, seq, text_width(txt, size), size, from_end=True,
+                                                                 record=False, optional=True) is None:
+            # no clear place on one line (a short link): on two lines, if that finds one
+            two = _wrap_words(units, 2, lambda u, sz=size: text_width(u, sz))
+            at = place_label(obs, seq, max(text_width(u, size) for u in two), 2.2 * size, from_end=True,
+                             optional=True)
+            if at is not None:  # the box of the two lines: baselines 1.2 size apart
+                for k, u in enumerate(two):
+                    group_of(i).add(Text((at[0], at[1] - 0.96 * size + 1.2 * size * k), u, size, at[2], color=color))
+                continue
         # multi-line: a link label with no free place along its route is left out (the single-line has it)
         at = place_label(obs, seq, text_width(txt, size), size, from_end=True,
                          optional=obs.label_channel and color == "#000000")
