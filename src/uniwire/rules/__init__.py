@@ -91,7 +91,21 @@ def check(doc: Document, profiles: Iterable[str] | None = None) -> list[Finding]
             findings.extend(r(doc, index))
     if not any(p in PROFILES for p in active if p != "core"):
         findings.append(_no_profile(doc))
+    elif any(p in CABLE_PROFILES for p in active) and not _any_cable_size(index):
+        findings.append(Finding("info", "core.no-cables", _t("rules.no_cables")))  # 'no finding' is not 'cables OK'
     return findings
+
+
+#: Profiles that check the cables against their protection.
+CABLE_PROFILES = ("nfc15100", "vde0100", "iec60364")
+
+
+def _any_cable_size(index: Index) -> bool:
+    """A protected circuit with a cable size, or nothing protected (nothing to size)."""
+    nodes = list(index.nodes.values())
+    if not any(getattr(n, "in_A", None) and n.type in ("breaker", "rcbo", "fuse", "fuse_switch") for n in nodes):  # type: ignore[attr-defined]
+        return True
+    return any(c is not None and (c.section_mm2 or c.size_awg) for c in (getattr(n, "cable", None) for n in nodes))
 
 
 #: Standards the rule profiles derive from.

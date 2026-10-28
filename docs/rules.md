@@ -53,6 +53,7 @@ An unknown profile name produces a `profile` warning.
 | `core.terminal-node` | PV arrays, batteries, SPDs and earth electrodes feed nothing (a battery root of `sources`, the only source of a DC system, may) | warning |
 | `core.normalized` | A near-miss value was read in its canonical form on load: `poles: 2` as `"2P"`, `cable.cores: 3` as `"3G"`, `"3G2.5"` as `"3G"` plus `section_mm2: 2.5`, a `[15, 45]` range as `"15-45"`, a view `type`/`single_line` as `kind`/`single-line`, `meta.description` as a note. Ambiguous values are not guessed: validation rejects them. `uniwire normalize` writes the canonical form | warning |
 | `core.interlock` | Nodes and links sharing a `locks` key: no more members closed in normal operation than the interlock has `keys` (SPEC §4.1); a declared interlock is used by at least 2 members; an undeclared lock is not alone | error / warning |
+| `core.no-cables` | A profile that checks cables is active (`nfc15100`, `vde0100`, `iec60364`) but no circuit gives its cable size: the cables were not checked, so an empty result does not mean they are right | info |
 
 ## PLC rules (part of `core`)
 
