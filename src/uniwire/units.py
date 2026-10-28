@@ -118,6 +118,13 @@ def fmt(value: float | None, unit: str = "", sep: str = "") -> str:
     return f"{s}{sep}{unit}" if unit else s
 
 
+def fmt_power(kw: float | None) -> str:
+    """Below 1 kW in watts (0.0162 -> '16.2 W', 0.5 -> '500 W'), from 1 kW in kilowatts (3.5 -> '3.5 kW')."""
+    if kw is None:
+        return ""
+    return fmt(round(kw * 1000, 3), " W") if abs(kw) < 1 else fmt(kw, " kW")
+
+
 def fmt_current(a: float | None) -> str:
     """30 mA stays in mA, 300 mA stays in mA, 1000 mA -> 1 A."""
     if a is None:

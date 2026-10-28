@@ -368,7 +368,8 @@ def _ann_lines(ln: LNode, view: View, lang: str) -> list[str]:
     return lines[:5] + captions  # the cable and the safety mark come on top of the usual lines, never instead
 
 
-def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = None) -> None:
+def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = None,
+              right_limit: float | None = None) -> None:
     if ln.kind != "node" or not view.annotations:
         ln.ann = []
         return
@@ -386,6 +387,8 @@ def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = N
     avail = (ln.x_left + ln.width) - (ln.x + ln.sym.right + 1.0) + view.pitch_mm / 2 - 3.5
     if not ln.children:
         avail = max(view.pitch_mm - ln.sym.right - 4.0, (ln.x_left + ln.width) - (ln.x + ln.sym.right + 1.0) - 1.0)
+    if right_limit is not None:
+        avail = min(avail, right_limit - (ln.x + ln.sym.right + 1.0))
     if avail_override is not None:
         avail = avail_override
     size = ANN_SIZE
@@ -664,8 +667,10 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                 p = sum(1 for l in doc.links if l.kind in POWER_LINKS and (l.from_ in own or l.to in own))
                 b.pad_bottom = SIGNAL_LANE * min(k, 8) + LANE * 2 * min(p, 4) + 1.5 if k or p else 0.0
     for r in main:
-        for n in r.walk():
-            _annotate(n, view, lang)
+        nxt = {id(a): b for n in r.walk() for a, b in zip(n.children, n.children[1:])}
+        for n in r.walk():  # a label stops before the next symbol, as wide as it is (a converter)
+            b = nxt.get(id(n))
+            _annotate(n, view, lang, right_limit=b.x - b.sym.left - 1.0 if b is not None else None)
         _place_y(r, 0.0)
         _separate_boards(r)
 
