@@ -66,6 +66,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("-o", "--out", help=_t("cli.help.out_render"))
     p.add_argument("--view", help=_t("cli.help.view"))
     p.add_argument("--kind", choices=["single-line", "multi-line"], help=_t("cli.help.kind"))
+    p.add_argument("--about", action="store_true", help=_t("cli.help.about"))
+    p.add_argument("--doc-id", help=_t("cli.help.doc_id"))
 
     p = sub.add_parser("schema", help=_t("cli.help.schema"))
     p.add_argument("-o", "--out")
@@ -154,7 +156,10 @@ def main(argv: list[str] | None = None) -> int:
                 print(pth)
         else:  # every view of the document in one PDF, unless one is asked for
             every = not a.view and not a.kind and len(doc.views) > 1
-            print(render_pdf(doc, a.out or f"out/{stem}.pdf", None if every else view, all_views=every))
+            from .render.about import About
+
+            about = About(a.doc_id) if a.about or a.doc_id else None
+            print(render_pdf(doc, a.out or f"out/{stem}.pdf", None if every else view, all_views=every, about=about))
         return 0
     if a.cmd == "schema":
         from .schema import schema_text

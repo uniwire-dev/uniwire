@@ -78,6 +78,40 @@ class Text:
 
 
 @dataclass
+class Path:
+    """Filled outline made of absolute segments: ("M", x, y), ("L", x, y), ("Q", x1, y1, x, y), ("Z",). Used for
+    the brand wordmark; :func:`parse_path` reads them from SVG path data."""
+    segments: list[tuple]
+    fill: str = "#000000"
+
+
+def parse_path(d: str, dx: float = 0.0, dy: float = 0.0, scale: float = 1.0) -> list[tuple]:
+    """Segments of SVG path data with absolute M, L, H, V, Q and Z commands, scaled then moved."""
+    out: list[tuple] = []
+    x = y = 0.0
+    for cmd, args in re.findall(r"([MLHVQZ])([^MLHVQZ]*)", d):
+        nums = [float(v) for v in re.findall(r"-?\d*\.?\d+(?:e-?\d+)?", args)]
+        if cmd == "Z":
+            out.append(("Z",))
+            continue
+        step = {"M": 2, "L": 2, "H": 1, "V": 1, "Q": 4}[cmd]
+        for i in range(0, len(nums), step):
+            v = nums[i:i + step]
+            if cmd == "H":
+                x = v[0]
+            elif cmd == "V":
+                y = v[0]
+            elif cmd == "Q":
+                out.append(("Q", v[0] * scale + dx, v[1] * scale + dy, v[2] * scale + dx, v[3] * scale + dy))
+                x, y = v[2], v[3]
+                continue
+            else:
+                x, y = v
+            out.append(("M" if cmd == "M" and i == 0 else "L", x * scale + dx, y * scale + dy))
+    return out
+
+
+@dataclass
 class Group:
     items: list[Item] = field(default_factory=list)
     id: Optional[str] = None  # uniwire node id (traceability)
@@ -89,7 +123,7 @@ class Group:
         return self
 
 
-Item = Union[Line, Polyline, Circle, Ellipse, Rect, Text, Group]
+Item = Union[Line, Polyline, Circle, Ellipse, Rect, Text, Path, Group]
 
 
 @dataclass
@@ -173,6 +207,12 @@ def transform(item: Item, dx: float = 0.0, dy: float = 0.0, rot: int = 0, scale:
     if isinstance(item, Text):
         return Text(tp(item.p), item.text, item.size * scale, item.anchor, item.baseline,
                     item.rotate, item.bold, item.color)
+    if isinstance(item, Path):
+        segs: list[tuple] = []
+        for seg in item.segments:
+            pts = [tp((seg[i], seg[i + 1])) for i in range(1, len(seg), 2)]
+            segs.append((seg[0], *[c for p in pts for c in p]))
+        return Path(segs, item.fill)
     if isinstance(item, Group):
         return Group([transform(i, dx, dy, rot, scale) for i in item.items], item.id, item.cls, dict(item.attrs))
     raise TypeError(item)
@@ -200,6 +240,11 @@ def bbox(item: Item) -> tuple[float, float, float, float] | None:
             l0 = item.p[1] - (w if item.anchor == "start" else w / 2 if item.anchor == "middle" else 0)
             return (item.p[0] - h * 0.8, l0, item.p[0] + h * 0.2, l0 + w)
         return (x0, y0, x0 + w, y0 + h)
+    elif isinstance(item, Path):
+        xs = [seg[i] for seg in item.segments for i in range(1, len(seg), 2)]
+        ys = [seg[i] for seg in item.segments for i in range(2, len(seg), 2)]
+        if not xs:
+            return None
     elif isinstance(item, Group):
         boxes = [b for b in (bbox(i) for i in item.items) if b]
         if not boxes:

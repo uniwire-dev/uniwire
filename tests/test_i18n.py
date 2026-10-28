@@ -21,7 +21,7 @@ def _texts(item) -> list[str]:
 def test_catalogs_have_same_keys():
     assert set(EN) == set(FR)
     assert set(CATALOGS) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr"}
-    drawing = {k for k in EN if k.split(".")[0] in ("tb", "notes", "legend", "ann", "cell")}
+    drawing = {k for k in EN if k.split(".")[0] in ("tb", "notes", "legend", "ann", "cell", "about")}
     rules = {k for k in EN if k.split(".")[0] in ("core", "rules", "nfc15100", "vde0100", "iec60364", "enedis", "plc")}
     for cat in (RU, ZH, ES, DE, PT, IT, PL, TR):  # the drawing texts in every language
         assert drawing <= set(cat) <= set(EN)
