@@ -93,7 +93,7 @@ def test_polish_drawing_texts():
 def test_turkish_drawing_texts():
     view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
     tr = [s for p in render_pages(load({**DOC, "meta": {"lang": "tr-TR"}, "views": [view]})) for s in _texts(p.root)]
-    assert {"Notlar", "Etiket", "Kablo (mm²)", "Sayfa"} <= set(tr)
+    assert {"Notlar", "Etiket", "Kablo (mm²)", "Pafta"} <= set(tr)
     assert "1,5" in " ".join(tr)  # decimal comma
 
 

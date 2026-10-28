@@ -6,6 +6,15 @@ The format and the library are versioned separately: the format follows `1.y.z` 
 version. Before the library's 1.0, a `0.x.y` release adds features and fixes that keep existing documents and
 code working, and a `0.x.0` release may break compatibility (described here, with what to change).
 
+## Unreleased
+
+* Translations reviewed in every language: wrong meanings fixed (German "converter", Chinese and other languages on
+  RCD selectivity, which now says to use a selective type S device, the French messages of the vde0100 profile on
+  charging points), trade terms made consistent within each language (one term per device), labels shortened to fit
+  their cells, Portuguese made consistently Brazilian (NBR 5410 vocabulary), Russian number agreement and no dash.
+  The page "About this document" no longer names the button of the web page, which is in English and French only.
+  `--lang` lists the ten languages. Web editor: the PDF error message names the current menu entry.
+
 ## 0.1.4 (2026-10-28)
 
 * PDF: a page "About this document" may follow the sheets. It is not a sheet of the diagram (no folio number): the
