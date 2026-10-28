@@ -225,7 +225,7 @@ def test_plc_protocols_cut_on_whole_names():
 
 def json_example(name):
     import json
-    return json.loads((ROOT / "examples" / f"{name}.uniwire.json").read_text())
+    return json.loads((ROOT / "examples" / f"{name}.uniwire.json").read_text(encoding="utf-8"))
 
 
 def test_split_phase_two_pole_and_pen_split_at_tn_s_board():

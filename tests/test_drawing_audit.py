@@ -18,12 +18,12 @@ EXAMPLES = sorted((ROOT / "examples").glob("*.uniwire.json"))
 
 @pytest.mark.parametrize("path", EXAMPLES, ids=[p.name.split("_")[0] for p in EXAMPLES])
 def test_example_drawing_readable(path):
-    findings = [f for pg in render_views(load(json.loads(path.read_text()))) for f in audit(pg.root)]  # every view
+    findings = [f for pg in render_views(load(json.loads(path.read_text(encoding="utf-8")))) for f in audit(pg.root)]  # every view
     assert len(findings) <= KNOWN.get(path.name.split("_")[0], 0), "\n".join(map(str, findings))
 
 
 @pytest.mark.parametrize("path", EXAMPLES, ids=[p.name.split("_")[0] for p in EXAMPLES])
 def test_example_multiline_readable(path):
-    doc = load(json.loads(path.read_text()))
+    doc = load(json.loads(path.read_text(encoding="utf-8")))
     findings = [f for pg in render_pages(doc, default_view(doc, kind="multi-line")) for f in audit(pg.root)]
     assert len(findings) <= KNOWN_ML.get(path.name.split("_")[0], 0), "\n".join(map(str, findings))
