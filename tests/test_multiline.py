@@ -262,3 +262,20 @@ def test_dc_motor_and_transformer_pe():
     edge = max(c.c[0] + c.r for c in circles)
     xs = [x for i in pe.items for x, _ in i.points[2:]]
     assert min(xs) > edge  # the PE jogs above the windings and passes beside them, never into them
+
+
+def test_annotation_does_not_repeat_what_the_label_says():
+    """A characteristic the label already gives ('25 kVA' in '25 kVA spare unit') is not written again below it."""
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "breaker", "children": [
+        {"type": "transformer", "id": "T", "ref": "-T1", "label": "25 kVA spare unit", "sn_kVA": 25, "u1_V": 400,
+         "u2_V": 230, "children": [{"type": "load", "p_kW": 2}]}]}]}]})
+    texts = [t.text for pg in render_pages(doc, default_view(doc, kind="multi-line"))
+             for t in _all_texts(pg.root)]
+    assert "25 kVA spare unit" in texts
+    assert "25 kVA" not in texts
+
+
+def _all_texts(item):
+    if isinstance(item, Text):
+        return [item]
+    return [t for i in item.items for t in _all_texts(i)] if isinstance(item, Group) else []
