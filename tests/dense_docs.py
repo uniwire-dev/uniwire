@@ -75,3 +75,53 @@ DENSE = {
     "spread": dense_doc(sensors=2, local=4, remote=0, spread=8),
     "mixed": dense_doc(sensors=10, local=4, remote=3, spread=6, words=7),
 }
+
+
+def _final(board: str, k: int) -> dict[str, Any]:
+    load = ({"type": "lighting", "label": f"Lighting {k}", "p_kW": 0.4} if k % 3 == 0 else
+            {"type": "socket", "label": f"Sockets {k}", "count": 4} if k % 3 == 1 else
+            {"type": "load", "label": f"Unit {k}", "p_kW": 2})
+    return {"id": f"{board}F{k}", "type": "rcbo", "ref": f"-F{k}", "in_A": 16, "curve": "C", "idn_mA": 30,
+            "poles": "1P+N", "cable": {"cores": "3G", "section_mm2": 2.5}, "children": [dict(load, id=f"{board}L{k}")]}
+
+
+def split_main_doc(ways: int = 28) -> dict[str, Any]:
+    """A main board of four feeders: two feed large distribution boards (``ways`` final circuits each, more than a
+    sheet holds), two leave for other drawings. The main board fits on one sheet; its large boards do not."""
+    def board(name: str, label: str) -> dict[str, Any]:
+        return {"id": f"{name}", "type": "board", "ref": name, "label": label, "kind": "distribution", "children": [
+            {"id": f"{name}S", "type": "switch_disconnector", "ref": "-QS0", "in_A": 125, "poles": "4P",
+             "children": [_final(name, k) for k in range(1, ways + 1)]}]}
+    feeders = [
+        {"id": "Q1", "type": "breaker", "ref": "-Q1", "in_A": 125, "poles": "4P", "children": [board("DA", "Board A")]},
+        {"id": "Q2", "type": "breaker", "ref": "-Q2", "in_A": 100, "poles": "4P", "children": [board("DB", "Board B")]},
+        {"id": "Q3", "type": "breaker", "ref": "-Q3", "in_A": 63, "poles": "4P",
+         "children": [{"id": "X3", "type": "offpage", "label": "Outdoor board"}]},
+        {"id": "Q4", "type": "breaker", "ref": "-Q4", "in_A": 63, "poles": "4P",
+         "children": [{"id": "X4", "type": "offpage", "label": "Plant room"}]}]
+    return {
+        "uniwire": "1.0.0",
+        "meta": {"title": "Split main board test document", "lang": "en"},
+        "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50},
+        "sources": [{"id": "T", "type": "transformer", "ref": "TR1", "sn_kVA": 630, "children": [
+            {"id": "MB", "type": "board", "ref": "MB", "label": "Main board", "kind": "main", "children": feeders}]}],
+    }
+
+
+def long_way_doc(ways: int = 30) -> dict[str, Any]:
+    """A main board of five ways, the third feeding a busbar of ``ways`` final circuits: wider than a sheet and not a
+    board, so the main busbar is continued over several sheets, one of them holding that way alone."""
+    def final(k: int) -> dict[str, Any]:
+        return {"id": f"F{k}", "type": "breaker", "ref": f"-F{k}", "in_A": 16, "poles": "1P+N",
+                "children": [{"id": f"L{k}", "type": "socket", "label": f"Sockets {k}"}]}
+    main = [final(1), final(2),
+            {"id": "Q3", "type": "breaker", "ref": "-Q3", "in_A": 100, "poles": "4P", "children": [
+                {"id": "W3", "type": "busbar", "ref": "W3", "children": [final(100 + k) for k in range(ways)]}]},
+            final(4), final(5)]
+    return {
+        "uniwire": "1.0.0",
+        "meta": {"title": "Long way test document", "lang": "en"},
+        "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50},
+        "sources": [{"id": "G", "type": "grid", "ref": "G", "label": "Supply", "children": [
+            {"id": "MB", "type": "board", "ref": "MB", "label": "Main board", "kind": "main", "children": main}]}],
+    }
