@@ -129,26 +129,26 @@ The rating of the protective device feeding a cable (`ir_A`, otherwise
 `parallel`).
 
 * Applies when the cable specifies `section_mm2`, `material`, `insulation` and `install`.
-* Coverage: copper, PVC or XLPE (`PR` and `EPR` are treated as XLPE); installation methods `A1`, `A2`,
-  `B1`, `B2`, `C`, `E`, `F` with 2 or 3 loaded conductors, 1.5 to 300 mm²; `D-duct` (buried in duct, also
-  written `D1`, its IEC name) for copper and aluminium. Combinations outside the table produce an `info`.
-* Ambient temperature: the cable's `ambient_C`. In air, 30 °C or less takes the values brought back to 30 °C
-  (IEC 60364-5-52, table B.52.14: 0.87 for PVC, 0.91 for XLPE at 40 °C), up to 40 °C the values at 40 °C (the next
-  temperature tabulated above), above 40 °C Iz is not checked (`info`). In the ground, up to 25 °C; above, not
-  checked. Without `ambient_C`: 40 °C in air, and the message says it.
+* Coverage: copper and aluminium, PVC or XLPE (`PR` and `EPR` are treated as XLPE); installation methods `A1`,
+  `A2`, `B1`, `B2`, `C`, `D1` (in a duct in the ground, also written `D-duct`), `D2` (buried directly), `E`, `F`,
+  with 2 or 3 loaded conductors, in the cross-sections the IEC tables give (1.5 to 300 mm², from 2.5 mm² for
+  aluminium, from 25 mm² for `F`). Combinations outside them produce an `info`.
+* Iz: formulas `a * S^m` after IEC 60364-5-52, never above its values. Reference conditions: 30 °C in air, 20 °C
+  and 2.5 K·m/W in the ground.
+* Ambient temperature: the cable's `ambient_C` corrects Iz by sqrt((θmax − θ) / (θmax − θref)), θmax 70 °C for PVC
+  and 90 °C for XLPE, from 10 °C (colder is taken as 10 °C) up to 60 °C for PVC and 80 °C for XLPE; above, Iz is not checked (`info`). Without `ambient_C`: 40 °C in
+  air and 20 °C in the ground, and the message says it.
 * Loaded conductors: 3 when the protective device is `3P`, `3P+N` or `4P`, otherwise 2; without poles,
   `installation.system` decides.
-* Level: **warning**, never error. The tables (`src/uniwire/registry/data/iz_tables.json`, read with
-  `uniwire.registry.iz_tables()`) are given at 40 °C in air and 25 °C in the ground; no grouping factor is
-  applied.
+* Level: **warning**, never error. The formulas are in `src/uniwire/registry/data/iz_iec60364.json`, read with
+  `uniwire.registry.iz_iec60364()`. No grouping, soil resistivity or harmonic factor is applied.
 
 ### `iec60364.iz-estimate`
 
 A cable that gives `section_mm2` but not its `material`, `insulation` or `install` is not left unchecked:
 
 * Iz is estimated with copper and PVC unless stated, and the most favourable installation method in air
-  (`A1` to `F`) unless `install` is given; the table values are brought back to 30 °C (IEC 60364-5-52,
-  table B.52.14: 0.87 for PVC, 0.91 for XLPE at 40 °C), or taken as for `iec60364.iz` when `ambient_C` is given.
+  (`A1` to `F`) unless `install` is given, at 30 °C, or corrected as for `iec60364.iz` when `ambient_C` is given.
 * A protection above that Iz is too high under these assumptions: **warning**, with the
   assumptions in the message.
 * One **info** finding lists the cables estimated: give their material, insulation and installation method for
