@@ -45,6 +45,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   each a lane apart, its column leaves room on its left for their labels and stubs (no longer written across the
   conductors of the next feeders), and no auxiliary device is put in that room.
 * Drawings: the texts of an off-page stub end before the point of its arrow.
+* Checks, `iec60364.iz` and `iec60364.iz-estimate`: Iz now follows IEC 60364-5-52, as formulas `a * S^m` that never
+  give more than its values (`registry/data/iz_iec60364.json`, `uniwire.registry.iz_iec60364()`), instead of the
+  Spanish GUIA-BT-19 tables at 40 °C. Aluminium in air, PVC in the ground and method `D2` (buried directly) are now
+  covered. The ambient temperature corrects Iz at any value from 10 °C to 60 °C (PVC) or 80 °C (XLPE), by the
+  heating of the conductor, instead of two steps at 30 and 40 °C. In the ground, without `ambient_C`, 20 °C and
+  2.5 K·m/W, the IEC reference (the Spanish tables took 25 °C and 1.5 K·m/W). `registry.iz_tables()` still reads the
+  Spanish tables, no longer used by the rules.
 * Tests: the readability audit also counts texts written over a symbol, texts crossed by a link, link texts written
   across a conductor and texts reduced to fit; a set of dense documents (`tests/dense_docs.py`) holds the layout to
   these counts.

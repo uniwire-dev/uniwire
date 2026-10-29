@@ -512,30 +512,25 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
        * Check: the rating of the protective device supplying the cable does not exceed Iz. The rating
          used is `ir_A`, otherwise `fuse_A`, otherwise `in_A`. Iz is multiplied by `parallel`.
        * Level: **warning**, never error. The message cites the source.
-     * **Data**: [`registry/data/iz_tables.json`](https://github.com/uniwire-dev/uniwire/blob/main/src/uniwire/registry/data/iz_tables.json),
-       readable with `uniwire.registry.iz_tables()`.
-       * Source: official Spanish guide **GUIA-BT-19** (Feb. 2009, rev. 2).
-       * Table A, p. 9: reproduces table A.52-1 bis of **UNE 20460-5-523:2004**, the transposition of
-         IEC 60364-5-523.
-       * Table D, p. 12: buried cables in ducts.
+     * **Data**: [`registry/data/iz_iec60364.json`](https://github.com/uniwire-dev/uniwire/blob/main/src/uniwire/registry/data/iz_iec60364.json),
+       readable with `uniwire.registry.iz_iec60364()`.
+       * Formulas `a * S^m` after IEC 60364-5-52, never above its values.
+       * Reference conditions: 30 °C in air; 20 °C and 2.5 K·m/W in the ground.
      * **Coverage**
-       * Copper, PVC or XLPE (`PR` and `EPR` are treated as XLPE).
-       * Installation methods `A1`, `A2`, `B1`, `B2`, `C`, `E`, `F`, with 2 or 3 loaded conductors.
-       * Cross-sections from 1.5 to 300 mm².
-       * Method `D-duct` (buried in duct, XLPE), also written `D1` (its IEC name): copper and aluminium.
-       * Non-buried aluminium is not provided by the source: the rule then emits an info.
+       * Copper and aluminium, PVC or XLPE (`PR` and `EPR` are treated as XLPE).
+       * Installation methods `A1`, `A2`, `B1`, `B2`, `C`, `D1` (also written `D-duct`), `D2`, `E`, `F`, with 2 or
+         3 loaded conductors.
+       * The cross-sections of the tables: 1.5 to 300 mm², from 2.5 mm² for aluminium, from 25 mm² for `F`.
+         Outside them, the rule emits an info.
      * **Number of loaded conductors**: 3 if the protective device is `3P`, `3P+N` or `4P`. Otherwise 2.
        If the poles are not specified, `installation.system` is used.
-     * **Limitations**
-       * Referenced to **40 °C** in air and 25 °C in the ground. The cable's `ambient_C` picks the values: 30 °C
-         or less in air, brought back to 30 °C (IEC 60364-5-52, table B.52.14); up to 40 °C, the values at
-         40 °C; above 40 °C in air or 25 °C in the ground, Iz is not checked (info). Without `ambient_C`, 40 °C.
-       * No grouping factor is applied.
-       * The IEC 60364-5-52:2009 edition may differ slightly.
+     * **Ambient temperature**: the cable's `ambient_C` corrects Iz by sqrt((θmax − θ) / (θmax − θref)), θmax
+       70 °C for PVC and 90 °C for XLPE, from 10 °C up to 60 °C (PVC) or 80 °C
+       (XLPE); above, Iz is not checked (info). Without `ambient_C`, 40 °C in air and 20 °C in the ground.
+     * **Limitations**: no grouping, soil resistivity or harmonic factor is applied.
      * **Rule `iec60364.iz-estimate`**: a cable giving `section_mm2` without its `material`, `insulation`
        or `install` is estimated: copper and PVC unless stated, the most favourable method in air (`A1` to
-       `F`) unless stated, the table values brought back to 30 °C (IEC 60364-5-52, table B.52.14: 0.87 for
-       PVC, 0.91 for XLPE). A rating above that Iz: **warning**. One **info** lists the cables estimated, so
+       `F`) unless stated, at 30 °C. A rating above that Iz: **warning**. One **info** lists the cables estimated, so
        that an empty result is not read as a checked cable.
      * **Rule `iec60364.rcd-30mA`** (IEC 60364-4-41:2005+AMD1:2017, 411.3.3 and 411.3.4): a socket-outlet
        up to 32 A, in all premises, and a lighting circuit when `installation.premises` is `dwelling`, protected

@@ -83,7 +83,7 @@ EN: dict[str, str] = {
     "plc.coil": "output {port} ({un_v:g} V) drives a {coil:g} V coil: use an interface relay or a relay module",
     "plc.port_shared": "channel {port} controls {count} devices",
     # iec60364
-    "iec60364.install_uncovered": "installation method {install!r} not covered (A1, A2, B1, B2, C, E, F, D1/D-duct)",
+    "iec60364.install_uncovered": "installation method {install!r} not covered (A1, A2, B1, B2, C, E, F, D1/D-duct, D2)",
     "iec60364.iz_unavailable": "Iz not available for {material} {insulation} {section:g} mm² "
                                "method {method}, {loaded} loaded conductors",
     "iec60364.iz_exceeded": "protection {rating:g} A > Iz {iz:g} A ({material} {insulation} {section:g} mm², "
@@ -386,7 +386,7 @@ FR: dict[str, str] = {
     "plc.port_channels": "port {port!r} : le module {module} n'a que {channels} voies",
     "plc.coil": "sortie {port} ({un_v:g} V) pilote une bobine {coil:g} V : prévoir un relais d'interface ou un module relais",
     "plc.port_shared": "la voie {port} commande {count} appareils",
-    "iec60364.install_uncovered": "mode de pose {install!r} non couvert (A1, A2, B1, B2, C, E, F, D1/D-duct)",
+    "iec60364.install_uncovered": "mode de pose {install!r} non couvert (A1, A2, B1, B2, C, E, F, D1/D-duct, D2)",
     "iec60364.iz_unavailable": "Iz non disponible pour {material} {insulation} {section:g} mm² "
                                "pose {method}, {loaded} conducteurs chargés",
     "iec60364.iz_exceeded": "protection {rating:g} A > Iz {iz:g} A ({material} {insulation} {section:g} mm², "
@@ -775,7 +775,7 @@ RU: dict[str, str] = {
     "plc.coil": "выход {port} ({un_v:g} В) управляет катушкой {coil:g} В: используйте промежуточное реле или релейный "
                 "модуль",
     "plc.port_shared": "канал {port} управляет {count} аппаратами",
-    "iec60364.install_uncovered": "способ прокладки {install!r} не охвачен (A1, A2, B1, B2, C, E, F, D1/D-duct)",
+    "iec60364.install_uncovered": "способ прокладки {install!r} не охвачен (A1, A2, B1, B2, C, E, F, D1/D-duct, D2)",
     "iec60364.iz_unavailable": "нет данных Iz для {material} {insulation} {section:g} мм², способ {method}, нагруженных проводников: {loaded}",
     "iec60364.iz_exceeded": "защита {rating:g} А > Iz {iz:g} А ({material} {insulation} {section:g} мм², способ "
                             "{method}, {loaded} нагруж. пров., {ambient})",
@@ -996,7 +996,7 @@ ZH: dict[str, str] = {
     "plc.port_channels": "端口 {port!r}：模块 {module} 只有 {channels} 个通道",
     "plc.coil": "输出 {port}（{un_v:g} V）驱动 {coil:g} V 线圈：请使用中间继电器或继电器模块",
     "plc.port_shared": "通道 {port} 控制 {count} 个电器",
-    "iec60364.install_uncovered": "敷设方式 {install!r} 不在支持范围内（A1、A2、B1、B2、C、E、F、D1/D-duct）",
+    "iec60364.install_uncovered": "敷设方式 {install!r} 不在支持范围内（A1、A2、B1、B2、C、E、F、D1/D-duct、D2）",
     "iec60364.iz_unavailable": "无 Iz 数据：{material} {insulation} {section:g} mm²，方式 {method}，{loaded} 根载流导体",
     "iec60364.iz_exceeded": "保护电器 {rating:g} A > Iz {iz:g} A（{material} {insulation} {section:g} mm²，方式 {method}，{loaded} 根载流导体，{ambient}）",
     "iec60364.ambient_ground": "土壤 {t:g} °C",
@@ -1209,7 +1209,7 @@ ES: dict[str, str] = {
     "plc.coil": "la salida {port} ({un_v:g} V) acciona una bobina de {coil:g} V: usar un relé de interfaz o un "
                 "módulo de relés",
     "plc.port_shared": "el canal {port} controla {count} aparatos",
-    "iec60364.install_uncovered": "método de instalación {install!r} no cubierto (A1, A2, B1, B2, C, E, F, D1/D-duct)",
+    "iec60364.install_uncovered": "método de instalación {install!r} no cubierto (A1, A2, B1, B2, C, E, F, D1/D-duct, D2)",
     "iec60364.iz_unavailable": "Iz no disponible para {material} {insulation} {section:g} mm² método {method}, {loaded} "
                                "conductores cargados",
     "iec60364.iz_exceeded": "protección {rating:g} A > Iz {iz:g} A ({material} {insulation} {section:g} mm², método "
@@ -1447,7 +1447,7 @@ DE: dict[str, str] = {
     "plc.port_channels": "Anschluss {port!r}: Modul {module} hat nur {channels} Kanäle",
     "plc.coil": "Ausgang {port} ({un_v:g} V) steuert eine Spule mit {coil:g} V an: Koppelrelais oder Relaismodul verwenden",
     "plc.port_shared": "Kanal {port} steuert {count} Geräte",
-    "iec60364.install_uncovered": "Verlegeart {install!r} nicht abgedeckt (A1, A2, B1, B2, C, E, F, D1/D-duct)",
+    "iec60364.install_uncovered": "Verlegeart {install!r} nicht abgedeckt (A1, A2, B1, B2, C, E, F, D1/D-duct, D2)",
     "iec60364.iz_unavailable": "Iz nicht verfügbar für {material} {insulation} {section:g} mm² Verlegeart {method}, "
                                "{loaded} belastete Leiter",
     "iec60364.iz_exceeded": "Schutzorgan {rating:g} A > Iz {iz:g} A ({material} {insulation} {section:g} mm², Verlegeart "
@@ -1687,7 +1687,7 @@ PT: dict[str, str] = {
     "plc.port_channels": "porta {port!r}: o módulo {module} só tem {channels} canais",
     "plc.coil": "a saída {port} ({un_v:g} V) comanda uma bobina de {coil:g} V: use um relé de interface ou um módulo de relés",
     "plc.port_shared": "o canal {port} comanda {count} dispositivos",
-    "iec60364.install_uncovered": "método de instalação {install!r} não coberto (A1, A2, B1, B2, C, E, F, D1/D-duct)",
+    "iec60364.install_uncovered": "método de instalação {install!r} não coberto (A1, A2, B1, B2, C, E, F, D1/D-duct, D2)",
     "iec60364.iz_unavailable": "Iz indisponível para {material} {insulation} {section:g} mm² método {method}, {loaded} "
                                "condutores carregados",
     "iec60364.iz_exceeded": "proteção {rating:g} A > Iz {iz:g} A ({material} {insulation} {section:g} mm², método "

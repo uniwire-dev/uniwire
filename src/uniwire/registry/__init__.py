@@ -70,5 +70,13 @@ def iec81346_class(type_: str) -> str | None:
 
 @cache
 def iz_tables() -> dict[str, Any]:
-    """Current-carrying capacities (GUIA-BT-19 / UNE 20460-5-523:2004), see ``data/iz_tables.json``."""
+    """Current-carrying capacities (GUIA-BT-19 / UNE 20460-5-523:2004), see ``data/iz_tables.json``. No longer used
+    by the rules (see ``iz_iec60364``), kept for the code reading it."""
     return _data("iz_tables.json")
+
+
+@cache
+def iz_iec60364() -> dict[str, Any]:
+    """Current-carrying capacities at the reference conditions of IEC 60364-5-52, as formulas, see
+    ``data/iz_iec60364.json``."""
+    return _data("iz_iec60364.json")
