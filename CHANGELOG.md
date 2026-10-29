@@ -41,8 +41,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Drawings: an AWG size is no longer dropped when the composition holds the same digit (`6G` with `#6` gives
   `5-#6+G`, not `6G`).
 * Drawings, multi-line view: a characteristic the label already gives (`25 kVA` in `25 kVA unit`) is not repeated.
-* Tests: the readability audit also counts texts written over a symbol, texts crossed by a link and texts reduced to
-  fit; a set of dense documents (`tests/dense_docs.py`) holds the layout to these counts.
+* Drawings, multi-line view, the same for a controller many links reach: its box grows with its links, one point
+  each a lane apart, its column leaves room on its left for their labels and stubs (no longer written across the
+  conductors of the next feeders), and no auxiliary device is put in that room.
+* Drawings: the texts of an off-page stub end before the point of its arrow.
+* Tests: the readability audit also counts texts written over a symbol, texts crossed by a link, link texts written
+  across a conductor and texts reduced to fit; a set of dense documents (`tests/dense_docs.py`) holds the layout to
+  these counts.
 
 ## 0.1.4 (2026-10-28)
 

@@ -9,8 +9,8 @@ from uniwire import load
 from uniwire.render import default_view, render_pages, render_views
 from uniwire.render.scene import Group, Rect, Text
 
-# findings tolerated per document, single-line views + multi-line view (links bundled near the controller)
-KNOWN = {"hub4": 0, "hub8": 1, "hub12": 9, "long_labels": 2, "spread": 0, "mixed": 14}
+# findings tolerated per document, single-line views + multi-line view
+KNOWN = {"hub4": 0, "hub8": 0, "hub12": 2, "long_labels": 2, "spread": 0, "mixed": 4}
 
 
 @pytest.mark.parametrize("name", sorted(DENSE))
@@ -73,3 +73,31 @@ def test_label_of_a_controller_at_the_end_of_a_row_is_not_cut():
     sizes = {t.text: t.size for t in _texts(page.root)}
     assert label in sizes
     assert sizes[label] == pytest.approx(sizes["Control supply"])
+
+
+def _multiline(doc):
+    return render_pages(load(doc), default_view(load(doc), kind="multi-line"))
+
+
+def test_controller_many_links_reach_is_drawn_taller_in_the_multi_line_view():
+    """As in the single-line diagram: one point each on its side, a lane apart, rather than packed together."""
+    def height(doc):
+        g = _node(_multiline(doc)[0].root, "HUB")
+        return max(i.h for i in _walk_rects(g))
+
+    small, large = height(dense_doc(sensors=1, local=0, remote=0)), height(dense_doc(sensors=6, local=2, remote=2))
+    assert large > small * 2
+
+
+def _walk_rects(item) -> list[Rect]:
+    if isinstance(item, Rect) and not item.style.dash:
+        return [item]
+    return [r for i in item.items for r in _walk_rects(i)] if isinstance(item, Group) else []
+
+
+def test_multi_line_link_texts_keep_off_the_conductors():
+    """The texts of the links of a busy controller, beside it, not written across the feeders next to it."""
+    for name in ("hub8", "mixed"):
+        findings = [f for pg in _multiline(DENSE[name]) for f in audit(pg.root)]
+        assert not [f for f in findings if f.kind == "text_on_conductor"], "\n".join(map(str, findings))
+

@@ -17,7 +17,8 @@ Seg = tuple[tuple[float, float], tuple[float, float]]
 
 @dataclass
 class Finding:
-    kind: str  # "text_overlap", "text_on_symbol", "text_crossed", "small_text", "shared_run", "link_on_conductor", "link_along_frame"
+    kind: str  # "text_overlap", "text_on_symbol", "text_crossed", "text_on_conductor", "small_text", "shared_run",
+    # "link_on_conductor", "link_along_frame"
     what: str
     where: tuple[float, float]
 
@@ -170,6 +171,8 @@ def audit(root: Group) -> list[Finding]:
                         None)
         if crossing is not None:
             out.append(Finding("text_crossed", f"{t.text!r} crossed by link {crossing}", t.p))
+        elif own_link is not None and any(_crosses(core, s) for s in wires):  # a link's text across a conductor
+            out.append(Finding("text_on_conductor", f"{t.text!r} written across a conductor", t.p))
         for nid, boxes, _g in symbols:
             if t.text.strip() not in TERMINALS and any(_overlap(core, b) > 0 for b in boxes):
                 out.append(Finding("text_on_symbol", f"{t.text!r} on the symbol of {nid}", t.p))
