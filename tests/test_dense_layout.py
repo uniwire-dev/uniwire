@@ -3,7 +3,7 @@ other sheets, long labels. The counts may only go down: lower a number when a fi
 
 import pytest
 
-from tests.dense_docs import DENSE, dense_doc
+from tests.dense_docs import DENSE, dense_doc, long_way_doc, split_main_doc
 from tests.drawing_audit import audit
 from uniwire import load
 from uniwire.render import default_view, render_pages, render_views
@@ -101,3 +101,26 @@ def test_multi_line_link_texts_keep_off_the_conductors():
         findings = [f for pg in _multiline(DENSE[name]) for f in audit(pg.root)]
         assert not [f for f in findings if f.kind == "text_on_conductor"], "\n".join(map(str, findings))
 
+
+
+def _ids(item) -> set[str]:
+    if not isinstance(item, Group):
+        return set()
+    return ({item.id} if item.id else set()) | {i for x in item.items for i in _ids(x)}
+
+
+def test_a_main_board_keeps_its_ways_together_when_its_boards_go_to_other_sheets():
+    """Two of its four ways feed boards wider than a sheet: those boards go to sheets of their own, the main board
+    stays whole on one sheet (not cut way by way between them)."""
+    pages = render_views(load(split_main_doc()))
+    holding = [i for i, p in enumerate(pages) if {"Q1", "Q2", "Q3", "Q4"} & _ids(p.root)]
+    assert len(holding) == 1 and {"Q1", "Q2", "Q3", "Q4"} <= _ids(pages[holding[0]].root)
+
+
+def test_texts_of_a_busbar_continued_over_sheets_do_not_overlap():
+    """A sheet holding one way of a busbar continued from the sheet before and on the sheet after: its two texts
+    ('continued from', 'continued on') clear of each other and of the name of the board."""
+    pages = render_views(load(long_way_doc()))
+    assert len(pages) >= 3
+    findings = [f for p in pages for f in audit(p.root) if f.kind == "text_overlap"]
+    assert not findings, "\n".join(map(str, findings))

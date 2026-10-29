@@ -917,14 +917,16 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
             n.label = f"{n.sym.extra.get('label', '')}" + (_t("render.to_folio", lang, folio=f) if f else "")
         if n.kind == "bus_in":
             prev_f = continuation_folios[0]
+            txt = _t("render.continued_from", lang, label=n.label, folio=prev_f or '?')
             g.add(ref_group(prev_f, n.target, [
                 Polyline([(n.bus_x0 + 1.6, n.bus_y - 1.2), (n.bus_x0, n.bus_y), (n.bus_x0 + 1.6, n.bus_y + 1.2)]),
-                Text((n.bus_x0, n.bus_y - 2.0), _t("render.continued_from", lang, label=n.label, folio=prev_f or '?'), 2.0)]))
+                _bus_end_text(obs, txt, n.bus_x0, n.bus_y, "start")]))
         if n.bus_out and n.bus_y is not None:
             nxt = continuation_folios[1]
+            txt = _t("render.continued_on", lang, folio=nxt or '?')
             g.add(ref_group(nxt, n.id, [
                 Polyline([(n.bus_x1 - 1.6, n.bus_y - 1.2), (n.bus_x1, n.bus_y), (n.bus_x1 - 1.6, n.bus_y + 1.2)]),
-                Text((n.bus_x1, n.bus_y - 2.0), _t("render.continued_on", lang, folio=nxt or '?'), 2.0, "end")]))
+                _bus_end_text(obs, txt, n.bus_x1, n.bus_y, "end")]))
 
     bottom_end = max([y_load + n.sym.height for n in everything if n.bottom] + [y_load + 2.0])
     if view.cartouche:  # the sheet a feeder continues on, under its arrow (the table repeats it with the name)
@@ -1040,6 +1042,21 @@ def _device_homes(doc: Document) -> dict[str, Optional[str]]:
         return None
 
     return {d: home(d, {d}) for d in partners}
+
+
+def _bus_end_text(obs: Obstacles, txt: str, x: float, y: float, anchor: str) -> Text:
+    """The text at an end of a busbar continued on another sheet: above it, inward; where that is taken (a short
+    busbar: the text of its other end, the name of its board), beyond its end, then below it."""
+    w = text_width(txt, 2.0)
+    out = 1.0 if anchor == "end" else -1.0  # beyond the end of the busbar
+    beyond = "start" if anchor == "end" else "end"
+    cands = [(x, y - 2.0, anchor), (x + 2.0 * out, y + 0.7, beyond), (x + 2.0 * out, y - 2.0, beyond),
+             (x, y + 3.8, anchor)]
+    pick = next((c for c in cands if obs.box_free(text_box(c[0], c[1], w, 2.0, c[2]), 0.3)), None)
+    if pick is None:  # across a line (a frame, a conductor) rather than on a text
+        pick = min(cands, key=lambda c: obs.overlap(text_box(c[0], c[1], w, 2.0, c[2]), 0.3))
+    obs.add_box(text_box(pick[0], pick[1], w, 2.0, pick[2]))
+    return Text((pick[0], pick[1]), txt, 2.0, pick[2])
 
 
 def sheet_node_ids(doc: Document, spec: SheetSpec, index: Index) -> set[str]:
@@ -2922,7 +2939,9 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
                     continue
             boards = [n for n in lay.lnodes if n.is_board and n.node is not None and n.node.id not in root_ids
                       and n.node.id not in spec.detached and n.width >= 3 * view.pitch_mm]
-            board = _board_to_detach(boards, lay, view, keep_whole=allow_bus_split)
+            drawn = {n.node.id for n in lay.lnodes if n.is_board and n.node is not None}
+            nested = {n.node.id for n in boards if any(a.id in drawn for a in index.ancestors(n.node.id))}  # type: ignore[union-attr]
+            board = _board_to_detach(boards, lay, view, keep_whole=allow_bus_split, nested=nested)
             if board is not None:
                 spec.detached.add(board.node.id)  # type: ignore[union-attr]
                 continue
@@ -2950,11 +2969,14 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
     return process(first)
 
 
-def _board_to_detach(boards: list[LNode], lay: SheetLayout, view: View, keep_whole: bool = False) -> Optional[LNode]:
+def _board_to_detach(boards: list[LNode], lay: SheetLayout, view: View, keep_whole: bool = False,
+                     nested: frozenset[str] | set[str] = frozenset()) -> Optional[LNode]:
     """The board to draw on its own sheet: among those that are not nearly the whole sheet, the narrowest whose
     departure makes the sheet fit, otherwise the widest (the rest of the tree keeps its upstream boards: not a sheet
     holding only an incomer). A board that is nearly the whole sheet (the main board) stays with its supply when
-    ``keep_whole``: its busbar is continued on the next sheets instead; ``None`` then."""
+    ``keep_whole``: its busbar is continued on the next sheets instead; ``None`` then. A board below another one on
+    the sheet (``nested``: their ids) is not kept so: however wide, it goes, and the board feeding it keeps its ways
+    together rather than being cut way by way."""
     _, _, aw, _ = drawing_area(view)
     excess = lay.width - aw / view.min_scale
     part = [n for n in boards if n.width < 0.85 * lay.width]
@@ -2963,6 +2985,9 @@ def _board_to_detach(boards: list[LNode], lay: SheetLayout, view: View, keep_who
         return min(enough, key=lambda n: n.width)
     if part:
         return max(part, key=lambda n: n.width)
+    below = [n for n in boards if n.node is not None and n.node.id in nested]
+    if below:
+        return max(below, key=lambda n: n.width)
     return None if keep_whole or not boards else max(boards, key=lambda n: n.width)
 
 
