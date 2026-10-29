@@ -71,7 +71,20 @@ from ..resolve import Index, build_index, iter_nodes
 from ..symbols import ABBREVIATIONS, M, Symbol, symbol_for
 from ..symbols import grid as grid_symbol
 from ..units import fmt
-from .engine import DC_PORT_TYPES, LNode, SheetLayout, SheetSpec, _is_dc, drawing_area, interlock_mark, sheet_node_ids
+from .engine import (
+    DC_PORT_TYPES,
+    LEFT_ROOM_MAX,
+    SPREAD_FROM,
+    LNode,
+    SheetLayout,
+    SheetSpec,
+    _device_homes,
+    _is_dc,
+    _signal_links,
+    drawing_area,
+    interlock_mark,
+    sheet_node_ids,
+)
 from .routing import FRAME_CROSS, Box, Obstacles, boxes_union
 
 S = 3.0  # spacing of the conductors of a bundle (mm)
@@ -490,6 +503,8 @@ class MLNode:
     pad_bottom: float = 0.0  # room at the bottom of a board frame for the signal links of its devices
     link_gap: float = 0.0  # room between the poles and the text, for the control links of the operating line
     below: float = 0.0  # room under a final device for the landings of a power link (inside its board frame)
+    body: float = 0.0  # a boxed device many links reach: its box drawn this much taller (see _pad_boards)
+    text_room: float = 0.0  # ... and the room on its left for the texts of its links
 
     @property
     def id(self) -> str:
@@ -1305,13 +1320,13 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
         g.add(Line((x0, y + 3.5), (x1, y + 3.5), Style(width=THIN)),
               Text(((x0 + x1) / 2, y + 6.5), "kWh", min(1.6, (x1 - x0 - 0.6) / 2.0), "middle", "middle"))
     else:
-        g.add(*_box(x0, y + 1.5, x1, y + 9.5, _box_text(ln)))
+        g.add(*_box(x0, y + 1.5, x1, y + 9.5 + ln.body, _box_text(ln)))
     for c in boxed:
         g.add(cond_group(c, Line((xs[c], y), (xs[c], y + 1.5))))
     if ln.children:
         for c in ln.out:
             if c in boxed or c not in xs:
-                g.add(cond_group(c, Line((ln.xo(c), y + 9.5), (ln.xo(c), y + h))))
+                g.add(cond_group(c, Line((ln.xo(c), y + 9.5 + ln.body), (ln.xo(c), y + h))))
         through([c for c in ln.inp if c not in boxed])
     else:  # a final device: its PE ends on its enclosure
         for c in ln.inp:
@@ -2075,6 +2090,9 @@ def _signal_band(doc: Document, roots: list[MLNode]) -> float:
 def _pad_boards(doc: Document, roots: list[MLNode]) -> None:
     """Room at the bottom of each board frame for the channels of the signal links of the devices inside it
     (as in the single-line diagram): the frame does not hug the devices the links run under."""
+    up = {id(c): n for r in roots for n in r.walk() for c in n.children}
+    here = {n.node.id for r in roots for n in r.walk() if n.node is not None and n.node.id}
+    here |= {d for d, h in _device_homes(doc).items() if h in here}
     ends: dict[str, int] = {}
     for link in doc.links:
         if link.kind not in ML_LINKS:
@@ -2082,6 +2100,27 @@ def _pad_boards(doc: Document, roots: list[MLNode]) -> None:
                 ends[nid] = ends.get(nid, 0) + 1
     for r in roots:
         for b in r.walk():
+            if b.kind == "node" and not b.bottom and b.node is not None and b.node.id \
+                    and symbol_for(b.node).name == "controller":
+                # a controller many links reach: one point each on its side, a lane apart (one more for a link to
+                # another sheet, whose stub carries the name of the other end), as in the single-line diagram
+                ids = _signal_links(doc, b.node.id)
+                if len(ids) >= SPREAD_FROM:
+                    off = sum(1 for i in ids if (doc.links[i].to if doc.links[i].from_ == b.node.id
+                                                 else doc.links[i].from_) not in here)
+                    b.body = max(ML_LANE * (len(ids) + off - 1) + 2.0 - 8.0, 0.0)
+                    b.h += b.body
+                    # room on its left for the labels and stubs of its links, taken by the column it heads
+                    widths = [text_width(doc.links[i].label, 1.6) for i in ids if doc.links[i].label]
+                    widths += [text_width(f"{o} → 00", 1.6) + 8.0 for i in ids
+                               for o in [doc.links[i].to if doc.links[i].from_ == b.node.id else doc.links[i].from_]
+                               if o not in here]
+                    head = b
+                    while id(head) in up and not up[id(head)].rails and len(up[id(head)].children) == 1:
+                        head = up[id(head)]
+                    if widths:
+                        b.text_room = min(LEFT_ROOM_MAX, max(widths) + 4.0)
+                        head.lead = max(head.lead, b.text_room)
             if b.is_board:
                 n = sum(ends.get(m.node.id, 0) for m in _owned(b) if m.node is not None and m.node.id)
                 b.pad_bottom = ML_FRAME_CLEAR + n * ML_LANE if n else 0.0
@@ -2154,6 +2193,9 @@ def _draw_annex(doc: Document, roots: list[MLNode], g: Group, view: View, spec: 
     c = ML_FRAME_CLEAR
     edges = [b for f in obs.frames for b in ((f[0] - c, f[1], f[0] + c, f[3]), (f[2] - c, f[1], f[2] + c, f[3]),
                                              (f[0], f[1] - c, f[2], f[1] + c), (f[0], f[3] - c, f[2], f[3] + c))]
+    # the room left for the texts of the links of a controller many links reach: no device put there
+    edges += [(boxes[n.node.id][0] - n.text_room, boxes[n.node.id][1], boxes[n.node.id][0], boxes[n.node.id][3])
+              for r in roots for n in r.walk() if n.text_room and n.node is not None and n.node.id in boxes]
     obs.boxes += edges
     from .engine import _right_end
 
