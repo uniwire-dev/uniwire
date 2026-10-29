@@ -155,7 +155,10 @@ def audit(root: Group) -> list[Finding]:
         for u, b, _m in texts[i + 1:]:
             ov = _overlap(a, b)
             small = min((a[2] - a[0]) * (a[3] - a[1]), (b[2] - b[0]) * (b[3] - b[1]))
-            if small > 0 and ov > 0.15 * small:
+            w = min(a[2], b[2]) - max(a[0], b[0])
+            h = min(a[3], b[3]) - max(a[1], b[1])
+            # a large share of the smaller text, or one line run into another over a few letters
+            if small > 0 and ov > 0.15 * small or w > 1.5 and h > 0.15:
                 out.append(Finding("text_overlap", f"{t.text!r} / {u.text!r}", t.p))
     symbols = list(_symbol_boxes(root))
     own = {id(i) for _n, _b, g in symbols for i in _own(g) if isinstance(i, Text)}

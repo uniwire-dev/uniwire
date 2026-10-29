@@ -45,9 +45,15 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   each a lane apart, its column leaves room on its left for their labels and stubs (no longer written across the
   conductors of the next feeders), and no auxiliary device is put in that room.
 * Drawings: the texts of an off-page stub end before the point of its arrow.
+* Drawings, sheets: a board wider than a sheet below another board goes to sheets of its own, so that the board
+  feeding it keeps its ways together on one sheet (a main board of four ways feeding two large boards was cut way
+  by way over three sheets).
+* Drawings: the texts at the ends of a busbar continued on another sheet ('continued from', 'continued on') are
+  placed clear of each other and of the name of the board: beyond the end of the busbar, or below it, when the
+  space above is taken.
 * Tests: the readability audit also counts texts written over a symbol, texts crossed by a link, link texts written
-  across a conductor and texts reduced to fit; a set of dense documents (`tests/dense_docs.py`) holds the layout to
-  these counts.
+  across a conductor, texts reduced to fit, and two texts run into each other over a few letters however small their
+  overlap; a set of dense documents (`tests/dense_docs.py`) holds the layout to these counts.
 
 ## 0.1.4 (2026-10-28)
 
