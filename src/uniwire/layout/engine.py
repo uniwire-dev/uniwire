@@ -2682,7 +2682,14 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
     else:
         obs.add_hline(pts[1][1], pts[0][0], pts[1][0])
     for txt in txts:
-        x, y, anchor = place_label(obs, [pts[0], tip], text_width(txt, 1.6), 1.6, from_end=True)
+        w = text_width(txt, 1.6)
+        x, y, anchor = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False)
+        b = text_box(x, y, w, 1.6, anchor)
+        if e.side == "left" and anchor == "end" and x > tip[0] - 0.6 and b[1] < e.y + 0.8 and e.y - 0.8 < b[3]:
+            moved = text_box(tip[0] - 0.6, y, w, 1.6, anchor)  # running onto the point of its arrow: ends before it
+            if obs.box_free(moved, 0.1, wire_pad=0.0):
+                x, b = tip[0] - 0.6, moved
+        obs.add_box(b)
         rg.add(Text((x, y), txt, 1.6, anchor))
     g.add(rg)
 
