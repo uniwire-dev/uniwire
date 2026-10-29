@@ -42,9 +42,11 @@ def test_cable_text_awg_and_kcmil():
         {"type": "breaker", "id": "b", "cable": {"cores": "2-", "size_awg": "#12"}},
         {"type": "breaker", "id": "c", "cable": {"cores": "4-", "size_awg": "600 kcmil", "parallel": 3}},
         {"type": "breaker", "id": "d", "cable": {"cores": "2-#12+G", "size_awg": "#12"}},
-        {"type": "breaker", "id": "e", "cable": {"cores": "3G", "section_mm2": 2.5, "size_awg": "14"}}]}]})
+        {"type": "breaker", "id": "e", "cable": {"cores": "3G", "section_mm2": 2.5, "size_awg": "14"}},
+        {"type": "breaker", "id": "f", "cable": {"cores": "6G", "size_awg": "6"}},  # the 6 of '6G' is not the size
+        {"type": "breaker", "id": "g", "cable": {"cores": "3-#10+G", "size_awg": "#10"}}]}]})
     texts = [cable_text(n.cable) for n in c.sources[0].children]
-    assert texts == ["#12", "2-#12", "3x(4-600 kcmil)", "2-#12+G", "3G2.5"]
+    assert texts == ["#12", "2-#12", "3x(4-600 kcmil)", "2-#12+G", "3G2.5", "5-#6+G", "3-#10+G"]
 
 
 def test_feeder_table_shows_awg_with_neutral_header():

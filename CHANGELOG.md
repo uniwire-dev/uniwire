@@ -28,6 +28,21 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Drawings: a device text that repeats its label in another case (`Type 2` under `… type 2`) is not repeated.
 * Reference card for assistants: socket-outlets are entered as `socket` nodes even on a shared circuit (so the RCD
   rules see them), and a feeder continued elsewhere ends on an `offpage` node, not a `spare`.
+* Drawings, dense control circuits (many auxiliary devices and links, several of them reaching one controller):
+  * a controller reached by three links or more is drawn taller, with one point per link on its sides (on the right
+    for the devices to its right), in the order of the other ends: its links no longer share one route;
+  * its links to other sheets end on stubs along its side, and its column leaves room on its left for their texts;
+  * each auxiliary device is placed with room for its link labels on the side facing its partner, and a label goes
+    near the end of its link where fewer links meet;
+  * a link label with no clear place near either end goes in the nearest free space, joined to its link by a thin
+    leader, instead of over a symbol or another text;
+  * the text of the last device of a row, with nothing drawn to its right, is no longer reduced or cut to fit its
+    column.
+* Drawings: an AWG size is no longer dropped when the composition holds the same digit (`6G` with `#6` gives
+  `5-#6+G`, not `6G`).
+* Drawings, multi-line view: a characteristic the label already gives (`25 kVA` in `25 kVA unit`) is not repeated.
+* Tests: the readability audit also counts texts written over a symbol, texts crossed by a link and texts reduced to
+  fit; a set of dense documents (`tests/dense_docs.py`) holds the layout to these counts.
 
 ## 0.1.4 (2026-10-28)
 

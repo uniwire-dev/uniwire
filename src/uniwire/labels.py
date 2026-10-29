@@ -221,8 +221,8 @@ def cable_text(c: Optional[Cable]) -> str:
         size = awg_text(c.size_awg)
         if not cores:
             s = size
-        elif c.size_awg.strip().lstrip("#") in cores:  # composition already spells the size: '2-#12+G'
-            return cores
+        elif re.search(re.escape(size) + r"(?![\d/])", cores):  # composition already spells the size: '2-#12+G'
+            return cores  # (the size itself, not a digit of it: '6G' with #6 is not '5-#6+G')
         elif re.fullmatch(r"\d+G", cores.strip()) and int(cores.strip()[:-1]) > 1:  # '3G' + #12: '2-#12+G'
             s = f"{int(cores.strip()[:-1]) - 1}-{size}+G"
         else:

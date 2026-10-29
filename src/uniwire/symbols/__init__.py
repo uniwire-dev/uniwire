@@ -250,9 +250,10 @@ def motor_starter(node: Any = None) -> Symbol:
     return Symbol("motor_starter", items, h, w / 2 + 0.2, w / 2 + 0.2)
 
 
-def controller(node: Any = None) -> Symbol:
+def controller(node: Any = None, body: float = 3 * M) -> Symbol:
+    """A box; ``body``: its height, larger for a controller many links reach (one point each on its sides)."""
     label = getattr(node, "symbol_text", None) or "CTRL"
-    return _box("controller", label, 5 * M, max(6.0, 1.1 * len(label) + 2))
+    return _box("controller", label, body + 2 * M, max(6.0, 1.1 * len(label) + 2))
 
 
 def transfer_switch(node: Any = None) -> Symbol:
