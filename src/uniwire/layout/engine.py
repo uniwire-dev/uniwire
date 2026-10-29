@@ -56,7 +56,7 @@ from ..render.semantics import (
     ref_group,
 )
 from ..resolve import Index, build_index, iter_nodes
-from ..symbols import BUSWAY_H, DASH, PLC_SLOT_W, Symbol, offpage, symbol_for
+from ..symbols import BUSWAY_H, DASH, PLC_SLOT_W, Symbol, controller, offpage, symbol_for
 from ..units import fmt
 from .routing import (
     LANE,
@@ -121,6 +121,7 @@ class LNode:
     tagged: bool = False
     need: float = 0.0  # width the column needs for its annotation (or a board for its name), at full size
     dc_side: int = 0  # leading children on the DC side of an inverter/charger: fed from its DC terminal, not the bus
+    left_room: float = 0.0  # room its links need on its left (the texts of a controller many links reach)
 
     @property
     def id(self) -> str:
@@ -244,6 +245,53 @@ def _build(node: NodeBase, spec: SheetSpec, is_root: bool) -> LNode:
     return ln
 
 
+SPREAD_STEP = 1.5  # single-line: spacing of the link ends on the side of a controller many links reach
+SPREAD_FROM = 3  # from this many links on a controller, one point each (fewer: one point per kind, as before)
+
+
+def _signal_links(doc: Document, nid: Optional[str]) -> list[int]:
+    """Control, data and measure links attached to the node ``nid`` by its side (not by a PLC channel)."""
+    return [i for i, l in enumerate(doc.links) if l.kind not in SWITCHED_LINKS and l.kind != "earth"
+            and ((l.from_ == nid and not l.from_port) or (l.to == nid and not l.to_port))]
+
+
+SPREAD_OFF = 5.0  # ... for a link to another sheet: its stub carries two lines of text
+
+
+LEFT_ROOM_MAX = 45.0
+
+
+def _left_room(doc: Document, n: LNode, here: set[str], lang: str) -> float:
+    """A controller many links reach (see ``_spread_symbol``): room on its left for the texts of its links (the
+    labels, and the stubs of the links to other sheets), so that its column does not crowd the one before."""
+    if n.sym.name != "controller" or n.node is None:
+        return 0.0
+    ids = _signal_links(doc, n.node.id)
+    if len(ids) < SPREAD_FROM:
+        return 0.0
+    widths = [0.0]
+    for i in ids:
+        link = doc.links[i]
+        other = link.to if link.from_ == n.node.id else link.from_
+        if link.label:
+            widths.append(text_width(link.label, 1.6))
+        if other not in here:  # an off-page stub: its arrow and the name of the other end too
+            widths.append(text_width(f"{other} → 00", 1.6) + 8.0)
+    return min(LEFT_ROOM_MAX, max(widths) + n.sym.left + 4.0) if max(widths) else 0.0
+
+
+def _spread_symbol(doc: Document, node: Optional[NodeBase], sym: Symbol, here: Optional[set[str]] = None) -> Symbol:
+    """A controller many links reach: drawn taller, room for one link end each on its sides (``here``: the nodes
+    drawn on the sheet; a link to another one ends on an off-page stub, which takes more room)."""
+    if node is None or sym.name != "controller" or not node.id:
+        return sym
+    ids = _signal_links(doc, node.id)
+    count = len(ids)
+    others = [doc.links[i].to if doc.links[i].from_ == node.id else doc.links[i].from_ for i in ids]
+    body = sum(SPREAD_OFF if here is not None and o not in here else SPREAD_STEP for o in others) + 1.5
+    return controller(node, body) if count >= SPREAD_FROM and body > sym.height - 2 * 2.5 else sym
+
+
 DC_PORT_TYPES = {"inverter", "ups"}
 OVERCURRENT = {"breaker", "rcbo", "main_breaker", "fuse", "fuse_switch"}  # what protects a feeder
 DC_ACCESSORIES = {"spd", "meter", "insulation_monitor"}  # beside a DC way, they do not make it an AC feeder
@@ -285,15 +333,19 @@ def _build_sheet_roots(spec: SheetSpec, index: Index) -> list[LNode]:
 
 
 # ---------------------------------------------------------------- computation
-def _measure(ln: LNode, pitch: float) -> float:
+def _measure(ln: LNode, pitch: float, left_room: float = 0.0) -> float:
+    """``left_room``: room on the left asked by a device above in the same column (see ``LNode.left_room``)."""
+    room = max(left_room, ln.left_room)
     for c in ln.children:
-        _measure(c, pitch)
+        _measure(c, pitch, room if len(ln.children) == 1 else 0.0)
     # intrinsic symbol width (modular PLC, transfer switch...): the column widens if needed
     own = pitch / 2 + ln.sym.right + 16.0 if ln.sym.right > pitch / 2 - 2 else pitch  # + room for the annotation
     if not ln.children:
-        ln.width = max(pitch, own, ln.need)
-    else:
-        ln.width = max(sum(c.width for c in ln.children), own, ln.need)
+        ln.left_room = room  # the column moves its axis right by that much
+        ln.width = max(pitch, own, ln.need) + max(room - pitch / 2, 0.0)
+    else:  # its text keeps the room it needs right of the axis, moved right by the room on the left
+        shift = max(room - pitch / 2, 0.0) if len(ln.children) == 1 else 0.0
+        ln.width = max(sum(c.width for c in ln.children), own + shift, ln.need + shift)
     if ln.is_board:
         ln.width += 2 * BOARD_PAD + pitch * 0.3  # right margin: annotations of the last column
         short = ln.need - ln.width
@@ -324,7 +376,7 @@ def _needs(ln: LNode, view: View, lang: str) -> None:
 def _place_x(ln: LNode, x_left: float, pitch: float = 20.0) -> None:
     ln.x_left = x_left
     if not ln.children:
-        ln.x = x_left + pitch / 2 if ln.width > pitch else x_left + ln.width / 2
+        ln.x = x_left + max(pitch / 2, ln.left_room) if ln.width > pitch else x_left + ln.width / 2
         return
     cx = x_left + (BOARD_PAD if ln.is_board else 0.0)
     for c in ln.children:
@@ -368,8 +420,11 @@ def _ann_lines(ln: LNode, view: View, lang: str) -> list[str]:
     return lines[:5] + captions  # the cable and the safety mark come on top of the usual lines, never instead
 
 
+OPEN_ROOM = 45.0  # width a label may take beside the last device of a row, nothing drawn to its right
+
+
 def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = None,
-              right_limit: float | None = None) -> None:
+              right_limit: float | None = None, room: float | None = None) -> None:
     if ln.kind != "node" or not view.annotations:
         ln.ann = []
         return
@@ -389,6 +444,8 @@ def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = N
         avail = max(view.pitch_mm - ln.sym.right - 4.0, (ln.x_left + ln.width) - (ln.x + ln.sym.right + 1.0) - 1.0)
     if right_limit is not None:
         avail = min(avail, right_limit - (ln.x + ln.sym.right + 1.0))
+    if room is not None:
+        avail = max(avail, room)
     if avail_override is not None:
         avail = avail_override
     size = ANN_SIZE
@@ -605,10 +662,13 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                              and n.type not in SIDE_TYPES and n.type not in ("controller", "plc")
                              and registry.category(n.type) != "source")
 
+    here = sheet_node_ids(doc, spec, index)
     for r in roots:
         for n in r.walk():
             if n.type == "generator" and n.node is not None:
                 n.sym = symbol_for(n.node, _system_of(n.node, doc))
+            n.sym = _spread_symbol(doc, n.node, n.sym, here)
+            n.left_room = _left_room(doc, n, here, lang)
 
     # feeders continued by a power link (transfer source, parallel / bypass / infeed connection): no open arrow
     connected = {l.from_ for l in doc.links if l.kind == "transfer"}
@@ -666,11 +726,17 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                 k = sum(1 for l in doc.links if l.kind not in SWITCHED_LINKS and (l.from_ in own or l.to in own))
                 p = sum(1 for l in doc.links if l.kind in POWER_LINKS and (l.from_ in own or l.to in own))
                 b.pad_bottom = SIGNAL_LANE * min(k, 8) + LANE * 2 * min(p, 4) + 1.5 if k or p else 0.0
+    xs = sorted({round(n.x - n.sym.left, 3) for r in main for n in r.walk()})
     for r in main:
         nxt = {id(a): b for n in r.walk() for a, b in zip(n.children, n.children[1:])}
         for n in r.walk():  # a label stops before the next symbol, as wide as it is (a converter)
             b = nxt.get(id(n))
-            _annotate(n, view, lang, right_limit=b.x - b.sym.left - 1.0 if b is not None else None)
+            # the last device of a row with nothing drawn to its right (a controller at the end of a feeder):
+            # its label runs on rather than shrinks, up to the next column of the sheet
+            right = next((x for x in xs if x > n.x + n.sym.right + 1.0), None)
+            room = None if b is not None or n.children else \
+                min(OPEN_ROOM, (right - 1.0 if right is not None else 1e9) - (n.x + n.sym.right + 1.0))
+            _annotate(n, view, lang, right_limit=b.x - b.sym.left - 1.0 if b is not None else None, room=room)
         _place_y(r, 0.0)
         _separate_boards(r)
 
@@ -996,6 +1062,7 @@ def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], v
     placed: dict[str, LNode] = {n.node.id: n for n in everything if n.kind == "node" and n.node is not None and n.node.id}
     todo = [d for d in doc.devices if d.id and homes.get(d.id) in placed]
     annex: list[LNode] = []
+    reserved: list[tuple[float, float, float, float]] = []  # room kept for the link labels, freed at the end
     # the axis under each load stays free: a device there would read as wired in series with the load
     axes = [(n.x, n.y, n.y + n.sym.height + DEVICE_AXIS_MM) for n in everything if n.bottom]
     while todo:
@@ -1011,7 +1078,7 @@ def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], v
                 continue
             todo.remove(dev)
             progress = True
-            ln = LNode(dev, "node", symbol_for(dev))
+            ln = LNode(dev, "node", _spread_symbol(doc, dev, symbol_for(dev)))
             ln.width = pitch
             _annotate(ln, view, lang, avail_override=60.0)
             ln.x, ln.y = 0.0, 0.0
@@ -1021,16 +1088,35 @@ def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], v
             pref_x = (pab[2] if pab else partner.x + partner.sym.right) + 4.0
             if left_of is not None and left_of(partner):
                 pref_x = partner.x - partner.sym.left - 4.0 - (u[2] - u[0])
+            # its link labels are written beside it, where its links leave (the left side, see _end): room for the
+            # widest one, kept free of the next devices (the routes and labels drawn later may use it)
+            lw = max((text_width(l.label, 1.6) for l in doc.links if l.label and dev.id in (l.from_, l.to)),
+                     default=0.0)
+            lane = lw + 2.0 if lw else 0.0
             free = Obstacles(obs.boxes, obs.vwires + axes, obs.hlines, obs.buses)
-            x0, y0 = place_box(free, u[2] - u[0], u[3] - u[1], (pref_x, partner.y), pad=DEVICE_PAD_MM)
-            ln.x, ln.y = x0 - u[0], y0 - u[1]
+            for right_side in (False, True):  # the room on the side facing its partner: left, unless placed left of it
+                v = (u[0], u[1], u[2] + lane, u[3]) if right_side else (u[0] - lane, u[1], u[2], u[3])
+                x0, y0 = place_box(free, v[2] - v[0], v[3] - v[1], (pref_x, partner.y), pad=DEVICE_PAD_MM)
+                ln.x, ln.y = x0 - v[0], y0 - v[1]
+                if not lane or right_side or ln.x > partner.x:
+                    break
             ln.x_left = ln.x - pitch / 2
             obs.add_box(ln.sym_box())
             obs.add_box(ln.ann_box())
+            if lane:
+                e = _end(ln, "control")
+                if ln.x < partner.x:  # its links leave by the right (see _right_end)
+                    x = ln.x + ln.sym.right + 0.8
+                    reserved.append((x, e.y - 2.4, x + lane, e.y + 2.4))
+                else:
+                    reserved.append((e.x - lane, e.y - 2.4, e.x, e.y + 2.4))
+                obs.add_box(reserved[-1])
             annex.append(ln)
             placed[dev.id] = ln  # type: ignore[index]
         if not progress:
             break
+    for b in reserved:
+        obs.boxes.remove(b)
     return annex
 
 
@@ -2080,6 +2166,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         if doc.links[i].kind == "infeed" and doc.links[i].to in fed_ok:
             landings.setdefault(doc.links[i].to, []).append(i)
     parent_of = {id(c): n for r in roots for n in r.walk() for c in n.children}
+    spread = {} if obs.min_lane > 0 else _spread_ends(doc, roots, order)
 
     def landing(i: int, b: LNode, e: End) -> End:
         """Several feeds on one input conductor: one point each, up the conductor (``e``: the lowest)."""
@@ -2120,7 +2207,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 _draw_offpage_link(link, n, other, nodes.get(other), obs, lg, lang, node_folio, offpage, at)
             elif link.kind not in ("transfer", "tie"):
                 other = link.to if b is None else link.from_
-                at = None
+                at = spread.get((i, 0 if b is None else 1))  # a controller many links reach: its own point
                 if b is not None and link.kind == "infeed" and link.to in fed_ok:  # on its input conductor
                     at = landing(i, b, _end(b, link.kind, fed=True))
                 _draw_offpage_link(link, a or b, other, nodes.get(other), obs, lg, lang, node_folio, offpage, at)
@@ -2221,6 +2308,9 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             # a control, data or measure link leaves each device by the side that gives the clearest route
             alts = []
             for k, (n, e) in enumerate(zip((a, b), ends)):
+                if (i, k) in spread:  # a controller many links reach: its own point, on the side facing the other end
+                    alts.append([spread[(i, k)]])
+                    continue
                 if ml and link.kind == "earth" and "pe_end" in n.sym.extra:  # on the PE conductor of the feeder
                     alts.append([End(*n.sym.extra["pe_end"], "right")])
                     continue
@@ -2304,6 +2394,8 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 hi = max(e.y for e in ends) + 30.0
                 if max(e.y for e in ends) < y_max:
                     hi = min(hi, y_max)
+            else:  # one end each (a controller's own point)
+                ends = [alts[0][0], alts[1][0]]
         if (not ml and a.bottom and b.bottom and link.label and port_label is None
                 and abs(ends[0].x - ends[1].x) < text_width(link.label, 1.6) + 2.0):
             # two loads too close for the label between them: under the loads, where the label has room
@@ -2338,21 +2430,39 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             text = link.protocol
         if text and link.device is None:  # a carried device is annotated: the label would repeat it
             labels.append((i, seq, text, 1.6, "#000000"))
-    # labels once every route is known, near the far end of their link (port labels: near the controlled device)
+    # labels once every route is known, near the far end of their link (port labels: near the controlled device),
+    # unless more links meet there than at the near end: near the near end then (a controller many links reach)
+    degree = Counter(e for l in doc.links for e in (l.from_, l.to))
     for i, seq, txt, size, color in labels:
         units = text_units(txt)
-        if color == "#000000" and len(units) > 1 and place_label(obs, seq, text_width(txt, size), size, from_end=True,
-                                                                 record=False, optional=True) is None:
-            # no clear place on one line (a short link): on two lines, if that finds one
-            two = _wrap_words(units, 2, lambda u, sz=size: text_width(u, sz))
-            at = place_label(obs, seq, max(text_width(u, size) for u in two), 2.2 * size, from_end=True,
-                             optional=True)
-            if at is not None:  # the box of the two lines: baselines 1.2 size apart
-                for k, u in enumerate(two):
-                    group_of(i).add(Text((at[0], at[1] - 0.96 * size + 1.2 * size * k), u, size, at[2], color=color))
+        far_end = color != "#000000" or degree[doc.links[i].to] <= degree[doc.links[i].from_]
+        if color == "#000000":
+            # a clear place on one line near the preferred end, else near the other end, else on two lines (a short
+            # link), near either end
+            two = _wrap_words(units, 2, lambda u, sz=size: text_width(u, sz)) if len(units) > 1 else []
+            tries = [(fe, lines) for lines in ([txt], two) if lines for fe in (far_end, not far_end)]
+            placed = False
+            for fe, lines in tries:
+                w = max(text_width(u, size) for u in lines)
+                h = size if len(lines) == 1 else 2.2 * size
+                at = place_label(obs, seq, w, h, from_end=fe, optional=True)
+                if at is None:
+                    continue
+                if len(lines) == 1:
+                    group_of(i).add(Text((at[0], at[1]), txt, size, at[2], color=color))
+                else:  # the box of the two lines: baselines 1.2 size apart
+                    for k, u in enumerate(lines):
+                        group_of(i).add(Text((at[0], at[1] - 0.96 * size + 1.2 * size * k), u, size, at[2],
+                                             color=color))
+                placed = True
+                break
+            if placed:
                 continue
+            if not obs.label_channel:  # single-line: in the nearest free space, a leader to its link
+                if _leader_label(obs, seq, txt, size, group_of(i)):
+                    continue
         # multi-line: a link label with no free place along its route is left out (the single-line has it)
-        at = place_label(obs, seq, text_width(txt, size), size, from_end=True,
+        at = place_label(obs, seq, text_width(txt, size), size, from_end=far_end,
                          optional=obs.label_channel and color == "#000000")
         if at is not None:
             group_of(i).add(Text((at[0], at[1]), txt, size, at[2], color=color))
@@ -2360,6 +2470,71 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         if groups[i].items:
             g.add(finish_link_group(groups[i]))
     return chosen
+
+
+LEADER_REACH = 25.0  # how far from its link a label may go, joined to it by a leader
+
+
+def _leader_label(obs: Obstacles, pts: list[tuple[float, float]], txt: str, size: float, g: Group) -> bool:
+    """A link label with no clear place along its route (a short link between neighbours): in the nearest free
+    space, a thin leader from the middle of the link's longest stretch to the label. False if none is near."""
+    p, q = max(zip(pts, pts[1:]), key=lambda s: abs(s[0][0] - s[1][0]) + abs(s[0][1] - s[1][1]))
+    mx, my = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
+    w, h = text_width(txt, size), size * 1.1
+    x, y = place_box(obs, w, h, (mx - w / 2, my + 2.0), step=0.5, reach=LEADER_REACH, pad=0.6)
+    if abs(x + w / 2 - mx) > LEADER_REACH + w / 2 or abs(y - my) > LEADER_REACH:
+        return False
+    box = (x, y, x + w, y + h)
+    tx, ty = min(max(mx, box[0]), box[2]), min(max(my, box[1]), box[3])  # the point of the label nearest the link
+    g.add(Line((mx, my), (tx, ty), Style(width=THIN)))
+    g.add(Text((x, y + 0.85 * size), txt, size))
+    obs.add_box(box)
+    return True
+
+
+def _spread_ends(doc: Document, roots: list[LNode], order: list[int]) -> dict[tuple[int, int], End]:
+    """Single-line: the links reaching a controller from many sides, one end each on its sides (see
+    ``_spread_symbol``): on the right for the other ends to its right, if there is room under its text, else on the
+    left; on each side in the order of the other ends from top to bottom (no crossing at the controller)."""
+    out: dict[tuple[int, int], End] = {}
+    for r in roots:
+        for n in r.walk():
+            ids = [i for i in _signal_links(doc, n.node.id if n.node is not None else None) if i in order]
+            if n.sym.name != "controller" or len(ids) < SPREAD_FROM:
+                continue
+            top, bottom = n.y + 2.5 + 0.75, n.y + n.sym.height - 2.5 - 0.75  # the box, 1 M below and above its leads
+            ab = n.ann_box()
+            right_top = max(top, ab[3] + 0.8) if ab else top
+            sides: dict[str, list[tuple[float, int, int]]] = {"left": [], "right": []}
+            off: list[tuple[int, int]] = []
+            for i in ids:
+                link = doc.links[i]
+                k = 0 if link.from_ == n.node.id else 1  # type: ignore[union-attr]
+                o = _find(roots, link.to if k == 0 else link.from_)
+                if o is None:  # to another sheet: an off-page stub on the left, below the others
+                    off.append((i, k))
+                    continue
+                oy = o.y + o.sym.height / 2
+                sides["right" if o.x > n.x + n.sym.right else "left"].append((oy, i, k))
+            if off:  # the stubs take the bottom of the left side
+                bottom_left = bottom - SPREAD_OFF * (len(off) - 1) - 1.0
+                x = n.x - n.sym.left - 0.8
+                for j, (i, k) in enumerate(off):
+                    out[(i, k)] = End(x, bottom_left + 0.5 + SPREAD_OFF * j, "left")
+            room = int((bottom - right_top) / SPREAD_STEP) + 1
+            if len(sides["right"]) > room:  # no room under the text: the farthest down go round by the left
+                sides["right"].sort()
+                sides["left"] += sides["right"][:len(sides["right"]) - room]
+                sides["right"] = sides["right"][len(sides["right"]) - room:]
+            for side, items in sides.items():
+                items.sort()
+                y0 = right_top if side == "right" else top
+                y1 = bottom if side == "right" or not off else bottom_left - SPREAD_STEP
+                step = min(SPREAD_STEP, max(y1 - y0, 0.0) / max(len(items) - 1, 1))
+                x = n.x + n.sym.right + 0.8 if side == "right" else n.x - n.sym.left - 0.8
+                for j, (_oy, i, k) in enumerate(items):
+                    out[(i, k)] = End(x, y0 + step * j, side)
+    return out
 
 
 def _device_text(link: Any, dev: NodeBase, lang: str, compact: bool = True) -> list[str]:
@@ -2471,9 +2646,17 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
     on = target_node.ref or target_node.label or other if target_node is not None else other
     txts = ([link.label] if link.label else []) + [on + (_t("render.to_folio", lang, folio=f) if f else "")]
     e = at or _end(n, link.kind)
+    key = n.id or ""
+    if at is None and e.side == "left":  # no room on the left for its texts (a neighbour there): by the right side
+        need = max(text_width(t, 1.6) for t in txts) + 9.0
+        r = _right_end(n)
+        d = taken.get(key, 0.0) if taken is not None else 0.0
+        if r is not None and not obs.box_free((e.x - need, e.y + d - 2.0, e.x, e.y + d + 2.0), 0.3) \
+                and obs.box_free((r.x, r.y - 2.0, r.x + need, r.y + 2.0), 0.3):
+            e, key = r, key + ">"
     if taken is not None and at is None:  # its labels on both sides of a horizontal stub, beside a vertical one
-        d = taken.get(n.id or "", 0.0)
-        taken[n.id or ""] = d + (max(text_width(t, 1.6) for t in txts) + 1.5 if e.side == "down" else 5.0)
+        d = taken.get(key, 0.0)
+        taken[key] = d + (max(text_width(t, 1.6) for t in txts) + 1.5 if e.side == "down" else 5.0)
         e = End(e.x + d, e.y, e.side) if e.side == "down" else End(e.x, e.y + d, e.side)
     if e.side == "down":
         pts = [(e.x, e.y), (e.x, e.y + 6.0)]

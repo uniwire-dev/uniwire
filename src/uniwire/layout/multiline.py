@@ -811,6 +811,8 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
             node = ln.node
             feeds_bus = any(len(d.children) >= 2 for d in ln.walk())
             lines = [x for x in annotation(node, lang, show_label=feeds_bus) if x]
+            if node.label and node.label in lines:  # the lines below the label: not repeating it ('25 kVA')
+                lines = [t for t in lines if t == node.label or t.casefold() not in node.label.casefold()]
             if ln.type == "spare":  # a spare way: what it is kept for, its rating
                 in_a = getattr(node, "in_A", None)
                 lines = [x for x in (node.label or registry.label("spare", lang), fmt(in_a, " A") if in_a else "",
