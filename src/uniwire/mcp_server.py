@@ -545,7 +545,7 @@ def _add_pdf_route(server, store, pool, site: Optional[str] = None) -> None:
     async def get_pdf(request):
         text = store.get(request.path_params["doc_id"])
         if text is None:
-            return _missing(store, request.path_params["doc_id"], headers)
+            return _missing(store, request.path_params["doc_id"], headers, request, site)
         # ?kind=multi-line&color=phase: known options only, anything else is ignored
         view: dict[str, Any] = {k: v for k, v in request.query_params.items()
                                 if k in T.LINK_VIEW and v in T.LINK_VIEW[k]}
@@ -556,6 +556,8 @@ def _add_pdf_route(server, store, pool, site: Optional[str] = None) -> None:
             r = await run_in_threadpool(make, text, view)
         except Exception as e:  # noqa: BLE001  (worker errors and timeouts: a short message, no stack trace)
             log.info("route=pdf status=error ms=%d", (time.monotonic() - t0) * 1000)
+            if _wants_html(request):
+                return _link_page(request, "error", 422, headers, site, detail=str(e))
             return PlainTextResponse(f"cannot draw this document: {e}", status_code=422, headers=headers)
         log.info("route=pdf status=ok ms=%d", (time.monotonic() - t0) * 1000)
         disp = f'inline; filename="{r["filename"]}"'
@@ -591,13 +593,72 @@ def _add_svg_route(server, store, pool) -> None:
         return Response(r["svg"], media_type="image/svg+xml; charset=utf-8", headers=headers)
 
 
-def _missing(store, doc_id: str, headers: dict[str, str]):
-    """Answer for a document that cannot be served: 410 when a link holder deleted it, else 404."""
+def _missing(store, doc_id: str, headers: dict[str, str], request=None, site: Optional[str] = None):
+    """Answer for a document that cannot be served: 410 when a link holder deleted it, else 404. With ``request``
+    (a link a person opens, ``/pdf/<id>``), a browser gets a short page in its language instead of plain text."""
     from starlette.responses import PlainTextResponse
 
-    if store.deleted(doc_id):
+    deleted = store.deleted(doc_id)
+    if request is not None and _wants_html(request):
+        return _link_page(request, "deleted" if deleted else "missing", 410 if deleted else 404, headers, site)
+    if deleted:
         return PlainTextResponse("deleted at the request of a link holder", 410, headers=headers)
     return PlainTextResponse("not found (links expire 30 days after their last use)", 404, headers=headers)
+
+
+def _wants_html(request) -> bool:
+    """True for a browser opening the link (``Accept: text/html``), not for a script or an assistant's fetch."""
+    return "text/html" in request.headers.get("accept", "")
+
+
+def _page_lang(request) -> str:
+    """Catalog language of the browser: the first language of ``Accept-Language`` that uniwire speaks."""
+    from .i18n import CATALOGS, DEFAULT_LANG
+
+    tags = []
+    for i, part in enumerate(request.headers.get("accept-language", "").split(",")):
+        tag, _, q = part.strip().partition(";q=")
+        try:
+            tags.append((-float(q or 1), i, tag))
+        except ValueError:
+            continue
+    for _, _, tag in sorted(tags):
+        base = tag.replace("_", "-").split("-")[0].lower()
+        if base in CATALOGS:
+            return base
+    return DEFAULT_LANG
+
+
+def _link_page(request, kind: str, status: int, headers: dict[str, str], site: Optional[str] = None,
+               detail: Optional[str] = None):
+    """Page of a link that cannot be served (``kind``: missing, deleted, error), in the browser's language: what
+    happened and what to do (ask the assistant again); no script, no external resource."""
+    import html
+
+    from starlette.responses import HTMLResponse
+
+    from .i18n import t
+
+    lang = _page_lang(request)
+    title = html.escape(t(f"link.{kind}_title", lang))
+    body = [f"<p>{html.escape(t(f'link.{kind}_text', lang))}</p>"]
+    if detail:
+        body.append(f"<pre>{html.escape(detail[:600])}</pre>")
+    body.append(f"<p>{html.escape(t('link.again', lang))}</p>")
+    if site:
+        body.append(f'<p class="home"><a href="{html.escape(site)}/">{html.escape(t("link.home", lang))}</a></p>')
+    page = (f'<!doctype html><html lang="{lang}"><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            f'<meta name="robots" content="noindex"><title>{title} · uniwire</title><style>'
+            ":root{color-scheme:light dark;--ink:#15181C;--ink2:#4A525C;--paper:#F8F9FA;--accent:#C2410C}"
+            "@media (prefers-color-scheme:dark){:root{--ink:#E8EAED;--ink2:#A9B0B8;--paper:#15181C;--accent:#FB923C}}"
+            "body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.55 system-ui,sans-serif}"
+            "main{max-width:36rem;margin:12vh auto;padding:0 16px}h1{font-size:1.6rem;line-height:1.2}"
+            "p{color:var(--ink2)}pre{white-space:pre-wrap;font-size:14px;padding:12px;border-left:3px solid var(--accent)}"
+            "a{color:var(--accent)}.home{margin-top:2rem}"
+            f"</style></head><body><main><h1>{title}</h1>{''.join(body)}</main></body></html>")
+    return HTMLResponse(page, status, headers={**headers, "Content-Security-Policy":
+                                               "default-src 'none'; style-src 'unsafe-inline'"})
 
 
 def _add_doc_route(server, store) -> None:
