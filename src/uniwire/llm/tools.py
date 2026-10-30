@@ -41,11 +41,24 @@ MAX_NODES = 1500  # nodes after template resolution, auxiliary and link devices 
 MAX_SHEETS = 40  # sheets of one rendering
 MAX_OUTPUT_BYTES = 20_000_000  # SVG characters (all sheets) or PDF bytes of one rendering
 MAX_PATCH_OPS = 500  # operations of one apply_patch call
+MAX_RESULT_CHARS = 30_000_000  # any tool result as JSON text (a PDF of MAX_OUTPUT_BYTES in base64 fits)
 
 #: What a rule check covers, returned with every check result so that assistants report it with the findings.
 CHECK_SCOPE = ("Automatic checks of the rules of the listed profiles, on the data in the document only. Not a "
                "conformity certificate: a qualified electrician must verify the installation (design, installation "
                "conditions, earthing, short-circuit currents, equipment data) before it is built.")
+
+
+def json_longer_than(value: Any, limit: int) -> bool:
+    """Whether ``value`` as JSON text is longer than ``limit`` characters, without writing more than that."""
+    if isinstance(value, (str, bytes)):
+        return len(value) > limit
+    n = 0
+    for chunk in json.JSONEncoder(ensure_ascii=False, default=lambda o: None).iterencode(value):
+        n += len(chunk)
+        if n > limit:
+            return True
+    return False
 
 
 def _scope(doc: Document, profiles: list[str]) -> str:
@@ -237,7 +250,10 @@ def describe(document: Any, lang: str = "en") -> str:
 
 def normalize(document: Any) -> dict[str, Any]:
     """The resolved document as JSON data (templates applied, ids assigned)."""
-    return _doc(document).model_dump(mode="json", by_alias=True, exclude_none=True)
+    out = _doc(document).model_dump(mode="json", by_alias=True, exclude_none=True)
+    if PUBLIC and json_longer_than(out, 2 * MAX_DOCUMENT_CHARS):  # a template copied into many nodes
+        raise ToolError(f"resolved document too large for this server (at most {2 * MAX_DOCUMENT_CHARS} characters)")
+    return out
 
 
 def apply_patch(document: Any, ops: Any, validate: bool = True) -> dict[str, Any]:  # noqa: A002

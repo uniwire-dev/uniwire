@@ -18,6 +18,7 @@ import logging
 import sys
 import time
 from typing import Annotated, Any, Optional, Union
+from urllib.parse import urlsplit
 
 from pydantic import Field
 
@@ -117,7 +118,14 @@ def _shorten(result: Any, store, base: str, pdf_base: Optional[str] = None) -> A
 
     if not (isinstance(result, dict) and "viewer_url" in result):
         return result
-    id_ = store.put(document_from_link(result["viewer_url"]))
+    text = document_from_link(result["viewer_url"])
+    try:
+        raw = json.loads(text)
+    except ValueError:
+        return result
+    if not (isinstance(raw, dict) and ("sources" in raw or "uniwire" in raw)):
+        return result  # not a diagram (any JSON reaches validate): not kept on the server
+    id_ = store.put(text)
     if id_ is None:
         return result
     # view options of the long link (&kind=multi-line&color=phase) carry over to both short links
@@ -463,6 +471,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         print("uniwire-mcp --http needs the MCP SDK 2.x (transport security and streamable HTTP options): "
               "pip install -U 'mcp>=2.0'", file=sys.stderr)
         return 1
+    if a.http and not a.public and a.host not in ("127.0.0.1", "localhost", "::1"):
+        print(f"uniwire-mcp: warning: listening on {a.host} without --public; the tools read and write files on "
+              "this machine for anyone who reaches it. Add --public to serve other machines.", file=sys.stderr)
     pool = None
     if a.public:
         pool = sandbox.WorkerPool(a.workers, a.timeout, a.memory_mb * 1024 * 1024 or None)
@@ -498,8 +509,9 @@ def main(argv: Optional[list[str]] = None) -> int:
             _add_icon_route(server)
         if store is not None:
             _add_doc_route(server, store)
-            _add_pdf_route(server, store, pool, pdf_base.rpartition("/pdf/")[0] if pdf_base else None)
-            _add_svg_route(server, store, pool)
+            drawings = _Drawings()
+            _add_pdf_route(server, store, pool, pdf_base.rpartition("/pdf/")[0] if pdf_base else None, drawings)
+            _add_svg_route(server, store, pool, drawings)
         server.run("streamable-http", host=a.host, port=a.port, streamable_http_path=a.path,
                    stateless_http=True, json_response=True, transport_security=security, **extra)
         return 0
@@ -526,20 +538,71 @@ def _add_icon_route(server) -> None:
         return RedirectResponse(ICON_URL, status_code=302)
 
 
-def _add_pdf_route(server, store, pool, site: Optional[str] = None) -> None:
+class _Drawings:
+    """Drawings of stored documents already made (``/pdf``, ``/svg``), the least recently used dropped beyond
+    ``max_bytes``. The text behind an id never changes, so a link opened again, or by many people at once, is
+    drawn once; a document that cannot be drawn keeps its error too (a busy or starting server excepted)."""
+
+    def __init__(self, max_bytes: int = 64_000_000) -> None:
+        from collections import OrderedDict
+
+        self.max_bytes = max_bytes
+        self._items: OrderedDict[tuple, tuple[str, Any, int]] = OrderedDict()
+        self._size = 0
+        self._pending: dict[tuple, Any] = {}
+
+    async def get(self, key: tuple, make) -> tuple[str, Any]:
+        """("ok", result of ``make()``) or ("error", message); ``make`` runs in a thread, once per ``key``."""
+        import asyncio
+
+        from starlette.concurrency import run_in_threadpool
+
+        if key in self._items:
+            self._items.move_to_end(key)
+            return self._items[key][:2]
+        if key in self._pending:  # the same drawing under way for another request: wait for it
+            return await asyncio.shield(self._pending[key])
+        fut = self._pending[key] = asyncio.get_running_loop().create_future()
+        try:
+            try:
+                value: tuple[str, Any] = ("ok", await run_in_threadpool(make))
+            except Exception as e:  # noqa: BLE001  (worker errors and timeouts: a short message)
+                value = ("error", str(e))
+            if not (value[0] == "error" and value[1].startswith("server ")):
+                self._keep(key, value)
+            fut.set_result(value)
+            return value
+        except BaseException:
+            fut.cancel()
+            raise
+        finally:
+            del self._pending[key]
+
+    def _keep(self, key: tuple, value: tuple[str, Any]) -> None:
+        size = len(value[1]) if isinstance(value[1], (str, bytes)) else len(value[1][0]) + 256
+        if size > self.max_bytes // 4:
+            return
+        self._items[key] = (*value, size)
+        self._size += size
+        while self._size > self.max_bytes:
+            self._size -= self._items.popitem(last=False)[1][2]
+
+
+def _add_pdf_route(server, store, pool, site: Optional[str] = None, drawings: Optional[_Drawings] = None) -> None:
     """``GET /pdf/<id>`` -> the PDF of a stored document, drawn by the library (in a worker process with
     ``pool``), shown inline with the document title as file name; 404 when unknown or expired. With ``site``
     (the address the links point to), the PDF ends with the page "About this document", unless ``?about=0``."""
     import base64
 
-    from starlette.concurrency import run_in_threadpool
     from starlette.responses import PlainTextResponse, Response
 
     headers = {"Cache-Control": "no-store", "X-Robots-Tag": "noindex", "X-Content-Type-Options": "nosniff"}
+    drawings = drawings or _Drawings()
 
-    def make(text: str, view: dict[str, Any]) -> dict[str, Any]:
+    def make(text: str, view: dict[str, Any]) -> tuple[bytes, str]:
         args = {"document": text, **view}
-        return pool.call("pdf_file", args) if pool is not None else T.pdf_file(**args)
+        r = pool.call("pdf_file", args) if pool is not None else T.pdf_file(**args)
+        return base64.b64decode(r["pdf_base64"]), r["filename"]
 
     @server.custom_route("/pdf/{doc_id}", methods=["GET"], include_in_schema=False)
     async def get_pdf(request):
@@ -552,31 +615,30 @@ def _add_pdf_route(server, store, pool, site: Optional[str] = None) -> None:
         if site and request.query_params.get("about") != "0":
             view["about"] = {"doc_id": request.path_params["doc_id"], "site": site}
         t0 = time.monotonic()
-        try:
-            r = await run_in_threadpool(make, text, view)
-        except Exception as e:  # noqa: BLE001  (worker errors and timeouts: a short message, no stack trace)
-            log.info("route=pdf status=error ms=%d", (time.monotonic() - t0) * 1000)
-            if _wants_html(request):
-                return _link_page(request, "error", 422, headers, site, detail=str(e))
-            return PlainTextResponse(f"cannot draw this document: {e}", status_code=422, headers=headers)
-        log.info("route=pdf status=ok ms=%d", (time.monotonic() - t0) * 1000)
-        disp = f'inline; filename="{r["filename"]}"'
-        return Response(base64.b64decode(r["pdf_base64"]), media_type="application/pdf",
-                        headers={**headers, "Content-Disposition": disp})
+        key = ("pdf", request.path_params["doc_id"], json.dumps(view, sort_keys=True))
+        status, r = await drawings.get(key, lambda: make(text, view))
+        log.info("route=pdf status=%s ms=%d", status, (time.monotonic() - t0) * 1000)
+        if status == "error":
+            if _wants_html(request):  # no detail on the page: it may quote the document, which anyone can write
+                return _link_page(request, "error", 422, headers, site)
+            return PlainTextResponse(f"cannot draw this document: {r}", status_code=422, headers=headers)
+        return Response(r[0], media_type="application/pdf",
+                        headers={**headers, "Content-Disposition": f'inline; filename="{r[1]}"'})
 
 
-def _add_svg_route(server, store, pool) -> None:
+def _add_svg_route(server, store, pool, drawings: Optional[_Drawings] = None) -> None:
     """``GET /svg/<id>`` -> the first sheet of a stored document as SVG: the web editor shows it at once while its
     own engine starts (a few seconds), then replaces it with the live drawing. 404 when unknown or expired."""
-    from starlette.concurrency import run_in_threadpool
     from starlette.responses import PlainTextResponse, Response
 
     headers = {"Cache-Control": "no-store", "X-Robots-Tag": "noindex", "X-Content-Type-Options": "nosniff",
                "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"}
     args = {"format": "svg", "sheet": 1}
+    drawings = drawings or _Drawings()
 
-    def make(text: str) -> dict[str, Any]:
-        return pool.call("render", {"document": text, **args}) if pool is not None else T.render(text, **args)
+    def make(text: str) -> str:
+        r = pool.call("render", {"document": text, **args}) if pool is not None else T.render(text, **args)
+        return r["svg"]
 
     @server.custom_route("/svg/{doc_id}", methods=["GET"], include_in_schema=False)
     async def get_svg(request):
@@ -584,13 +646,11 @@ def _add_svg_route(server, store, pool) -> None:
         if text is None:
             return _missing(store, request.path_params["doc_id"], headers)
         t0 = time.monotonic()
-        try:
-            r = await run_in_threadpool(make, text)
-        except Exception as e:  # noqa: BLE001  (worker errors and timeouts: a short message, no stack trace)
-            log.info("route=svg status=error ms=%d", (time.monotonic() - t0) * 1000)
-            return PlainTextResponse(f"cannot draw this document: {e}", status_code=422, headers=headers)
-        log.info("route=svg status=ok ms=%d", (time.monotonic() - t0) * 1000)
-        return Response(r["svg"], media_type="image/svg+xml; charset=utf-8", headers=headers)
+        status, r = await drawings.get(("svg", request.path_params["doc_id"]), lambda: make(text))
+        log.info("route=svg status=%s ms=%d", status, (time.monotonic() - t0) * 1000)
+        if status == "error":
+            return PlainTextResponse(f"cannot draw this document: {r}", status_code=422, headers=headers)
+        return Response(r, media_type="image/svg+xml; charset=utf-8", headers=headers)
 
 
 def _missing(store, doc_id: str, headers: dict[str, str], request=None, site: Optional[str] = None):
@@ -629,8 +689,7 @@ def _page_lang(request) -> str:
     return DEFAULT_LANG
 
 
-def _link_page(request, kind: str, status: int, headers: dict[str, str], site: Optional[str] = None,
-               detail: Optional[str] = None):
+def _link_page(request, kind: str, status: int, headers: dict[str, str], site: Optional[str] = None):
     """Page of a link that cannot be served (``kind``: missing, deleted, error), in the browser's language: what
     happened and what to do (ask the assistant again); no script, no external resource."""
     import html
@@ -642,8 +701,6 @@ def _link_page(request, kind: str, status: int, headers: dict[str, str], site: O
     lang = _page_lang(request)
     title = html.escape(t(f"link.{kind}_title", lang))
     body = [f"<p>{html.escape(t(f'link.{kind}_text', lang))}</p>"]
-    if detail:
-        body.append(f"<pre>{html.escape(detail[:600])}</pre>")
     body.append(f"<p>{html.escape(t('link.again', lang))}</p>")
     if site:
         body.append(f'<p class="home"><a href="{html.escape(site)}/">{html.escape(t("link.home", lang))}</a></p>')
@@ -654,7 +711,7 @@ def _link_page(request, kind: str, status: int, headers: dict[str, str], site: O
             "@media (prefers-color-scheme:dark){:root{--ink:#E8EAED;--ink2:#A9B0B8;--paper:#15181C;--accent:#FB923C}}"
             "body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.55 system-ui,sans-serif}"
             "main{max-width:36rem;margin:12vh auto;padding:0 16px}h1{font-size:1.6rem;line-height:1.2}"
-            "p{color:var(--ink2)}pre{white-space:pre-wrap;font-size:14px;padding:12px;border-left:3px solid var(--accent)}"
+            "p{color:var(--ink2)}"
             "a{color:var(--accent)}.home{margin-top:2rem}"
             f"</style></head><body><main><h1>{title}</h1>{''.join(body)}</main></body></html>")
     return HTMLResponse(page, status, headers={**headers, "Content-Security-Policy":
@@ -679,6 +736,9 @@ def _add_doc_route(server, store) -> None:
 
     @server.custom_route("/doc/{doc_id}/delete", methods=["POST"], include_in_schema=False)
     async def delete_doc(request):
+        origin = request.headers.get("origin")
+        if origin is not None and urlsplit(origin).netloc != request.headers.get("host"):
+            return Response("cross-site request refused", 403, headers=headers)  # a form posted by another site
         if not store.delete(request.path_params["doc_id"]):
             return _missing(store, request.path_params["doc_id"], headers)
         log.info("route=delete status=ok")

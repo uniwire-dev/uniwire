@@ -15,6 +15,7 @@ const state = {
   examples: [],
   stem: "uniwire",
   result: null,        // last worker result
+  tooLong: null,       // text of a document the engine was stopped on (not drawn again until edited)
   pages: [],           // pages currently displayed (last valid render)
   nodes: {},           // node id -> {path, type, ref, label, parent, children, summary, cable} (last valid render)
   links: [],           // links of the document (last valid render)
@@ -76,19 +77,39 @@ const interaction = createInteraction({
 
 /* ================================================================== worker */
 
-const worker = new Worker("worker.js");
+const CALL_TIMEOUT_MS = 60000;  // a document that takes longer: the engine is stopped and started again
+let worker = null;
 let nextId = 1;
 const pending = new Map();
 
-function call(type, req) {
+function startWorker() {
+  worker = new Worker("worker.js");
+  worker.onmessage = onWorkerMessage;
+  worker.onerror = (ev) => showFatal(ev.message || "worker error");
+}
+
+function call(type, req, timeout = CALL_TIMEOUT_MS) {
   const id = nextId++;
   return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject });
+    pending.set(id, { resolve, reject, timer: setTimeout(restartWorker, timeout) });
     worker.postMessage({ id, type, req });
   });
 }
 
-worker.onmessage = (ev) => {
+/** The engine is stuck on a document (Python cannot be interrupted): stop it, fail the calls under way, start
+ *  a new one. The document is not drawn again until it changes (see runRender). */
+function restartWorker() {
+  worker.terminate();
+  state.ready = false;
+  for (const p of pending.values()) {
+    clearTimeout(p.timer);
+    p.reject(Object.assign(new Error(t("status.too_long")), { tooLong: true }));
+  }
+  pending.clear();
+  startWorker();
+}
+
+function onWorkerMessage(ev) {
   const msg = ev.data;
   if (msg.type === "progress") return showProgress(msg.step, msg.pct);
   if (msg.type === "ready") {
@@ -104,10 +125,11 @@ worker.onmessage = (ev) => {
   const p = pending.get(msg.id);
   if (!p) return;
   pending.delete(msg.id);
+  clearTimeout(p.timer);
   if (msg.type === "result") p.resolve(msg.result);
   else p.reject(new Error(msg.message));
-};
-worker.onerror = (ev) => showFatal(ev.message || "worker error");
+}
+startWorker();
 
 function showProgress(step, pct) {
   $("#loader-step").textContent = t(`load.${step}`);
@@ -137,6 +159,10 @@ async function runRender() {
   state.busy = true;
   state.dirty = false;
   const text = state.editor.getText();
+  if (text === state.tooLong) {  // stopped once on this document: wait for an edit
+    state.busy = false;
+    return setStatus(t("status.too_long"), "bad");
+  }
   setStatus(t("status.rendering"));
   try {
     const result = await call("process", { text, view: state.view, kind: state.kind, lang: lang(), options: viewOverrides() });
@@ -149,6 +175,7 @@ async function runRender() {
       }
     }
   } catch (err) {
+    if (err.tooLong) state.tooLong = text;
     setStatus(String(err.message || err), "bad");
   } finally {
     state.busy = false;
@@ -1014,7 +1041,7 @@ async function onDownload(kind) {
     toast(t("msg.pdf_wait"), 60000);
     try {
       const r = await call("pdf", { text, view: state.view, kind: state.kind, lang: lang(), options: viewOverrides(),
-                                    about: aboutPage(text) });
+                                    about: aboutPage(text) }, 5 * CALL_TIMEOUT_MS);  // the first one downloads reportlab
       download(`${state.stem}${suffix()}.pdf`, new Blob([r.bytes], { type: "application/pdf" }));
       hideToast();
     } catch (err) {
