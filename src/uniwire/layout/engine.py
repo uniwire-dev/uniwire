@@ -450,6 +450,9 @@ def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = N
         avail = avail_override
     size = ANN_SIZE
     widest = max((text_width(t, ANN_SIZE) for t in ln.ann), default=0)
+    if widest > avail > 0 and (full := _wrap_full_size(ln, avail)) is not None:
+        ln.ann, ln.ann_size = full, size  # on more lines at the usual size rather than smaller
+        return
     if widest > avail > 0:
         size = max(ANN_MIN, ANN_SIZE * avail / widest)
     ln.ann_size = size
@@ -466,6 +469,24 @@ def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = N
                 t = t[:-2] + "…"
             out.append(t)
         ln.ann = out
+
+
+def _wrap_full_size(ln: LNode, avail: float) -> list[str] | None:
+    """The label lines of ``ln`` with each line too wide for ``avail`` on two lines, at the usual size; None when a
+    line cannot be split so (one word, the tag) or the label would run to more than five lines."""
+    out: list[str] = []
+    for i, t in enumerate(ln.ann):
+        if text_width(t, ANN_SIZE) <= avail:
+            out.append(t)
+            continue
+        units = text_units(t)
+        if (not i and ln.tagged) or len(units) < 2:
+            return None
+        two = _wrap_words(units, 2, lambda u: text_width(u, ANN_SIZE))
+        if max(text_width(u, ANN_SIZE) for u in two) > avail:
+            return None
+        out += two
+    return out if len(out) <= 5 else None
 
 
 def _place_y(ln: LNode, y: float) -> None:

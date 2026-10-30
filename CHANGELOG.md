@@ -61,6 +61,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Tests: the readability audit also counts texts written over a symbol, texts crossed by a link, link texts written
   across a conductor, texts reduced to fit, and two texts run into each other over a few letters however small their
   overlap; a set of dense documents (`tests/dense_docs.py`) holds the layout to these counts.
+* Drawings: a device text too wide for its room (a surge protector beside a feeder) goes on more lines at its usual
+  size before it is reduced; it is reduced only when no split fits.
 
 ## 0.1.4 (2026-10-28)
 
