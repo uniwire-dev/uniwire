@@ -145,6 +145,21 @@ def text_width(text: str, size: float) -> float:
                    + 0.68 * upper)
 
 
+def cut_to_width(text: str, size: float, avail: float, keep: int = 3) -> str:
+    """``text`` cut with an ellipsis to fit ``avail`` (never shorter than ``keep`` characters with the ellipsis):
+    the longest fitting beginning, found by halving (the width grows with the length)."""
+    if len(text) <= keep or text_width(text, size) <= avail:
+        return text
+    lo, hi = keep - 1, len(text) - 2  # characters kept: lo always allowed, hi the most
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if text_width(text[:mid] + "…", size) <= avail:
+            lo = mid
+        else:
+            hi = mid - 1
+    return text[:lo] + "…"
+
+
 def text_units(text: str) -> list[str]:
     """Pieces a text may be broken between, each with the space before it: the words, and each CJK character
     (Chinese and Japanese break between characters, without spaces). ``"".join(units).strip()`` gives the text."""

@@ -72,6 +72,9 @@ def _worker(conn: Any, memory_bytes: Optional[int], cpu_s: Optional[int]) -> Non
         _limit_cpu(cpu_s)
         try:
             reply: tuple[str, Any] = ("ok", getattr(tools, name)(**kwargs))
+            # bounded here: the pipe sends a part shared by many nodes once, the server would write it out each time
+            if tools.json_longer_than(reply[1], tools.MAX_RESULT_CHARS):
+                reply = ("error", f"result too large for this server (at most {tools.MAX_RESULT_CHARS} characters)")
         except (tools.ToolError, UniwireError, KeyError, FileNotFoundError, ValueError) as e:
             reply = ("error", str(e))
         except RecursionError:
