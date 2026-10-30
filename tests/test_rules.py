@@ -129,13 +129,13 @@ def iz_doc(cable, in_A, poles="1P+N"):
 def test_iz_rule():
     from uniwire.rules.iec60364 import lookup_iz
     cable = {"section_mm2": 2.5, "material": "Cu", "insulation": "PVC", "install": "B1"}
-    assert lookup_iz("Cu", "PVC", "B1", 2, 2.5) == 21
+    assert 23 < lookup_iz("Cu", "PVC", "B1", 2, 2.5) < 24  # at 30 °C; 20.6 A at 40 °C, without ambient_C
     assert not [f for f in check(iz_doc(cable, 20)) if f.rule == "iec60364.iz"]
     fs = [f for f in check(iz_doc(cable, 25)) if f.rule == "iec60364.iz"]
-    assert len(fs) == 1 and fs[0].level == "warning" and "GUIA-BT-19" in fs[0].source
-    # three-phase: 3 loaded conductors, lower Iz (B1, 3x PVC, 2.5 mm²: 18.5 A)
+    assert len(fs) == 1 and fs[0].level == "warning" and "IEC 60364-5-52" in fs[0].source
+    # three-phase: 3 loaded conductors, lower Iz (B1, 3x PVC, 2.5 mm² at 40 °C: 18 A)
     fs = [f for f in check(iz_doc(cable, 20, "3P+N")) if f.rule == "iec60364.iz"]
-    assert fs and "18.5" in fs[0].message
+    assert fs and "18" in fs[0].message
     # PR = XLPE; cables in parallel
     big = {"section_mm2": 95, "material": "Cu", "insulation": "PR", "install": "E", "parallel": 2}
     assert not [f for f in check(iz_doc(big, 500, "4P")) if f.level != "info" and f.rule == "iec60364.iz"]
@@ -145,21 +145,49 @@ def test_iz_rule():
     assert {f.level for f in check(iz_doc(odd, 20)) if f.rule == "iec60364.iz"} == {"info"}
 
 
-def test_iz_reads_the_ambient_temperature_and_the_iec_name_d1():
-    cable = {"section_mm2": 2.5, "material": "Cu", "insulation": "PVC", "install": "B1"}  # 21 A at 40 °C
+def test_iz_formulas_keep_the_order_of_the_tables():
+    """Larger sections carry more, aluminium less than copper, XLPE more than PVC, 3 loaded conductors less than 2,
+    a cable in the air on a wall more than one in conduit in an insulating wall; combinations the tables do not give
+    (single-core cables in free air below 25 mm²) have no value."""
+    from uniwire.rules.iec60364 import lookup_iz
+    sections = (1.5, 2.5, 4, 6, 10, 16, 20, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300)
+    for m in ("A1", "A2", "B1", "B2", "C", "D1", "D2", "E"):
+        for ins in ("PVC", "XLPE"):
+            for n in (2, 3):
+                cu = [lookup_iz("Cu", ins, m, n, s) for s in sections]
+                assert all(a < b for a, b in zip(cu, cu[1:])), (m, ins, n)
+                assert lookup_iz("Al", ins, m, n, 50) < lookup_iz("Cu", ins, m, n, 50)
+                assert lookup_iz("Cu", "XLPE", m, n, 50) > lookup_iz("Cu", "PVC", m, n, 50)
+            assert lookup_iz("Cu", ins, m, 3, 10) < lookup_iz("Cu", ins, m, 2, 10)
+    assert lookup_iz("Cu", "PVC", "A1", 2, 10) < lookup_iz("Cu", "PVC", "C", 2, 10)
+    assert lookup_iz("Cu", "PVC", "F", 2, 1.5) is None and lookup_iz("Cu", "PVC", "F", 2, 25) is not None
+    assert lookup_iz("Cu", "PVC", "C", 2, 400) is None
 
-    def iz_findings(c, in_A=24):
+
+def test_iz_temperature_factor_follows_the_heating_of_the_conductor():
+    from uniwire.rules.iec60364 import temperature_factor as k
+    assert k("PVC", 30, False) == 1 and k("XLPE", 20, True) == 1
+    assert round(k("PVC", 40, False), 2) == 0.87 and round(k("XLPE", 40, False), 2) == 0.91
+    assert k("PVC", 0, False) == k("PVC", 10, False)  # colder than the tables: taken as 10 °C
+    assert k("PVC", 61, False) is None and k("XLPE", 80, False) is not None
+
+
+def test_iz_reads_the_ambient_temperature_and_the_iec_names_d1_d2():
+    cable = {"section_mm2": 2.5, "material": "Cu", "insulation": "PVC", "install": "B1"}  # 23.8 A at 30 °C
+
+    def iz_findings(c, in_A=23):
         return [f for f in check(iz_doc(c, in_A)) if f.rule == "iec60364.iz"]
     fs = iz_findings(cable)  # no ambient_C: 40 °C, and the message says so
     assert len(fs) == 1 and fs[0].level == "warning" and "ambient_C" in fs[0].message
-    assert not iz_findings(dict(cable, ambient_C=30))  # 21 / 0.87 = 24.1 A at 30 °C
-    fs = iz_findings(dict(cable, ambient_C=35))  # between the two: the values at 40 °C, on the safe side
-    assert len(fs) == 1 and fs[0].level == "warning" and "40 °C" in fs[0].message and "ambient_C" not in fs[0].message
-    fs = iz_findings(dict(cable, ambient_C=45))  # hotter than the table: not checked, and said
-    assert [f.level for f in fs] == ["info"] and "45" in fs[0].message
+    assert not iz_findings(dict(cable, ambient_C=30))
+    fs = iz_findings(dict(cable, ambient_C=35))  # 22.3 A at 35 °C
+    assert len(fs) == 1 and fs[0].level == "warning" and "35 °C" in fs[0].message and "ambient_C" not in fs[0].message
+    fs = iz_findings(dict(cable, ambient_C=65))  # hotter than the tables: not checked, and said
+    assert [f.level for f in fs] == ["info"] and "65" in fs[0].message
     duct = iz_findings(dict(cable, install="D-duct"), 32)
     assert [f.message for f in iz_findings(dict(cable, install="D1"), 32)] == [f.message for f in duct]
-    assert not [f for f in iz_findings(dict(cable, install="D1"), 32) if "not covered" in f.message]
+    assert duct and "20 °C" in duct[0].message  # in the ground: 20 °C without ambient_C
+    assert not [f for f in iz_findings(dict(cable, install="D2"), 32) if "not covered" in f.message]
 
 
 def test_iz_profile_not_active_by_default():
@@ -430,14 +458,14 @@ def test_no_profile_said_so():
 
 
 def test_iz_estimated_when_the_cable_is_incomplete():
-    # section only: copper, PVC, the most favourable method in air at 30 °C (1.5 mm², 2 loaded: 20 / 0.87 = 23 A)
+    # section only: copper, PVC, the most favourable method in air at 30 °C (1.5 mm², 2 loaded: 21.8 A)
     fs = [f for f in check(iz_doc({"section_mm2": 1.5}, 25)) if f.rule == "iec60364.iz-estimate"]
-    assert [f.level for f in fs] == ["warning", "info"] and "23" in fs[0].message
+    assert [f.level for f in fs] == ["warning", "info"] and "21.8" in fs[0].message
     fs = [f for f in check(iz_doc({"section_mm2": 1.5}, 16)) if f.rule == "iec60364.iz-estimate"]
     assert [f.level for f in fs] == ["info"]  # within the estimate: still said to be estimated only
-    # a stated method is used (A1, PVC, 2 loaded: 13 / 0.87 = 14.9 A)
+    # a stated method is used (A1, PVC, 2 loaded: 14.3 A)
     fs = [f for f in check(iz_doc({"section_mm2": 1.5, "install": "A1"}, 16)) if f.level == "warning"]
-    assert [f.rule for f in fs] == ["iec60364.iz-estimate"] and "14.9" in fs[0].message
+    assert [f.rule for f in fs] == ["iec60364.iz-estimate"] and "14.3" in fs[0].message
     # a complete cable is checked exactly, not estimated
     full = {"section_mm2": 2.5, "material": "Cu", "insulation": "PVC", "install": "B1"}
     assert not [f for f in check(iz_doc(full, 20)) if f.rule == "iec60364.iz-estimate"]
