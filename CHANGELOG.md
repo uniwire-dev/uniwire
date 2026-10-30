@@ -61,6 +61,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Tests: the readability audit also counts texts written over a symbol, texts crossed by a link, link texts written
   across a conductor, texts reduced to fit, and two texts run into each other over a few letters however small their
   overlap; a set of dense documents (`tests/dense_docs.py`) holds the layout to these counts.
+* Drawings: a device text too wide for its room (a surge protector beside a feeder) goes on more lines at its usual
+  size before it is reduced; it is reduced only when no split fits.
+* MCP server (`--http`): a PDF link opened in a browser that cannot be served (expired, deleted by a link holder,
+  or a document that cannot be drawn) shows a short page in the browser's language saying what happened and to ask
+  the assistant again, instead of a line of English text. Scripts and assistants still get the plain text.
 * Format 1.1: a cable may give the conditions that lower its current-carrying capacity: `grouped` (circuits or
   multicore cables laid together), `arrangement` (how they lie in air), `supports` (stacked trays or ladders),
   `spacing_m` (between circuits in the ground), `soil_resistivity_K_m_W` and `third_harmonic_pct`. A 1.0 document
