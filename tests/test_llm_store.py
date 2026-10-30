@@ -124,6 +124,35 @@ def test_pdf_route(tmp_path):
     assert evil.status_code == 200 and abs(len(evil.content) - len(r.content)) < 100
 
 
+def test_pdf_route_pages_for_a_browser(tmp_path):
+    """A person who opens a PDF link that cannot be served reads a short page in their language; scripts and
+    assistants keep the plain text."""
+    pytest.importorskip("mcp.server.mcpserver")
+    from starlette.testclient import TestClient
+
+    from uniwire.mcp_server import _add_doc_route, _add_pdf_route, build_server
+
+    store = DocStore(tmp_path)
+    server = build_server(None, store)
+    _add_pdf_route(server, store, None, "https://example.org")
+    _add_doc_route(server, store)
+    client = TestClient(server.streamable_http_app())
+    html = {"accept": "text/html,application/xhtml+xml,*/*;q=0.8"}
+    r = client.get("/pdf/AAAAAAAAAAAA", headers={**html, "accept-language": "xx,fr-FR;q=0.9,en;q=0.8"})
+    assert r.status_code == 404 and r.headers["content-type"].startswith("text/html")
+    assert '<html lang="fr">' in r.text and "Ce lien a expiré" in r.text and 'href="https://example.org/"' in r.text
+    assert "default-src 'none'" in r.headers["content-security-policy"] and "<script" not in r.text
+    assert "expired" in client.get("/pdf/AAAAAAAAAAAA", headers=html).text  # no Accept-Language: English
+    assert client.get("/pdf/AAAAAAAAAAAA").headers["content-type"].startswith("text/plain")
+    id_ = store.put(STUDIO.read_text("utf-8"))
+    client.post(f"/doc/{id_}/delete")
+    gone = client.get(f"/pdf/{id_}", headers={**html, "accept-language": "de"})
+    assert gone.status_code == 410 and "gelöscht" in gone.text
+    bad_id = store.put(json.dumps({"uniwire": "1.0.0", "meta": {"title": "<b>"}}))
+    bad = client.get(f"/pdf/{bad_id}", headers=html)
+    assert bad.status_code == 422 and "<pre>" in bad.text and "<b>" not in bad.text
+
+
 def test_svg_route(tmp_path):
     """The first sheet as SVG, for the web editor to show while its engine starts."""
     pytest.importorskip("mcp.server.mcpserver")

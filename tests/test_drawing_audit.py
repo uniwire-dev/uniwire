@@ -11,7 +11,7 @@ from uniwire import load
 from uniwire.render import default_view, render_pages, render_views
 from uniwire.render.scene import Group, Polyline, Text
 
-KNOWN: dict[str, int] = {"32": 3, "42": 3}  # findings tolerated per example: a device beside a feeder, its text reduced
+KNOWN: dict[str, int] = {}  # findings tolerated per example (single-line views)
 # multi-line view of every example: power links outside the tree still drawn along a conductor or a frame
 KNOWN_ML: dict[str, int] = {"49": 1, "50": 2, "53": 1}
 EXAMPLES = sorted((ROOT / "examples").glob("*.uniwire.json"))
