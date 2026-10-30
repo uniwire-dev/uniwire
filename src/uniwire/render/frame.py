@@ -115,16 +115,55 @@ def _fit_lines(text: str, size: float, width: float, two_line_size: float) -> tu
     s = _fit(text, size, width)
     words = text_units(text)  # words, and each CJK character
     if s < min(size, 1.6) and len(words) > 1:
-        splits = [("".join(words[:i]).strip(), "".join(words[i:]).strip()) for i in range(1, len(words))]
-        pair = min(splits, key=lambda p: max(text_width(p[0], 1.0), text_width(p[1], 1.0)))
+        pair = _halves(words)
         s2 = min(two_line_size, size, *(_fit(t, size, width) for t in pair))
         if s2 > s:
             return list(pair), s2
     if text_width(text, s) > width:
-        while len(text) > 1 and text_width(text + "…", s) > width:
-            text = text[:-1].rstrip()
-        text += "…"
+        text = _cut(text, s, width) + "…"
     return [text], s
+
+
+def _halves(words: list[str]) -> tuple[str, str]:
+    """``words`` on two lines, the wider as narrow as possible. The first line widens and the second narrows as
+    the cut moves right: the best cut is where they cross, found by halving."""
+    def pair(i: int) -> tuple[str, str]:
+        return "".join(words[:i]).strip(), "".join(words[i:]).strip()
+
+    def wider_first(i: int) -> bool:
+        a, b = pair(i)
+        return text_width(a, 1.0) >= text_width(b, 1.0)
+
+    lo, hi = 1, len(words) - 1  # the first cut where the first line is the wider (hi when none)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if wider_first(mid):
+            hi = mid
+        else:
+            lo = mid + 1
+    return min((pair(i) for i in (lo - 1, lo) if i >= 1),
+               key=lambda p: max(text_width(p[0], 1.0), text_width(p[1], 1.0)))
+
+
+def _cut(text: str, size: float, width: float) -> str:
+    """The longest beginning of ``text`` that fits ``width`` with an ellipsis (trailing spaces dropped), found by
+    halving; a single character when none fits."""
+    if len(text) <= 1:
+        return text
+
+    def fits(k: int) -> bool:
+        return text_width(text[:k].rstrip() + "…", size) <= width
+
+    # one character at least: up to the second one that is not a space
+    floor = min(next((i for i in range(1, len(text)) if not text[i].isspace()), len(text)), len(text) - 1)
+    lo, hi = 0, len(text) - 1  # lo: no fitting length found yet
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if fits(mid):
+            lo = mid
+        else:
+            hi = mid - 1
+    return text[:max(lo, floor)].rstrip()
 
 
 _PROFILE_NAMES = {"iec60364": "IEC 60364", "nfc15100": "NF C 15-100", "enedis": "Enedis"}

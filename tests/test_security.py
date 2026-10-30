@@ -197,23 +197,50 @@ def test_public_patch_limits(public, monkeypatch):
         T.apply_patch(doc, [{"op": "set", "id": "Q11", "path": "label", "value": "x" * 100}])
 
 
+def test_long_texts_are_fitted_in_linear_time():
+    """Wrapping a label on lines, cutting it with an ellipsis and fitting a title block cell grow with the length of
+    the text, not with its square or cube: a few kilobytes of label used to take minutes."""
+    words, solid = "ab " * 3000, "A" * 30_000
+    doc = _doc([{"type": "breaker", "label": words, "children": [{"type": "socket", "label": solid}]}])
+    doc["meta"] = {"title": words, "project": solid}
+    t = time.perf_counter()
+    T.render(doc)
+    T.render(doc, kind="multi-line")
+    assert time.perf_counter() - t < 10
+
+
+def test_resolved_document_is_bounded(monkeypatch):
+    """A template copied into many nodes multiplies its text: normalize refuses a result beyond its limit."""
+    monkeypatch.setattr(T, "PUBLIC", True)
+    doc = _doc([{"type": "breaker", "use": "BIG"} for _ in range(50)])
+    doc["templates"] = {"BIG": {"type": "breaker", "label": "x" * 100_000}}
+    with pytest.raises(T.ToolError, match="resolved document too large"):
+        T.normalize(doc)
+    assert T.json_longer_than({"a": "x" * 10}, 10) and not T.json_longer_than({"a": "x"}, 100)
+
+
 def test_local_mode_is_unlimited(monkeypatch):
     monkeypatch.setattr(T, "MAX_NODES", 3)
     monkeypatch.setattr(T, "MAX_SHEETS", 0)
     assert T.render(str(EXAMPLE))["sheets"] >= 1
 
 
-POOL_TIMEOUT = 8  # seconds; the slow document below needs about a minute
+POOL_TIMEOUT = 3  # seconds; the slow document below needs more (1400 feeders laid out on many sheets: 5 s on a
+#                   fast machine)
+
+
+def _slow():
+    return _flat(1400)
 
 
 @pytest.fixture(scope="module")
 def pool():
     from uniwire.llm.sandbox import WorkerPool
 
-    # The first call of a worker imports the library: seconds on a slow CI runner. A generous timeout, and a warm
-    # worker before the tests, so that only the deliberately slow documents time out.
-    p = WorkerPool(size=1, timeout=POOL_TIMEOUT, queue_timeout=1)
-    p.call("validate", {"document": _flat(3)})
+    # The first call of a worker imports the library: seconds on a slow CI runner, outside the call timeout. A warm
+    # worker before the tests, so that only the deliberately slow document times out.
+    p = WorkerPool(size=1, timeout=POOL_TIMEOUT, queue_timeout=0.5)
+    p.call("render", {"document": _flat(3)})
     yield p
     p.close()
 
@@ -231,7 +258,7 @@ def test_pool_runs_tools_and_reports_clean_errors(pool):
 
 
 def test_pool_timeout_kills_the_worker(pool):
-    slow = _flat(5, "x" * 20_000)  # long labels: about a minute of layout work in-process
+    slow = _slow()
     w = pool._idle.queue[0]
     t = time.perf_counter()
     with pytest.raises(T.ToolError, match="timed out"):
@@ -245,7 +272,7 @@ def test_pool_timeout_kills_the_worker(pool):
 def test_pool_busy(pool):
     import threading
 
-    slow = _flat(5, "x" * 20_000)
+    slow = _slow()
     errors = []
 
     def go():

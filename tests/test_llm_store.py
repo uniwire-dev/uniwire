@@ -20,7 +20,8 @@ def test_store_put_get_expire(tmp_path):
     store = DocStore(tmp_path, ttl_days=1)
     text = STUDIO.read_text("utf-8")
     id_ = store.put(text)
-    assert id_ == doc_id(text) and len(id_) == ID_LENGTH and id_.isalnum()
+    assert id_ == doc_id(text, store.key) and len(id_) == ID_LENGTH and id_.isalnum()
+    assert id_ != doc_id(text) and DocStore(tmp_path).key == store.key  # a secret key, kept with the store
     assert store.put(text) == id_ and len(list(tmp_path.glob("*.json"))) == 1  # same content, same link
     assert store.get(id_) == text
     assert store.get("../../etc/passwd") is None and store.get("x" * ID_LENGTH) is None
@@ -42,7 +43,7 @@ def test_store_delete(tmp_path):
     os.utime(tmp_path / f"{id_}.deleted", (old, old))
     assert not store.deleted(id_)
     store.prune()
-    assert not list(tmp_path.iterdir())  # the marker goes with the expiry
+    assert [p.name for p in tmp_path.iterdir()] == [".key"]  # the marker goes with the expiry
 
 
 def test_store_limits(tmp_path):
@@ -55,6 +56,9 @@ def test_store_limits(tmp_path):
         os.utime(tmp_path / f"{ids[-1]}.json", (t, t))
     store.prune()
     assert [store.get(i) is not None for i in ids] == [False, False, True, True]  # oldest removed first
+    for i in range(4, 8):  # the total is checked at each write, not only at the hourly prune
+        ids.append(store.put(f'{{"n": {i}, "pad": "{"y" * 60}"}}'))
+        assert sum(p.stat().st_size for p in tmp_path.glob("*.json")) <= 200
 
 
 def test_shorten_tool_results(tmp_path):
@@ -67,6 +71,8 @@ def test_shorten_tool_results(tmp_path):
     assert res["summary"]["error"] == 0  # the rest of the result is unchanged
     assert _shorten(["rows"], store, "x") == ["rows"] and _shorten({"svg": "<svg/>"}, store, "x") == {"svg": "<svg/>"}
     assert document_from_link(viewer_link(d)) == json.dumps(d, ensure_ascii=False, separators=(",", ":"))
+    junk = tools.validate({"junk": "x" * 100})  # any JSON reaches validate: only diagrams are kept
+    assert _shorten(junk, store, "https://uniwire.sh/viewer/") == junk and len(list(tmp_path.glob("*.json"))) == 1
 
 
 def test_shorten_pdf_links(tmp_path):
@@ -98,13 +104,16 @@ def test_pdf_filename():
     assert tools.pdf_filename(None) == tools.pdf_filename("—") == "uniwire.pdf"
 
 
-def test_pdf_route(tmp_path):
+def test_pdf_route(tmp_path, monkeypatch):
     pytest.importorskip("reportlab")
     pytest.importorskip("mcp.server.mcpserver")
     from starlette.testclient import TestClient
 
     from uniwire.mcp_server import _add_pdf_route, build_server
 
+    calls = []
+    pdf_file = tools.pdf_file
+    monkeypatch.setattr(tools, "pdf_file", lambda **kw: calls.append(kw) or pdf_file(**kw))
     store = DocStore(tmp_path)
     id_ = store.put(STUDIO.read_text("utf-8"))
     server = build_server(None, store)
@@ -114,6 +123,7 @@ def test_pdf_route(tmp_path):
     assert r.status_code == 200 and r.content.startswith(b"%PDF-")
     assert r.headers["content-type"] == "application/pdf" and r.headers["cache-control"] == "no-store"
     assert r.headers["content-disposition"] == 'inline; filename="studio-28-m2-tableau-de-repartition.pdf"'
+    assert client.get(f"/pdf/{id_}").content == r.content and len(calls) == 1  # opened again: drawn once
     assert client.get("/pdf/AAAAAAAAAAAA").status_code == 404
     bad_id = store.put('{"uniwire": "1.0.0"}')
     bad = client.get(f"/pdf/{bad_id}")
@@ -150,7 +160,7 @@ def test_pdf_route_pages_for_a_browser(tmp_path):
     assert gone.status_code == 410 and "gelöscht" in gone.text
     bad_id = store.put(json.dumps({"uniwire": "1.0.0", "meta": {"title": "<b>"}}))
     bad = client.get(f"/pdf/{bad_id}", headers=html)
-    assert bad.status_code == 422 and "<pre>" in bad.text and "<b>" not in bad.text
+    assert bad.status_code == 422 and "<pre>" not in bad.text and "<b>" not in bad.text  # the document is not quoted
 
 
 def test_svg_route(tmp_path):
@@ -190,7 +200,10 @@ def test_delete_route(tmp_path):
     client = TestClient(server.streamable_http_app())
     assert client.get(f"/doc/{id_}/delete").status_code in (404, 405)  # a GET never deletes
     assert client.get(f"/doc/{id_}").status_code == 200
-    r = client.post(f"/doc/{id_}/delete")
+    for origin in ("https://evil.example", "null"):  # a form posted by another site
+        assert client.post(f"/doc/{id_}/delete", headers={"origin": origin}).status_code == 403
+    assert client.get(f"/doc/{id_}").status_code == 200
+    r = client.post(f"/doc/{id_}/delete", headers={"origin": "http://testserver"})
     assert r.status_code == 204 and r.headers["cache-control"] == "no-store"
     assert client.get(f"/doc/{id_}").status_code == 410 and client.get(f"/svg/{id_}").status_code == 410
     assert client.post(f"/doc/{id_}/delete").status_code == 410
