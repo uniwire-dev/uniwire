@@ -59,6 +59,23 @@ class Cable(UWModel):
     size_awg: Optional[str] = Field(None, description="Size in AWG/kcmil as printed: '#4/0', '500 kcmil'")
     raceway: Optional[str] = Field(None, description="Conduit / raceway: '2\" EMT', 'tube IRL 20'")
     ambient_C: Optional[float] = Field(None, description="Ambient temperature used for calculation (°C)")
+    # --- 1.1: conditions that correct the current-carrying capacity (IEC 60364-5-52)
+    grouped: Optional[int] = Field(
+        None, ge=1, description="Circuits or multicore cables laid together, this one included (on one support when "
+        "'supports' is given): grouping factor of Iz")
+    arrangement: Optional[Literal["bunched", "single_layer", "ceiling", "perforated_tray", "ladder"]] = Field(
+        None, description="How grouped cables are laid in air: 'bunched' (in conduit or trunking, on a surface, "
+        "enclosed; the default), 'single_layer' (one layer on a wall, floor or unperforated tray), 'ceiling' (one "
+        "layer, touching, fixed under a wooden ceiling), 'perforated_tray', 'ladder' (or cleats)")
+    supports: Optional[int] = Field(
+        None, ge=1, description="Trays or ladders stacked one above another ('arrangement' perforated_tray or "
+        "ladder); 'grouped' then counts the cables on one of them")
+    spacing_m: Optional[Q("m", "Clear distance between grouped circuits in the ground, methods D1 and D2 (0: "
+                          "touching, the default)")] = None
+    soil_resistivity_K_m_W: Optional[float] = Field(
+        None, gt=0, description="Thermal resistivity of the soil, methods D1 and D2 (K·m/W; 2.5 when not given)")
+    third_harmonic_pct: Optional[Q("%", "Third-harmonic content of the phase currents: factor of Iz of a "
+                                   "three-phase cable whose neutral carries them", le=100)] = None
     status: Optional[Literal["new", "existing", "spare", "future", "removed"]] = None
     marks: Optional[dict[ConductorName, str]] = Field(
         None, description="Wire marks (ferrule texts) of the conductors of this cable, by conductor: "

@@ -14,7 +14,7 @@ You describe the **installation** (sources, protective devices, cables, loads, P
 file or in Python, and uniwire computes the drawings. No coordinates, no CAD file: a text file you can
 review and diff.
 
-* **Format**: `*.uniwire.json`, format 1.0, defined by the [specification](https://uniwire.sh/docs/SPEC/)
+* **Format**: `*.uniwire.json`, format 1.1, defined by the [specification](https://uniwire.sh/docs/SPEC/)
   and validated by a published JSON Schema: <https://uniwire.sh/schema/v1/uniwire.schema.json>.
 * **Library**: `pip install uniwire`: Python API, code-first builder and the `uniwire` command line.
 * **Documentation**: <https://uniwire.sh/docs/>
