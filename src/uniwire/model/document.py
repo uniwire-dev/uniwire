@@ -10,7 +10,7 @@ from pydantic import Field, PrivateAttr, field_validator, model_validator
 from .base import ID_PATTERN, Cable, Installation, Meta, UWModel
 from .nodes import Node
 
-FORMAT_VERSION = "1.0.0"
+FORMAT_VERSION = "1.1.0"
 SCHEMA_ID = "https://uniwire.sh/schema/v1/uniwire.schema.json"
 
 LinkKind = Literal["transfer", "tie", "bypass", "parallel", "infeed", "earth", "control", "interlock", "trip",

@@ -1,4 +1,4 @@
-# uniwire format specification, version 1.0
+# uniwire format specification, version 1.1
 
 > Open exchange format for **describing electrical installations**, drawn as single-line and multi-line
 > diagrams (residential, commercial and industrial LV, with an MV/LV transformer at the head, standby sources, PV, EV charging (IRVE)).
@@ -35,7 +35,7 @@ The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are to be interpret
 ```json
 {
   "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
-  "uniwire": "1.0.0",
+  "uniwire": "1.1.0",
   "profiles": ["nfc15100"],
   "meta": { ... },
   "installation": { ... },
@@ -50,7 +50,7 @@ The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are to be interpret
 | Key | Required | Purpose |
 |---|---|---|
 | `$schema` | no | Schema URL (the major version appears in the path: `/v1/`) |
-| `uniwire` | no (default `1.0.0`) | Format version, semver `1.x.y` |
+| `uniwire` | no (default `1.1.0`) | Format version, semver `1.x.y` |
 | `profiles` | no | Business rule profiles to apply (`nfc15100`, `vde0100`, `iec60364`, `enedis`…) |
 | `meta` | no | Title, project, client, author, date, `revisions[]`, `notes[]`, `lang` |
 | `installation` | no | `earthing` (TT, TN-C, TN-S, TN-C-S, IT), `system` (1P+N, 3P+N…), `un_V`, `f_Hz`, `supply`, `subscribed_kVA`, `planned_kVA`, `ik3_kA`, `earth_resistance_ohm`, `surface_m2`, `standard`, `premises` (dwelling, commercial, office, industrial, public, agricultural, other: dwelling rules apply to `dwelling` or when absent) |
@@ -170,6 +170,13 @@ sets it, a TN-C-S installation splits at the first board). `busbar`: `kind` (`bu
 ### Cable
 `ref` (reference designation / schedule tag), `kind` (`busway`, `trunk`...), `conductors` ("L1, L2, L3, N, PE"), `pen`,
 `cpr_class`, `size_awg`, `raceway`, `ambient_C`, `status`.
+
+Conditions that correct the current-carrying capacity *(1.1)*: `grouped` (circuits or multicore cables laid
+together, this one included), `arrangement` in air (`bunched`, the default, `single_layer`, `ceiling`,
+`perforated_tray`, `ladder`), `supports` (trays or ladders stacked one above another; `grouped` then counts the
+cables on one of them), `spacing_m` (clear distance between grouped circuits in the ground, 0 when touching),
+`soil_resistivity_K_m_W` (thermal resistivity of the soil, 2.5 when not given), `third_harmonic_pct` (third-harmonic
+content of the phase currents).
 
 ### Auxiliary devices and enclosures
 * `devices[]` (document root): nodes **outside the power tree** (relays, CTs on a branch, IMDs, VPIS,
@@ -527,7 +534,17 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
      * **Ambient temperature**: the cable's `ambient_C` corrects Iz by sqrt((θmax − θ) / (θmax − θref)), θmax
        70 °C for PVC and 90 °C for XLPE, from 10 °C up to 60 °C (PVC) or 80 °C
        (XLPE); above, Iz is not checked (info). Without `ambient_C`, 40 °C in air and 20 °C in the ground.
-     * **Limitations**: no grouping, soil resistivity or harmonic factor is applied.
+     * **Grouping**: `grouped`, with `arrangement` (in air, `bunched` when not given) or `supports` (2 or 3 stacked
+       trays or ladders), or `spacing_m` in the ground (`D1`, `D2`; the cable is taken as single-core in its
+       ducts when `cores` reads `1x`), applies the grouping factor: up to 20 circuits in air, 9 per stacked
+       support, 6 in the ground.
+     * **Soil**: `soil_resistivity_K_m_W` corrects Iz in the ground from 0.5 to 3 K·m/W (a lower value is taken
+       as 0.5).
+     * **Harmonics**: `third_harmonic_pct` on a three-phase circuit with a neutral (`3P+N`, `4P`) multiplies Iz by
+       1 / sqrt(1 + 4 h²), h the content, up to 50 %; by 1 / sqrt(1 + 7 h²) up to 15 % when the neutral is smaller
+       (`neutral_section_mm2`).
+     * The factors are formulas of the same file, never above those of IEC 60364-5-52. Beyond their range, Iz is
+       not checked (info).
      * **Rule `iec60364.iz-estimate`**: a cable giving `section_mm2` without its `material`, `insulation`
        or `install` is estimated: copper and PVC unless stated, the most favourable method in air (`A1` to
        `F`) unless stated, at 30 °C. A rating above that Iz: **warning**. One **info** lists the cables estimated, so
@@ -556,12 +573,13 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
 | Version | Changes |
 |---|---|
 | 1.0 | Initial release |
+| 1.1 | Cable: `grouped`, `arrangement`, `supports`, `spacing_m`, `soil_resistivity_K_m_W`, `third_harmonic_pct` (conditions that correct the current-carrying capacity) |
 
 ## 12. Complete minimal example
 
 ```json
 {
-  "uniwire": "1.0.0",
+  "uniwire": "1.1.0",
   "installation": { "earthing": "TT", "system": "1P+N", "un_V": 230 },
   "sources": [
     { "type": "grid", "label": "Grid", "children": [

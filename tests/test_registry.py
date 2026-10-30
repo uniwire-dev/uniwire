@@ -63,6 +63,12 @@ def test_iz_iec60364_formulas():
                 for ranges in mat.values():  # [[S_min, S_max, a, m], ...]: up to 16 mm², from 25 mm²
                     assert all(r[0] <= r[1] and r[2] > 0 and 0.4 < r[3] < 1 for r in ranges)
                     assert [r[0] for r in ranges] == sorted(r[0] for r in ranges)
+    factors = iz["factors"]
+    assert set(factors) == {"grouping", "soil", "harmonics"}
+    assert set(factors["grouping"]["air"]["arrangements"]) == {"bunched", "single_layer", "ceiling", "perforated_tray",
+                                                               "ladder"}
+    for f1, b, floor in factors["grouping"]["air"]["arrangements"].values():  # f = max(floor, f1 * n^-b)
+        assert 0.9 <= f1 <= 1 and 0 < b < 0.5 and 0 <= floor < f1
 
 
 def test_data_files_are_packaged():
