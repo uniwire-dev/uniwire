@@ -1038,6 +1038,7 @@ async function onDownload(kind) {
     return;
   }
   if (kind === "pdf") {
+    countPdf();
     toast(t("msg.pdf_wait"), 60000);
     try {
       const r = await call("pdf", { text, view: state.view, kind: state.kind, lang: lang(), options: viewOverrides(),
@@ -1048,6 +1049,15 @@ async function onDownload(kind) {
       toast(t("msg.pdf_failed", { error: err.message || err }), 8000);
     }
   }
+}
+
+/** One PDF export, added to an hourly total on uniwire.sh (nothing else is sent: no document, no name); only on the
+ * site itself, not on a copy of the editor elsewhere. */
+function countPdf() {
+  if (location.hostname !== "uniwire.sh") return;
+  try {
+    fetch("/api/count/pdf", { method: "POST", keepalive: true, credentials: "omit" }).catch(() => {});
+  } catch { /* counting is optional */ }
 }
 
 /** The page "About this document" of the PDF (null when unticked): the short link's id while the document is the
