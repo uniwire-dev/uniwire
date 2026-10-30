@@ -29,7 +29,7 @@ def _studio() -> dict:
 @pytest.mark.parametrize("lang", ["en", "fr"])
 def test_card_size_bounds(lang):
     compact, full = card(lang, "compact"), card(lang, "full")
-    assert approx_tokens(compact) <= 3500, approx_tokens(compact)
+    assert approx_tokens(compact) <= 3600, approx_tokens(compact)
     assert approx_tokens(full) <= 12000, approx_tokens(full)
     assert len(full) > len(compact)
 
@@ -58,7 +58,7 @@ def test_card_examples_are_valid_and_clean():
     for ex in (EXAMPLE_HOUSE, EXAMPLE_STANDBY):
         doc = uniwire.load(json.loads(json.dumps(ex)))
         assert not [f for f in uniwire.check(doc) if f.level == "error"]
-    assert '"uniwire":"1.0.0"' in card()
+    assert f'"uniwire":"{uniwire.FORMAT_VERSION}"' in card()
 
 
 def test_type_info():

@@ -61,6 +61,14 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Tests: the readability audit also counts texts written over a symbol, texts crossed by a link, link texts written
   across a conductor, texts reduced to fit, and two texts run into each other over a few letters however small their
   overlap; a set of dense documents (`tests/dense_docs.py`) holds the layout to these counts.
+* Format 1.1: a cable may give the conditions that lower its current-carrying capacity: `grouped` (circuits or
+  multicore cables laid together), `arrangement` (how they lie in air), `supports` (stacked trays or ladders),
+  `spacing_m` (between circuits in the ground), `soil_resistivity_K_m_W` and `third_harmonic_pct`. A 1.0 document
+  is a valid 1.1 document.
+* Checks: `iec60364.iz` and `iec60364.iz-estimate` apply the grouping, soil resistivity and third-harmonic factors
+  of these fields, as formulas never above the factors of IEC 60364-5-52 (`registry.iz_iec60364()["factors"]`); the
+  message lists them. Beyond their range (more than 20 circuits in air, 6 in the ground, a soil above
+  3 K·m/W, harmonics above 50 %), Iz is not checked (`info`).
 
 ## 0.1.4 (2026-10-28)
 

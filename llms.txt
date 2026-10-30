@@ -1,6 +1,6 @@
 # uniwire
 
-> uniwire ("electrical diagrams, as code") is an open standard JSON format (`*.uniwire.json`, format 1.0.0) to describe electrical installations (drawn as single-line and multi-line diagrams), with a reference Python library (`pip install uniwire`, Apache-2.0) that validates documents, checks them against rule profiles (NF C 15-100, IEC 60364, PLC), produces bills of materials and draws SVG / PDF sheets. A document is a power tree (sources -> devices -> loads, each node in its parent's `children`) plus `links` for everything outside the tree. Layout is automatic.
+> uniwire ("electrical diagrams, as code") is an open standard JSON format (`*.uniwire.json`, format 1.1.0) to describe electrical installations (drawn as single-line and multi-line diagrams), with a reference Python library (`pip install uniwire`, Apache-2.0) that validates documents, checks them against rule profiles (NF C 15-100, IEC 60364, PLC), produces bills of materials and draws SVG / PDF sheets. A document is a power tree (sources -> devices -> loads, each node in its parent's `children`) plus `links` for everything outside the tree. Layout is automatic.
 
 For assistants: the reference card of the format (generated from the model) follows this file at https://uniwire.sh/llms.txt, so one read gives you everything needed. Locally, `uniwire card` prints the same card.
 

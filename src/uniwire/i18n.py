@@ -92,6 +92,14 @@ EN: dict[str, str] = {
     "iec60364.ambient_air": "{t:g} °C ambient",
     "iec60364.ambient_default": ", ambient_C not given",
     "iec60364.ambient_uncovered": "Iz not checked: ambient {ambient:g} °C above the {limit} °C of the table for method {method}",
+    "iec60364.k_grouped": "grouping of {n} (×{k:g})",
+    "iec60364.k_soil": "soil {rho:g} K·m/W (×{k:g})",
+    "iec60364.k_harmonic": "third harmonic {h:g} % (×{k:g})",
+    "iec60364.u_grouped": "{n} circuits or cables grouped",
+    "iec60364.u_supports": "{s} trays or ladders stacked",
+    "iec60364.u_soil": "soil thermal resistivity {rho:g} K·m/W",
+    "iec60364.u_harmonic": "third harmonic {h:g} % with this neutral",
+    "iec60364.factor_uncovered": "Iz not checked: {what}, beyond the correction factors of IEC 60364-5-52",
     "iec60364.iz_estimate_exceeded": "the cable does not state its material, insulation or installation method: "
                                      "estimated with {material} {insulation} {section:g} mm², method {method}, "
                                      "{loaded} loaded conductors, {t:g} °C: protection {rating:g} A > Iz {iz:g} A; "
@@ -395,6 +403,14 @@ FR: dict[str, str] = {
     "iec60364.ambient_air": "{t:g} °C ambiant",
     "iec60364.ambient_default": ", ambient_C non indiqué",
     "iec60364.ambient_uncovered": "Iz non vérifié : ambiante {ambient:g} °C au-dessus des {limit} °C de la table pour la pose {method}",
+    "iec60364.k_grouped": "groupement de {n} (×{k:g})",
+    "iec60364.k_soil": "sol {rho:g} K·m/W (×{k:g})",
+    "iec60364.k_harmonic": "harmonique 3 {h:g} % (×{k:g})",
+    "iec60364.u_grouped": "{n} circuits ou câbles groupés",
+    "iec60364.u_supports": "{s} chemins ou échelles superposés",
+    "iec60364.u_soil": "résistivité thermique du sol {rho:g} K·m/W",
+    "iec60364.u_harmonic": "harmonique 3 {h:g} % avec ce neutre",
+    "iec60364.factor_uncovered": "Iz non vérifié : {what}, au-delà des facteurs de correction de l'IEC 60364-5-52",
     "iec60364.iz_estimate_exceeded": "le câble ne précise pas sa matière, son isolant ou son mode de pose : "
                                      "estimation en {material} {insulation} {section:g} mm², mode {method}, "
                                      "{loaded} conducteurs chargés, {t:g} °C : protection {rating:g} A > Iz {iz:g} A ; "
@@ -783,6 +799,14 @@ RU: dict[str, str] = {
     "iec60364.ambient_air": "воздух {t:g} °C",
     "iec60364.ambient_default": ", ambient_C не указан",
     "iec60364.ambient_uncovered": "Iz не проверен: температура окружающей среды {ambient:g} °C выше предела таблицы {limit} °C для способа {method}",
+    "iec60364.k_grouped": "группа из {n} (×{k:g})",
+    "iec60364.k_soil": "грунт {rho:g} K·м/Вт (×{k:g})",
+    "iec60364.k_harmonic": "третья гармоника {h:g} % (×{k:g})",
+    "iec60364.u_grouped": "в группе {n} цепей или кабелей",
+    "iec60364.u_supports": "лотков или лестниц друг над другом: {s}",
+    "iec60364.u_soil": "тепловое сопротивление грунта {rho:g} K·м/Вт",
+    "iec60364.u_harmonic": "третья гармоника {h:g} % при таком нулевом проводнике",
+    "iec60364.factor_uncovered": "Iz не проверен: {what}, за пределами поправочных коэффициентов IEC 60364-5-52",
     "iec60364.iz_estimate_exceeded": "для кабеля не указаны материал, изоляция или способ прокладки: оценка для "
                                      "{material} {insulation} {section:g} мм², способ {method}, нагруженных "
                                      "проводников: {loaded}, {t:g} °C: защита {rating:g} А > Iz {iz:g} А; укажите их "
@@ -1003,6 +1027,14 @@ ZH: dict[str, str] = {
     "iec60364.ambient_air": "环境温度 {t:g} °C",
     "iec60364.ambient_default": "，未给出 ambient_C",
     "iec60364.ambient_uncovered": "未校核 Iz：环境温度 {ambient:g} °C 高于敷设方式 {method} 表格的 {limit} °C",
+    "iec60364.k_grouped": "{n} 回路成组（×{k:g}）",
+    "iec60364.k_soil": "土壤 {rho:g} K·m/W（×{k:g}）",
+    "iec60364.k_harmonic": "三次谐波 {h:g} %（×{k:g}）",
+    "iec60364.u_grouped": "{n} 个回路或电缆成组",
+    "iec60364.u_supports": "{s} 层桥架或梯架叠放",
+    "iec60364.u_soil": "土壤热阻系数 {rho:g} K·m/W",
+    "iec60364.u_harmonic": "此中性线下三次谐波 {h:g} %",
+    "iec60364.factor_uncovered": "未校核 Iz：{what}，超出 IEC 60364-5-52 校正系数的范围",
     "iec60364.iz_estimate_exceeded": "电缆未注明导体材料、绝缘或敷设方式：按 {material} {insulation} {section:g} mm²、方式 {method}、{loaded} 根载流导体、{t:g} °C 估算：保护电器 {rating:g} A > Iz {iz:g} A；请注明以便精确校验",
     "iec60364.any_air_method": "空气中最有利方式",
     "iec60364.iz_estimated": "仅估算了 {count} 根电缆的载流量（{tags}）：缺少导体材料、绝缘或敷设方式（假定为铜、PVC 及最有利的敷设方式）；请注明以便精确校验",
@@ -1218,6 +1250,14 @@ ES: dict[str, str] = {
     "iec60364.ambient_air": "ambiente {t:g} °C",
     "iec60364.ambient_default": ", ambient_C no indicado",
     "iec60364.ambient_uncovered": "Iz no comprobada: temperatura ambiente de {ambient:g} °C superior a los {limit} °C de la tabla para el método {method}",
+    "iec60364.k_grouped": "agrupamiento de {n} (×{k:g})",
+    "iec60364.k_soil": "terreno {rho:g} K·m/W (×{k:g})",
+    "iec60364.k_harmonic": "tercer armónico {h:g} % (×{k:g})",
+    "iec60364.u_grouped": "{n} circuitos o cables agrupados",
+    "iec60364.u_supports": "{s} bandejas o escaleras superpuestas",
+    "iec60364.u_soil": "resistividad térmica del terreno {rho:g} K·m/W",
+    "iec60364.u_harmonic": "tercer armónico {h:g} % con este neutro",
+    "iec60364.factor_uncovered": "Iz no comprobada: {what}, fuera de los factores de corrección de la IEC 60364-5-52",
     "iec60364.iz_estimate_exceeded": "el cable no indica material, aislamiento o método de instalación: estimación con {material} {insulation} {section:g} mm², método {method}, {loaded} conductores cargados, {t:g} °C: protección {rating:g} A > Iz {iz:g} A; indicarlos para una comprobación exacta",
     "iec60364.any_air_method": "el más favorable al aire libre",
     "iec60364.iz_estimated": "intensidad admisible solo estimada para {count} cable(s) ({tags}): falta material, aislamiento o método de instalación (se suponen cobre, PVC y el método más favorable); indicarlos para una comprobación exacta",
@@ -1456,6 +1496,14 @@ DE: dict[str, str] = {
     "iec60364.ambient_air": "Umgebung {t:g} °C",
     "iec60364.ambient_default": ", ambient_C nicht angegeben",
     "iec60364.ambient_uncovered": "Iz nicht geprüft: Umgebung {ambient:g} °C über den {limit} °C der Tabelle für Verlegeart {method}",
+    "iec60364.k_grouped": "Häufung von {n} (×{k:g})",
+    "iec60364.k_soil": "Boden {rho:g} K·m/W (×{k:g})",
+    "iec60364.k_harmonic": "3. Oberschwingung {h:g} % (×{k:g})",
+    "iec60364.u_grouped": "{n} Stromkreise oder Kabel gehäuft",
+    "iec60364.u_supports": "{s} Kabelrinnen oder -leitern übereinander",
+    "iec60364.u_soil": "spezifischer Wärmewiderstand des Bodens {rho:g} K·m/W",
+    "iec60364.u_harmonic": "3. Oberschwingung {h:g} % mit diesem Neutralleiter",
+    "iec60364.factor_uncovered": "Iz nicht geprüft: {what}, außerhalb der Umrechnungsfaktoren der IEC 60364-5-52",
     "iec60364.iz_estimate_exceeded": "Leitung ohne Angabe von Leitermaterial, Isolierung oder Verlegeart: Schätzung "
                                      "mit {material} {insulation} {section:g} mm², Verlegeart {method}, {loaded} "
                                      "belastete Leiter, {t:g} °C: Schutzorgan {rating:g} A > Iz {iz:g} A; für eine "
@@ -1696,6 +1744,14 @@ PT: dict[str, str] = {
     "iec60364.ambient_air": "ambiente {t:g} °C",
     "iec60364.ambient_default": ", ambient_C não indicado",
     "iec60364.ambient_uncovered": "Iz não verificado: ambiente {ambient:g} °C acima dos {limit} °C da tabela para o método {method}",
+    "iec60364.k_grouped": "agrupamento de {n} (×{k:g})",
+    "iec60364.k_soil": "solo {rho:g} K·m/W (×{k:g})",
+    "iec60364.k_harmonic": "terceira harmônica {h:g} % (×{k:g})",
+    "iec60364.u_grouped": "{n} circuitos ou cabos agrupados",
+    "iec60364.u_supports": "{s} eletrocalhas ou leitos sobrepostos",
+    "iec60364.u_soil": "resistividade térmica do solo {rho:g} K·m/W",
+    "iec60364.u_harmonic": "terceira harmônica {h:g} % com este neutro",
+    "iec60364.factor_uncovered": "Iz não verificado: {what}, fora dos fatores de correção da IEC 60364-5-52",
     "iec60364.iz_estimate_exceeded": "o cabo não indica material, isolamento ou método de instalação: estimativa "
                                      "com {material} {insulation} {section:g} mm², método {method}, {loaded} "
                                      "condutores carregados, {t:g} °C: proteção {rating:g} A > Iz {iz:g} A; indique-os "

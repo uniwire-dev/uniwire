@@ -1086,5 +1086,184 @@
     }
    }
   }
+ },
+ "factors": {
+  "grouping": {
+   "formula": "f = max(floor, f1 * n^-b), n the circuits or multicore cables of the group, this one included; [f1, b, floor] by arrangement. Never above the factors of IEC 60364-5-52.",
+   "air": {
+    "n_max": 20,
+    "arrangements": {
+     "bunched": [
+      1.0,
+      0.325,
+      0.0
+     ],
+     "single_layer": [
+      1.0,
+      0.235,
+      0.7
+     ],
+     "ceiling": [
+      0.95,
+      0.253,
+      0.61
+     ],
+     "perforated_tray": [
+      1.0,
+      0.189,
+      0.72
+     ],
+     "ladder": [
+      1.0,
+      0.201,
+      0.78
+     ]
+    }
+   },
+   "stacked": {
+    "note": "trays or ladders stacked one above another: [f1, b, floor] by number of supports (2 or 3), n the cables on one support",
+    "n_max": 9,
+    "supports": {
+     "perforated_tray": {
+      "2": [
+       1.0,
+       0.204,
+       0.68
+      ],
+      "3": [
+       1.0,
+       0.218,
+       0.66
+      ]
+     },
+     "ladder": {
+      "2": [
+       1.0,
+       0.218,
+       0.73
+      ],
+      "3": [
+       1.0,
+       0.235,
+       0.7
+      ]
+     }
+    }
+   },
+   "ground": {
+    "note": "[f1, b, floor] by clear distance between circuits (m): the largest distance not above the actual one; D1 single-core when the cable is made of single cores (one duct per core)",
+    "n_max": 6,
+    "methods": {
+     "D2": {
+      "0.0": [
+       1.0,
+       0.416,
+       0.0
+      ],
+      "0.125": [
+       1.0,
+       0.286,
+       0.0
+      ],
+      "0.25": [
+       1.0,
+       0.222,
+       0.0
+      ],
+      "0.5": [
+       1.0,
+       0.161,
+       0.8
+      ]
+     },
+     "D1_multicore": {
+      "0.0": [
+       1.0,
+       0.286,
+       0.0
+      ],
+      "0.25": [
+       1.0,
+       0.161,
+       0.8
+      ],
+      "0.5": [
+       1.0,
+       0.125,
+       0.0
+      ],
+      "1.0": [
+       1.0,
+       0.077,
+       0.0
+      ]
+     },
+     "D1_single_core": {
+      "0.0": [
+       1.0,
+       0.325,
+       0.6
+      ],
+      "0.25": [
+       1.0,
+       0.222,
+       0.0
+      ],
+      "0.5": [
+       1.0,
+       0.161,
+       0.8
+      ],
+      "1.0": [
+       1.0,
+       0.096,
+       0.9
+      ]
+     }
+    }
+   }
+  },
+  "soil": {
+   "formula": "f = ((A + 2.5) / (A + rho))^k, rho the thermal resistivity of the soil in K.m/W; [rho_min, rho_max, A, k] by method. Never above the factors of IEC 60364-5-52.",
+   "D1": [
+    [
+     0.5,
+     2.5,
+     3.391,
+     0.5
+    ],
+    [
+     2.5,
+     3.0,
+     0.0,
+     0.224
+    ]
+   ],
+   "D2": [
+    [
+     0.5,
+     2.5,
+     0.4083,
+     0.5
+    ],
+    [
+     2.5,
+     3.0,
+     0.0,
+     0.578
+    ]
+   ]
+  },
+  "harmonics": {
+   "formula": "f = 1 / sqrt(1 + c * h^2), h the third-harmonic content of the phase currents (fraction), rounded down to 0.01: the heating of three phases and a neutral carrying 3 h",
+   "full_neutral": {
+    "c": 4,
+    "h_max": 0.5
+   },
+   "reduced_neutral": {
+    "c": 7,
+    "h_max": 0.15
+   }
+  }
  }
 }
