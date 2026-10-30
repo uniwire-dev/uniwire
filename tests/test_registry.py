@@ -52,9 +52,23 @@ def test_iz_tables():
     assert iz["tables"]["Al"]["XLPE"]["D-duct"]["3"]["300"] == 350
 
 
+def test_iz_iec60364_formulas():
+    iz = registry.iz_iec60364()
+    assert iz["header"]["reference_conditions"]["air_C"] == 30
+    pieces = iz["pieces"]
+    assert set(pieces) == {"A1", "A2", "B1", "B2", "C", "D1", "D2", "E", "F"}
+    for m in pieces.values():
+        for ins in m.values():
+            for mat in ins.values():
+                for ranges in mat.values():  # [[S_min, S_max, a, m], ...]: up to 16 mm², from 25 mm²
+                    assert all(r[0] <= r[1] and r[2] > 0 and 0.4 < r[3] < 1 for r in ranges)
+                    assert [r[0] for r in ranges] == sorted(r[0] for r in ranges)
+
+
 def test_data_files_are_packaged():
     data = ROOT / "src" / "uniwire" / "registry" / "data"
     assert (data / "iz_tables.json").exists() and (data / "LICENSES.md").exists()
+    assert (data / "iz_iec60364.json").exists()
     # the CC BY-SA table must stay out of the Apache-2.0 package
     assert not (data / "iec81346_2.json").exists()
     ext = ROOT / "packages" / "uniwire-data-iec81346" / "src" / "uniwire_data_iec81346" / "iec81346_2.json"

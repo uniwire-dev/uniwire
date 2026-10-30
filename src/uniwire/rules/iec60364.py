@@ -1,20 +1,20 @@
 """``iec60364`` profile: current-carrying capacity of wiring systems (Iz) and the 30 mA RCD of socket-outlets.
 
-The ``iec60364.iz`` rule compares the rating ``in_A`` of the protection feeding a cable with the
-current-carrying capacity Iz read from ``registry/data/iz_tables.json`` (GUIA-BT-19, tables of
-UNE 20460-5-523:2004, the Spanish transposition of IEC 60364-5-523). It only applies when the cable
-specifies ``section_mm2``, ``material``, ``insulation`` and ``install`` (``D1``, the IEC name of cables in ducts in
-the ground, is read as ``D-duct``). The table gives Iz at 40 °C in air and 25 °C in the ground. The cable's
-``ambient_C`` picks the values: 30 °C or less in air, the values brought back to 30 °C (IEC 60364-5-52, table
-B.52.14: 0.87 for PVC, 0.91 for XLPE at 40 °C); up to 40 °C, the values at 40 °C, the next temperature tabulated
-above (on the safe side); above 40 °C in air or 25 °C in the ground, Iz is not checked (info). Without ``ambient_C``,
-40 °C in air, as the message says. No grouping factor is applied. Outcome: warning, never error.
+The ``iec60364.iz`` rule compares the rating ``in_A`` of the protection feeding a cable with its current-carrying
+capacity Iz, given by the formulas of ``registry/data/iz_iec60364.json`` (after IEC 60364-5-52, never above its
+values). It only applies when the cable specifies
+``section_mm2``, ``material``, ``insulation`` and ``install`` (``D-duct`` is read as ``D1``, cables in ducts in the
+ground). The formulas give Iz at 30 °C in air, 20 °C in the ground (2.5 K·m/W). The cable's ``ambient_C`` corrects
+them by sqrt((θmax - θ) / (θmax - θref)), θmax 70 °C for PVC and 90 °C for XLPE, from 10 °C up to 60 °C (PVC) or
+80 °C (XLPE); above, Iz is not checked (info). Without ``ambient_C``,
+40 °C in air and 20 °C in the ground, as the message says. No grouping factor is applied. Outcome: warning, never
+error.
 
 A cable giving its section but not its material, insulation or installation method is estimated by the
 ``iec60364.iz-estimate`` rule: copper and PVC unless stated, the most favourable method in air (A1 to F) unless
-stated, values brought back to 30 °C unless ``ambient_C`` says otherwise (as for ``iec60364.iz``). A
-protection above that Iz is too high under these assumptions: warning. The cables estimated are listed in one
-info finding, so that an empty result is not read as a checked cable.
+stated, at 30 °C unless ``ambient_C`` says otherwise. A protection above that Iz is too high under these
+assumptions: warning. The cables estimated are listed in one info finding, so that an empty result is not read as a
+checked cable.
 
 The ``iec60364.rcd-30mA`` rule (IEC 60364-4-41:2005+AMD1:2017, 411.3.3 and 411.3.4): socket-outlets up to 32 A
 protected by an RCD of at most 30 mA in all premises, final circuits of luminaires the same in dwellings (the 2005
@@ -32,15 +32,11 @@ from ..model import Document
 from ..resolve import Index
 from . import PROFILES, describe, rule
 
-IZ = describe(
-    "iec60364.iz",
-    "GUIA-BT-19 (Ministerio de Industria, feb. 2009 rev. 2), p. 9 Tabla A (= UNE 20460-5-523:2004 "
-    "Tabla A.52-1 bis, 40 °C ambient) and p. 12 Tabla D (buried in duct, 25 °C, 1.5 K·m/W)",
-    "high")
+SOURCE = "IEC 60364-5-52"
+IZ = describe("iec60364.iz", SOURCE, "high")
 IZ_ESTIMATE = describe(
     "iec60364.iz-estimate",
-    "GUIA-BT-19 Tabla A (as iec60364.iz) brought back to 30 °C with IEC 60364-5-52, table B.52.14; copper, PVC "
-    "and the most favourable method in air when the cable does not state them",
+    SOURCE + "; copper, PVC and the most favourable method in air when the cable does not state them",
     "medium")
 RCD_30MA = describe(
     "iec60364.rcd-30mA",
@@ -51,44 +47,56 @@ RCD_30MA = describe(
 
 PROTECTIONS = ("breaker", "rcbo", "fuse", "fuse_switch", "main_breaker", "motor_starter", "thermal_relay")
 INSULATION = {"PVC": "PVC", "XLPE": "XLPE", "PR": "XLPE", "EPR": "XLPE"}
-METHODS = {"A1", "A2", "B1", "B2", "C", "E", "F", "D-DUCT", "D1"}  # D1: IEC name of D-duct (cables in ducts in ground)
+METHODS = {"A1", "A2", "B1", "B2", "C", "D1", "D2", "E", "F"}
 THREE_PHASE = ("3P", "3P+N", "4P")
 AIR_METHODS = ("A1", "A2", "B1", "B2", "C", "E", "F")
-AT_40C = {"PVC": 0.87, "XLPE": 0.91}  # IEC 60364-5-52, table B.52.14: ambient 40 °C against the 30 °C reference
+BURIED = ("D1", "D2")
+THETA_MAX = {"PVC": 70.0, "XLPE": 90.0}  # conductor temperature in normal operation (IEC 60364-5-52, 52.1)
+THETA_LIMIT = {"PVC": 60.0, "XLPE": 80.0}  # highest ambient corrected (IEC 60364-5-52)
+THETA_MIN = 10.0  # lowest: a colder ambient is taken as this
 
 
 def _method(install: str) -> str | None:
     m = install.strip().upper().replace(" ", "")
-    return ("D-duct" if m in ("D-DUCT", "D1") else m) if m in METHODS else None
+    m = "D1" if m == "D-DUCT" else m
+    return m if m in METHODS else None
+
+
+def temperature_factor(insulation: str, ambient: float, buried: bool) -> float | None:
+    """Correction of Iz for an ambient (air) or ground temperature other than the reference (30 °C in air, 20 °C in
+    the ground); ``None`` above the range of IEC 60364-5-52."""
+    ins = INSULATION.get(insulation)
+    if ins is None or ambient > THETA_LIMIT[ins]:
+        return None
+    ref = 20.0 if buried else 30.0
+    return ((THETA_MAX[ins] - max(ambient, THETA_MIN)) / (THETA_MAX[ins] - ref)) ** 0.5
 
 
 def _ambient(c, method: str, insulation: str, default_air: float) -> tuple[float, float, bool] | None:
-    """(factor on the table value, temperature used, ambient_C given) for a cable; ``None`` when its ambient is above
-    what the table covers (40 °C in air, 25 °C in the ground): Iz is then not checked."""
+    """(factor on Iz, temperature used, ambient_C given) for a cable; ``None`` when its ambient is above what the
+    tables cover: Iz is then not checked."""
+    buried = method in BURIED
     given = c.ambient_C
-    if method == "D-duct":
-        return (1.0, 25.0, given is not None) if given is None or given <= 25 else None
-    temp = default_air if given is None else 30.0 if given <= 30 else 40.0 if given <= 40 else None
-    k40 = AT_40C.get(INSULATION.get(insulation, ""))
-    if temp is None:
-        return None
-    if temp == 30 and k40 is None:  # an insulation the table does not cover: reported by the lookup
-        temp = 40.0
-    return (1.0 if temp == 40 else 1 / k40, temp, given is not None)  # type: ignore[operator]
+    temp = given if given is not None else 20.0 if buried else default_air
+    k = temperature_factor(insulation, temp, buried)
+    return None if k is None else (k, temp, given is not None)
 
 
 def _ambient_text(method: str, temp: float, given: bool) -> str:
-    where = _t("iec60364.ambient_ground" if method == "D-duct" else "iec60364.ambient_air", t=temp)
+    where = _t("iec60364.ambient_ground" if method in BURIED else "iec60364.ambient_air", t=temp)
     return where if given else where + _t("iec60364.ambient_default")
 
 
 def lookup_iz(material: str, insulation: str, method: str, loaded: int, section_mm2: float) -> float | None:
-    """Iz (A) from the table, or ``None`` if the combination is not covered by the source."""
-    t = registry.iz_tables()["tables"]
+    """Iz (A) at the reference conditions, or ``None`` if the tables do not give this combination."""
     try:
-        return t[material][INSULATION[insulation]][method][str(loaded)][f"{section_mm2:g}"]
+        pieces = registry.iz_iec60364()["pieces"][method][INSULATION[insulation]][material][str(loaded)]
     except KeyError:
         return None
+    values = [a * section_mm2 ** m for lo, hi, a, m in pieces if lo <= section_mm2 <= hi]
+    if not values and pieces[0][0] <= section_mm2 <= pieces[-1][1]:  # between two ranges (16 to 25 mm²)
+        values = [a * section_mm2 ** m for _lo, _hi, a, m in pieces]
+    return min(values) if values else None
 
 
 def _rating(p) -> float | None:
@@ -132,7 +140,7 @@ def iz_check(doc: Document, idx: Index):
         amb = _ambient(c, method, c.insulation, 40.0)  # type: ignore[arg-type]
         if amb is None:
             yield IZ.finding("info", _t("iec60364.ambient_uncovered", ambient=c.ambient_C, method=method,
-                                limit=25 if method == "D-duct" else 40), nid)
+                                limit=THETA_LIMIT[INSULATION[c.insulation]]), nid)  # type: ignore[index]
             continue
         iz = lookup_iz(c.material, c.insulation, method, loaded, c.section_mm2)  # type: ignore[arg-type]
         if iz is None:
