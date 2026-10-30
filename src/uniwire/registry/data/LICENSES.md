@@ -18,6 +18,8 @@ chosen by the project; it does not reproduce the table.
 - Formulas `a * S^m` per installation method, insulation, material and number of loaded conductors, for two
   ranges of sections, computed by the project and never above the values of IEC 60364-5-52. It does not replace
   the standard or a national one.
+- `factors`: the grouping, soil resistivity and third-harmonic correction factors, as formulas with a few
+  coefficients each, computed by the project the same way.
 
 ## `iz_tables.json`
 

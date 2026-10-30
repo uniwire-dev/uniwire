@@ -140,15 +140,28 @@ The rating of the protective device feeding a cable (`ir_A`, otherwise
   air and 20 °C in the ground, and the message says it.
 * Loaded conductors: 3 when the protective device is `3P`, `3P+N` or `4P`, otherwise 2; without poles,
   `installation.system` decides.
-* Level: **warning**, never error. The formulas are in `src/uniwire/registry/data/iz_iec60364.json`, read with
-  `uniwire.registry.iz_iec60364()`. No grouping, soil resistivity or harmonic factor is applied.
+* Grouping: `grouped` (circuits or multicore cables laid together, this one included) applies the grouping
+  factor, in air by `arrangement` (`bunched` when not given, `single_layer`, `ceiling`, `perforated_tray`,
+  `ladder`; with `supports`, 2 or 3 trays or ladders stacked, `grouped` counting the cables on one of them), in
+  the ground by `spacing_m` (0 when not given; single-core cables in their own ducts when `cores` reads `1x`).
+  Up to 20 circuits in air, 9 per stacked support, 6 in the ground.
+* Soil: `soil_resistivity_K_m_W` corrects Iz in the ground (`D1`, `D2`) from 0.5 to 3 K·m/W (a lower value is
+  taken as 0.5).
+* Harmonics: `third_harmonic_pct` on a three-phase circuit with a neutral (`3P+N`, `4P`, or the system when the
+  poles are not given) multiplies Iz by 1 / sqrt(1 + 4 h²), the heating of the phases and of a neutral carrying
+  their third harmonics, up to 50 %; by 1 / sqrt(1 + 7 h²) up to 15 % when the neutral is smaller.
+* The applied factors are listed in the message. Beyond the range of a factor, Iz is not checked (`info`).
+* Level: **warning**, never error. The formulas of Iz and of the factors are in
+  `src/uniwire/registry/data/iz_iec60364.json`, never above the values of IEC 60364-5-52, read with
+  `uniwire.registry.iz_iec60364()`.
 
 ### `iec60364.iz-estimate`
 
 A cable that gives `section_mm2` but not its `material`, `insulation` or `install` is not left unchecked:
 
 * Iz is estimated with copper and PVC unless stated, and the most favourable installation method in air
-  (`A1` to `F`) unless `install` is given, at 30 °C, or corrected as for `iec60364.iz` when `ambient_C` is given.
+  (`A1` to `F`) unless `install` is given, at 30 °C, or corrected as for `iec60364.iz` when `ambient_C` is given,
+  with the grouping, soil and harmonic factors of `iec60364.iz`.
 * A protection above that Iz is too high under these assumptions: **warning**, with the
   assumptions in the message.
 * One **info** finding lists the cables estimated: give their material, insulation and installation method for

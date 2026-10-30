@@ -60,7 +60,7 @@ In Jupyter, an `Installation` displays its first sheet inline.
 
 ## Element classes
 
-There is one class per uniwire node type (53 in format 1.0). The class name is the type in CamelCase,
+There is one class per uniwire node type (53 in format 1.1). The class name is the type in CamelCase,
 with a few acronyms:
 
 | Category | Classes |

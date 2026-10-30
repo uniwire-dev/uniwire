@@ -7,8 +7,10 @@ values). It only applies when the cable specifies
 ground). The formulas give Iz at 30 °C in air, 20 °C in the ground (2.5 K·m/W). The cable's ``ambient_C`` corrects
 them by sqrt((θmax - θ) / (θmax - θref)), θmax 70 °C for PVC and 90 °C for XLPE, from 10 °C up to 60 °C (PVC) or
 80 °C (XLPE); above, Iz is not checked (info). Without ``ambient_C``,
-40 °C in air and 20 °C in the ground, as the message says. No grouping factor is applied. Outcome: warning, never
-error.
+40 °C in air and 20 °C in the ground, as the message says. The cable's ``grouped`` (with ``arrangement``,
+``supports`` or, in the ground, ``spacing_m``), ``soil_resistivity_K_m_W`` (D1, D2) and ``third_harmonic_pct``
+(three-phase circuit with a neutral) apply the grouping, soil and harmonic factors, formulas of the same file;
+beyond their range, Iz is not checked (info). Outcome: warning, never error.
 
 A cable giving its section but not its material, insulation or installation method is estimated by the
 ``iec60364.iz-estimate`` rule: copper and PVC unless stated, the most favourable method in air (A1 to F) unless
@@ -25,6 +27,8 @@ national scope).
 """
 
 from __future__ import annotations
+
+import math
 
 from .. import registry
 from ..i18n import t as _t
@@ -87,6 +91,87 @@ def _ambient_text(method: str, temp: float, given: bool) -> str:
     return where if given else where + _t("iec60364.ambient_default")
 
 
+def _group(p: list[float], n: int) -> float:
+    f1, b, floor = p
+    return max(floor, f1 * n ** -b)
+
+
+def _single_core(c) -> bool:
+    """A cable made of single cores (``4x(1x240)``, ``3x1x95``): one duct per core in the ground."""
+    return "1x" in (c.cores or "").replace(" ", "").lower()
+
+
+def grouping_factor(c, method: str) -> float | None:
+    """Factor of Iz for the cables laid with this one (``grouped``, ``arrangement``, ``supports``, ``spacing_m``);
+    ``None`` beyond the formulas."""
+    n = c.grouped or 1
+    data = registry.iz_iec60364()["factors"]["grouping"]
+    if method in BURIED:
+        if n == 1:
+            return 1.0
+        ground = data["ground"]
+        if n > ground["n_max"]:
+            return None
+        key = "D2" if method == "D2" else "D1_single_core" if _single_core(c) else "D1_multicore"
+        spacing = c.spacing_m or 0.0  # the classes up to the actual distance: the best of them holds
+        return max(_group(p, n) for d, p in ground["methods"][key].items() if float(d) <= spacing)
+    arrangement = c.arrangement or "bunched"
+    if (c.supports or 1) > 1 and arrangement in ("perforated_tray", "ladder"):
+        stacked = data["stacked"]
+        p = stacked["supports"][arrangement].get(str(c.supports))
+        return None if p is None or n > stacked["n_max"] else _group(p, n)
+    air = data["air"]
+    return None if n > air["n_max"] else _group(air["arrangements"][arrangement], n)
+
+
+def soil_factor(c, method: str) -> float | None:
+    """Factor of Iz for the thermal resistivity of the soil (D1, D2), 2.5 K·m/W when not given; ``None`` above
+    the formulas. A resistivity below their range is taken as its lowest value."""
+    if method not in BURIED:
+        return 1.0
+    rho = max(c.soil_resistivity_K_m_W or 2.5, 0.5)
+    piece = next((p for p in registry.iz_iec60364()["factors"]["soil"][method] if p[0] <= rho <= p[1]), None)
+    return None if piece is None else ((piece[2] + 2.5) / (piece[2] + rho)) ** piece[3]
+
+
+def harmonic_factor(c, neutral: bool) -> float | None:
+    """Factor of Iz of a three-phase cable whose neutral carries the third harmonics of the phase currents
+    (``third_harmonic_pct``); ``None`` above the formulas (the neutral is then sized for its own current)."""
+    if not c.third_harmonic_pct or not neutral:
+        return 1.0
+    reduced = c.neutral_section_mm2 is not None and c.neutral_section_mm2 < (c.section_mm2 or 0)
+    p = registry.iz_iec60364()["factors"]["harmonics"]["reduced_neutral" if reduced else "full_neutral"]
+    h = c.third_harmonic_pct / 100
+    return None if h > p["h_max"] else math.floor(100 / math.sqrt(1 + p["c"] * h * h)) / 100
+
+
+def _factors(c, method: str, neutral: bool) -> tuple[float, str] | str:
+    """(product of the grouping, soil and harmonic factors, their text for the message), or the text of the
+    first condition beyond the formulas."""
+    k, parts = 1.0, []
+    g = grouping_factor(c, method)
+    if g is None:
+        if (c.supports or 1) > 3 and method not in BURIED:
+            return _t("iec60364.u_supports", s=c.supports)
+        return _t("iec60364.u_grouped", n=c.grouped)
+    if g != 1.0:
+        k *= g
+        parts.append(_t("iec60364.k_grouped", n=c.grouped or 1, k=round(g, 2)))
+    s = soil_factor(c, method)
+    if s is None:
+        return _t("iec60364.u_soil", rho=c.soil_resistivity_K_m_W)
+    if c.soil_resistivity_K_m_W is not None and method in BURIED:
+        k *= s
+        parts.append(_t("iec60364.k_soil", rho=c.soil_resistivity_K_m_W, k=round(s, 2)))
+    h = harmonic_factor(c, neutral)
+    if h is None:
+        return _t("iec60364.u_harmonic", h=c.third_harmonic_pct)
+    if h != 1.0:
+        k *= h
+        parts.append(_t("iec60364.k_harmonic", h=c.third_harmonic_pct, k=h))
+    return k, "".join(", " + x for x in parts)
+
+
 def lookup_iz(material: str, insulation: str, method: str, loaded: int, section_mm2: float) -> float | None:
     """Iz (A) at the reference conditions, or ``None`` if the tables do not give this combination."""
     try:
@@ -109,6 +194,13 @@ def _rating(p) -> float | None:
         except ValueError:
             r = None
     return r
+
+
+def _neutral(doc: Document, p, loaded: int) -> bool:
+    """A three-phase circuit with a loaded neutral (``3P+N``, ``4P``, or the system when the poles are not
+    given): the third harmonics of the phases add up in it."""
+    poles = getattr(p, "poles", None)
+    return loaded == 3 and (poles in ("3P+N", "4P") or poles is None and doc.installation.system == "3P+N")
 
 
 def _loaded_conductors(doc: Document, p, node) -> int:
@@ -147,11 +239,15 @@ def iz_check(doc: Document, idx: Index):
             yield IZ.finding("info", _t("iec60364.iz_unavailable", material=c.material, insulation=c.insulation,
                                 section=c.section_mm2, method=method, loaded=loaded), nid)
             continue
-        iz = round(iz * amb[0] * (c.parallel or 1), 1)
+        f = _factors(c, method, _neutral(doc, p, loaded))
+        if isinstance(f, str):
+            yield IZ.finding("info", _t("iec60364.factor_uncovered", what=f), nid)
+            continue
+        iz = round(iz * amb[0] * f[0] * (c.parallel or 1), 1)
         if rating > iz:
             yield IZ.finding("warning", _t("iec60364.iz_exceeded", rating=rating, iz=iz, material=c.material,
                                 insulation=c.insulation, section=c.section_mm2, method=method, loaded=loaded,
-                                ambient=_ambient_text(method, amb[1], amb[2])), nid)
+                                ambient=_ambient_text(method, amb[1], amb[2]) + f[1]), nid)
 
 
 def _protection(idx: Index, nid: str, n):
@@ -188,9 +284,10 @@ def iz_estimate(doc: Document, idx: Index):
         if best is None:
             continue
         amb = _ambient(c, given or "air", insulation, 30.0)
-        if amb is None:
-            continue  # too hot for the table: not estimated either
-        iz = round(best * amb[0] * (c.parallel or 1), 1)
+        f = _factors(c, given or "air", _neutral(doc, p, loaded))
+        if amb is None or isinstance(f, str):
+            continue  # beyond the tables: not estimated either
+        iz = round(best * amb[0] * f[0] * (c.parallel or 1), 1)
         estimated.append(_tag(n, nid))
         if rating > iz:
             yield IZ_ESTIMATE.finding("warning", _t("iec60364.iz_estimate_exceeded", rating=rating, iz=iz,

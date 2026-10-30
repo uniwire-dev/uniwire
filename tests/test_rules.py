@@ -190,6 +190,56 @@ def test_iz_reads_the_ambient_temperature_and_the_iec_names_d1_d2():
     assert not [f for f in iz_findings(dict(cable, install="D2"), 32) if "not covered" in f.message]
 
 
+def test_iz_grouping_soil_and_harmonic_factors():
+    """Formulas never above the factors of IEC 60364-5-52: fewer circuits, wider spacing, a cooler soil or fewer
+    harmonics never lower Iz; beyond their range, Iz is not checked and said."""
+    from uniwire.model import Cable
+    from uniwire.rules.iec60364 import grouping_factor, harmonic_factor, soil_factor
+
+    def g(method="C", **kw):
+        return grouping_factor(Cable(**kw), method)
+    assert g() == g(grouped=1) == 1 and g(grouped=1, arrangement="ceiling") < 1
+    for arr in ("bunched", "single_layer", "ceiling", "perforated_tray", "ladder"):
+        f = [g(grouped=n, arrangement=arr) for n in range(1, 21)]
+        assert all(a >= b for a, b in zip(f, f[1:])) and 0.3 < f[-1] < 1, arr
+    assert g(grouped=4, arrangement="bunched") < g(grouped=4, arrangement="ladder")
+    assert g(grouped=21) is None
+    stacked = [g(grouped=4, arrangement="ladder", supports=s) for s in (1, 2, 3)]
+    assert stacked[0] > stacked[1] > stacked[2] and g(grouped=4, arrangement="ladder", supports=4) is None
+    for m in ("D1", "D2"):
+        by_spacing = [g(m, grouped=4, spacing_m=d) for d in (0, 0.125, 0.25, 0.5, 1)]
+        assert all(a <= b for a, b in zip(by_spacing, by_spacing[1:])) and by_spacing[0] < 0.8, m
+        assert g(m, grouped=7) is None
+    assert g("D1", grouped=3, cores="3x(1x95)") < g("D1", grouped=3, cores="4G")  # single cores, one duct each
+
+    def s(m, rho):
+        return soil_factor(Cable(soil_resistivity_K_m_W=rho), m)
+    for m in ("D1", "D2"):
+        f = [s(m, r) for r in (0.5, 0.7, 1, 1.5, 2, 2.5, 3)]
+        assert all(a > b for a, b in zip(f, f[1:])) and f[5] == 1, m
+        assert s(m, 0.2) == s(m, 0.5) and s(m, 3.5) is None
+    assert s("D2", 1) > s("D1", 1) > 1 and s("C", 1) == 1  # in the air, no effect
+
+    def h(pct, neutral=True, **kw):
+        return harmonic_factor(Cable(third_harmonic_pct=pct, section_mm2=50, **kw), neutral)
+    assert h(0) == h(30, neutral=False) == 1 and h(30) == 0.85 and h(50) == 0.7 and h(55) is None
+    assert h(15, neutral_section_mm2=25) < h(15) and h(20, neutral_section_mm2=25) is None
+
+    cable = {"section_mm2": 6, "material": "Cu", "insulation": "PVC", "install": "C", "ambient_C": 30}  # 41 A
+
+    def iz_findings(c, in_A=32, poles="1P+N"):
+        return [f for f in check(iz_doc(c, in_A, poles)) if f.rule == "iec60364.iz"]
+    assert not iz_findings(cable)
+    fs = iz_findings(dict(cable, grouped=4))  # bunched: 0.64
+    assert [f.level for f in fs] == ["warning"] and "×0.64" in fs[0].message
+    assert not iz_findings(dict(cable, grouped=4, arrangement="single_layer"), 25)
+    assert [f.level for f in iz_findings(dict(cable, grouped=30))] == ["info"]
+    assert not iz_findings(cable, 40, "3P+N")  # 3 loaded conductors: 41 A
+    fs = iz_findings(dict(cable, third_harmonic_pct=40), 40, "3P+N")  # x0.78
+    assert [f.level for f in fs] == ["warning"] and "40 %" in fs[0].message
+    assert not iz_findings(dict(cable, third_harmonic_pct=40), 40, "3P")  # no neutral: no harmonic current in it
+
+
 def test_iz_profile_not_active_by_default():
     d = load({"sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 63, "cable": {
         "section_mm2": 1.5, "material": "Cu", "insulation": "PVC", "install": "C"}}]}]})

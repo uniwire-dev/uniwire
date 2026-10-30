@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uniwire.sh/schema/v1/uniwire.schema.json",
   "title": "uniwire: electrical installation",
-  "description": "uniwire 1.0.0 exchange format for describing electrical installations, drawn as single-line and multi-line diagrams (tree topology + links, characteristics, rendering preferences).",
+  "description": "uniwire 1.1.0 exchange format for describing electrical installations, drawn as single-line and multi-line diagrams (tree topology + links, characteristics, rendering preferences).",
   "$defs": {
     "Appliance": {
       "additionalProperties": false,
@@ -2889,6 +2889,97 @@
           "default": null,
           "description": "Ambient temperature used for calculation (°C)",
           "title": "Ambient C"
+        },
+        "grouped": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Circuits or multicore cables laid together, this one included (on one support when 'supports' is given): grouping factor of Iz",
+          "title": "Grouped"
+        },
+        "arrangement": {
+          "anyOf": [
+            {
+              "enum": [
+                "bunched",
+                "single_layer",
+                "ceiling",
+                "perforated_tray",
+                "ladder"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How grouped cables are laid in air: 'bunched' (in conduit or trunking, on a surface, enclosed; the default), 'single_layer' (one layer on a wall, floor or unperforated tray), 'ceiling' (one layer, touching, fixed under a wooden ceiling), 'perforated_tray', 'ladder' (or cleats)",
+          "title": "Arrangement"
+        },
+        "supports": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Trays or ladders stacked one above another ('arrangement' perforated_tray or ladder); 'grouped' then counts the cables on one of them",
+          "title": "Supports"
+        },
+        "spacing_m": {
+          "anyOf": [
+            {
+              "description": "Clear distance between grouped circuits in the ground, methods D1 and D2 (0: touching, the default)",
+              "ge": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Spacing M"
+        },
+        "soil_resistivity_K_m_W": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Thermal resistivity of the soil, methods D1 and D2 (K·m/W; 2.5 when not given)",
+          "title": "Soil Resistivity K M W"
+        },
+        "third_harmonic_pct": {
+          "anyOf": [
+            {
+              "description": "Third-harmonic content of the phase currents: factor of Iz of a three-phase cable whose neutral carries them",
+              "ge": 0,
+              "le": 100,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Third Harmonic Pct"
         },
         "status": {
           "anyOf": [
@@ -28050,7 +28141,7 @@
       "title": "$Schema"
     },
     "uniwire": {
-      "default": "1.0.0",
+      "default": "1.1.0",
       "description": "Format version (semver)",
       "pattern": "^1\\.\\d+\\.\\d+$",
       "title": "uniwire",
