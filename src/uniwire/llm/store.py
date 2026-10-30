@@ -3,8 +3,9 @@
 Assistants copy links into their replies token by token, and a long ``#doc=`` payload does not survive that copy.
 With ``uniwire-mcp --store DIR``, the links returned by the tools are short instead
 (``https://uniwire.sh/viewer/#d=<id>``): the server keeps the document text in ``DIR`` and serves it at
-``GET /doc/<id>``. The id is derived from the content (the same document gives the same link) and cannot be
-guessed without it. Documents expire ``ttl_days`` after their last use; the store also bounds the total size by
+``GET /doc/<id>``. The id is derived from the content and a secret key of the store, kept in ``DIR/.key`` (the same
+document gives the same link, and nobody can work out the link of a document, even one they know, without the key).
+Documents expire ``ttl_days`` after their last use; the store also bounds the total size, checked at each write, by
 removing the oldest documents first. Anyone holding a link may delete its document before then: an empty marker
 ``<id>.deleted`` remains for ``ttl_days`` so that the link can say so, and storing the same text again (a new
 request from an assistant) removes it.
@@ -13,8 +14,10 @@ request from an assistant) removes it.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import os
 import re
+import secrets
 import tempfile
 import time
 from pathlib import Path
@@ -25,9 +28,9 @@ ID_LENGTH = 12  # 62**12 ~ 3e21
 ID_RE = re.compile(rf"^[0-9A-Za-z]{{{ID_LENGTH}}}$")
 
 
-def doc_id(text: str) -> str:
-    """Content-derived id of a document text (base62 of its SHA-256, truncated)."""
-    n = int.from_bytes(hashlib.sha256(text.encode("utf-8", "replace")).digest(), "big")
+def doc_id(text: str, key: bytes = b"") -> str:
+    """Content-derived id of a document text (base62 of its HMAC-SHA-256 with ``key``, truncated)."""
+    n = int.from_bytes(hmac.new(key, text.encode("utf-8", "replace"), hashlib.sha256).digest(), "big")
     out = []
     for _ in range(ID_LENGTH):
         n, r = divmod(n, 62)
@@ -46,6 +49,23 @@ class DocStore:
         self.max_total_bytes = max_total_bytes
         self.max_doc_bytes = max_doc_bytes
         self._last_prune = 0.0
+        self._total: Optional[int] = None  # bytes of the stored documents, counted by the first prune
+        self.key = self._key()
+
+    def _key(self) -> bytes:
+        """The secret key of the ids, created with the store (shared by the processes using the same folder)."""
+        path = self.root / ".key"
+        try:
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            pass
+        else:
+            with os.fdopen(fd, "wb") as f:
+                f.write(secrets.token_bytes(32))
+        key = path.read_bytes()
+        if len(key) < 32:  # pragma: no cover - a key file cut short (disk full while it was written)
+            raise OSError(f"{path}: damaged key; remove the file to start new links")
+        return key
 
     def _path(self, id_: str) -> Path:
         return self.root / f"{id_}.json"
@@ -55,7 +75,7 @@ class DocStore:
         data = text.encode("utf-8", "replace")
         if len(data) > self.max_doc_bytes:
             return None
-        id_ = doc_id(text)
+        id_ = doc_id(text, self.key)
         path = self._path(id_)
         self._marker(id_).unlink(missing_ok=True)  # stored again after a deletion: a new request
         if path.exists():
@@ -65,7 +85,9 @@ class DocStore:
             with os.fdopen(fd, "wb") as f:
                 f.write(data)
             os.replace(tmp, path)
-        if time.time() - self._last_prune > 3600:
+            if self._total is not None:
+                self._total += len(data)
+        if self._total is None or self._total > self.max_total_bytes or time.time() - self._last_prune > 3600:
             self.prune()
         return id_
 
@@ -94,7 +116,13 @@ class DocStore:
         if not path.exists():
             return False
         self._marker(id_).touch()
-        path.unlink(missing_ok=True)
+        try:
+            size = path.stat().st_size
+            path.unlink()
+        except FileNotFoundError:
+            return True
+        if self._total is not None:
+            self._total -= size
         return True
 
     def deleted(self, id_: str) -> bool:
@@ -107,7 +135,8 @@ class DocStore:
             return False
 
     def prune(self) -> None:
-        """Remove expired documents, then the oldest ones while the store is over ``max_total_bytes``."""
+        """Remove expired documents, then, when the store is over ``max_total_bytes``, the oldest ones down to 90 % of
+        it (room for the next writes before another pass over the folder)."""
         self._last_prune = now = time.time()
         files = []
         for p in self.root.iterdir():
@@ -120,8 +149,10 @@ class DocStore:
             elif p.suffix == ".json":
                 files.append((st.st_mtime, st.st_size, p))
         total = sum(size for _, size, _ in files)
+        target = self.max_total_bytes if total <= self.max_total_bytes else self.max_total_bytes * 0.9
         for _, size, p in sorted(files):
-            if total <= self.max_total_bytes:
+            if total <= target:
                 break
             p.unlink(missing_ok=True)
             total -= size
+        self._total = total

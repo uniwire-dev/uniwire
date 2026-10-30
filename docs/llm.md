@@ -76,28 +76,34 @@ endpoint runs). Public mode refuses file paths and file writes and bounds every 
 | Document | 2,000,000 characters of JSON; 1500 nodes, counted after templates are applied, auxiliary and link devices included; 256 levels of nesting (this one applies everywhere) |
 | `render` | 40 sheets; 20,000,000 bytes of output (all SVG sheets together, or the PDF) |
 | `apply_patch` | 500 operations per call; the patched document must stay within the document limits |
+| Results | 30,000,000 characters of JSON for any tool result; `normalize` 4,000,000 (templates applied) |
 | Time and memory | the document tools (`validate`, `check`, `describe`, `apply_patch`, `render`, `wiring`, `bom`, `normalize`, `viewer_link`) run in worker processes: `--workers` of them (default 2, the concurrency limit), each killed and replaced after `--timeout` seconds (default 20). On Linux each worker is also limited to `--memory-mb` of address space (default 768) and to a CPU-time budget per call |
 | HTTP | request bodies over 3 MB are refused (413) before the JSON is parsed |
 
 A call beyond a limit fails with a short tool error (no stack trace), for example `document too large for this
 server: 1601 nodes (at most 1500)`, `timed out after 20 s` or `server busy`. `GET /healthz` answers 200 `ok`
 for container health checks. `uniwire-mcp --help` lists the same limits. Without `--public` (stdio, or HTTP for
-your own use) none of these limits apply and the tools run in the server process.
+your own use) none of these limits apply and the tools run in the server process: serve other machines only with
+`--public` (the server warns when `--host` is not a loopback address without it).
 
 #### Short links
 
 Assistants retype links into their replies, and a long `#doc=` payload rarely survives that copy. With
 `--store DIR`, the links returned by the tools are short (`https://uniwire.sh/viewer/#d=<id>`, about 40
 characters): the server keeps the document text in `DIR` and serves it at `GET /doc/<id>`. The id is derived from
-the content (the same document gives the same link) and cannot be guessed without it. A document is deleted 30
-days after its last use, and the oldest documents go first when the store exceeds 500 MB. The hosted endpoint runs
+the content and a secret key kept in `DIR/.key` (the same document gives the same link; without the key nobody can
+work out the link of a document, even one they know). Only diagrams are kept (JSON with `sources` or `uniwire`). A
+document is deleted 30 days after its last use, and the oldest documents go first when the store exceeds 500 MB,
+checked at each write. The hosted endpoint runs
 with `--store`: documents sent to its tools are kept on that basis. `--link-base` sets the editor URL of the links.
 
 Over HTTP with `--store`, `pdf_url` is a plain PDF link as well (`https://uniwire.sh/pdf/<id>`): the server draws
 the PDF with the library (in a worker process in public mode) and serves it at `GET /pdf/<id>`, named after the
 document title. It works without the editor and cannot be mistaken for `viewer_url`. `--pdf-base` sets its prefix
 (default: the editor URL with `/viewer/` replaced by `/pdf/`). `GET /svg/<id>` serves the first sheet as SVG, which
-the web editor shows while its engine starts, and `GET /doc/<id>` the document text.
+the web editor shows while its engine starts, and `GET /doc/<id>` the document text. The PDFs and SVGs drawn are
+kept in memory (64 MB, the least recently used dropped first): a link opened again, or by many people at once, is
+drawn once. `POST /doc/<id>/delete` refuses a request sent by a page of another site (`Origin` header).
 
 The PDF of `GET /pdf/<id>` ends with a page "About this document", which is not a sheet of the diagram: the rule
 profiles applied and the findings, the scope of the checks, the links of the online copy and how to delete it, and

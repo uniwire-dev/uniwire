@@ -6,6 +6,20 @@ The format and the library are versioned separately: the format follows `1.y.z` 
 version. Before the library's 1.0, a `0.x.y` release adds features and fixes that keep existing documents and
 code working, and a `0.x.0` release may break compatibility (described here, with what to change).
 
+## Unreleased
+
+* Drawings: long texts are fitted in time proportional to their length (wrapping on several lines, cutting with an
+  ellipsis, title block cells); drawings of usual documents are unchanged.
+* MCP server, public mode: every tool result is bounded (30,000,000 characters of JSON, `normalize` 4,000,000),
+  checked in the worker process.
+* MCP server, short links: ids derive from the content and a secret key of the store (`DIR/.key`), so that the link
+  of a document cannot be worked out from its text; existing links keep working. Only diagrams are stored, the size
+  of the store is checked at each write, `/pdf` and `/svg` drawings are cached in memory, a deletion sent by a page
+  of another site is refused, and the error page of a PDF link no longer quotes the document.
+* `uniwire-mcp --http` warns when it listens on another address than loopback without `--public`.
+* Web editor: a document that takes more than a minute to draw stops the engine, which starts again, instead of
+  leaving the page waiting; it is drawn again once edited.
+
 ## 0.1.5 (2026-10-30)
 
 * Translations reviewed in every language: wrong meanings fixed (German "converter", Chinese and other languages on

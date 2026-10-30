@@ -54,6 +54,7 @@ from ..render.scene import (
     Text,
     arc_points,
     bbox,
+    cut_to_width,
     text_width,
     transform,
 )
@@ -766,12 +767,7 @@ def _fit_lines(lines: list[str], size: float, avail: float) -> tuple[list[str], 
     widest = max((text_width(t, size) for t in lines), default=0.0)
     if widest > avail:
         size = max(1.4, size * avail / widest)
-    out = []
-    for t in lines:
-        while len(t) > 3 and text_width(t, size) > avail:
-            t = t[:-2] + "…"
-        out.append(t)
-    return out, size
+    return [cut_to_width(t, size, avail) for t in lines], size
 
 
 def _feeder_cable(ln: MLNode, parent: dict[int, MLNode]) -> Optional[MLNode]:

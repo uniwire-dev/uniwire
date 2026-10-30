@@ -42,6 +42,7 @@ from ..render.scene import (
     Style,
     Text,
     bbox,
+    cut_to_width,
     text_units,
     text_width,
     transform,
@@ -465,9 +466,7 @@ def _annotate(ln: LNode, view: View, lang: str, avail_override: float | None = N
                 if max(text_width(u, size) for u in two) <= avail:
                     out += two
                     continue
-            while len(t) > 3 and text_width(t, size) > avail:
-                t = t[:-2] + "…"
-            out.append(t)
+            out.append(cut_to_width(t, size, avail))
         ln.ann = out
 
 
@@ -1619,10 +1618,14 @@ def _frame_label_tries(label: str, size: float, width: float) -> Iterator[tuple[
 
 
 NO_LINE_START = {"—", "–", "-", "/", ":", ";", "!", "?", "»", ")"}  # a separator ends a line, never starts one
+WRAP_EXACT = 40  # beyond so many words (or ten times as many characters), lines of even width rather than every
+#                 cut tried (that grows as words cubed)
 
 
 def _wrap_words(words: list[str], n: int, width: Callable[[str], float]) -> list[str]:
     """``words`` (:func:`text_units`: words, CJK characters) on ``n`` lines, the widest line as narrow as possible."""
+    if len(words) > WRAP_EXACT or sum(map(len, words)) > 10 * WRAP_EXACT:
+        return _wrap_even(words, n, width)
     best: Optional[list[str]] = None
     for cuts in _cuts(len(words), n):
         if any(words[c].strip() in NO_LINE_START for c in cuts) and len(words) > n + 1:
@@ -1631,6 +1634,21 @@ def _wrap_words(words: list[str], n: int, width: Callable[[str], float]) -> list
         if best is None or max(map(width, lines)) < max(map(width, best)):
             best = lines
     return best or ["".join(words).strip()]
+
+
+def _wrap_even(words: list[str], n: int, width: Callable[[str], float]) -> list[str]:
+    """``words`` on ``n`` lines of about the same width, in one pass (a text too long to try every cut)."""
+    acc, total = [0.0], 0.0
+    for u in words:
+        total += width(u)
+        acc.append(total)
+    cuts: list[int] = []
+    for k in range(1, n):
+        lo = (cuts[-1] if cuts else 0) + 1
+        c = next((i for i in range(lo, len(words) - (n - k) + 1) if acc[i] >= total * k / n), len(words) - (n - k))
+        cuts.append(max(c, lo))
+    bounds = [0, *cuts, len(words)]
+    return ["".join(words[a:b]).strip() for a, b in zip(bounds, bounds[1:])]
 
 
 def _cuts(m: int, n: int) -> Iterator[tuple[int, ...]]:
@@ -2879,8 +2897,7 @@ def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: 
                     size = max(1.3, size * room / widest)
                 step = size * 1.2
                 for i, line in enumerate(lines):
-                    while len(line) > 4 and text_width(line, size) > room:
-                        line = line[:-2] + "…"
+                    line = cut_to_width(line, size, room, keep=4)
                     x = (cx0 + cx1) / 2 + 0.7 + (i - (len(lines) - 1) / 2) * step
                     cg.add(Text((x, y + h - 1.0), line, size, "start", "alphabetic", 90))
             else:
