@@ -6,7 +6,7 @@ The format and the library are versioned separately: the format follows `1.y.z` 
 version. Before the library's 1.0, a `0.x.y` release adds features and fixes that keep existing documents and
 code working, and a `0.x.0` release may break compatibility (described here, with what to change).
 
-## Unreleased
+## 0.1.5 (2026-10-30)
 
 * Translations reviewed in every language: wrong meanings fixed (German "converter", Chinese and other languages on
   RCD selectivity, which now says to use a selective type S device, the French messages of the vde0100 profile on
