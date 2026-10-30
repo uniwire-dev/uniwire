@@ -6,7 +6,7 @@ The format and the library are versioned separately: the format follows `1.y.z` 
 version. Before the library's 1.0, a `0.x.y` release adds features and fixes that keep existing documents and
 code working, and a `0.x.0` release may break compatibility (described here, with what to change).
 
-## Unreleased
+## 0.1.6 (2026-10-30)
 
 * Drawings: long texts are fitted in time proportional to their length (wrapping on several lines, cutting with an
   ellipsis, title block cells); drawings of usual documents are unchanged.
@@ -17,6 +17,7 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   of the store is checked at each write, `/pdf` and `/svg` drawings are cached in memory, a deletion sent by a page
   of another site is refused, and the error page of a PDF link no longer quotes the document.
 * `uniwire-mcp --http` warns when it listens on another address than loopback without `--public`.
+* Web editor on uniwire.sh: each PDF export adds one to an hourly total kept by the site (nothing else is sent).
 * Web editor: a document that takes more than a minute to draw stops the engine, which starts again, instead of
   leaving the page waiting; it is drawn again once edited.
 
