@@ -36,7 +36,7 @@ When the user asks for a PDF, add `&download=pdf` at the end of the link: the ed
 ## Check and draw
 
 - [Web editor](https://uniwire.sh/viewer/): paste a document to validate, check and draw it in the browser; or open `https://uniwire.sh/viewer/#doc=<base64url of the raw-deflated JSON>` to show a document directly (recipe above)
-- [Hosted MCP server](https://mcp.uniwire.sh/mcp): streamable HTTP endpoint with the validate, check, render and export tools
+- [Hosted MCP server](https://mcp.uniwire.sh/mcp): streamable HTTP endpoint with the validate, check, render and export tools; in ChatGPT, the [uniwire plugin](https://chatgpt.com/plugins/plugin_asdk_app_6ace27d31ab08191b243ec37826969c2) of the plugin directory
 
 ## Docs
 

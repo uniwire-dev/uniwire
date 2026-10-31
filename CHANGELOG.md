@@ -6,6 +6,11 @@ The format and the library are versioned separately: the format follows `1.y.z` 
 version. Before the library's 1.0, a `0.x.y` release adds features and fixes that keep existing documents and
 code working, and a `0.x.0` release may break compatibility (described here, with what to change).
 
+## Unreleased
+
+* Docs: uniwire is in ChatGPT's plugin directory ([uniwire in ChatGPT](https://chatgpt.com/plugins/plugin_asdk_app_6ace27d31ab08191b243ec37826969c2)); the hosted server's
+  logging is described as it is (the request and the caller's address in the security logs, one year).
+
 ## 0.1.6 (2026-10-30)
 
 * Drawings: long texts are fitted in time proportional to their length (wrapping on several lines, cutting with an
