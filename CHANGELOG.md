@@ -10,6 +10,12 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 * Docs: uniwire is in ChatGPT's plugin directory ([uniwire in ChatGPT](https://chatgpt.com/plugins/plugin_asdk_app_6ace27d31ab08191b243ec37826969c2)); the hosted server's
   logging is described as it is (the request and the caller's address in the security logs, one year).
+* Rules, iec60364: the current-carrying capacity of a cable is no longer compared with a protection on the other side
+  of a converter (the AC breaker of an inverter against the DC cables of its strings).
+* A setting range given as a single number (`"range_A": 10`) is read as `"10"`, like `[9, 13]` is read as `"9-13"`,
+  instead of making the document invalid.
+* Drawings: the unit of a setting range is written only after numbers (`9-13 A`); a range given in words
+  (`"to confirm"`) is shown as written.
 
 ## 0.1.6 (2026-10-30)
 
