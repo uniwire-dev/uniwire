@@ -18,8 +18,8 @@ as `io.github.uniwire-dev/uniwire`, so clients that browse the registry find it 
 id, draw them and export wire lists and bills of materials. Their results carry two links for the user: one opens
 the drawing in the [web editor](https://uniwire.sh/viewer/), the other is the PDF.
 
-**ChatGPT**: add a custom MCP server (app / connector) with the URL above and no authentication, then mention
-`@uniwire` in a conversation. Custom servers need ChatGPT's developer mode.
+**ChatGPT**: uniwire is in ChatGPT's plugin directory. Open [uniwire in ChatGPT](https://chatgpt.com/plugins/plugin_asdk_app_6ace27d31ab08191b243ec37826969c2), choose *Try in chat*,
+then mention `@uniwire` in a conversation. Nothing to configure, no developer mode.
 
 **Claude** (claude.ai and Claude Desktop): Settings, Connectors, *Add custom connector*, paste the URL above.
 
@@ -47,8 +47,9 @@ or in `.vscode/mcp.json`:
 
 The hosted server bounds every call (document size, sheets, time; see [Public server](llm.md#public-server)) and
 keeps the documents of its results for 30 days so that the links it returns stay short
-([Short links](llm.md#short-links)). It logs which tool was called, the outcome and the duration, never the
-caller's address.
+([Short links](llm.md#short-links)). It logs which tool was called, the outcome and the duration. Like every request
+to uniwire.sh, the request itself is kept with the caller's address in the security logs for one year
+([privacy](https://uniwire.sh/privacy)).
 
 ## No MCP: any assistant that reads web pages
 
