@@ -72,6 +72,17 @@ def test_rcd_free_text_delay_is_displayed():
     assert "inst" not in lines[3]
 
 
+def test_setting_range_unit_only_after_numbers():
+    doc = load({"sources": [{"type": "grid", "children": [
+        {"type": "thermal_relay", "range_A": "9-13"},
+        {"type": "thermal_relay", "range_A": "to be set on site"},
+        {"type": "main_breaker", "range_A": "15-45 A"}]}]})
+    lines = [" ".join(annotation(n)) for n in doc.sources[0].children]
+    assert "9-13 A" in lines[0]
+    assert "to be set on site" in lines[1] and "site A" not in lines[1]
+    assert "15-45 A" in lines[2] and "A A" not in lines[2]
+
+
 def test_points_singular_and_plural():
     doc = load({"sources": [{"type": "grid", "children": [{"type": "lighting", "points": 1}, {"type": "socket", "points": 4}]}]})
     one, four = doc.sources[0].children
