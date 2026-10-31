@@ -35,6 +35,7 @@ from ..i18n import t as _t
 from ..model import Document
 from ..resolve import Index
 from . import PROFILES, describe, rule
+from .core import VOLTAGE_CONVERTERS
 
 SOURCE = "IEC 60364-5-52"
 IZ = describe("iec60364.iz", SOURCE, "high")
@@ -252,8 +253,16 @@ def iz_check(doc: Document, idx: Index):
 
 def _protection(idx: Index, nid: str, n):
     """The protection feeding the cable of ``n``: the node itself if it is one, otherwise its nearest protective
-    ancestor."""
-    return next((a for a in [n] + idx.ancestors(nid) if a.type in PROTECTIONS), None)  # type: ignore[attr-defined]
+    ancestor on the same side of any converter (a breaker on the AC side does not protect the DC cables of an
+    inverter's strings)."""
+    if n.type in PROTECTIONS:  # type: ignore[attr-defined]
+        return n
+    for a in idx.ancestors(nid):
+        if a.type in VOLTAGE_CONVERTERS:  # type: ignore[attr-defined]
+            return None
+        if a.type in PROTECTIONS:  # type: ignore[attr-defined]
+            return a
+    return None
 
 
 def _tag(n, nid: str) -> str:
