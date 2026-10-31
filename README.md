@@ -53,7 +53,8 @@ review and diff.
   and a hosted MCP endpoint at <https://mcp.uniwire.sh/mcp>, plus
   [llms.txt](https://uniwire.sh/llms.txt) for assistants (full reference card
   included). Setup for ChatGPT, Claude, Cursor and VS Code:
-  [uniwire in your assistant](https://uniwire.sh/docs/assistants/); details in
+  [uniwire in your assistant](https://uniwire.sh/docs/assistants/) (in ChatGPT, the
+  [uniwire plugin](https://chatgpt.com/plugins/plugin_asdk_app_6ace27d31ab08191b243ec37826969c2) of the plugin directory); details in
   [LLM tools](https://uniwire.sh/docs/llm/).
 
 ## Gallery
