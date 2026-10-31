@@ -61,6 +61,12 @@ def part_number(node: Any) -> Optional[str]:
     return (prod.part_number if prod is not None and prod.part_number else None) or _g(node, "part_number")
 
 
+def _amps(text: Any) -> str:
+    """A setting range with its unit, '9-13 A'; a range given as words ('to confirm') stays as written."""
+    s = str(text or "")
+    return f"{s} A" if re.search(r"\d", s) and not re.search(r"\d\s*A\b", s) else s
+
+
 def protection_short(node: Any) -> str:
     """'C16', '40 A 30 mA', 'gG 32 A', '63 A / 32 A'...: the number and its unit apart, as everywhere on the drawing."""
     t = node.type
@@ -71,8 +77,8 @@ def protection_short(node: Any) -> str:
         rating = f"{node.curve}{fmt(in_a)}" if node.curve else (fmt(in_a, " A") if in_a else "")
         return f"{rating} {fmt_sensitivity(node.idn_mA)}".strip()
     if t == "main_breaker":
-        r = node.range_A or fmt(in_a)
-        return f"{r} A {fmt_sensitivity(node.idn_mA)}".strip()
+        r = _amps(node.range_A) if node.range_A else fmt(in_a, " A") if in_a else ""
+        return f"{r} {fmt_sensitivity(node.idn_mA)}".strip()
     if t == "rcd":
         return f"{fmt(in_a, ' A')} {fmt_sensitivity(node.idn_mA)}".strip()
     if t == "fuse":
@@ -303,7 +309,7 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
             lines.insert(0, g("range"))
     elif t == "main_breaker":
         r = g("range_A")
-        lines += [f"{r} A" if r else fmt(g("in_A"), " A") if g("in_A") else "", _rcd_text(node), g("poles") or "",
+        lines += [_amps(r) if r else fmt(g("in_A"), " A") if g("in_A") else "", _rcd_text(node), g("poles") or "",
                   fmt(g("subscribed_kVA"), " kVA") if g("subscribed_kVA") else ""]
     elif t == "rcd":
         lines += [fmt(g("in_A"), " A") if g("in_A") else "", _rcd_text(node),
@@ -318,7 +324,7 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
         rng = str(g("range_A") or "")
         if normalize_lang(lang) in DECIMAL_COMMA:  # the decimal comma of the rest of the text
             rng = re.sub(r"(?<=\d)\.(?=\d)", ",", rng)
-        lines += [f"{rng} A" if rng else "", f"Ir {fmt(g('setting_A'))} A" if g("setting_A") else ""]
+        lines += [_amps(rng), f"Ir {fmt(g('setting_A'))} A" if g("setting_A") else ""]
     elif t == "motor_starter":
         lines += [fmt(g("p_kW"), " kW") if g("p_kW") else "", fmt(g("in_A"), " A") if g("in_A") else ""]
     elif t == "transfer_switch":

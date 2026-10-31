@@ -41,6 +41,13 @@ def test_cores_and_ranges():
     assert len(_notes(d)) == 5
 
 
+def test_single_value_range():
+    d = _doc({"type": "motor_starter", "id": "M1", "in_A": 16, "children": [
+        {"type": "thermal_relay", "id": "F1", "range_A": 10, "children": [{"type": "motor"}]}]})
+    relay = uniwire.load(d).sources[0].children[0].children[0]
+    assert relay.range_A == "10" and len(_notes(d)) == 1
+
+
 def test_meta_and_views():
     d = _doc({"type": "socket"}, meta={"title": "Shop", "description": "small shop", "notes": ["n1"]},
              views=[{"type": "multi_line"}])

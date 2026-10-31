@@ -65,6 +65,10 @@ class _Tolerance:
                 new = f"{v[0]:g}-{v[1]:g}"
                 self.note(where, f, v, new)
                 n[f] = new
+            elif isinstance(v, (int, float)) and not isinstance(v, bool):  # a single value: '10'
+                new = f"{v:g}"
+                self.note(where, f, v, new)
+                n[f] = new
         cable = n.get("cable")
         if isinstance(cable, dict):
             self.cable(cable, where)

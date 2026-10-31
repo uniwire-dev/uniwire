@@ -521,6 +521,18 @@ def test_iz_estimated_when_the_cable_is_incomplete():
     assert not [f for f in check(iz_doc(full, 20)) if f.rule == "iec60364.iz-estimate"]
 
 
+def test_iz_not_judged_across_an_inverter():
+    # the AC breaker feeds the inverter; the strings behind it are DC cables it does not protect
+    doc = load({"profiles": ["iec60364"], "installation": {"system": "1P+N"},
+                "sources": [{"type": "grid", "children": [
+                    {"type": "breaker", "in_A": 50, "children": [
+                        {"type": "inverter", "cable": {"section_mm2": 10}, "children": [
+                            {"type": "pv_array", "id": "S1", "cable": {"section_mm2": 4}},
+                            {"type": "pv_array", "id": "S2", "cable": {"section_mm2": 4}}]}]}]}]})
+    fs = [f for f in check(doc) if f.rule == "iec60364.iz-estimate"]
+    assert [f.level for f in fs] == ["info"] and "S1" not in fs[0].message
+
+
 def test_iec60364_sockets_need_30ma():
     def d(children, premises="commercial", profiles=("iec60364",)):
         return load({"profiles": list(profiles), "installation": {"premises": premises},
