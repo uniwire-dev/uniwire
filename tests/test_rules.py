@@ -533,6 +533,23 @@ def test_iz_not_judged_across_an_inverter():
     assert [f.level for f in fs] == ["info"] and "S1" not in fs[0].message
 
 
+def test_three_phase_load_on_a_single_phase_circuit():
+    def doc(*kids):
+        return load({"installation": {"earthing": "TT", "system": "3P+N", "un_V": 400},
+                     "sources": [{"type": "grid", "children": [{"type": "board", "children": list(kids)}]}]})
+
+    def flagged(*kids):
+        return [f.node for f in check(doc(*kids)) if f.rule == "core.phases-feeder"]
+
+    motor = {"type": "motor", "id": "M", "phases": 3}
+    assert flagged({"type": "breaker", "poles": "1P+N", "in_A": 16, "children": [motor]}) == ["M"]
+    assert flagged({"type": "breaker", "in_A": 16, "children": [{**motor, "cable": {"cores": "3G", "section_mm2": 2.5}}]}) == ["M"]
+    assert not flagged({"type": "breaker", "poles": "3P", "in_A": 16, "children": [motor]})
+    assert not flagged({"type": "breaker", "in_A": 16, "children": [motor]})  # nothing says otherwise
+    assert not flagged({"type": "breaker", "poles": "1P+N", "in_A": 16, "children": [  # a drive makes three phases
+        {"type": "motor_starter", "method": "vfd", "children": [motor]}]})
+
+
 def test_iec60364_sockets_need_30ma():
     def d(children, premises="commercial", profiles=("iec60364",)):
         return load({"profiles": list(profiles), "installation": {"premises": premises},

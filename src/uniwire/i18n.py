@@ -67,6 +67,8 @@ EN: dict[str, str] = {
     "core.terminal_node": "a {type} node is a leaf and feeds nothing: draw it below the device that connects it (its "
                           "protection, converter or inverter), power may flow both ways",
     "core.rating_cascade": "rating {in_a:g} A higher than the upstream protection {up} ({up_in_a:g} A)",
+    "core.phases_feeder": "three-phase load on a circuit with {live} live conductors (single-phase): check its "
+                          "phases or its feeder",
     "core.interlock_closed": "interlock {lock!r}: {count} members closed in normal operation ({members}) for {keys} key(s)",
     "core.interlock_single": "lock {lock!r} is used by a single member and declared in no 'interlocks' entry: it interlocks nothing",
     "core.interlock_unused": "declared interlock {lock!r} is used by {count} member(s) ('locks'), at least 2 expected",
@@ -391,6 +393,8 @@ FR: dict[str, str] = {
                           "raccorde (sa protection, son convertisseur ou son onduleur), l'énergie peut circuler dans "
                           "les deux sens",
     "core.rating_cascade": "calibre {in_a:g} A supérieur à la protection amont {up} ({up_in_a:g} A)",
+    "core.phases_feeder": "récepteur triphasé sur un circuit à {live} conducteurs actifs (monophasé) : vérifier "
+                          "ses phases ou son départ",
     "core.interlock_closed": "verrouillage {lock!r} : {count} membres fermés en exploitation normale ({members}) pour {keys} clé(s)",
     "core.interlock_single": "la serrure {lock!r} n'équipe qu'un seul membre et n'est déclarée dans aucune entrée 'interlocks' : elle ne verrouille rien",
     "core.interlock_unused": "le verrouillage déclaré {lock!r} n'équipe que {count} membre(s) ('locks'), 2 au moins attendus",
@@ -803,6 +807,8 @@ RU: dict[str, str] = {
                           "который он подключён (защита, преобразователь или инвертор), энергия может идти в обе "
                           "стороны",
     "core.rating_cascade": "номинал {in_a:g} А больше номинала вышестоящей защиты {up} ({up_in_a:g} А)",
+    "core.phases_feeder": "трёхфазный приёмник на линии с {live} рабочими проводниками (однофазной): проверьте "
+                          "число фаз или питающую линию",
     "core.interlock_closed": "блокировка {lock!r}: в нормальном режиме включено элементов: {count} ({members}) при числе ключей: {keys}",
     "core.interlock_single": "замок {lock!r} используется одним элементом и не объявлен ни в одной записи 'interlocks': "
                              "он ничего не блокирует",
@@ -1045,6 +1051,7 @@ ZH: dict[str, str] = {
     "core.terminal_node": "{type} 节点是末端节点，不应有下级回路：请将其画在连接它的电器（保护电器、变换器或逆变器）之下，"
                           "能量可双向流动",
     "core.rating_cascade": "额定电流 {in_a:g} A 大于上级保护电器 {up}（{up_in_a:g} A）",
+    "core.phases_feeder": "三相负载接在只有 {live} 根带电导体的回路（单相）上：请检查其相数或供电回路",
     "core.interlock_closed": "联锁 {lock!r}：正常运行时 {count} 个成员闭合（{members}），钥匙数为 {keys}",
     "core.interlock_single": "锁 {lock!r} 仅被一个成员使用，且未在任何 'interlocks' 条目中声明：不起联锁作用",
     "core.interlock_unused": "已声明的联锁 {lock!r} 被 {count} 个成员使用（'locks'），至少应为 2 个",
@@ -1270,6 +1277,8 @@ ES: dict[str, str] = {
     "core.terminal_node": "un nodo {type} es una hoja y no alimenta nada: colocarlo bajo el aparato que lo conecta "
                           "(su protección, convertidor o inversor), la energía puede circular en ambos sentidos",
     "core.rating_cascade": "calibre {in_a:g} A superior a la protección aguas arriba {up} ({up_in_a:g} A)",
+    "core.phases_feeder": "receptor trifásico en un circuito con {live} conductores activos (monofásico): "
+                          "verificar sus fases o su alimentación",
     "core.interlock_closed": "enclavamiento {lock!r}: {count} miembros cerrados en servicio normal ({members}) para {keys} "
                              "llave(s)",
     "core.interlock_single": "la cerradura {lock!r} la usa un solo miembro y no está declarada en ninguna entrada "
@@ -1525,6 +1534,8 @@ DE: dict[str, str] = {
     "core.transfer_source": "Netzumschalter ohne zweite Quelle ('transfer'-Verbindung)",
     "core.terminal_node": "ein Knoten {type} ist ein Endknoten und speist nichts: unter dem Gerät anordnen, über das er angeschlossen ist (sein Schutzorgan, Umrichter oder Wechselrichter); die Energie kann in beide Richtungen fließen",
     "core.rating_cascade": "Nennstrom {in_a:g} A größer als der des vorgeschalteten Schutzorgans {up} ({up_in_a:g} A)",
+    "core.phases_feeder": "Drehstromverbraucher an einem Stromkreis mit {live} aktiven Leitern (einphasig): "
+                          "Phasenzahl oder Zuleitung prüfen",
     "core.interlock_closed": "Verriegelung {lock!r}: {count} Schaltgeräte im Normalbetrieb geschlossen ({members}) "
                              "bei {keys} Schlüssel(n)",
     "core.interlock_single": "Schloss {lock!r} wird von nur einem Schaltgerät verwendet und in keinem "
@@ -1783,6 +1794,8 @@ PT: dict[str, str] = {
     "core.transfer_source": "chave de transferência sem segunda fonte (ligação 'transfer')",
     "core.terminal_node": "um nó {type} é uma folha e não alimenta nada: desenhe-o abaixo do dispositivo que o conecta (sua proteção, conversor ou inversor), a energia pode circular nos dois sentidos",
     "core.rating_cascade": "corrente nominal {in_a:g} A acima da proteção a montante {up} ({up_in_a:g} A)",
+    "core.phases_feeder": "carga trifásica em um circuito com {live} condutores vivos (monofásico): verificar "
+                          "suas fases ou o circuito que a alimenta",
     "core.interlock_closed": "intertravamento {lock!r}: {count} membros fechados em operação normal ({members}) para "
                              "{keys} chave(s)",
     "core.interlock_single": "a fechadura {lock!r} é usada por um só membro e não está declarada em nenhuma entrada "
