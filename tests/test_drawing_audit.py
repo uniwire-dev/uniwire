@@ -11,7 +11,8 @@ from uniwire import load
 from uniwire.render import default_view, render_pages, render_views
 from uniwire.render.scene import Group, Polyline, Text
 
-KNOWN: dict[str, int] = {}  # findings tolerated per example (single-line views)
+KNOWN: dict[str, int] = {"38": 1, "44": 1}  # findings tolerated per example (single-line views): an off-sheet text
+# on its own stub (38), a data link through the ellipsis of a protocol list (44)
 # multi-line view of every example: power links outside the tree still drawn along a conductor or a frame
 KNOWN_ML: dict[str, int] = {"49": 1, "50": 2, "53": 1}
 EXAMPLES = sorted((ROOT / "examples").glob("*.uniwire.json"))

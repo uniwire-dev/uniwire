@@ -55,6 +55,7 @@ from ..render.scene import (
     arc_points,
     bbox,
     cut_to_width,
+    text_units,
     text_width,
     transform,
 )
@@ -82,6 +83,7 @@ from .engine import (
     _device_homes,
     _is_dc,
     _signal_links,
+    _wrap_words,
     drawing_area,
     interlock_mark,
     sheet_node_ids,
@@ -774,7 +776,17 @@ def _abbr(key: str) -> str:
     return table.get(key) or ABBREVIATIONS["en"].get(key, "")
 
 
-def _fit_lines(lines: list[str], size: float, avail: float) -> tuple[list[str], float]:
+def _fit_lines(lines: list[str], size: float, avail: float, keep: int = 0) -> tuple[list[str], float]:
+    """``lines`` within ``avail``: a line too wide on two lines (the first ``keep`` lines whole: the tag), as long
+    as the text stays within seven lines; what is still too wide then makes it smaller, and is cut at last."""
+    wrapped: list[str] = []
+    for i, t in enumerate(lines):
+        units = text_units(t)
+        if i < keep or text_width(t, size) <= avail or len(units) < 2 or len(lines) + len(wrapped) - i > 6:
+            wrapped.append(t)
+            continue
+        wrapped += _wrap_words(units, 2, lambda u: text_width(u, size))
+    lines = wrapped
     widest = max((text_width(t, size) for t in lines), default=0.0)
     if widest > avail:
         size = max(1.4, size * avail / widest)
@@ -847,7 +859,7 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
             lines = lines[:5]
             if node.cable is not None and id(ln) not in shown_cable and cable_text(node.cable):
                 lines.append(" ".join(x for x in (node.cable.ref, node.cable.designation, drawn_cable_text(node.cable)) if x))
-            ln.ann, ln.ann_size = _fit_lines(lines, ANN_SIZE, ANN_MAX_W)
+            ln.ann, ln.ann_size = _fit_lines(lines, ANN_SIZE, ANN_MAX_W, keep=1 if tag else 0)
 
 
 def _assign_offsets(ln: MLNode, parent: Optional[MLNode]) -> None:

@@ -18,7 +18,7 @@ Seg = tuple[tuple[float, float], tuple[float, float]]
 @dataclass
 class Finding:
     kind: str  # "text_overlap", "text_on_symbol", "text_crossed", "text_on_conductor", "small_text", "shared_run",
-    # "link_on_conductor", "link_along_frame"
+    # "link_on_conductor", "link_along_frame", "truncated", "detour"
     what: str
     where: tuple[float, float]
 
@@ -62,12 +62,12 @@ SMALL_BY_DESIGN = {"conductors", "title-block", "notes", "uw-legend"}  # conduct
 TERMINALS = {"L1", "L2", "L3", "N", "PE", "PEN", "L", "L+", "L-", "+", "-", "U", "V", "W"}  # under a source bar
 
 
-def _marks(item: object, inside: bool = False) -> Iterator[Text]:
+def _marks(item: object, inside: bool = False, kinds: set[str] = SMALL_BY_DESIGN) -> Iterator[Text]:
     """Texts small by design: conductor marks (strokes, phases), title block, notes and legend."""
     if isinstance(item, Group):
-        inside = inside or bool(item.cls and SMALL_BY_DESIGN & set(item.cls.split()))
+        inside = inside or bool(item.cls and kinds & set(item.cls.split()))
         for i in item.items:
-            yield from _marks(i, inside)
+            yield from _marks(i, inside, kinds)
     elif inside and isinstance(item, Text):
         yield item
 
@@ -110,6 +110,14 @@ def _own(g: Group) -> Iterator[object]:
             yield i
 
 
+def _union(boxes: list[Box]) -> Box:
+    return min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes)
+
+
+def _inside(a: Box, b: Box) -> bool:
+    return b[0] <= a[0] and a[2] <= b[2] and b[1] <= a[1] and a[3] <= b[3]
+
+
 def _overlap(a: Box, b: Box) -> float:
     w = min(a[2], b[2]) - max(a[0], b[0])
     h = min(a[3], b[3]) - max(a[1], b[1])
@@ -135,9 +143,12 @@ def _run(p: Seg, q: Seg, gap: float) -> float:
     return 0.0
 
 
-def audit(root: Group) -> list[Finding]:
+def audit(root: Group, detours: bool = False) -> list[Finding]:
+    """Findings on the sheet ``root``; ``detours``: also links going far round (a hint to look at, not a fault:
+    the short way may cross what it must not)."""
     texts: list[tuple[Text, Box, Optional[str]]] = []
     links: dict[str, list[Seg]] = {}
+    paths: dict[str, list[tuple[float, float]]] = {}
     wires: list[Seg] = []
     frames: list[Seg] = []  # dashed outlines of boards, enclosures and view frames
     for item, link, _owner in _walk(root):
@@ -148,6 +159,8 @@ def audit(root: Group) -> list[Finding]:
             frames += [((x0, y0), (x1, y0)), ((x0, y1), (x1, y1)), ((x0, y0), (x0, y1)), ((x1, y0), (x1, y1))]
         elif link is not None:
             links.setdefault(link, []).extend(_segments(item))
+            if isinstance(item, Polyline) and len(item.points) > 1:
+                paths.setdefault(link, list(item.points))  # its route (drawn again as a halo, or with a device)
         elif isinstance(item, (Line, Polyline)):
             wires.extend(_segments(item))
     out: list[Finding] = []
@@ -165,15 +178,23 @@ def audit(root: Group) -> list[Finding]:
     marks = {id(t) for t in _marks(root)}
     sizes = Counter(round(t.size, 2) for t, _b, _l in texts if id(t) not in own and id(t) not in marks)
     usual = sizes.most_common(1)[0][0] if sizes else 0.0
+    inner = [b for _n, boxes, _g in symbols for b in [_union(boxes)]]
+    title_block = {id(t) for t in _marks(root, kinds={"title-block", "notes", "uw-legend"})}
     for t, a, own_link in texts:
+        if id(t) in title_block:
+            continue
+        if t.text.endswith("\u2026") and not t.text.endswith(" \u2026"):  # cut short (' …': more items left out)
+            out.append(Finding("truncated", f"{t.text!r} cut short", t.p))
+        dx, dy = 0.04 * (a[2] - a[0]), 0.15 * (a[3] - a[1])  # the box of a text is approximate: its core
+        core = (a[0] + dx, a[1] + dy, a[2] - dx, a[3] - dy)
+        # a link through a text: any text but the ones inside a symbol ('CTRL', 'M'), conductor marks included
+        # (a board's name, a stroke count), the text of the link itself included (beside its line, never on it)
+        if id(t) not in own or not any(_inside(core, b) for b in inner):
+            crossing = next((la for la, segs in links.items() if any(_crosses(core, s) for s in segs)), None)
+            if crossing is not None:
+                out.append(Finding("text_crossed", f"{t.text!r} crossed by link {crossing}", t.p))
         if id(t) in own or id(t) in marks:
             continue
-        dx, dy = 0.1 * (a[2] - a[0]), 0.15 * (a[3] - a[1])  # the box of a text is approximate: its core
-        core = (a[0] + dx, a[1] + dy, a[2] - dx, a[3] - dy)
-        crossing = next((la for la, segs in links.items() if la != own_link and any(_crosses(core, s) for s in segs)),
-                        None)
-        if crossing is not None:
-            out.append(Finding("text_crossed", f"{t.text!r} crossed by link {crossing}", t.p))
         elif own_link is not None and any(_crosses(core, s) for s in wires):  # a link's text across a conductor
             out.append(Finding("text_on_conductor", f"{t.text!r} written across a conductor", t.p))
         for nid, boxes, _g in symbols:
@@ -189,6 +210,12 @@ def audit(root: Group) -> list[Finding]:
             if run > 3.0:
                 out.append(Finding("shared_run", f"links {la} and {lb} share {run:.0f} mm", links[la][0][0]))
     for la in ids:
+        pts = paths.get(la, [])
+        if detours and len(pts) > 1:
+            length = sum(abs(p[0] - q[0]) + abs(p[1] - q[1]) for p, q in zip(pts, pts[1:]))
+            direct = abs(pts[0][0] - pts[-1][0]) + abs(pts[0][1] - pts[-1][1])
+            if length - direct > max(40.0, 0.5 * direct):  # far round when a short way exists
+                out.append(Finding("detour", f"link {la}: {length:.0f} mm for ends {direct:.0f} mm apart", pts[0]))
         run = max((_run(p, q, 1.2) for p in links[la] for q in wires), default=0.0)
         if run > 8.0:
             out.append(Finding("link_on_conductor", f"link {la} runs {run:.0f} mm on a conductor", links[la][0][0]))
