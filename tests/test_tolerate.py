@@ -56,6 +56,26 @@ def test_meta_and_views():
     assert len(_notes(d)) == 3
 
 
+def test_number_for_a_text_read_as_text():
+    d = _doc({"type": "breaker", "id": "Q1", "in_A": 16, "ref": 7, "children": [{"type": "socket", "label": 2.5}]})
+    q1 = uniwire.load(d).sources[0].children[0]
+    assert q1.ref == "7" and q1.children[0].label == "2.5" and len(_notes(d)) == 2
+
+
+def test_misnamed_field_read_under_the_missing_name():
+    d = _doc({"type": "socket"}, meta={"revisions": [{"rev": "A", "date": "2026-01-05"}, {"index": "B"}]})
+    assert [r.index for r in uniwire.load(d).meta.revisions] == ["A", "B"]
+    assert len(_notes(d)) == 1 and "'rev'" in _notes(d)[0] and "'index'" in _notes(d)[0]
+
+
+def test_ambiguous_names_refused_with_the_fields_of_the_object():
+    d = _doc({"type": "socket"}, meta={"revisions": [{"rev": "A", "num": "1"}]})
+    with pytest.raises(UniwireError) as e:
+        uniwire.load(d)
+    msg = "\n".join(e.value.issues)
+    assert "index, date, author, description" in msg and "missing: index" in msg
+
+
 def test_input_untouched_and_canonical_silent():
     d = _doc({"type": "breaker", "id": "Q1", "in_A": 16, "poles": 2})
     before = copy.deepcopy(d)
@@ -65,7 +85,7 @@ def test_input_untouched_and_canonical_silent():
     assert _notes(canon) == [] and tolerate(canon)[1] == []
 
 
-@pytest.mark.parametrize("bad", [{"poles": 5}, {"poles": "two"}, {"poles": True}, {"cable": {"cores": 0}},
+@pytest.mark.parametrize("bad", [{"poles": 5}, {"poles": "two"}, {"poles": True}, {"cable": {"cores": True}},
                                  {"type": "main_breaker", "range_A": [15, "x"]}])
 def test_ambiguous_values_still_fail(bad):
     with pytest.raises(UniwireError):
