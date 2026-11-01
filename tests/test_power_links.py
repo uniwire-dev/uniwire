@@ -171,3 +171,21 @@ def test_multiline_drawing_enlarged_to_use_the_sheet():
     drawing = next(i for i in page.root.items if isinstance(i, Group) and i.cls == "multiline")
     b = bbox(drawing)
     assert b[2] - b[0] > 0.5 * page.width or b[3] - b[1] > 0.5 * page.height
+
+
+def test_link_device_text_stays_beside_its_symbol():
+    # a bypass along a soft starter: no free corner beside the bypass contactor, its tag still next to it
+    from tests.test_multiline import BYPASS
+
+    root = render_pages(load({**BYPASS, "views": [{"id": "sl"}]}))[0].root
+
+    def walk(item):
+        yield item
+        if isinstance(item, Group):
+            for i in item.items:
+                yield from walk(i)
+
+    sym = bbox(next(g for g in walk(root) if isinstance(g, Group) and g.id == "K2"))
+    tag = next(t for t in walk(root) if isinstance(t, Text) and t.text == "-K2")
+    gap = max(sym[0] - tag.p[0] - 6.0, tag.p[0] - sym[2], sym[1] - tag.p[1], tag.p[1] - sym[3] - 3.0, 0.0)
+    assert gap <= 8.0

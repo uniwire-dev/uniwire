@@ -2678,8 +2678,16 @@ def _draw_link_device(link: Any, dev: NodeBase, pts: list[tuple[float, float]], 
     if not txt:
         return
     w, hh = tw, th
-    free = [p for p in text_spots(sbox, vertical) if obs.box_free((p[0], p[1], p[0] + w, p[1] + hh), 0.6)]
-    x, y = free[0] if free else place_box(obs, w, hh, text_spots(sbox, vertical)[0], step=0.5, reach=40.0, pad=1.0)
+    spots = text_spots(sbox, vertical)
+    free = [p for p in spots if obs.box_free((p[0], p[1], p[0] + w, p[1] + hh), 0.6)]
+    if free:
+        x, y = free[0]
+    else:  # the nearest free place that still reads as the device's (a few mm from its symbol), else beside it anyway
+        reach = 8.0
+        near = [(abs(c[0] - s[0]) + 2 * abs(c[1] - s[1]), c) for s in spots
+                for c in [place_box(obs, w, hh, s, step=0.5, reach=reach, pad=1.0)]
+                if abs(c[0] - s[0]) <= reach and abs(c[1] - s[1]) <= reach]
+        x, y = min(near)[1] if near else min(spots, key=lambda c: obs.overlap((c[0], c[1], c[0] + w, c[1] + hh), 0.6))
     obs.add_box((x, y, x + w, y + hh))
     for i, t in enumerate(txt):
         g.add(Text((x, y + (i + 0.8) * line), t, size, bold=(i == 0 and bool(dev.ref))))
