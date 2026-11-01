@@ -240,6 +240,13 @@ def cable_text(c: Optional[Cable]) -> str:
     return s
 
 
+def drawn_cable_text(c: Optional[Cable]) -> str:
+    """:func:`cable_text` written on the drawing: a section without composition gets its unit ('10 mm²'), since
+    no column heading gives it there."""
+    s = cable_text(c)
+    return f"{s} mm²" if re.fullmatch(r"\d+(?:[.,]\d+)?", s) else s
+
+
 def _protocols(names: list[str], width: int = 24) -> str:
     """The protocols of a PLC on one short line: whole names only, an ellipsis for the ones left out."""
     text = ""

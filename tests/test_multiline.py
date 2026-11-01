@@ -314,3 +314,22 @@ def test_odd_x_cores_are_a_guess_after_what_the_node_states():
 
     for cable in ({"cores": "3x", "section_mm2": 95, "pe_section_mm2": 50}, {"cores": "3x", "section_mm2": 2.5}):
         assert conductors(doc(cable))["M"].inp == ["L1", "L2", "L3", "PE"]
+
+
+def test_board_frame_holds_a_link_between_its_devices():
+    root = render_pages(load(BYPASS))[0].root
+    frame, dev = (bbox(next(g for g in _groups(root) if g.id == i)) for i in ("B", "K2"))
+    texts = next(g for g in _groups(root) if "ml-link-bypass" in (g.cls or ""))
+    assert frame[0] <= min(dev[0], bbox(texts)[0])
+
+
+def test_motor_without_phases_drawn_as_its_feeder():
+    doc = load({"installation": {"earthing": "TT", "system": "3P+N", "un_V": 400},
+                "sources": [{"type": "grid", "children": [{"type": "board", "id": "B", "children": [
+                    {"type": "breaker", "id": "Q1", "poles": "1P+N", "in_A": 16, "children": [{"type": "motor", "id": "M1"}]},
+                    {"type": "breaker", "id": "Q2", "poles": "3P", "in_A": 16, "children": [{"type": "motor", "id": "M2"}]}]}]}],
+                "views": [{"id": "sl"}, {"id": "ml", "kind": "multi-line"}]})
+    for view in doc.views:
+        root = render_pages(doc, view)[0].root
+        marks = {i: [t for t in _texts(next(g for g in _groups(root) if g.id == i)) if "~" in t] for i in ("M1", "M2")}
+        assert marks == {"M1": ["1~"], "M2": ["3~"]}, view.id
