@@ -2720,22 +2720,25 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         d = taken.get(key, 0.0)
         taken[key] = d + (max(text_width(t, 1.6) for t in txts) + 1.5 if e.side == "down" else 5.0)
         e = End(e.x + d, e.y, e.side) if e.side == "down" else End(e.x, e.y + d, e.side)
-    if e.side == "down":
-        pts = [(e.x, e.y), (e.x, e.y + 6.0)]
-        tip = (e.x, e.y + 7.5)
-        head = [(e.x - 0.8, e.y + 6.0), tip, (e.x + 0.8, e.y + 6.0)]
-    elif e.side == "up":  # a tap on top of a busbar
-        pts = [(e.x, e.y), (e.x, e.y - 6.0)]
-        tip = (e.x, e.y - 7.5)
-        head = [(e.x - 0.8, e.y - 6.0), tip, (e.x + 0.8, e.y - 6.0)]
-    elif e.side == "right":  # out of the right end of a busbar
-        pts = [(e.x, e.y), (e.x + 6.0, e.y)]
-        tip = (e.x + 7.5, e.y)
-        head = [(e.x + 6.0, e.y - 0.8), tip, (e.x + 6.0, e.y + 0.8)]
-    else:
-        pts = [(e.x, e.y), (e.x - 6.0, e.y)]
-        tip = (e.x - 7.5, e.y)
-        head = [(e.x - 6.0, e.y - 0.8), tip, (e.x - 6.0, e.y + 0.8)]
+    def geometry(n: float) -> tuple[list[tuple[float, float]], tuple[float, float], list[tuple[float, float]]]:
+        """Stub of length ``n`` to the base of its arrow: its line, the arrow's tip and head."""
+        dx, dy = {"down": (0, 1), "up": (0, -1), "right": (1, 0)}.get(e.side, (-1, 0))
+        base = (e.x + dx * n, e.y + dy * n)
+        tip = (e.x + dx * (n + 1.5), e.y + dy * (n + 1.5))
+        return [(e.x, e.y), base], tip, [(base[0] - 0.8 * abs(dy), base[1] - 0.8 * abs(dx)), tip,
+                                         (base[0] + 0.8 * abs(dy), base[1] + 0.8 * abs(dx))]
+
+    def room(n: float) -> bool:
+        """The sheet reference finds a free place beside a stub of length ``n``, which crosses no symbol nor text."""
+        line, tip, _ = geometry(n)
+        seg = (min(line[0][0], tip[0]) - 0.3, min(line[0][1], tip[1]) - 0.3,
+               max(line[0][0], tip[0]) + 0.3, max(line[0][1], tip[1]) + 0.3)
+        if n > 6.0 and any(_hit(seg, o, 0.0) for o in obs.boxes):
+            return False
+        return place_label(obs, [line[0], tip], text_width(txts[-1], 1.6), 1.6, record=False, optional=True) is not None
+
+    # the usual short stub; longer when its sheet reference finds no free place beside it (a crowded device side)
+    pts, tip, head = geometry(next((n for n in (6.0, 12.0, 18.0) if room(n)), 6.0))
     g.add(Polyline(pts, _link_style(link.kind, link.normally_open)))
     rg = Group([Polyline(head, Style(width=THIN, fill="#ffffff"), closed=True)]) if same_sheet else \
         ref_group(f, other, [Polyline(head, Style(width=THIN, fill="#ffffff"), closed=True)])
@@ -2743,9 +2746,13 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         obs.add_vline(e.x, min(e.y, tip[1]), max(e.y, tip[1]))
     else:
         obs.add_hline(pts[1][1], pts[0][0], pts[1][0])
-    for txt in txts:
+    for k, txt in enumerate(txts):
         w = text_width(txt, 1.6)
-        x, y, anchor = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False)
+        optional = k < len(txts) - 1  # the link's label, also written at the stub on the other sheet: where it is free
+        spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False, optional=optional)
+        if spot is None:
+            continue
+        x, y, anchor = spot
         b = text_box(x, y, w, 1.6, anchor)
         if e.side == "left" and anchor == "end" and x > tip[0] - 0.6 and b[1] < e.y + 0.8 and e.y - 0.8 < b[3]:
             moved = text_box(tip[0] - 0.6, y, w, 1.6, anchor)  # running onto the point of its arrow: ends before it
