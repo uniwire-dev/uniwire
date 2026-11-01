@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import math
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -1575,8 +1575,8 @@ def _draw(ln: MLNode, g: Group, lang: str, view: View, sheet_left: float, folio_
         elif sg.id:
             node_group(sg)
         g.add(sg)
-    # sheet root fed from elsewhere: incoming conductors
-    if ln.root and ln.kind == "node" and ln.type not in SOURCE_TYPES:
+    # sheet root fed from elsewhere (a transformer included, when it has a feeder): incoming conductors
+    if ln.root and ln.kind == "node" and (ln.type not in SOURCE_TYPES or incoming_ref[1] is not None):
         top = ln.frame_top - 6.0 if ln.is_board else ln.y - 6.0
         rg = ref_group(*incoming_ref)
         for c in ln.inp:
@@ -2484,11 +2484,18 @@ def plan_multiline(doc: Document, view: View, index: Index | None = None,
             for r in roots:
                 _measure(r)
             boards = [n for r in roots for n in r.walk() if n.is_board and n.node is not None and n.node.id not in root_ids
-                      and n.node.id not in spec.detached and len(n.children) >= 1]
+                      and n.node.id not in spec.detached and len(n.children) >= 1
+                      and not _strands(spec, n.node.id, index)]  # type: ignore[arg-type]
             if boards:
                 boards.sort(key=lambda n: -n.width)
                 spec.detached.add(boards[0].node.id)  # type: ignore[union-attr]
                 continue
+            _, _, aw, ah = drawing_area(view)
+            if lay.height / ah > lay.width / aw:  # too tall: a branch goes to a sheet of its own
+                cut = _tall_branch(doc, view, spec, index, info, _fit(lay, view))
+                if cut is not None:
+                    spec.detached.add(cut)
+                    continue
             if allow_bus_split:
                 conts = _split_bus(spec, roots, view, lang)
             break
@@ -2502,6 +2509,56 @@ def plan_multiline(doc: Document, view: View, index: Index | None = None,
 
     roots = [index.nodes[view.root]] if view.root else list(doc.sources)
     return process(SheetSpec(roots, name=""))
+
+
+def _left_on_sheet(spec: SheetSpec, index: Index, cut: str) -> list[NodeBase]:
+    """Nodes that stay on the sheet of ``spec`` (roots included) if ``cut`` goes to a sheet of its own."""
+    out: list[NodeBase] = []
+    stack = list(spec.roots)
+    while stack:
+        n = stack.pop()
+        out.append(n)
+        stack.extend(c for c in n.children if c.id != cut and c.id not in spec.detached)
+    return out
+
+
+def _strands(spec: SheetSpec, cut: str, index: Index) -> bool:
+    """Moving ``cut`` away would leave a sheet with only its supply: the sources and the devices feeding ``cut``."""
+    if spec.continuation or not spec.roots:
+        return False
+    feeding = {a.id for a in index.ancestors(cut)}
+    return all(n.id in feeding or n in spec.roots for n in _left_on_sheet(spec, index, cut))
+
+
+def _tall_branch(doc: Document, view: View, spec: SheetSpec, index: Index, info: dict[int, Conductors],
+                 fit: float) -> Optional[str]:
+    """The branch whose own sheet best reduces a sheet drawn too tall, or ``None`` when no branch helps."""
+    if spec.continuation:
+        return None
+    # what a protective or switching device feeds, the device itself staying with its board
+    cands = [n for n in _left_on_sheet(spec, index, "") if n not in spec.roots and n.children
+             and registry.category(index.nodes[index.parent[n.id]].type) in ("protection", "switching")  # type: ignore[index]
+             and len(index.nodes[index.parent[n.id]].children) == 1  # type: ignore[index]
+             and not _strands(spec, n.id, index)]  # type: ignore[arg-type]
+
+    def size(n: NodeBase) -> int:
+        return sum(1 for _ in _subtree(n))
+
+    tried = []
+    for n in sorted(cands, key=size, reverse=True)[:40]:
+        trial = SheetSpec(list(spec.roots), detached=spec.detached | {n.id}, bus_slice=spec.bus_slice)  # type: ignore[arg-type]
+        f = _fit(_layout(doc, view, trial, index, info, annex=False), view)
+        if f > fit + 0.02 or f > fit and f >= view.min_scale:  # a real gain, or enough to make it readable
+            tried.append((n, f))
+    return max(tried, key=lambda t: t[1])[0].id if tried else None
+
+
+def _subtree(n: NodeBase) -> Iterator[NodeBase]:
+    stack = [n]
+    while stack:
+        x = stack.pop()
+        yield x
+        stack.extend(x.children)
 
 
 def _split_bus(spec: SheetSpec, roots: list[MLNode], view: View, lang: str) -> list[SheetSpec]:

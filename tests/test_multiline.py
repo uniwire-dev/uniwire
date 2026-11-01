@@ -333,3 +333,39 @@ def test_motor_without_phases_drawn_as_its_feeder():
         root = render_pages(doc, view)[0].root
         marks = {i: [t for t in _texts(next(g for g in _groups(root) if g.id == i)) if "~" in t] for i in ("M1", "M2")}
         assert marks == {"M1": ["1~"], "M2": ["3~"]}, view.id
+
+
+
+TALL = {  # a board that is the whole sheet, drawn too tall by its control transformer branch
+    "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
+    "sources": [{"type": "grid", "id": "G", "children": [{"type": "board", "id": "B", "children": [
+        {"type": "breaker", "id": "QG", "in_A": 32, "poles": "4P", "children": [{"type": "busbar", "id": "BB", "children": [
+            *[{"type": "breaker", "id": f"Q{i}", "in_A": 10, "poles": "3P", "children": [
+                {"type": "contactor", "id": f"K{i}", "in_A": 9, "poles": "3P", "children": [
+                    {"type": "motor", "id": f"M{i}", "phases": 3, "p_kW": 1.5}]}]} for i in (1, 2)],
+            {"type": "breaker", "id": "F2", "in_A": 6, "poles": "2P", "children": [
+                {"type": "transformer", "id": "T1", "sn_kVA": 0.5, "u1_V": 400, "u2_V": 230, "children": [
+                    {"type": "busbar", "id": "B2", "children": [
+                        {"type": "breaker", "id": "F3", "in_A": 6, "poles": "2P", "children": [
+                            {"type": "power_supply", "id": "U1", "u2_V": 24, "children": [
+                                {"type": "breaker", "id": "F6", "in_A": 2, "poles": "1P", "children": [
+                                    {"type": "busbar", "id": "B3", "children": [
+                                        {"type": "fuse", "id": f"FS{i}", "in_A": 2, "children": [{"type": "load"}]}
+                                        for i in (1, 2)]}]}]}]},
+                        {"type": "breaker", "id": "F4", "in_A": 2, "poles": "2P", "children": [{"type": "load"}]}]}]}]}]}]}]}]}],
+    "views": [{"id": "ml", "kind": "multi-line", "paper": "A4"}],
+}
+
+
+def test_tall_sheet_split_by_branch_never_leaving_only_the_supply():
+    from uniwire.layout.multiline import _Assigner, _fit, _layout, plan_multiline
+    from uniwire.resolve import build_index
+
+    doc = load(TALL)
+    view, index = doc.views[0], build_index(doc)
+    info = _Assigner(doc, True).info
+    specs = plan_multiline(doc, view, index, info)
+    # the tall branch below its breaker (which stays in the board), not the board that is the whole sheet
+    assert len(specs) == 2 and specs[0].detached == {"T1"}
+    for s in specs:
+        assert _fit(_layout(doc, view, s, index, info, annex=False), view) >= view.min_scale
