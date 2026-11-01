@@ -178,6 +178,7 @@ class _Assigner:
         names = None
         ks: list[Optional[int]] = []
         ns: list[Optional[bool]] = []
+        guess: Optional[tuple[Optional[int], Optional[bool]]] = None
         ph = getattr(node, "phase", None)
         if ph:
             names = re.findall(r"L[123]", ph)
@@ -199,11 +200,18 @@ class _Assigner:
             m = _CORES.match(cable.cores)
             if m:
                 total = int(m[1])
-                live = total - 1 if (m[2] in "Gg" or (total % 2 == 1 and not cable.pen)) else total
+                # an odd 'x' count includes the PE, unless the PE has its own section: then it is not one of the
+                # 'x' cores, which all have the live section ('3x95' + PE 50: three phases)
+                separate_pe = cable.pe_section_mm2 is not None and cable.pe_section_mm2 != cable.section_mm2
+                guessed = m[2] not in "Gg" and total % 2 == 1 and not cable.pen and not separate_pe
+                live = total - 1 if (m[2] in "Gg" or guessed) else total
                 k, n = ({2: (2, False), 3: (2, True)} if self.split_phase else
                         {2: (1, True), 3: (3, False), 4: (3, True)}).get(live, (None, None))
-                ks.append(k)
-                ns.append(n)
+                if guessed:  # only a guess: what the node states (a motor's phases, a board's system) comes first
+                    guess = (k, n)
+                else:
+                    ks.append(k)
+                    ns.append(n)
         if t == "motor":
             phases = getattr(node, "phases", None)
             if phases == 1 and self.split_phase:  # 240 V on L1 L2 (no neutral), or 120 V on a phase and N
@@ -217,6 +225,9 @@ class _Assigner:
             k, n = SYSTEMS[system]
             ks.append(k)
             ns.append(n)
+        if guess is not None:
+            ks.append(guess[0])
+            ns.append(guess[1])
         if t in SINGLE_PHASE_LOADS and type_default:
             ks.append(1)
             ns.append(True)
@@ -1725,6 +1736,8 @@ def _plan_links(doc: Document, roots: list[MLNode], lang: str) -> list[_Link]:
             dst = "side"
         elif link.kind in ("infeed", "transfer") and id(b) in parent and (link.kind == "transfer" or b.children):
             dst = "inp"  # a device feeding nothing (back-feed breaker of a PV inverter) is fed on its outputs
+        elif id(b) in parent and not b.children and registry.is_load(b.type):
+            dst = "inp"  # a load has no outputs: a link reaches its terminals, on its incoming conductors
         elif link.kind == "infeed" and b.root and b.type in CONVERTERS | {"ups"}:
             dst = "top"  # an inverter / UPS at the head of the tree: its AC input on top, never on its outputs
         elif b.rails:
@@ -1736,7 +1749,8 @@ def _plan_links(doc: Document, roots: list[MLNode], lang: str) -> list[_Link]:
         # a source with a PEN (TN-C) feeds the neutral of a target that has N and PE (the PEN is split there)
         alias = {"N": "PEN"} if "PEN" in have and "N" in want and "N" not in have else {}
         conds = [c for c in sorted(want, key=lambda c: (b.off_in if dst in ("inp", "side", "top") else b.off_out).get(c, 0))
-                 if alias.get(c, c) in have and (c != "PE" or dst != "side")]  # the PE goes with the cable
+                 if alias.get(c, c) in have and (c != "PE" or (dst != "side" and link.kind != "bypass"))]
+        # the PE goes with the cable; a bypass parallels the live conductors of devices, never the PE
         if not conds:
             continue
         last = max([order[id(d)] for d in a.walk()])
@@ -1919,11 +1933,6 @@ def _route_links(links: list[_Link], roots: list[MLNode]) -> None:
         y += lk.block_h()
 
 
-def _h_pole(x0: float, y: float, mark: str) -> list[Item]:
-    """One pole of a switching device drawn on a horizontal conductor, from ``x0`` toward +x."""
-    return [transform(i, x0, y, rot=270) for i in _contact(0.0, 0.0, mark, DEV_H)]
-
-
 def _draw_links(doc: Document, links: list[_Link], g: Group, lang: str) -> None:
     for lk in links:
         link, dev = lk.link, lk.link.device
@@ -1945,7 +1954,13 @@ def _draw_links(doc: Document, links: list[_Link], g: Group, lang: str) -> None:
                 cands = [lo + 0.5 * i for i in range(int((hi - lo - DEV_H) / 0.5) + 1)]
                 s0 = min(cands, key=lambda s: sum(1 for x in walls if s - 1.5 < x < max(s + DEV_H, s + tw) + 1.5) * 10
                          + 0.01 * abs(s + DEV_H / 2 - near_target))
-        if s0 is not None:  # the open contacts of the device show the normal state: the conductors stay solid
+        v0 = None  # no room on the lanes: on the verticals toward the target, where all of them run side by side
+        if dev is not None and s0 is None:
+            y_lo = max(min(lk.lane[c], lk.land[c][1]) for c in lk.conds) + 1.5
+            y_hi = min(max(lk.lane[c], lk.land[c][1]) for c in lk.conds) - 1.5
+            if y_hi - y_lo >= DEV_H:
+                v0 = (y_lo + y_hi - DEV_H) / 2
+        if s0 is not None or v0 is not None:  # the open contacts of the device show the normal state: solid lines
             style = Style()
         for c in lk.conds:
             sx, sy, ly, dx = lk.sx[c], lk.sy[c], lk.lane[c], lk.dx[c]
@@ -1960,6 +1975,10 @@ def _draw_links(doc: Document, links: list[_Link], g: Group, lang: str) -> None:
                 fwd = dx > sx
                 a, b = ((s0, ly), (s0 + DEV_H, ly)) if fwd else ((s0 + DEV_H, ly), (s0, ly))
                 cg.add(Polyline(pts[:2] + [a], cs), Polyline([b] + pts[2:], cs))
+            elif v0 is not None:
+                down = lyy > ly
+                a, b = ((dx, v0), (dx, v0 + DEV_H)) if down else ((dx, v0 + DEV_H), (dx, v0))
+                cg.add(Polyline(pts[:3] + [a], cs), Polyline([b] + pts[3:], cs))
             else:
                 cg.add(Polyline(pts, cs))
             if lk.dst == "side":
@@ -1972,6 +1991,8 @@ def _draw_links(doc: Document, links: list[_Link], g: Group, lang: str) -> None:
                 cg.add(_dot(lx, lyy))
             if lk.src == "rails":
                 cg.add(_dot(sx, sy))
+            elif lk.a.children:  # leaving a conductor that goes on: the junction where the link turns off it
+                cg.add(_dot(sx, ly))
             lg.add(cg)
         if dev is None and lk.text:  # the link's label above its top lane, in the middle of the longest run
             c0 = min(lk.conds, key=lambda c: lk.lane[c])
@@ -1981,33 +2002,48 @@ def _draw_links(doc: Document, links: list[_Link], g: Group, lang: str) -> None:
             for c in lk.conds:
                 x = lk.b.xo(c)
                 lg.add(cond_group(c, Line((x, lk.b.y + lk.b.h), (x, lk.land[c][1]))))
-        if s0 is not None and dev is not None:
+        if dev is not None and (s0 is not None or v0 is not None):
             dg = Group(id=dev.id, cls=f"ml-sym ml-{dev.type} ml-link-device")
             prot, unprot = switched(dev, lk.conds)
             mark = {"breaker": "cross", "disconnector": "bar", "switch_disconnector": "switch", "fuse_switch": "switch",
                     "contactor": "arc", "transfer_switch": "switch"}.get(dev.type, "")
             mids = []
             for c in lk.conds:
-                ly = lk.lane[c]
+                if s0 is not None:  # horizontal: the pole turned a quarter, on the lane
+                    x0, y0, rot = s0, lk.lane[c], 270
+                    straight = Line((s0, y0), (s0 + DEV_H, y0))
+                    fuse = Rect(s0 + 3.1, y0 - 0.8, 6.3, 1.6, Style(fill="#ffffff"))
+                else:  # vertical: the pole as drawn in the tree, on the vertical toward the target
+                    x0, y0, rot = lk.dx[c], v0, 0
+                    straight = Line((x0, v0), (x0, v0 + DEV_H))  # type: ignore[operator]
+                    fuse = Rect(x0 - 0.8, v0 + 3.1, 1.6, 6.3, Style(fill="#ffffff"))  # type: ignore[operator]
                 if dev.type == "fuse":
-                    dg.add(Group([Line((s0, ly), (s0 + DEV_H, ly)), Rect(s0 + 3.1, ly - 0.8, 6.3, 1.6, Style(fill="#ffffff"))],
-                                 cls="pole", attrs={"data-uw-cond": c}))
+                    dg.add(Group([straight, fuse], cls="pole", attrs={"data-uw-cond": c}))
                     continue
                 if c not in prot and c not in unprot:  # conductor not switched: straight through
-                    dg.add(cond_group(c, Line((s0, ly), (s0 + DEV_H, ly))))
+                    dg.add(cond_group(c, straight))
                     continue
-                dg.add(Group(_h_pole(s0, ly, mark if c in prot or mark != "cross" else ""),
-                             cls="pole" if c in prot else "pole pole-n", attrs={"data-uw-cond": c}))
+                pole = [transform(i, x0, y0, rot=rot) for i in _contact(0.0, 0.0, mark if c in prot or mark != "cross" else "", DEV_H)]
+                dg.add(Group(pole, cls="pole" if c in prot else "pole pole-n", attrs={"data-uw-cond": c}))
                 mx, my = _blade_mid(0.0, 0.0)
-                mids.append((s0 + my, ly - mx))
-            if len(mids) >= 2:
+                mids.append((x0 + my, y0 - mx) if rot else (x0 + mx, y0 + my))
+            if len(mids) >= 2 and s0 is not None:
                 xm = mids[0][0]
                 dg.add(Line((xm, min(m[1] for m in mids) - 0.5), (xm, max(m[1] for m in mids)), DASH))
+            elif len(mids) >= 2:
+                ym = mids[0][1]
+                dg.add(Line((min(m[0] for m in mids), ym), (max(m[0] for m in mids) + 0.5, ym), DASH))
             lg.add(dg)
-            top = min(lk.lane.values())
             tg = Group(cls="annotation")
             for i, t in enumerate(lk.text):
-                tg.add(Text((s0, top - 2.6 - (len(lk.text) - 1 - i) * 2.2), t, ANN_SIZE, bold=(i == 0 and bool(dev.ref))))
+                bold = i == 0 and bool(dev.ref)
+                if s0 is not None:
+                    top = min(lk.lane.values())
+                    tg.add(Text((s0, top - 2.6 - (len(lk.text) - 1 - i) * 2.2), t, ANN_SIZE, bold=bold))
+                else:  # left of the poles (their blades lean left), clear of them
+                    box = bbox(dg)
+                    x_text = (box[0] if box else min(lk.dx.values())) - 1.0
+                    tg.add(Text((x_text, v0 + 2.0 + i * 2.2), t, ANN_SIZE, "end", bold=bold))  # type: ignore[operator]
             lg.add(tg)
         g.add(finish_link_group(lg))
 
