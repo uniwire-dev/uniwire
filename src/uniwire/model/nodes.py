@@ -567,6 +567,4 @@ NODE_TYPES: dict[str, type[NodeBase]] = {
     cls.model_fields["type"].annotation.__args__[0]: cls for cls in NODE_CLASSES  # type: ignore[union-attr]
 }
 
-for _cls in NODE_CLASSES:
-    _cls.model_rebuild()
-NodeBase.model_rebuild()
+NodeBase.model_rebuild()  # each node class completes its own schema when first used

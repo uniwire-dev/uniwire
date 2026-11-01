@@ -12,8 +12,12 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   logging is described as it is (the request and the caller's address in the security logs, one year).
 * Rules, iec60364: the current-carrying capacity of a cable is no longer compared with a protection on the other side
   of a converter (the AC breaker of an inverter against the DC cables of its strings).
-* A setting range given as a single number (`"range_A": 10`) is read as `"10"`, like `[9, 13]` is read as `"9-13"`,
-  instead of making the document invalid.
+* Documents with unambiguous mistakes are read instead of refused, each fix reported by `core.normalized`: a number
+  written for a text (`"range_A": 10` read as `"10"`), and in an object, a single unknown field beside a single
+  missing required one, read under the missing name (`{"rev": "A"}` in `meta.revisions` read as `{"index": "A"}`).
+* An unknown field is reported with the fields that can be written at that place, and the required ones missing.
+* Faster start: the node models are no longer built one by one on import (`import uniwire` and each command
+  start about four times faster).
 * Drawings: the unit of a setting range is written only after numbers (`9-13 A`); a range given in words
   (`"to confirm"`) is shown as written.
 

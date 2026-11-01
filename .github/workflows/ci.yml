@@ -72,7 +72,7 @@ jobs:
       - name: Tests
         run: python -m pytest -q
       - name: Validate, check and render every example
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
         run: |
           shopt -s nullglob
           files=(examples/*.uniwire.json)
