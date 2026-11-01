@@ -31,6 +31,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   single-line and multi-line diagrams.
 * Multi-line drawings: the frame of a board holds a link between two of its devices (a bypass and its contactor),
   without reaching into the column on its left.
+* Multi-line drawings: a sheet drawn too tall to stay readable (below `min_scale`) sends a branch to a sheet of its own
+  (what a protective device feeds, the device staying with its board), as a sheet too wide already did; a board that
+  is the whole drawing is no longer sent to a sheet of its own, which left a first sheet with only the supply; a
+  transformer at the head of a sheet names where it is fed from.
 * Drawings: the unit of a setting range is written only after numbers (`9-13 A`); a range given in words
   (`"to confirm"`) is shown as written.
 
