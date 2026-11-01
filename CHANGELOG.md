@@ -10,6 +10,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 * Docs: uniwire is in ChatGPT's plugin directory ([uniwire in ChatGPT](https://chatgpt.com/plugins/plugin_asdk_app_6ace27d31ab08191b243ec37826969c2)); the hosted server's
   logging is described as it is (the request and the caller's address in the security logs, one year).
+* Rules, new `core.phases-feeder` (warning): a three-phase load (`phases: 3`) fed by a single-phase circuit (`1P+N`
+  or `2P` protection, `3G` cable, single-phase supply); a drive or a converter in between makes its own phases.
 * Rules, iec60364: the current-carrying capacity of a cable is no longer compared with a protection on the other side
   of a converter (the AC breaker of an inverter against the DC cables of its strings).
 * Documents with unambiguous mistakes are read instead of refused, each fix reported by `core.normalized`: a number
