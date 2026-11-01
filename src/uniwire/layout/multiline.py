@@ -36,7 +36,7 @@ from typing import Any, Optional
 from .. import registry
 from ..i18n import normalize_lang, render_lang
 from ..i18n import t as _t
-from ..labels import annotation, cable_text, part_number
+from ..labels import annotation, cable_text, drawn_cable_text, part_number
 from ..marks import marked_wires, marks_shown
 from ..model import Document, NodeBase, View
 from ..render.scene import (
@@ -821,7 +821,7 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
             holder = _feeder_cable(ln, parent)
             if holder is not None and holder.node is not None and holder.node.cable is not None:
                 cab = holder.node.cable
-                ln.cable_lines = [x for x in (" ".join(x for x in (cab.ref, cab.designation) if x), cable_text(cab)) if x]
+                ln.cable_lines = [x for x in (" ".join(x for x in (cab.ref, cab.designation) if x), drawn_cable_text(cab)) if x]
                 if cab.length_m:
                     ln.cable_lines[-1] += f" {fmt(cab.length_m)} m"
                 shown_cable.add(id(holder))
@@ -846,7 +846,7 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
             ln.tagged = bool(tag)
             lines = lines[:5]
             if node.cable is not None and id(ln) not in shown_cable and cable_text(node.cable):
-                lines.append(" ".join(x for x in (node.cable.ref, node.cable.designation, cable_text(node.cable)) if x))
+                lines.append(" ".join(x for x in (node.cable.ref, node.cable.designation, drawn_cable_text(node.cable)) if x))
             ln.ann, ln.ann_size = _fit_lines(lines, ANN_SIZE, ANN_MAX_W)
 
 
@@ -1394,7 +1394,8 @@ def _draw_load(ln: MLNode, lang: str) -> Group:
         cxr, r = _circle(ln)
         c = (ln.x_left + cxr, y + 3.0 + r)
         dc = any(cd in DC for cd in ln.inp)
-        kind = "=" if dc else "1~" if getattr(node, "phases", None) == 1 else "3~"
+        phases = getattr(node, "phases", None) or (1 if sum(cd in PHASES for cd in ln.inp) < 3 else 3)  # else its feeder's
+        kind = "=" if dc else "1~" if phases == 1 else "3~"
         g.add(Circle(c, r), Text((c[0], c[1] - 0.7), "M", 2.6, "middle", "middle", bold=True),
               Text((c[0], c[1] + 2.0), kind, 1.5, "middle", "middle"))
         terms = iter(("U", "V", "W"))
@@ -1646,7 +1647,7 @@ def _draw_load_texts(ln: MLNode, g: Group, folio_of: Callable[[str], Optional[in
         g.add(cg)
 
 
-def _draw_frames(roots: list[MLNode], g: Group) -> None:
+def _draw_frames(roots: list[MLNode], g: Group, links: Optional[list[_Link]] = None) -> None:
     drawn = {it.id: it for it in g.items if isinstance(it, Group) and it.id and it.cls.startswith("ml-sym")}
     for r in roots:
         for b in r.walk():
@@ -1658,6 +1659,17 @@ def _draw_frames(roots: list[MLNode], g: Group) -> None:
             lefts = [box[0] for n in _owned(b) if n.id in drawn and (box := bbox(drawn[n.id])) is not None]
             x0 = max(b.x_left - 0.5, min([x0] + [x - 2.0 for x in lefts]))
             y0, y1 = b.frame_top, _frame_bottom(b)
+            # a link between two of its devices (a bypass and its contactor) is in the board: inside its frame,
+            # as far as the column on the left allows
+            inside = {id(n) for n in b.walk()}
+            reach = [lk.box[0] - 1.5 for lk in links or []
+                     if lk.box is not None and id(lk.a) in inside and id(lk.b) in inside and lk.box[1] < y1]
+            if reach and min(reach) < x0:
+                others = [bx[2] for it in g.items if isinstance(it, Group) and it.id and id(it) not in
+                          {id(drawn.get(n.id)) for n in b.walk() if n.id}
+                          and (it.cls.startswith("ml-sym") or it.cls.startswith("board"))
+                          and (bx := bbox(it)) is not None and bx[2] <= x0 and bx[1] < y1 and bx[3] > y0]
+                x0 = max([min(reach)] + [x + 1.0 for x in others])
             fg = Group(id=b.id, cls="board uw-node")
             fg.add(Rect(x0, y0, x1 - x0, y1 - y0, Style(width=THIN, dash=(2.0, 1.0), color="#555555")))
             name = _board_name(b.node)
@@ -1704,6 +1716,7 @@ class _Link:
     land: dict[str, tuple[float, float]] = field(default_factory=dict)  # landing point
     top: float = 0.0  # y of the block (annotation top)
     walls: list[tuple[float, float, float]] = field(default_factory=list)  # vertical conductors (x, y0, y1)
+    box: Optional[tuple[float, float, float, float]] = None  # extent of the drawn link (conductors, device, texts)
 
     @property
     def n(self) -> int:
@@ -2045,7 +2058,9 @@ def _draw_links(doc: Document, links: list[_Link], g: Group, lang: str) -> None:
                     x_text = (box[0] if box else min(lk.dx.values())) - 1.0
                     tg.add(Text((x_text, v0 + 2.0 + i * 2.2), t, ANN_SIZE, "end", bold=bold))  # type: ignore[operator]
             lg.add(tg)
-        g.add(finish_link_group(lg))
+        lg = finish_link_group(lg)
+        lk.box = bbox(lg)
+        g.add(lg)
 
 
 # ------------------------------------------- auxiliary devices, signal links
@@ -2330,7 +2345,7 @@ def _layout(doc: Document, view: View, spec: SheetSpec, index: Index, info: dict
     for r in roots:
         _draw(r, g, lang, view, sheet_left, folio_of or (lambda _: None), continuation, incoming, incoming_ref)
     _draw_links(doc, links, g, lang)
-    _draw_frames(roots, g)
+    _draw_frames(roots, g, links)
     if annex:  # (left out while the sheets are being planned: the band for its links is reserved anyway)
         _draw_annex(doc, roots, g, view, spec, lang, node_folio)
     if marks:
