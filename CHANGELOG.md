@@ -35,6 +35,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   (what a protective device feeds, the device staying with its board), as a sheet too wide already did; a board that
   is the whole drawing is no longer sent to a sheet of its own, which left a first sheet with only the supply; a
   transformer at the head of a sheet names where it is fed from.
+* Drawings: at the stub of a link to another sheet, the sheet reference is always written and the link's label only
+  where it is free (it is also written at the stub on the other sheet); the stub is drawn longer when that gives its
+  reference a free place. Labels are no longer written across symbols and frames there.
 * Drawings: the unit of a setting range is written only after numbers (`9-13 A`); a range given in words
   (`"to confirm"`) is shown as written.
 

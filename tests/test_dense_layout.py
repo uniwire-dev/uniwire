@@ -9,10 +9,8 @@ from uniwire import load
 from uniwire.render import default_view, render_pages, render_views
 from uniwire.render.scene import Group, Rect, Text
 
-# findings tolerated per document, single-line views + multi-line view ("mixed": its multi-line main sheet is no
-# longer drawn at 56 %: its PLC goes to a sheet of its own, and the texts of the stubs to that sheet still overlap
-# symbols; to come down when the stubs place their texts clear of the symbols)
-KNOWN = {"hub4": 0, "hub8": 0, "hub12": 2, "long_labels": 2, "spread": 0, "mixed": 11}
+# findings tolerated per document, single-line views + multi-line view
+KNOWN = {"hub4": 0, "hub8": 0, "hub12": 2, "long_labels": 1, "spread": 0, "mixed": 4}
 
 
 @pytest.mark.parametrize("name", sorted(DENSE))
