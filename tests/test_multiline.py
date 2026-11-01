@@ -279,3 +279,38 @@ def _all_texts(item):
     if isinstance(item, Text):
         return [item]
     return [t for i in item.items for t in _all_texts(i)] if isinstance(item, Group) else []
+
+
+BYPASS = {
+    "installation": {"earthing": "TN-S", "system": "3P", "un_V": 400},
+    "sources": [{"type": "grid", "children": [{"type": "board", "id": "B", "children": [
+        {"type": "contactor", "id": "K1", "ref": "-K1", "poles": "3P", "in_A": 40, "children": [
+            {"type": "motor_starter", "id": "U1", "ref": "-U1", "method": "soft_starter", "in_A": 38, "children": [
+                {"type": "motor", "id": "M1", "phases": 3, "p_kW": 18.5}]}]}]}]}],
+    "links": [{"kind": "bypass", "from": "K1", "to": "M1",
+               "device": {"type": "contactor", "id": "K2", "ref": "-K2", "poles": "3P", "in_A": 40}}],
+    "views": [{"id": "ml", "kind": "multi-line"}],
+}
+
+
+def test_link_device_drawn_without_room_on_the_lanes():
+    # the bypass runs alongside its device: no horizontal room, so its contactor goes on the verticals
+    root = render_pages(load(BYPASS))[0].root
+    dev = [g for g in _groups(root) if g.id == "K2" and "ml-link-device" in (g.cls or "")]
+    assert len(dev) == 1 and len([g for g in _groups(dev[0]) if "pole" in (g.cls or "").split()]) == 3
+    link = next(g for g in _groups(root) if "ml-link-bypass" in (g.cls or ""))
+    conds = {g.attrs.get("data-uw-cond") for g in _groups(link) if g.attrs and g.attrs.get("data-uw-cond")}
+    assert "PE" not in conds  # a bypass parallels the live conductors only
+    motor = next(g for g in _groups(root) if g.id == "M1")
+    lowest = max(b[3] for g in _groups(link) if (b := bbox(g)) is not None)
+    assert lowest <= bbox(motor)[1] + 0.1  # it reaches the motor's terminals, never below the motor
+
+
+def test_odd_x_cores_are_a_guess_after_what_the_node_states():
+    def doc(cable):
+        return load({"installation": {"earthing": "TN-S", "system": "3P", "un_V": 400},
+                     "sources": [{"type": "grid", "children": [{"type": "breaker", "id": "Q", "poles": "3P", "children": [
+                         {"type": "motor", "id": "M", "phases": 3, "cable": cable}]}]}]})
+
+    for cable in ({"cores": "3x", "section_mm2": 95, "pe_section_mm2": 50}, {"cores": "3x", "section_mm2": 2.5}):
+        assert conductors(doc(cable))["M"].inp == ["L1", "L2", "L3", "PE"]
