@@ -25,6 +25,12 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Multi-line drawings: an odd `x` core count (`"3x"`) is taken to include the PE only as a guess, after what the node
   states (a motor's `phases`), and never when the PE has its own section (`"3x"`, 95 mm², `pe_section_mm2` 50: three
   phases and a PE); a three-phase motor is no longer drawn on two phases.
+* Drawings: a cable given by its section alone is written with its unit beside its device (`10 mm²`, not `10`); the
+  table keeps the bare number under its heading `Cable (mm²)`.
+* Drawings: a motor that does not state its `phases` is marked as its feeder (`1~` on a single-phase circuit), in the
+  single-line and multi-line diagrams.
+* Multi-line drawings: the frame of a board holds a link between two of its devices (a bypass and its contactor),
+  without reaching into the column on its left.
 * Drawings: the unit of a setting range is written only after numbers (`9-13 A`); a range given in words
   (`"to confirm"`) is shown as written.
 

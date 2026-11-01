@@ -4,6 +4,7 @@ from tests.conftest import ROOT
 from uniwire import load, render_pages
 from uniwire.labels import annotation, cable_text, cell
 from uniwire.layout import layout_sheet, plan_sheets
+from uniwire.model.base import Cable
 from uniwire.render import default_view
 from uniwire.render.scene import BUS, Group, Line, Polyline, Text, text_width
 
@@ -81,6 +82,14 @@ def test_setting_range_unit_only_after_numbers():
     assert "9-13 A" in lines[0]
     assert "to be set on site" in lines[1] and "site A" not in lines[1]
     assert "15-45 A" in lines[2] and "A A" not in lines[2]
+
+
+def test_cable_section_alone_drawn_with_its_unit():
+    from uniwire.labels import drawn_cable_text
+
+    assert drawn_cable_text(Cable(section_mm2=10)) == "10 mm²"
+    assert drawn_cable_text(Cable(cores="3G", section_mm2=2.5)) == "3G2.5"
+    assert cell("cable", {"cable": Cable(section_mm2=10)}) == "10"  # in the table, the column heading says mm²
 
 
 def test_points_singular_and_plural():
