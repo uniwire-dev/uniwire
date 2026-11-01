@@ -28,6 +28,8 @@ ENV_VAR = "UNIWIRE_LANG"
 EN: dict[str, str] = {
     # --- validation (resolve.py)
     "validation.extra_forbidden": "unknown field (typo? use 'ext' for extensions)",
+    "validation.expected_fields": "fields here: {fields}",
+    "validation.missing_fields": "missing: {fields}",
     "validation.unknown_node_type": "unknown node type: {type!r}",
     "validation.unknown_template": "unknown 'use' template: {name!r}",
     "validation.template_type_mismatch": "template {name!r} is of type {ttype!r}, the node is of type {ntype!r}",
@@ -350,6 +352,8 @@ EN: dict[str, str] = {
 
 FR: dict[str, str] = {
     "validation.extra_forbidden": "champ inconnu (faute de frappe ? utiliser 'ext' pour les extensions)",
+    "validation.expected_fields": "champs possibles ici : {fields}",
+    "validation.missing_fields": "manquant : {fields}",
     "validation.unknown_node_type": "type de nœud inconnu : {type!r}",
     "validation.unknown_template": "modèle 'use' inconnu : {name!r}",
     "validation.template_type_mismatch": "le modèle {name!r} est de type {ttype!r}, le nœud de type {ntype!r}",
