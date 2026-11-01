@@ -73,6 +73,32 @@ def rating_cascade(doc: Document, idx: Index):
 
 
 
+@rule("core")
+def phases_from_feeder(doc: Document, idx: Index):
+    """A three-phase load is fed by a circuit that carries three phases."""
+    from ..labels import conductor_count
+
+    for nid, n in idx.nodes.items():
+        if getattr(n, "phases", None) != 3:
+            continue
+        chain, system = [], doc.installation.system
+        for a in idx.ancestors(nid):
+            if a.type in VOLTAGE_CONVERTERS or getattr(a, "method", None) == "vfd":  # type: ignore[attr-defined]
+                chain = []  # phases made downstream of it (a drive fed in single phase makes three): not judged
+                break
+            if a.type in ("board", "busbar") or len(a.children) >= 2:  # type: ignore[attr-defined]
+                system = next((getattr(b, "system", None) for b in [a] + idx.ancestors(a.id or "")
+                               if getattr(b, "system", None)), system)
+                break
+            chain.append(a)
+        if not chain or system in ("DC", "split-phase"):
+            continue
+        cable = n.cable is not None and n.cable.cores and re.fullmatch(r"\d+[Gg]", n.cable.cores)
+        live = conductor_count(([n] if cable else []) + chain, system)
+        if live is not None and live <= 2:
+            yield Finding("warning", "core.phases-feeder", _t("core.phases_feeder", live=live), nid)
+
+
 # Control circuits entered in the power tree: switching devices fed by a control power supply that switch nothing
 # (their coils drawn as power devices), and coils, push buttons and signal lamps entered as loads (IEC 81346 letter codes K, S, H).
 # Control links of a distribution diagram (load shedding, off-peak contactor, PLC command) are not concerned.
