@@ -40,6 +40,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Drawings: at the stub of a link to another sheet, the sheet reference is always written and the link's label only
   where it is free (it is also written at the stub on the other sheet); the stub is drawn longer when that gives its
   reference a free place. Labels are no longer written across symbols and frames there.
+* Single-line drawings: the tag of a device carried by a link stays beside its symbol (the nearest free place a few
+  millimetres from it, else beside it anyway) instead of going as far as the text of another device.
 * Drawings: the unit of a setting range is written only after numbers (`9-13 A`); a range given in words
   (`"to confirm"`) is shown as written.
 
