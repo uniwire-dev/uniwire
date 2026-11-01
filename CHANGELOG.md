@@ -18,6 +18,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * An unknown field is reported with the fields that can be written at that place, and the required ones missing.
 * Faster start: the node models are no longer built one by one on import (`import uniwire` and each command
   start about four times faster).
+* Multi-line drawings: the device carried by a link is drawn on the verticals of the link when its horizontal run is
+  too short for it (before, it was left out); a link to a load reaches the load's terminals instead of passing
+  below it; a bypass parallels the live conductors, never the PE; a link leaving a conductor that goes on is marked
+  with a junction dot.
+* Multi-line drawings: an odd `x` core count (`"3x"`) is taken to include the PE only as a guess, after what the node
+  states (a motor's `phases`), and never when the PE has its own section (`"3x"`, 95 mm², `pe_section_mm2` 50: three
+  phases and a PE); a three-phase motor is no longer drawn on two phases.
 * Drawings: the unit of a setting range is written only after numbers (`9-13 A`); a range given in words
   (`"to confirm"`) is shown as written.
 
