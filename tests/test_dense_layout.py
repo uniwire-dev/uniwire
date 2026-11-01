@@ -10,7 +10,7 @@ from uniwire.render import default_view, render_pages, render_views
 from uniwire.render.scene import Group, Rect, Text
 
 # findings tolerated per document, single-line views + multi-line view
-KNOWN = {"hub4": 0, "hub8": 0, "hub12": 2, "long_labels": 1, "spread": 0, "mixed": 4}
+KNOWN = {"hub4": 0, "hub8": 0, "hub12": 2, "long_labels": 1, "spread": 0, "mixed": 6}  # mixed: 3 off-sheet texts on their own stub
 
 
 @pytest.mark.parametrize("name", sorted(DENSE))

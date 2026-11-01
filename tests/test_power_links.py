@@ -189,3 +189,33 @@ def test_link_device_text_stays_beside_its_symbol():
     tag = next(t for t in walk(root) if isinstance(t, Text) and t.text == "-K2")
     gap = max(sym[0] - tag.p[0] - 6.0, tag.p[0] - sym[2], sym[1] - tag.p[1], tag.p[1] - sym[3] - 3.0, 0.0)
     assert gap <= 8.0
+
+
+def _breaker(i, amps, label=None):
+    return {"type": "breaker", "id": i, "ref": "-" + i, "in_A": amps, "poles": "4P",
+            "children": [{"type": "load", "id": "L" + i, "label": label or "Load " + i}]}
+
+
+STANDBY_ACROSS = {  # a standby generator on the right, reaching a changeover beyond a board fed separately
+    "uniwire": "1.0.0", "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
+    "sources": [
+        {"type": "grid", "id": "SA", "label": "Supply A", "children": [
+            {"type": "meter", "id": "PM", "ref": "-P1", "children": [
+                {"type": "breaker", "id": "Q0", "ref": "-Q0", "in_A": 630, "poles": "4P", "children": [
+                    {"type": "transfer_switch", "id": "ATS", "ref": "-QT", "in_A": 630, "mode": "automatic",
+                     "children": [{"type": "board", "id": "MB", "label": "Main board",
+                                   "children": [_breaker("QA1", 250), _breaker("QA2", 250)]}]}]}]}]},
+        {"type": "grid", "id": "SB", "label": "Supply B", "children": [
+            {"type": "breaker", "id": "QB0", "ref": "-QB0", "in_A": 160, "poles": "4P", "children": [
+                {"type": "board", "id": "SVB", "label": "Services board",
+                 "children": [_breaker("QB1", 63), _breaker("QB2", 63), _breaker("QB3", 63)]}]}]},
+        {"type": "generator", "id": "GS", "ref": "-G1", "label": "Standby generator", "children": []}],
+    "links": [{"kind": "transfer", "from": "GS", "to": "ATS"}]}
+
+
+def test_standby_supply_to_a_changeover_goes_round_the_feeders_it_would_cross():
+    from tests.drawing_audit import audit
+    from uniwire.render import render_views
+
+    findings = [f for pg in render_views(load(STANDBY_ACROSS)) for f in audit(pg.root)]
+    assert not [f for f in findings if f.kind in ("text_crossed", "link_on_conductor")], findings
