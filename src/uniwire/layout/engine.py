@@ -16,8 +16,9 @@ from ..labels import (
     Mark,
     annotation,
     cable_in_awg,
-    cable_text,
     cell,
+    conductor_count,
+    drawn_cable_text,
     feeder_mark,
     part_number,
     poles_mark,
@@ -58,6 +59,7 @@ from ..render.semantics import (
 )
 from ..resolve import Index, build_index, iter_nodes
 from ..symbols import BUSWAY_H, DASH, PLC_SLOT_W, Symbol, controller, offpage, symbol_for
+from ..symbols import motor as motor_symbol
 from ..units import fmt
 from .routing import (
     LANE,
@@ -687,6 +689,10 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         for n in r.walk():
             if n.type == "generator" and n.node is not None:
                 n.sym = symbol_for(n.node, _system_of(n.node, doc))
+            elif n.type == "motor" and n.node is not None and getattr(n.node, "phases", None) is None:
+                # phases not stated: those of its feeder (a motor on a single-phase circuit is drawn 1~)
+                live = conductor_count(_feeder_chain(n, index), _supply_system(n, index, doc))
+                n.sym = motor_symbol(n.node, live)
             n.sym = _spread_symbol(doc, n.node, n.sym, here)
             n.left_room = _left_room(doc, n, here, lang)
 
@@ -1373,7 +1379,7 @@ def _in_column(n: LNode) -> bool:
 def _cable_caption(c: Any) -> str:
     """'W7 5x6 38 m': tag, composition and length of a cable written in the text of its device ('' without a
     composition: a bare length says nothing)."""
-    comp = cable_text(c)
+    comp = drawn_cable_text(c)
     return " ".join(x for x in (c.ref, comp, fmt(c.length_m, " m") if c.length_m else "") if x) if comp else ""
 
 
