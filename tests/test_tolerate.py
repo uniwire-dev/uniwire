@@ -103,3 +103,11 @@ def test_rcd_count_only_for_dwellings():
     assert "nfc15100.rcd-count" in rules(d)
     d["installation"] = {**BASE["installation"], "premises": "commercial"}
     assert "nfc15100.rcd-count" not in rules(d)
+
+
+@pytest.mark.parametrize("raw,short", [("Air conditioner", "AC"), ("Ventilation", "Ventil"), ("  Heat pump unit ", "HPU")])
+def test_symbol_text_too_long_read_short(raw, short):
+    d = _doc({"type": "breaker", "id": "Q1", "in_A": 16, "children": [
+        {"type": "load", "id": "L1", "label": raw.strip(), "symbol_text": raw}]})
+    assert uniwire.load(d).sources[0].children[0].children[0].symbol_text == short
+    assert len(_notes(d)) == 1 and short in _notes(d)[0]

@@ -6,6 +6,21 @@ The format and the library are versioned separately: the format follows `1.y.z` 
 version. Before the library's 1.0, a `0.x.y` release adds features and fixes that keep existing documents and
 code working, and a `0.x.0` release may break compatibility (described here, with what to change).
 
+## Unreleased
+
+* Single-line drawings: a link whose route passes through a text or a symbol, or goes far round, is routed with
+  as many corners as needed when that is clearly better, and may leave a device by its other side; a standby supply
+  reaching the side input of a changeover is routed round the busbars, feeders and texts on its way (before, it ran
+  straight across them, possibly along a busbar).
+* Single-line drawings: the texts of a bus coupler go below it when a link already passes above it.
+* Multi-line drawings: a device text too wide for its place goes on two lines at the usual size instead of being
+  drawn smaller and cut short.
+* DC lines: a battery, a PV array, a DC/DC converter and a power supply with a DC output start a DC line even when no
+  `system` is stated: the devices below are marked with two poles (never `+N`) and a motor there is drawn `M =`.
+* Documents: a text too long for a field that shows only a few characters (`symbol_text`) is read short instead of
+  refused, reported by `core.normalized`: its initials when it has several words (`"Air conditioner"` read as
+  `"AC"`), else its beginning.
+
 ## 0.1.7 (2026-11-01)
 
 * Docs: uniwire is in ChatGPT's plugin directory ([uniwire in ChatGPT](https://chatgpt.com/plugins/plugin_asdk_app_6ace27d31ab08191b243ec37826969c2)); the hosted server's

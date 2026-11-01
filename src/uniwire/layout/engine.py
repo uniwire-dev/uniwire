@@ -68,8 +68,10 @@ from .routing import (
     _hit,
     _seg_cost,
     boxes_union,
+    improve_route,
     place_box,
     place_label,
+    record_route,
     route,
     route_grid,
     text_box,
@@ -689,6 +691,8 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         for n in r.walk():
             if n.type == "generator" and n.node is not None:
                 n.sym = symbol_for(n.node, _system_of(n.node, doc))
+            elif n.type == "motor" and n.node is not None and n.node.id and _dc_line(n.node, index):
+                n.sym = motor_symbol(n.node, dc=True)  # on a DC line: a DC motor, whatever its feeder's poles
             elif n.type == "motor" and n.node is not None and getattr(n.node, "phases", None) is None:
                 # phases not stated: those of its feeder (a motor on a single-phase circuit is drawn 1~)
                 live = conductor_count(_feeder_chain(n, index), _supply_system(n, index, doc))
@@ -1185,10 +1189,15 @@ def _supply_system(ln: LNode, index: Index, doc: Document) -> Optional[str]:
     return doc.installation.system
 
 
+DC_OUTPUT_TYPES = ("battery", "pv_array", "dc_converter")  # what they deliver is DC by nature
+
+
 def _dc_node(n: NodeBase) -> bool:
-    """A node that starts a DC part: DC system, DC box, or a device declared ``dc``."""
+    """A node that starts a DC part: DC system, DC box, a device declared ``dc``, a source or converter that
+    delivers DC by nature (battery, PV array, DC/DC converter, power supply with a DC output)."""
     return (getattr(n, "system", None) == "DC" or (n.type == "board" and getattr(n, "kind", None) == "dc_box")  # type: ignore[attr-defined]
-            or getattr(n, "dc", None) is True)
+            or getattr(n, "dc", None) is True or n.type in DC_OUTPUT_TYPES  # type: ignore[attr-defined]
+            or (n.type == "power_supply" and getattr(n, "output", None) == "DC"))  # type: ignore[attr-defined]
 
 
 def _dc_line(node: NodeBase, index: Index) -> bool:
@@ -1259,9 +1268,9 @@ def _line_marks(doc: Document) -> tuple[dict[int, Optional[Mark]], dict[int, Opt
 
     for src in doc.sources:
         walk(src, None)
-        m_out[id(src)] = _source_mark(src, doc)
+        m_out[id(src)] = (2, False) if _dc_node(src) and not getattr(src, "system", None) else _source_mark(src, doc)
         for c in src.children:
-            walk(c, m_out[id(src)])
+            walk(c, m_out[id(src)], _dc_node(src))
     return m_in, m_out
 
 
@@ -2057,7 +2066,7 @@ def _draw_band(doc: Document, band: AltBand, roots: list[LNode], tap_end: dict[i
         i, link, b, tx, xd, yj = items[k]
         y = band.y0 + band.top + j * band.pitch
         pts = [(tx, tap_end[i].y), (tx, y), (xd, y), (xd, yj), (b.x, yj)]
-        _record(obs, pts)
+        record_route(obs, pts)
         routes.append((i, link, b, pts))
     for i, link, _b, pts in routes:
         g = group_of(i)
@@ -2253,7 +2262,11 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
     # off-sheet stubs first: their arrows and sheet references are fixed, the routed links go round them
     first = [i for i in order if (_find(roots, doc.links[i].from_) is None) != (_find(roots, doc.links[i].to) is None)]
     # feeds tapping a busbar last, the outermost tap first: the inner ones then pass above it (no crossing)
-    rest = sorted((i for i in order if i not in first), key=lambda i: (i in bus_land, not (far and i in far), -abs(
+    # standby sources reaching side inputs before the other links, the shortest span first: the longer ones
+    # then pass round the shorter ones instead of across the side input they would block
+    rest = sorted((i for i in order if i not in first), key=lambda i: (
+        i not in side_runs, side_runs[i][2] - side_runs[i][1] if i in side_runs else 0.0,
+        i in bus_land, not (far and i in far), -abs(
         bus_land[i].x - (_find(roots, doc.links[i].to) or roots[0]).x) if i in bus_land else 0.0))
     for i in first + rest:
         link = doc.links[i]
@@ -2287,7 +2300,10 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             sy = b.y + b.sym.side_input[1]
             ay = a.out_y if a.sym.has_output else a.y + a.sym.height
             cy = sy - 2.5 - 1.5 * side_level.get(i, 0)
-            lg.add(Polyline([(a.x, ay), (a.x, cy), (sx, cy), (sx, sy)], style))
+            pts = [(a.x, ay), (a.x, cy), (sx, cy), (sx, sy)]
+            pts = improve_route(obs, End(a.x, ay, "down"), End(sx, sy, "up"), pts, far_round=False)
+            record_route(obs, pts)
+            lg.add(Polyline(pts, style))
             continue
         if link.kind == "tie" and a.bus_y is not None and b.bus_y is not None:
             left, right = (a, b) if a.x < b.x else (b, a)
@@ -2305,9 +2321,16 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 lg.add(Line((x0, y), (sx0, y), style))
                 lg.add(Group([transform(it, sx0, y, rot=270) for it in sym.items], dev.id, f"sym sym-{sym.name}"))
                 lg.add(Line((sx0 + sym.height, y), (x1, y), style))
-                txt = _device_text(link, dev, lang)
-                for k, t in enumerate(txt[:3]):
-                    lg.add(Text((mid, y - 4.0 - (len(txt[:3]) - 1 - k) * 2.4), t, 1.9, "middle", bold=(k == 0 and bool(dev.ref))))
+                txt = _device_text(link, dev, lang)[:3]
+                tw = max((text_width(t, 1.9) for t in txt), default=0.0)
+                above = y - 4.0 - (len(txt) - 1) * 2.4  # baseline of the first line: above the coupler, else below
+                spots = [above, y + 4.5]  # (a link already drawn there: a standby supply passing over it)
+                boxes = [(mid - tw / 2, b0 - 1.6, mid + tw / 2, b0 + (len(txt) - 1) * 2.4 + 0.4) for b0 in spots]
+                b0, box = next(((b0, bx) for b0, bx in zip(spots, boxes) if obs.box_free(bx, 0.3, wire_pad=0.1)),
+                               (spots[0], boxes[0]))
+                obs.add_box(box)
+                for k, t in enumerate(txt):
+                    lg.add(Text((mid, b0 + k * 2.4), t, 1.9, "middle", bold=(k == 0 and bool(dev.ref))))
             else:
                 lg.add(Line((x0, y), (x1, y), style if link.normally_open else Style(width=BUS)))
             continue
@@ -2364,6 +2387,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 "lane": max(3.5 if carries else LANE if link.kind in POWER_LINKS else SIGNAL_LANE, obs.min_lane),
                 "solid": link.kind in POWER_LINKS and not style.dash}
         pts: list[tuple[float, float]] = []
+        cands: Optional[tuple[list[End], list[End]]] = None  # the ends the link could use on each device
         ml = obs.min_lane > 0  # multi-line: also beside a PLC port and for earth links, right ends spread
         if link.kind not in SWITCHED_LINKS and i not in tap_end and (
                 ml or (link.kind != "earth" and port_label is None)):
@@ -2447,6 +2471,8 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                               step=1.0, record=False, lane=opts["lane"], cost_out=c)  # coarse: only to compare
                         scored.append((c[0], [ea, eb]))
                 ends = min(scored, key=lambda t: t[0])[1]
+                cands = ([ends[0]] + [e for e in alts[0] if e is not ends[0]],
+                         [ends[1]] + [e for e in alts[1] if e is not ends[1]])
                 for n, e in zip((a, b), ends):
                     if e.side == "right":
                         right_used[n.id] = right_used.get(n.id, 0) + 1
@@ -2464,7 +2490,14 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             lo = max(lo, max(a.y + a.sym.height, b.y + b.sym.height) + 1.5)
             hi = max(hi, lo + 0.01)
         if not obs.grid or not pts:
-            pts = route(obs, ends[0], ends[1], lo, hi, **opts)
+            pts = route(obs, ends[0], ends[1], lo, hi, **{**opts, "record": False})
+            if pts and not obs.grid and i not in bus_lane and not on_conductor:
+                # through a text or a symbol, or far round: with more corners when that is clearly better
+                pts = improve_route(obs, ends[0], ends[1], pts, opts["lane"], opts["solid"],
+                                    min_run=14.0 if carries else 0.0,
+                                    starts=cands[0] if cands else None, goals=cands[1] if cands else None)
+            if opts["record"]:
+                record_route(obs, pts)
         if not pts and on_conductor:  # e.g. a feeder leaving downwards: the channel must go below it after all
             pts = route(obs, ends[0], ends[1], lo, max(e.y for e in ends) + 30.0, **opts)
         if not pts:  # no free channel: leave this link out rather than fail the whole drawing
@@ -2651,7 +2684,7 @@ def _draw_link_device(link: Any, dev: NodeBase, pts: list[tuple[float, float]], 
                 best = (cost, k, s0, vertical)
     if best is None:  # no stretch long enough: plain route, tag beside it
         g.add(Polyline(pts, style))
-        _record(obs, pts)
+        record_route(obs, pts)
         if dev.ref:
             x, y, anchor = place_label(obs, pts, text_width(dev.ref, 1.9), 1.9, from_end=False)
             g.add(Text((x, y), dev.ref, 1.9, anchor, bold=True))
@@ -2672,7 +2705,7 @@ def _draw_link_device(link: Any, dev: NodeBase, pts: list[tuple[float, float]], 
     part1, part2 = pts[:k + 1] + [first], [second] + pts[k + 1:]
     for part in (part1, part2):
         g.add(Polyline(part, style))
-        _record(obs, part)
+        record_route(obs, part)
     g.add(Group(items, dev.id, f"sym sym-{sym.name}"))
     obs.add_box(sbox)
     if not txt:
@@ -2691,14 +2724,6 @@ def _draw_link_device(link: Any, dev: NodeBase, pts: list[tuple[float, float]], 
     obs.add_box((x, y, x + w, y + hh))
     for i, t in enumerate(txt):
         g.add(Text((x, y + (i + 0.8) * line), t, size, bold=(i == 0 and bool(dev.ref))))
-
-
-def _record(obs: Obstacles, pts: list[tuple[float, float]]) -> None:
-    for p, q in zip(pts, pts[1:]):
-        if abs(p[1] - q[1]) < 1e-9:
-            obs.add_hline(p[1], p[0], q[0])
-        elif abs(p[0] - q[0]) < 1e-9:
-            obs.add_vline(p[0], p[1], q[1])
 
 
 def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[NodeBase], obs: Obstacles, g: Group,

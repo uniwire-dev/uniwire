@@ -325,11 +325,12 @@ def generator(node: Any = None, system: Optional[str] = None) -> Symbol:
     return s
 
 
-def motor(node: Any = None, live: Optional[int] = None) -> Symbol:
-    """``live``: live conductors feeding a motor that does not state its ``phases`` (2: single-phase)."""
+def motor(node: Any = None, live: Optional[int] = None, dc: bool = False) -> Symbol:
+    """``live``: live conductors feeding a motor that does not state its ``phases`` (2: single-phase);
+    ``dc``: a motor on a DC line."""
     ph = getattr(node, "phases", None)
     single = ph == 1 or (ph is None and live is not None and live <= 2)
-    return _machine("motor", "M", "1~" if single else "3~", False)
+    return _machine("motor", "M", "=" if dc else "1~" if single else "3~", False)
 
 
 def grid(node: Any = None) -> Symbol:
