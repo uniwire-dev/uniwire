@@ -132,17 +132,21 @@ def _container(data: Any, loc: tuple) -> tuple[Any, list[str]] | None:
 
 def _repair(data: dict[str, Any], err: ValidationError) -> tuple[dict[str, Any], list[str]]:
     """A copy of ``data`` with the unambiguous mistakes behind ``err`` fixed, and one note per fix: a number written
-    for a text, and in an object, a single unknown field beside a single missing required one (a misnamed field)."""
+    for a text, a text too long for a field that only shows a few characters (its initials, else its beginning),
+    and in an object, a single unknown field beside a single missing required one (a misnamed field)."""
     out, notes = copy.deepcopy(data), []
     errors = err.errors()
     for e in errors:
         v = e.get("input")
-        if e["type"] != "string_type" or not isinstance(v, (int, float)) or isinstance(v, bool):
+        if e["type"] == "string_type" and isinstance(v, (int, float)) and not isinstance(v, bool):
+            new = f"{v:g}" if isinstance(v, float) else str(v)
+        elif e["type"] == "string_too_long" and isinstance(v, str) and (e.get("ctx") or {}).get("max_length"):
+            new = _short_form(v, int(e["ctx"]["max_length"]))
+        else:
             continue
         found = _container(out, e["loc"][:-1])
         key = e["loc"][-1]
         if found and isinstance(found[0], dict) and found[0].get(key) == v:
-            new = f"{v:g}" if isinstance(v, float) else str(v)
             found[0][key] = new
             notes.append(_t("core.normalized", where=_where(found), field=key, old=v, new=new))
     by_object: dict[tuple, tuple[list, list]] = {}
@@ -156,6 +160,14 @@ def _repair(data: dict[str, Any], err: ValidationError) -> tuple[dict[str, Any],
             found[0][missing[0]] = found[0].pop(extra[0])
             notes.append(_t("core.normalized_field", where=_where(found), old=extra[0], new=missing[0]))
     return out, notes
+
+
+def _short_form(text: str, limit: int) -> str:
+    """A text written where only ``limit`` characters fit: the initials of its words ('Air conditioner': 'AC') when
+    it has several and they fit, else its beginning."""
+    words = re.findall(r"[^\W_]+", text)
+    initials = "".join(w[0] for w in words).upper()
+    return initials if 1 < len(words) and len(initials) <= limit else text.strip()[:limit].strip()
 
 
 def _where(found: tuple[Any, list[str]]) -> str:

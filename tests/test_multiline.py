@@ -369,3 +369,17 @@ def test_tall_sheet_split_by_branch_never_leaving_only_the_supply():
     assert len(specs) == 2 and specs[0].detached == {"T1"}
     for s in specs:
         assert _fit(_layout(doc, view, s, index, info, annex=False), view) >= view.min_scale
+
+
+def test_long_device_text_wrapped_whole_in_the_multi_line_view():
+    from tests.drawing_audit import audit
+
+    long = "Electronic reverse current blocking module with dual transistors"
+    d = {"uniwire": "1.0.0", "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
+         "views": [{"kind": "multi-line"}],
+         "sources": [{"type": "grid", "id": "G", "children": [
+             {"type": "switch_disconnector", "id": "Q1", "ref": "-Q1", "label": long, "in_A": 32, "poles": "4P",
+              "children": [{"type": "load", "id": "L1", "label": "Load"}]}]}]}
+    doc = load(d)
+    findings = [f for pg in render_pages(doc, default_view(doc, kind="multi-line")) for f in audit(pg.root)]
+    assert not [f for f in findings if f.kind in ("truncated", "small_text")], findings

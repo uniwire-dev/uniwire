@@ -234,11 +234,7 @@ def route(obs: Obstacles, a: End, b: End, y_min: Optional[float] = None, y_max: 
     if cost_out is not None:
         cost_out.append(best[0])
     if record:
-        for p, q in zip(pts, pts[1:]):
-            if abs(p[1] - q[1]) < 1e-9:
-                obs.add_hline(p[1], p[0], q[0])
-            elif abs(p[0] - q[0]) < 1e-9:
-                obs.add_vline(p[0], p[1], q[1])
+        record_route(obs, pts)
     return pts
 
 
@@ -346,13 +342,16 @@ _PROBE: list[list[Point]] = []  # debugging aid, see route_grid
 
 def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box, lane: float = LANE,
                step: float = 1.0, record: bool = True,
-               cost_out: Optional[list[float]] = None) -> tuple[list[Point], int, int]:
+               cost_out: Optional[list[float]] = None, bend: float = 0.0) -> tuple[list[Point], int, int]:
     """Cheapest orthogonal route, with as many corners as needed, from one of ``starts`` to one of ``goals``
     (the ends a link may use on each device): Dijkstra on a grid of ``step`` mm laid over ``window``, through
     the coordinates of the ends. Same costs as ``route`` (texts and symbols, lines run along or crossed,
-    frames), plus a cost per corner. Returns the points and the indexes of the ends used (no route: [])."""
+    frames), plus a cost per corner (``bend``, ``BEND`` if not given). Returns the points and the indexes of the
+    ends used (no route: [])."""
     import heapq
     from bisect import bisect_left, bisect_right
+
+    bend = bend or BEND
 
     # a link leaving a terminal downwards (PLC port) goes 3 mm straight down before it may turn
     starts_in = starts
@@ -494,7 +493,7 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
             i2, j2 = i + di, j + dj
             if not (0 <= i2 < nx and 0 <= j2 < ny):
                 continue
-            c = cost + edge(i, j, d2) + (BEND if d2 != d else 0.0)
+            c = cost + edge(i, j, d2) + (bend if d2 != d else 0.0)
             s2 = (i2, j2, d2)
             if c < dist.get(s2, 1e18):
                 dist[s2], prev[s2], origin[s2] = c, st, origin[st]
@@ -514,9 +513,85 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
     a, b = starts_in[origin[first]], goals_in[goal_at[found]]
     pts = _simplify(([(a.x, a.y)] if a.side == "down" else []) + path + ([(b.x, b.y)] if b.side == "down" else []))
     if record:
-        for p, q in zip(pts, pts[1:]):
-            if abs(p[1] - q[1]) < 1e-9:
-                obs.add_hline(p[1], p[0], q[0])
-            elif abs(p[0] - q[0]) < 1e-9:
-                obs.add_vline(p[0], p[1], q[1])
+        record_route(obs, pts)
     return pts, origin[found], goal_at[found]
+
+
+DETOUR_BEND = 15.0  # a single-line route rerouted on the grid: few corners (a jog round a mark reads as a fault)
+
+
+def record_route(obs: Obstacles, pts: list[Point]) -> None:
+    """Record a route in the obstacles: later links fan out instead of running on it."""
+    for p, q in zip(pts, pts[1:]):
+        if abs(p[1] - q[1]) < 1e-9:
+            obs.add_hline(p[1], p[0], q[0])
+        elif abs(p[0] - q[0]) < 1e-9:
+            obs.add_vline(p[0], p[1], q[1])
+
+
+def path_cost(obs: Obstacles, pts: list[Point], lane: float = LANE, solid: bool = False) -> float:
+    """Cost of a whole route with the costs of ``route``: what it crosses or runs along, its length, its corners."""
+    c = sum(_seg_cost(obs, p, q, lane, solid) + 0.08 * (abs(p[0] - q[0]) + abs(p[1] - q[1]))
+            for p, q in zip(pts, pts[1:]))
+    return c + BEND * max(len(pts) - 2, 0)
+
+
+def _length(pts: list[Point]) -> float:
+    return sum(abs(p[0] - q[0]) + abs(p[1] - q[1]) for p, q in zip(pts, pts[1:]))
+
+
+GRAZE = 0.4  # a route this far inside the box of a text only grazes it (the box has a margin round the letters)
+
+
+def _crosses_box(obs: Obstacles, pts: list[Point], free: float = 1.5) -> bool:
+    """Whether a route passes through a text or a symbol, leaving out its first and last ``free`` mm and the boxes
+    of the devices it joins."""
+    total = _length(pts)
+    done = 0.0
+    own = [o for o in obs.boxes if any(_hit((x, y, x, y), o, 0.8) for x, y in (pts[0], pts[-1]))]  # joined devices
+    boxes = [(o[0] + GRAZE, o[1] + GRAZE, o[2] - GRAZE, o[3] - GRAZE) for o in obs.boxes if o not in own]
+    for p, q in zip(pts, pts[1:]):
+        seg = _length([p, q])
+        a, b = max(free - done, 0.0), min(total - free - done, seg)
+        done += seg
+        if b <= a or seg <= 0:
+            continue
+        ux, uy = (q[0] - p[0]) / seg, (q[1] - p[1]) / seg
+        s0 = (p[0] + ux * a, p[1] + uy * a)
+        s1 = (p[0] + ux * b, p[1] + uy * b)
+        box = (min(s0[0], s1[0]), min(s0[1], s1[1]), max(s0[0], s1[0]), max(s0[1], s1[1]))
+        if any(_hit(box, o) for o in boxes):
+            return True
+    return False
+
+
+def along_bus(obs: Obstacles, pts: list[Point]) -> bool:
+    """Whether a route runs along a busbar, close enough and long enough to read as part of it."""
+    return any(abs(p[1] - q[1]) < 1e-9 and abs(y - p[1]) < BUS_CLEAR and min(h1, max(p[0], q[0])) - max(h0, min(p[0], q[0])) > BUS_RUN
+               for p, q in zip(pts, pts[1:]) for y, h0, h1 in obs.buses)
+
+
+def improve_route(obs: Obstacles, a: End, b: End, pts: list[Point], lane: float = LANE, solid: bool = False,
+                  min_run: float = 0.0, starts: Optional[list[End]] = None, goals: Optional[list[End]] = None,
+                  far_round: bool = True) -> list[Point]:
+    """A route through one channel that passes through a text or a symbol, runs along a busbar, or goes far round
+    (``far_round``): the route with as many corners as needed (``route_grid``) when that one is clearly better.
+    ``min_run``: its longest straight stretch at least this long (a link carrying a device symbol); ``starts``,
+    ``goals``: the other ends the link may use on each device (``a``, ``b`` are the ones chosen)."""
+    if len(pts) < 2:
+        return pts
+    direct = abs(a.x - b.x) + abs(a.y - b.y)
+    crossing = _crosses_box(obs, pts) or along_bus(obs, pts)
+    if not crossing and (not far_round or _length(pts) - direct <= max(30.0, 0.4 * direct)):
+        return pts
+    starts, goals = starts or [a], goals or [b]
+    xs, ys = [e.x for e in starts + goals], [e.y for e in starts + goals]
+    window = (min(xs) - 25.0, min(ys) - 25.0, max(xs) + 25.0, max(ys) + 25.0)
+    alt, _ka, _kb = route_grid(obs, starts, goals, window, lane, record=False, bend=DETOUR_BEND)
+    if len(alt) < 2 or max((_length([p, q]) for p, q in zip(alt, alt[1:])), default=0.0) < min_run:
+        return pts
+    if not crossing and _length(alt) > 0.8 * _length(pts):  # far round only: worth it when clearly shorter
+        return pts
+    if path_cost(obs, alt, lane, solid) < path_cost(obs, pts, lane, solid) - 1.0:
+        return alt
+    return pts
