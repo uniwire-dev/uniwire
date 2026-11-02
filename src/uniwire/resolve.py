@@ -132,7 +132,7 @@ def _container(data: Any, loc: tuple) -> tuple[Any, list[str]] | None:
 
 def _repair(data: dict[str, Any], err: ValidationError) -> tuple[dict[str, Any], list[str]]:
     """A copy of ``data`` with the unambiguous mistakes behind ``err`` fixed, and one note per fix: a number written
-    for a text, a text too long for a field that only shows a few characters (its initials, else its beginning),
+    for a text, a text too long for a field that only shows a few characters (see ``_short_form``),
     and in an object, a single unknown field beside a single missing required one (a misnamed field)."""
     out, notes = copy.deepcopy(data), []
     errors = err.errors()
@@ -163,11 +163,17 @@ def _repair(data: dict[str, Any], err: ValidationError) -> tuple[dict[str, Any],
 
 
 def _short_form(text: str, limit: int) -> str:
-    """A text written where only ``limit`` characters fit: the initials of its words ('Air conditioner': 'AC') when
-    it has several and they fit, else its beginning."""
-    words = re.findall(r"[^\W_]+", text)
+    """A text written where only ``limit`` characters fit: without its spaces when that fits ('L1 L2 L3':
+    'L1L2L3'), else the initials of its words when they are all words of letters ('Air conditioner': 'AC'), else
+    its beginning."""
+    compact = "".join(text.split())
+    if len(compact) <= limit:
+        return compact
+    words = text.split()
     initials = "".join(w[0] for w in words).upper()
-    return initials if 1 < len(words) and len(initials) <= limit else text.strip()[:limit].strip()
+    if len(words) > 1 and all(w.isalpha() for w in words) and len(initials) <= limit:
+        return initials
+    return text.strip()[:limit].strip()
 
 
 def _where(found: tuple[Any, list[str]]) -> str:
