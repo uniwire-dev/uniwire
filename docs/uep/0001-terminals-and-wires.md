@@ -1,3 +1,8 @@
+---
+title: "UEP-0001: terminals, terminal strips and wires"
+description: "Draft proposal to describe terminals, terminal strips and wires in uniwire documents, for wire lists and panel wiring."
+---
+
 # UEP-0001: Terminals, terminal strips and wires
 
 | | |

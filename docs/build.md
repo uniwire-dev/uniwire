@@ -1,3 +1,8 @@
+---
+title: "Code-first API: electrical diagrams in Python"
+description: "Describe an electrical installation as Python code with uniwire.build and get a checked document, its drawings and its bill of materials."
+---
+
 # Code-first API (`uniwire.build`)
 
 `uniwire.build` lets you describe electrical installations as Python code. The code builds a regular uniwire
