@@ -18,8 +18,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * DC lines: a battery, a PV array, a DC/DC converter and a power supply with a DC output start a DC line even when no
   `system` is stated: the devices below are marked with two poles (never `+N`) and a motor there is drawn `M =`.
 * Documents: a text too long for a field that shows only a few characters (`symbol_text`) is read short instead of
-  refused, reported by `core.normalized`: its initials when it has several words (`"Air conditioner"` read as
-  `"AC"`), else its beginning.
+  refused, reported by `core.normalized`: without its spaces when that fits (`"L1 L2 L3"` read as `"L1L2L3"`), else
+  the initials of its words when they are all words of letters (`"Air conditioner"` read as `"AC"`), else its
+  beginning.
+* Drawings: the box of a load is as wide as its `symbol_text` (a six-character text ran over its sides).
 
 ## 0.1.7 (2026-11-01)
 
