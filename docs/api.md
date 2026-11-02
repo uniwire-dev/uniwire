@@ -1,3 +1,8 @@
+---
+title: "Python API and CLI: validate, check and render"
+description: "Load, validate and check uniwire documents, render single-line and multi-line diagrams to SVG and PDF and list materials, from Python or the command line."
+---
+
 # Python API and CLI
 
 The `uniwire` package exposes a small functional API around the `Document` model, and a `uniwire`

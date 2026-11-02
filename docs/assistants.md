@@ -1,3 +1,8 @@
+---
+title: "Electrical diagrams in your AI assistant"
+description: "Ask Claude, ChatGPT or another assistant for an electrical diagram in plain words and get a checked single-line diagram, its PDF and a link to edit it."
+---
+
 # uniwire in your assistant
 
 Ask an assistant for an electrical diagram in plain words ("draw the single-line diagram of my flat", "check my

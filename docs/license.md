@@ -1,3 +1,8 @@
+---
+title: "Licences: Apache-2.0 code, CC BY 4.0 specification"
+description: "The uniwire library, CLI and JSON Schema are under the Apache License 2.0, and its specification under CC BY 4.0."
+---
+
 # License
 
 | Part | Licence |
