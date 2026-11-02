@@ -446,6 +446,7 @@ def busway(node: Any = None) -> Symbol:
 
 # ---------------------------------------------------------------- loads
 def _load_box(name: str, label: str, w: float = 5.6, h: float = 4.4) -> Symbol:
+    w = max(w, text_width(label, 1.6) + 1.2)  # wide enough for its text
     y0 = 0.8 * M
     items = [_lead(0, y0), Rect(-w / 2, y0, w, h), _text((0, y0 + h / 2), label, 1.6)]
     return Symbol(name, items, y0 + h, w / 2, w / 2, has_output=False)
