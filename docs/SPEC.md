@@ -1,3 +1,8 @@
+---
+title: "Specification: electrical installations in JSON"
+description: "The uniwire format: a JSON power tree of sources, devices and loads, plus links, that describes an electrical installation and its diagrams."
+---
+
 # uniwire format specification, version 1.1
 
 > Open exchange format for **describing electrical installations**, drawn as single-line and multi-line

@@ -1,3 +1,8 @@
+---
+title: "Documentation: electrical diagrams as code"
+description: "Documentation of uniwire, an open JSON format and Python library to describe electrical installations and draw their single-line and multi-line diagrams."
+---
+
 # uniwire
 
 **Electrical diagrams, as code.** An open standard to describe electrical installations: single-line and

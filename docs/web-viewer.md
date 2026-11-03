@@ -1,3 +1,8 @@
+---
+title: "Web viewer: electrical diagrams in the browser"
+description: "Open, edit and render uniwire documents in the browser with nothing to install: drawings, rule checks, PDF and SVG downloads."
+---
+
 # Web viewer
 
 **[Open the viewer →](https://uniwire.sh/viewer/)**

@@ -1,3 +1,8 @@
+---
+title: "Enhancement Proposals (UEP)"
+description: "How a change to the uniwire format is proposed, discussed and accepted: the UEP process and the list of proposals."
+---
+
 # uniwire Enhancement Proposals (UEP)
 
 Every change to the uniwire format (the [specification](../SPEC.md), the JSON Schema and the type registry) goes
