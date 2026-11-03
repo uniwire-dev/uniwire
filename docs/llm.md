@@ -1,3 +1,8 @@
+---
+title: "LLM tools: let an AI write and check diagrams"
+description: "The tools uniwire gives an AI assistant to write, read, edit, check and render electrical diagrams, from Python, the command line or the MCP server."
+---
+
 # LLM tools
 
 uniwire includes tools that let an AI assistant write, read, edit, check and render electrical diagrams (single-line and multi-line):

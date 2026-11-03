@@ -1,3 +1,8 @@
+---
+title: "Rule checks: NF C 15-100, IEC 60364, VDE 0100"
+description: "The checks uniwire runs on a document: protections, cables, RCDs and earthing against NF C 15-100, IEC 60364, VDE 0100 and the PLC rules."
+---
+
 # Rules
 
 Beyond the JSON Schema, uniwire checks documents against **rule profiles**. The `core` rules (including

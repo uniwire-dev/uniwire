@@ -1,3 +1,8 @@
+---
+title: "Examples of electrical diagrams in JSON"
+description: "Complete uniwire documents, from a studio flat to industrial panels, each drawn as single-line and multi-line diagrams: starting points to adapt."
+---
+
 # Examples
 
 The [`examples/`](https://github.com/uniwire-dev/uniwire/tree/main/examples) folder of the repository holds

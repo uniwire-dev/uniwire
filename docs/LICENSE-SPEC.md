@@ -1,3 +1,8 @@
+---
+title: "Licence of the specification (CC BY 4.0)"
+description: "The uniwire specification is licensed under Creative Commons Attribution 4.0 International: how to reuse it and credit it."
+---
+
 # Licence of the uniwire specification
 
 The uniwire specification (`docs/SPEC.md` and the type registry
