@@ -9,7 +9,7 @@ import pytest
 from uniwire.llm import tools
 from uniwire.llm.link import document_from_link, viewer_link
 from uniwire.llm.store import ID_LENGTH, DocStore, doc_id
-from uniwire.mcp_server import _pdf_base, _shorten
+from uniwire.mcp_server import _from_link, _guard, _pdf_base, _shorten
 
 from .conftest import ROOT
 
@@ -73,6 +73,29 @@ def test_shorten_tool_results(tmp_path):
     assert document_from_link(viewer_link(d)) == json.dumps(d, ensure_ascii=False, separators=(",", ":"))
     junk = tools.validate({"junk": "x" * 100})  # any JSON reaches validate: only diagrams are kept
     assert _shorten(junk, store, "https://uniwire.sh/viewer/") == junk and len(list(tmp_path.glob("*.json"))) == 1
+
+
+def test_editor_link_as_document(tmp_path):
+    """An assistant passes the viewer_url of a result instead of the document: the tool works on that document."""
+    store = DocStore(tmp_path)
+    d = json.loads(STUDIO.read_text("utf-8"))
+    base = "https://uniwire.sh/viewer/"
+    short = _shorten(tools.check(d), store, base)["viewer_url"]
+    assert json.loads(_from_link(short, store, base)) == d
+    assert json.loads(_from_link(" " + short + "&kind=multi-line\n", store, base)) == d
+    assert json.loads(_from_link(viewer_link(d), None, base)) == d  # a long link carries the document
+    assert _from_link(d, store, base) is d and _from_link('{"label": "Pump #2"}', store, base) == '{"label": "Pump #2"}'
+    assert _from_link("https://example.com/viewer/#d=abc", store, base) == "https://example.com/viewer/#d=abc"
+    with pytest.raises(tools.ToolError, match="expired"):
+        _from_link(base + "#d=" + "x" * ID_LENGTH, store, base)
+
+    class Err(Exception):
+        pass
+
+    describe = _guard(tools.describe, Err, store=store, link_base=base)
+    assert describe(short) == tools.describe(d)
+    with pytest.raises(Err, match="pass the document itself"):
+        describe(base + "#d=unknown")
 
 
 def test_shorten_pdf_links(tmp_path):

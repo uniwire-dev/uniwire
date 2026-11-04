@@ -110,6 +110,10 @@ the web editor shows while its engine starts, and `GET /doc/<id>` the document t
 kept in memory (64 MB, the least recently used dropped first): a link opened again, or by many people at once, is
 drawn once. `POST /doc/<id>/delete` refuses a request sent by a page of another site (`Origin` header).
 
+A tool also accepts, as its `document`, the `viewer_url` a tool returned for it: the short link reads the document
+kept in the store, a long `#doc=` link carries it. An assistant that kept the link rather than the JSON can go on
+from it; an expired or deleted link is refused with a message asking for the document itself.
+
 The PDF of `GET /pdf/<id>` ends with a page "About this document", which is not a sheet of the diagram: the rule
 profiles applied and the findings, the scope of the checks, the links of the online copy and how to delete it, and
 how to write to the uniwire team. `?about=0` leaves it out. Whoever holds a link can delete its document before it
