@@ -826,6 +826,9 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
             power = fmt(node.p_kW, " kW") if node.p_kW else ""
             if power and power in name:
                 power = ""
+            n = getattr(node, "count", None)
+            if n and n > 1:  # identical loads drawn once: power given per load
+                power = f"{n} x {power}" if power else f"x {n}"
             details = [x for x in (node.ref, power,
                                    _t("cell.points", lang, count=node.points) if getattr(node, "points", None) else "")
                        if x]
