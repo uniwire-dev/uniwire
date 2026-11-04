@@ -268,6 +268,9 @@ class _Assigner:
         if t in ("earth", "earth_bar"):  # an earth electrode or bar is on the protective conductor only
             pe = [c for c in parent if c in ("PE", "PEN")]
             return pe[-1:] or parent[-1:]
+        if _tapped(node) and not node.children:  # in parallel, feeding nothing: on the conductors it uses only
+            taps, to_earth = _taps(node, parent)
+            return taps + [c for c in parent if c == "PE" and to_earth] or parent[:1]
         if any(c in DC for c in parent):
             return [c for c in parent if c in DC or c == "PE"]
         avail = [c for c in parent if c in PHASES]
@@ -472,20 +475,45 @@ def conductors(doc: Document, show_pe: bool = True) -> dict[str, Conductors]:
     return {n.id: a.info[id(n)] for n, _, _ in iter_nodes(doc) if n.id and id(n) in a.info}
 
 
+#: Devices with no element on the neutral when their ``poles`` are not given.
+PHASES_ONLY = {"fuse", "thermal_relay"}
+
+#: Devices connected in parallel on the conductors (they pass on): a box beside them, fed by taps.
+TAPPED = {"voltage_indicator", "insulation_monitor", "surge_limiter", "neutral_impedance", "earthing_switch"}
+TAP_GAP, TAP_W = 2.5, 7.0  # from the last conductor to the box; width of the box
+
+
+def _tapped(node: Any) -> bool:
+    return node is not None and (node.type in TAPPED or (
+        node.type == "instrument_transformer" and getattr(node, "kind", None) in ("vt", "combined")))
+
+
+def _taps(node: Any, conds: list[str]) -> tuple[list[str], bool]:
+    """Conductors a device in parallel is connected to, and whether it also goes to earth: a voltage transformer
+    or indicator across the live conductors; a surge limiter or neutral impedance between the neutral (else the
+    first live conductor) and earth; an insulation monitor or earthing switch between the live conductors and
+    earth. The earth is the PE when the device has one, else an earth symbol."""
+    live = [c for c in conds if c in LIVE or c == "PEN"]
+    if node.type in ("surge_limiter", "neutral_impedance"):
+        return [c for c in live if c in ("N", "PEN")][:1] or live[:1], True
+    return live, node.type in ("insulation_monitor", "earthing_switch")
+
+
 def switched(node: Any, conds: list[str]) -> tuple[list[str], list[str]]:
     """Poles of a switching device: (protected / switched conductors, unprotected neutral pole).
 
     ``1P`` / ``3P``: the phases only (the neutral, if any, goes straight through); ``1P+N`` / ``3P+N``: the
     phases plus a neutral pole without protection; ``2P`` / ``4P``: identical poles on every live conductor
     (a ``2P`` on two phases, split-phase 240 V: those two, the neutral straight through).
-    A PEN conductor is never switched."""
+    Without ``poles``: every live conductor, except for the devices that never act on the neutral (a fuse, a
+    thermal overload relay), on the phases only. A PEN conductor is never switched."""
     phases = [c for c in conds if c in PHASES or c in DC]
     has_n = "N" in conds
     poles = getattr(node, "poles", None)
     t = node.type
     if poles == "2P" and len([c for c in phases if c in PHASES]) == 2 and t != "rcd":
         return phases, []  # split-phase 2P: L1 and L2 (240 V), the neutral goes straight through
-    if t in ("rcd",) or poles in ("2P", "4P") or (poles is None and t != "fuse"):
+    if t in ("rcd",) or poles in ("2P", "4P") or (poles is None and t not in PHASES_ONLY):
         return phases + (["N"] if has_n else []), []
     if poles in ("1P+N", "3P+N") and has_n:
         return phases, ["N"]
@@ -600,6 +628,8 @@ class MLNode:
             r = max(r, max(live) + 2.2)
         elif self.type == "plc":  # the single-line PLC symbol: head on the supply, then its modules
             r = max(r, _plc_axis(self) + symbol_for(self.node).right)
+        elif _tapped(self.node):  # its box beside the conductors
+            r += TAP_GAP + TAP_W
         elif self.type not in CONTACT_TYPES:  # boxes drawn across the conductors
             r += 1.5
         sets = _starter_sets(self.node) if self.type == "motor_starter" else 0
@@ -711,6 +741,8 @@ def _height(ln: MLNode) -> float:
         return 17.0
     if t == "spd":
         return 11.0
+    if _tapped(ln.node):
+        return 14.0  # room below the box for its earth symbol
     if t == "earth":
         return 6.0
     if t == "earth_bar":
@@ -1325,10 +1357,39 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
                 g.add(cond_group(c, Polyline([(x, y), (x, ym), (head if x < head else ox + sym.left - 0.2, ym)])))
         return g
 
-    if t == "instrument_transformer" and getattr(node, "kind", None) in (None, "ct"):  # a ring on each live conductor
+    if t == "instrument_transformer" and getattr(node, "kind", None) == "toroid":  # one ring around the live conductors
+        through()
+        rl = [xs[c] for c in live if c != "PEN"] or [xs[c] for c in live]
+        if rl:
+            g.add(*_toroid(rl, y, y + h / 2)[:1])
+        return g
+
+    if t == "instrument_transformer" and getattr(node, "kind", None) in (None, "ct", "combined"):  # a ring on each phase
         through()
         for c in [c for c in live if c.startswith("L")] or live:  # the phases (never the PEN)
             g.add(Circle((xs[c], y + h / 2), 1.0))
+        if not _tapped(node):
+            return g
+
+    if _tapped(node):  # in parallel: the conductors pass on, the device beside them on taps
+        taps, to_earth = _taps(node, ln.inp)
+        pe = next((c for c in ln.inp if c == "PE"), None) if to_earth else None
+        taps = [c for c in taps if c in xs] + ([pe] if pe else [])
+        x0 = max(xs.values()) + TAP_GAP
+        x1, y0, y1 = x0 + TAP_W, y + 1.5, y + 9.5
+        icon = _icon(node, x0, y0, x1, y1)
+        g.add(*_box(x0, y0, x1, y1, "" if icon is not None else _box_text(ln)), *([icon] if icon is not None else []))
+        for k, c in enumerate(taps):
+            ty = y0 + 1.0 + (k * (y1 - y0 - 2.0) / (len(taps) - 1) if len(taps) > 1 else (y1 - y0 - 2.0) / 2)
+            if ln.children:  # the conductor goes on below: a junction
+                g.add(cond_group(c, Line((xs[c], ty), (x0, ty)), _dot(xs[c], ty)))
+            else:  # it ends here, turning into the device
+                g.add(cond_group(c, Polyline([(xs[c], y), (xs[c], ty), (x0, ty)])))
+                drawn.add(c)
+        through()
+        if to_earth and pe is None:
+            xm = (x0 + x1) / 2
+            g.add(Line((xm, y1), (xm, y1 + 1.0)), *_earth(xm, y1 + 1.0))
         return g
 
     if t == "connector":  # socket and plug on each conductor, as in the single-line symbol
