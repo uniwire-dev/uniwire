@@ -132,7 +132,7 @@ A template is an object of attributes, optionally typed. During resolution:
 ### Fields common to all nodes
 | Field | Description |
 |---|---|
-| `count` | Number of identical items represented ("x 20", 8 micro-inverters) |
+| `count` | Number of identical items represented, drawn once ("x 20", 8 micro-inverters). On a protective device: identical circuits, each with the device's subtree. Ratings and powers are per item |
 | `circuit` | Circuit or outgoing feeder number / code, distinct from the reference designation (C1, 15B) |
 | `un_V`, `uln_V` | Rated (phase-to-phase) voltage and phase-to-neutral voltage of the node (boards, busbars, loads, inverters) |
 | `ib_A`, `p_kW`, `q_kvar`, `cos_phi` | Feeder data / power balance |

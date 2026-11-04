@@ -362,6 +362,9 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
     elif t == "power_supply":
         u = f"{fmt(g('u1_V'))}/{fmt(g('u2_V'))} V {g('output') or ''}".strip() if g("u1_V") and g("u2_V") else ""
         lines += [u, fmt(g("in_A"), " A") if g("in_A") else ""]
+    n = g("count")
+    if n and n > 1 and t != "inverter":  # identical items drawn once ("x 24"); an inverter writes "8 x 0.3 kVA"
+        lines.insert(0, f"x {n}")
     lines.append(state_text(node, lang))
     return [x for x in lines if x]
 

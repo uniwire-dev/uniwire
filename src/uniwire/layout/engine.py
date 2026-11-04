@@ -2894,7 +2894,11 @@ def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: 
     cols = [Group(id=c.node.id if c.node is not None else None, cls="uw-cell") for c in columns]
     y = y0
     small = Style(width=THIN)
-    for field_ in view.cartouche:
+    fields = list(view.cartouche)
+    # identical circuits drawn once: the table says how many, after the power (given per circuit)
+    if "count" not in fields and any((getattr(i.get(k), "count", None) or 0) > 1 for i in infos for k in ("leaf", "prot")):
+        fields.insert(fields.index("p_kW") + 1 if "p_kW" in fields else len(fields), "count")
+    for field_ in fields:
         values = [cell(field_, inf, lang) for inf in infos]
         if field_ == "cable" and "cable_ref" not in view.cartouche:  # cable tag next to the cable text
             values = [" · ".join(x for x in (inf["cable"].ref, v) if x) if inf["cable"] is not None else v
