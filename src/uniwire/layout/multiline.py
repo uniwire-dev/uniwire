@@ -395,6 +395,9 @@ class _Assigner:
             out = list(inp)
             if t == "transformer":
                 out, pending = self._transformer_out(node, inp)
+            elif t == "inverter" and any(c in DC for c in inp):  # fed in DC: the AC network starts at its output
+                inst = self.doc.installation
+                out, pending = self.lv(getattr(node, "system", None) or inst.system, inst.earthing)
             elif t in CONVERTERS and not any(c in DC for c in inp) and not _dc_side(node):
                 out = list(DC)
             elif _vfd_to_three_phase(node, inp):  # a drive fed in single phase makes the motor's three phases
@@ -1295,6 +1298,11 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
         g.add(*_box(x0, y + 2.0, x1, y + 9.0))
         g.add(Line((x0, y + 9.0), (x1, y + 2.0), Style(width=THIN)))
         a, b = ("~", "~") if t == "ups" else ("=", "=") if t == "dc_converter" else ("~", "=")
+        if any(c in LIVE for c in ln.inp) and any(c in LIVE for c in ln.out):  # what it is fed with, what it gives
+            dc_in, dc_out = any(c in DC for c in ln.inp), any(c in DC for c in ln.out)
+            ac_out = any(c in PHASES for c in ln.out)
+            a = "=" if dc_in else "~"
+            b = "~" if ac_out and (dc_in or not dc_out) else "="  # AC and a DC side (inverter-charger): "~ ="
         g.add(Text((x0 + 1.6, y + 4.0), a, 1.8, "middle", "middle"), Text((x1 - 1.6, y + 7.2), b, 1.8, "middle", "middle"))
         for c, x in lanes:
             g.add(cond_group(c, Line((x, y), (x, y + 2.0))))

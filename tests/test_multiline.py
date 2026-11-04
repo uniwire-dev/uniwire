@@ -440,3 +440,18 @@ def test_devices_in_parallel_take_the_conductors_they_use_and_pass_them_on():
         return out
     assert kinds(groups["T1"]).count("Ellipse") == 1  # one ring around the live conductors
     assert kinds(groups["T2"]).count("Rect") == 1 and kinds(groups["T2"]).count("Circle") >= 4  # box, junctions
+
+
+def test_converters_drawn_in_the_direction_they_convert():
+    doc = load({"installation": {"earthing": "TN-S", "system": "1P+N"}, "sources": [
+        {"type": "pv_array", "children": [{"type": "inverter", "id": "U1", "children": [
+            {"type": "breaker", "id": "Q1", "poles": "1P+N", "children": [{"type": "load", "id": "L1"}]}]}]},
+        {"type": "battery", "children": [{"type": "power_supply", "id": "T2", "children": [{"type": "load", "id": "L2"}]}]},
+        {"type": "grid", "children": [{"type": "power_supply", "id": "T3", "children": [{"type": "load", "id": "L3"}]}]}]})
+    info = conductors(doc)
+    assert info["U1"].inp == ["L+", "L-"] and info["U1"].out == ["L1", "N", "PE"]  # an inverter fed in DC gives AC
+    assert info["Q1"].inp == ["L1", "N", "PE"]
+    assert info["T2"].out == ["L+", "L-"] and info["T3"].out == ["L+", "L-"]
+    page = render_pages(doc, default_view(doc, kind="multi-line"))[0]
+    marks = {g.id: [t.text for t in g.items if isinstance(t, Text)] for g in _groups(page.root) if g.id in ("U1", "T2", "T3")}
+    assert marks == {"U1": ["=", "~"], "T2": ["=", "="], "T3": ["~", "="]}
