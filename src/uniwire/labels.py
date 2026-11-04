@@ -539,6 +539,14 @@ CARTOUCHE_TITLES = {
         "cos_phi": "cos φ", "count": "Adet", "un_V": "Gerilim", "frame_A": "Kasa", "cable_type": "Kablo tipi",
         "cable_ref": "Kablo etiketi", "install": "Döşeme şekli",
     },
+    "nl": {
+        "label": "Omschrijving", "ref": "Codering", "protection": "Beveiliging", "in_A": "Nominaal",
+        "curve": "Karakteristiek", "icn_kA": "Uitsch.verm.", "idn_mA": "Aardlek", "rcd_type": "Type aardlek",
+        "poles": "Polen", "cable": "Kabel (mm²)", "cable_awg": "Kabel", "section_mm2": "Doorsnede",
+        "length_m": "Lengte", "p_kW": "Vermogen", "phase": "Fase", "room": "Ruimte", "points": "Punten",
+        "circuit": "Groep", "ib_A": "Ib", "cos_phi": "Arbeidsfactor", "count": "Aantal", "un_V": "Spanning",
+        "frame_A": "Frame", "cable_type": "Kabeltype", "cable_ref": "Kabelcodering", "install": "Installatiemethode",
+    },
     "en": {
         "label": "Description", "ref": "Tag", "protection": "Protection", "in_A": "Rating", "curve": "Curve",
         "icn_kA": "Breaking cap.", "idn_mA": "RCD", "rcd_type": "RCD type", "poles": "Poles", "cable": "Cable (mm²)", "cable_awg": "Cable",
