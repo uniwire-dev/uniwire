@@ -23,6 +23,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Drawings: identical items drawn once (`count`) show how many: `x 12` under the tag of a device, `3 x 2.2 kW` under
   a load in multi-line drawings, and a `count` row in the feeder table after the power, added when the document has
   such items and the view does not list it. The SPEC says that ratings and powers are given per item.
+* Multi-line drawings: a drive fed in single phase gives three phases to what it feeds when anything below it is
+  three-phase (a three-pole device, a three-phase motor), not only a three-phase motor directly under it: a 3P
+  breaker between the drive and the motor was drawn with one pole, the motor with L1, N and PE.
 
 ## 0.1.8 (2026-11-02)
 
