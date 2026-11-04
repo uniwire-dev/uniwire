@@ -1261,7 +1261,9 @@ def _line_marks(doc: Document) -> tuple[dict[int, Optional[Mark]], dict[int, Opt
         elif dc:  # a DC line has two poles and no neutral, whatever the devices cut
             out = (2, False)
         elif n.type in SWITCHING and getattr(n, "poles", None):  # type: ignore[attr-defined]
-            out = poles_mark(n.poles, _needs_neutral(n)) or up  # type: ignore[attr-defined]
+            # a device passes on the neutral of its supply, it never makes one: three phases in, no "+N" out
+            neutral_in = up != (3, False)
+            out = poles_mark(n.poles, neutral_in and _needs_neutral(n)) or up  # type: ignore[attr-defined]
         m_out[id(n)] = out
         for c in n.children:
             walk(c, out, dc)

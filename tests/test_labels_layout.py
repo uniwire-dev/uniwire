@@ -379,6 +379,21 @@ def _items_groups(item):
             yield from _items_groups(i)
 
 
+def test_no_neutral_made_below_a_three_wire_supply():
+    """A 3P device passes on the neutral of its supply: below a three-wire network (system 3P) a single-phase
+    circuit further down does not give it a '+N'; on a 3P+N network it does."""
+    from uniwire.layout.engine import _line_marks
+
+    def mark(system):
+        d = load({"installation": {"system": system, "earthing": "TN-S"}, "sources": [{"type": "grid", "children": [
+            {"type": "breaker", "id": "Q0", "poles": "3P", "cable": {"cores": "4G"}, "children": [
+                {"type": "breaker", "id": "Q1", "poles": "3P", "children": [{"type": "motor", "phases": 3}]},
+                {"type": "breaker", "id": "Q2", "poles": "1P+N", "phase": "L1", "children": [{"type": "load"}]}]}]}]})
+        return _line_marks(d)[1][id(d.sources[0].children[0])]
+
+    assert mark("3P") == (3, False) and mark("3P+N") == (3, True)
+
+
 def test_pen_split_marker():
     assert "PEN" in _texts(render_pages(_sld(earthing="TN-C-S"))[0].root)  # default: first board
     assert "PEN" not in _texts(render_pages(_sld(earthing="TN-S"))[0].root)
