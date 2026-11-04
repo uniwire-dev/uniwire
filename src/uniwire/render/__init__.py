@@ -6,7 +6,7 @@ import copy
 import hashlib
 import re
 from collections import OrderedDict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any, Optional
 
@@ -47,6 +47,13 @@ _PAGES_MAX = 16                                        # several times in a row 
 def render_pages(doc: Document, view: Optional[View] = None) -> list[Page]:
     """Plan the sheets, lay them out and compose each page."""
     view = view or default_view(doc)
+    pages = _view_pages(doc, view)
+    number_sheets(pages, [(view, len(pages))])
+    return pages
+
+
+def _view_pages(doc: Document, view: View) -> list[Page]:
+    """Sheets of one view, numbered 1..n in their title blocks and cross-sheet references (see number_sheets)."""
     lang = normalize_lang(doc.meta.lang)
     try:
         key: Optional[str] = hashlib.sha256((doc.model_dump_json() + "\0" + view.model_dump_json() + "\0" + lang)
@@ -79,29 +86,78 @@ def render_views(doc: Document, views: Optional[Iterable[View]] = None) -> list[
     auxiliary devices and links. The cross-sheet references of each view keep pointing at its own sheets."""
     views = list(views) if views is not None else (list(doc.views) or [default_view(doc)])
     out: list[Page] = []
+    counts: list[tuple[View, int]] = []
     for v in views:
-        pages = render_pages(doc, v)
+        pages = _view_pages(doc, v)
         if out:
             for page in pages:
                 _shift_refs(page.root, len(out))
         out += pages
-    if len(views) > 1:  # one drawing set: sheets numbered across the views
-        for i, page in enumerate(out, 1):
-            page.attrs["data-uw-sheet"] = str(i)
-            _renumber(page.root, i, len(out))
+        counts.append((v, len(pages)))
+    for i, page in enumerate(out, 1):
+        page.attrs["data-uw-sheet"] = str(i)
+    number_sheets(out, counts)
     return out
 
 
-def _renumber(item: Item, folio: int, total: int) -> None:
+def sheet_numbers(views: list[tuple[View, int]]) -> tuple[list[int], Optional[int]]:
+    """Printed number of each sheet of one drawing set (its views in order, with their number of sheets), and the
+    total to print after it. A view numbered from its ``first_folio`` (when given), else following the view
+    before it (from 1 for the first). The total is the ``total_folios`` given (the largest, never less than the
+    last sheet: '7 / 6' would be false), else the last sheet when the set starts at 1, else none ('3', not '3 / 4',
+    for a partial set)."""
+    numbers: list[int] = []
+    for v, n in views:
+        start = v.first_folio if "first_folio" in v.model_fields_set or not numbers else numbers[-1] + 1
+        numbers += range(start, start + n)
+    given = [v.total_folios for v, _ in views if v.total_folios]
+    last = max(numbers, default=0)
+    total = max(given + [last]) if given else (last if numbers and numbers[0] == 1 else None)
+    return numbers, total
+
+
+def number_sheets(pages: list[Page], views: list[tuple[View, int]]) -> None:
+    """Write the printed sheet numbers (:func:`sheet_numbers`) in the title blocks and in the text of the
+    cross-sheet references, which until then give the position of the sheet; the links keep the position."""
+    numbers, total = sheet_numbers(views)
+    for page, number in zip(pages, numbers):
+        page.attrs["data-uw-folio"] = str(number)
+        _renumber(page.root, number, total)
+        _print_refs(page.root, numbers)
+
+
+def _renumber(item: Item, folio: int, total: Optional[int]) -> None:
     """Write ``folio / total`` in the sheet cell of a title block (the last text of its ``tb-sheet`` group)."""
     if isinstance(item, Group):
         if item.cls == "tb-sheet":
             texts = [t for t in item.items if isinstance(t, Text)]
             if texts:
-                texts[-1].text = f"{folio} / {total}"
+                texts[-1].text = f"{folio} / {total}" if total else str(folio)
             return
         for c in item.items:
             _renumber(c, folio, total)
+
+
+def _last_number(text: str, old: int, new: int) -> str:
+    """``text`` with its last occurrence of the number ``old`` replaced by ``new``."""
+    return re.sub(rf"(?<!\d){old}(?!\d)(?!.*(?<!\d){old}(?!\d))", str(new), text)
+
+
+def _ref_text(group: Group, change: Callable[[str], str]) -> None:
+    """Change the text of a cross-sheet reference that carries the sheet number: its last text (a link's label,
+    written before it, keeps its own figures)."""
+    texts = [t for t in group.items if isinstance(t, Text)]
+    if texts:
+        texts[-1].text = change(texts[-1].text)
+
+
+def _print_refs(item: Item, numbers: list[int]) -> None:
+    if isinstance(item, Group):
+        target = item.attrs.get("data-uw-target-sheet", "")
+        if target.isdigit() and 1 <= int(target) <= len(numbers) and numbers[int(target) - 1] != int(target):
+            _ref_text(item, lambda s: _last_number(s, int(target), numbers[int(target) - 1]))
+        for c in item.items:
+            _print_refs(c, numbers)
 
 
 def _shift_refs(item: Item, offset: int) -> None:
@@ -111,9 +167,7 @@ def _shift_refs(item: Item, offset: int) -> None:
         target = item.attrs.get("data-uw-target-sheet", "")
         if target.isdigit():
             item.attrs["data-uw-target-sheet"] = str(int(target) + offset)
-            for t in item.items:
-                if isinstance(t, Text):
-                    t.text = re.sub(rf"(?<!\d){target}(?!\d)(?!.*(?<!\d){target}(?!\d))", str(int(target) + offset), t.text)
+            _ref_text(item, lambda s: _last_number(s, int(target), int(target) + offset))
         for c in item.items:
             _shift_refs(c, offset)
 

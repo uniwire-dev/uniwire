@@ -231,8 +231,9 @@ def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None, 
         if page.attrs.get("data-uw-about"):  # page "About this document": no sheet number
             c.addOutlineEntry(xml_safe(page.title), _dest(n), level=0)
         else:
-            c.addOutlineEntry(_t("render.sheet_bookmark", lang, number=n, title=xml_safe(page.title)) if page.title else
-                              _t("render.sheet_bookmark_untitled", lang, number=n), _dest(n), level=0)
+            k = page.attrs.get("data-uw-folio", n)  # the number printed in its title block
+            c.addOutlineEntry(_t("render.sheet_bookmark", lang, number=k, title=xml_safe(page.title)) if page.title else
+                              _t("render.sheet_bookmark_untitled", lang, number=k), _dest(n), level=0)
         c.saveState()
         c.translate(0, page.height * mm)
         c.scale(mm, -mm)  # mm, y pointing down like the scene

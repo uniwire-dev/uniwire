@@ -82,8 +82,7 @@ def compose_page(doc: Document, view: View, lay: SheetLayout, folio: int, total:
 
     if not view.title_block:
         return page
-    folio = view.first_folio + folio - 1
-    total = view.total_folios or (total if view.first_folio == 1 else None)
+    # folio / total: the position of the sheet in its view; numbered from first_folio afterwards (render.number_sheets)
     # title-block band
     band_y = h - MARGIN - TITLE_BAND
     root.add(Line((MARGIN, band_y), (w - MARGIN, band_y), Style(width=NORMAL)))
