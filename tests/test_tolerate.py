@@ -48,6 +48,12 @@ def test_single_value_range():
     assert relay.range_A == "10" and len(_notes(d)) == 1
 
 
+def test_phases_written_as_text():
+    d = _doc({"type": "motor", "id": "M1", "phases": "3"}, {"type": "motor", "id": "M2", "phases": " 1 "})
+    motors = uniwire.load(d).sources[0].children
+    assert [m.phases for m in motors] == [3, 1] and len(_notes(d)) == 2
+
+
 def test_meta_and_views():
     d = _doc({"type": "socket"}, meta={"title": "Shop", "description": "small shop", "notes": ["n1"]},
              views=[{"type": "multi_line"}])
@@ -86,7 +92,8 @@ def test_input_untouched_and_canonical_silent():
 
 
 @pytest.mark.parametrize("bad", [{"poles": 5}, {"poles": "two"}, {"poles": True}, {"cable": {"cores": True}},
-                                 {"type": "main_breaker", "range_A": [15, "x"]}])
+                                 {"type": "main_breaker", "range_A": [15, "x"]},
+                                 {"type": "motor", "phases": "2"}, {"type": "motor", "phases": "three"}])
 def test_ambiguous_values_still_fail(bad):
     with pytest.raises(UniwireError):
         uniwire.load(_doc({"type": "breaker", "id": "Q1", "in_A": 16, **bad}))

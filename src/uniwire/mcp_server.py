@@ -17,6 +17,7 @@ import json
 import logging
 import sys
 import time
+import zlib
 from typing import Annotated, Any, Optional, Union
 from urllib.parse import urlsplit
 
@@ -108,6 +109,33 @@ LINKED = {"validate", "check", "apply_patch", "render", "viewer_link"}
 MAX_REQUEST_BODY_BYTES = 3 * 1024 * 1024
 
 
+def _from_link(document: Any, store, base: str) -> Any:
+    """The document opened by an editor link given in place of the document (assistants keep the link of a result
+    rather than its JSON): a short ``#d=<id>`` link reads the document kept in ``store``, a long ``#doc=`` link
+    carries it. Anything else is returned unchanged."""
+    from .llm.link import document_from_link
+
+    if not isinstance(document, str):
+        return document
+    link = document.strip()
+    head, sep, fragment = link.partition("#")
+    if not (sep and head and base.startswith(head.replace("http://", "https://", 1))):
+        return document
+    params = dict(p.partition("=")[::2] for p in fragment.split("&"))
+    if "doc" in params:
+        try:
+            return document_from_link(link)
+        except (ValueError, zlib.error, UnicodeDecodeError):
+            raise T.ToolError("this editor link is damaged: pass the document itself") from None
+    if "d" in params:
+        text = store.get(params["d"]) if store is not None else None
+        if text is None:
+            raise T.ToolError("this editor link is unknown here, has expired or was deleted: pass the document "
+                              "itself") from None
+        return text
+    return document
+
+
 def _shorten(result: Any, store, base: str, pdf_base: Optional[str] = None) -> Any:
     """Replace the long ``#doc=`` links of a tool result by short ``#d=<id>`` links to documents kept in ``store``
     (assistants retype links into their replies, and long payloads do not survive that). With ``pdf_base``,
@@ -156,12 +184,14 @@ def _guard(fn, tool_error, pool=None, store=None, link_base: str = "", pdf_base:
         t0 = time.monotonic()
         status = "error"
         try:
+            bound = sig.bind(*args, **kwargs)
+            if "document" in bound.arguments:
+                bound.arguments["document"] = _from_link(bound.arguments["document"], store, link_base)
             if pooled:
-                bound = sig.bind(*args, **kwargs)
                 bound.apply_defaults()
                 result = pool.call(fn.__name__, dict(bound.arguments))
             else:
-                result = fn(*args, **kwargs)
+                result = fn(*bound.args, **bound.kwargs)
             result = _shorten(result, store, link_base, pdf_base) if store is not None else result
             status = "ok"
             return result
