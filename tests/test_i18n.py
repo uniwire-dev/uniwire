@@ -1,7 +1,7 @@
 import re
 
 from uniwire import load, render_pages
-from uniwire.i18n import CATALOGS, DE, EN, ES, FR, IT, PL, PT, RU, TR, ZH, normalize_lang, t
+from uniwire.i18n import CATALOGS, DE, EN, ES, FR, IT, NL, PL, PT, RU, TR, ZH, normalize_lang, t
 from uniwire.render.scene import Group, Text
 from uniwire.rules import check
 
@@ -20,14 +20,14 @@ def _texts(item) -> list[str]:
 
 def test_catalogs_have_same_keys():
     assert set(EN) == set(FR)
-    assert set(CATALOGS) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr"}
+    assert set(CATALOGS) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr", "nl"}
     drawing = {k for k in EN if k.split(".")[0] in ("tb", "notes", "legend", "ann", "cell", "about")}
     rules = {k for k in EN if k.split(".")[0] in ("core", "rules", "nfc15100", "vde0100", "iec60364", "enedis", "plc")}
-    for cat in (RU, ZH, ES, DE, PT, IT, PL, TR):  # the drawing texts in every language
+    for cat in (RU, ZH, ES, DE, PT, IT, PL, TR, NL):  # the drawing texts in every language
         assert drawing <= set(cat) <= set(EN)
         for k, v in cat.items():  # same placeholders as the English text (the order follows each language)
             assert sorted(re.findall(r"{\w+}", v)) == sorted(re.findall(r"{\w+}", EN[k])), k
-    for cat in (RU, ZH, ES, DE, PT):  # and the rule messages (English for the CLI and validation)
+    for cat in (RU, ZH, ES, DE, PT, NL):  # and the rule messages (English for the CLI and validation)
         assert rules <= set(cat)
         assert set(cat) == set(RU)
 
@@ -97,11 +97,18 @@ def test_turkish_drawing_texts():
     assert "1,5" in " ".join(tr)  # decimal comma
 
 
+def test_dutch_drawing_texts():
+    view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
+    nl = [s for p in render_pages(load({**DOC, "meta": {"lang": "nl-BE"}, "views": [view]})) for s in _texts(p.root)]
+    assert {"Opmerkingen", "Codering", "Kabel (mm²)", "Blad"} <= set(nl)
+    assert "1,5" in " ".join(nl)  # decimal comma
+
+
 def test_type_labels_in_every_language():
     from uniwire import registry
 
     for type_, info in registry.registry()["types"].items():
-        assert set(info["label"]) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr"}, type_
+        assert set(info["label"]) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr", "nl"}, type_
 
 
 def test_lang_selection(monkeypatch):

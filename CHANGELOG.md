@@ -6,6 +6,14 @@ The format and the library are versioned separately: the format follows `1.y.z` 
 version. Before the library's 1.0, a `0.x.y` release adds features and fixes that keep existing documents and
 code working, and a `0.x.0` release may break compatibility (described here, with what to change).
 
+## Unreleased
+
+* Drawings in Dutch (`meta.lang` "nl", "nl-NL", "nl-BE"): title block, notes, legends, table headings ("Codering",
+  "Groep"), type names, the short texts in symbols and the rule findings, with the terms of NEN 1010 practice. Dutch
+  numbers take a decimal comma. Validation and command line messages stay in English.
+* Reference card: `meta.lang` is the language of the labels written in the document, which the texts drawn by
+  uniwire follow.
+
 ## 0.1.8 (2026-11-02)
 
 * Single-line drawings: a link whose route passes through a text or a symbol, or goes far round, is routed with
