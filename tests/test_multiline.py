@@ -401,3 +401,42 @@ def test_long_device_text_wrapped_whole_in_the_multi_line_view():
     doc = load(d)
     findings = [f for pg in render_pages(doc, default_view(doc, kind="multi-line")) for f in audit(pg.root)]
     assert not [f for f in findings if f.kind in ("truncated", "small_text")], findings
+
+
+def test_device_without_poles_never_on_the_neutral_when_it_never_acts_on_it():
+    from types import SimpleNamespace
+
+    from uniwire.layout.multiline import switched
+    conds = ["L1", "L2", "L3", "N", "PE"]
+    for t in ("thermal_relay", "fuse"):
+        assert switched(SimpleNamespace(type=t, poles=None), conds) == (["L1", "L2", "L3"], []), t
+    assert switched(SimpleNamespace(type="contactor", poles=None), conds) == (["L1", "L2", "L3", "N"], [])
+    assert switched(SimpleNamespace(type="thermal_relay", poles="4P"), conds) == (["L1", "L2", "L3", "N"], [])
+
+
+def _parallel_doc():
+    return load({"installation": {"earthing": "TN-S", "system": "3P+N"}, "sources": [{"type": "grid", "children": [
+        {"type": "board", "id": "B", "children": [
+            {"type": "voltage_indicator", "id": "P1"},
+            {"type": "insulation_monitor", "id": "P2"},
+            {"type": "breaker", "id": "Q1", "poles": "4P", "children": [
+                {"type": "instrument_transformer", "id": "T1", "kind": "toroid", "children": [{"type": "load", "id": "L1"}]}]},
+            {"type": "breaker", "id": "Q2", "poles": "4P", "children": [
+                {"type": "instrument_transformer", "id": "T2", "kind": "vt", "children": [{"type": "load", "id": "L2"}]}]}]}]}]})
+
+
+def test_devices_in_parallel_take_the_conductors_they_use_and_pass_them_on():
+    doc = _parallel_doc()
+    info = conductors(doc)
+    assert info["P1"].inp == ["L1", "L2", "L3", "N"]  # across the live conductors, not on the PE
+    assert info["P2"].inp == ["L1", "L2", "L3", "N", "PE"]  # between the network and earth
+    assert info["T2"].out == ["L1", "L2", "L3", "N", "PE"] and info["L2"].inp == info["T2"].inp
+    page = render_pages(doc, default_view(doc, kind="multi-line"))[0]
+    groups = {g.id: g for g in _groups(page.root) if g.id}
+    def kinds(g):
+        out = []
+        for i in g.items:
+            out += kinds(i) if isinstance(i, Group) else [type(i).__name__]
+        return out
+    assert kinds(groups["T1"]).count("Ellipse") == 1  # one ring around the live conductors
+    assert kinds(groups["T2"]).count("Rect") == 1 and kinds(groups["T2"]).count("Circle") >= 4  # box, junctions

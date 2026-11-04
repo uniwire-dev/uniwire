@@ -31,6 +31,14 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   than the last sheet). Before, a drawing set printed 1/2 where the views said 3/6. The sheet numbers written in
   cross-sheet references ("→ sheet 4") and in the PDF bookmarks are the printed ones (before, the position of the
   sheet, also for a single view with `first_folio`).
+* Multi-line drawings: a thermal overload relay without `poles` acts on the phases only, like a fuse (before, it
+  was drawn with an element on the neutral too).
+* Multi-line drawings: devices connected in parallel are drawn beside the conductors, on taps, instead of as a
+  box in series across every conductor: a voltage transformer or a voltage indicator across the live conductors,
+  a surge limiter or a neutral impedance between the neutral and earth, an insulation monitor or an earthing switch
+  between the live conductors and earth (the PE, else an earth symbol). The conductors go on below them; one that
+  feeds nothing below takes only the conductors it uses. A residual-current toroid (`instrument_transformer`
+  `kind` `toroid`) is one ring around the live conductors.
 
 ## 0.1.8 (2026-11-02)
 
