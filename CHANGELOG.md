@@ -26,6 +26,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Multi-line drawings: a drive fed in single phase gives three phases to what it feeds when anything below it is
   three-phase (a three-pole device, a three-phase motor), not only a three-phase motor directly under it: a 3P
   breaker between the drive and the motor was drawn with one pole, the motor with L1, N and PE.
+* Sheet numbers: a drawing set (several views) numbers its sheets from the `first_folio` of its first view, and
+  from the `first_folio` of a later view that gives one, else following on; the total is `total_folios` (never less
+  than the last sheet). Before, a drawing set printed 1/2 where the views said 3/6. The sheet numbers written in
+  cross-sheet references ("→ sheet 4") and in the PDF bookmarks are the printed ones (before, the position of the
+  sheet, also for a single view with `first_folio`).
 
 ## 0.1.8 (2026-11-02)
 

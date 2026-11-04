@@ -87,3 +87,36 @@ def test_layout_reused_for_the_same_document_and_never_shared():
     first[0].root.items.clear()  # a caller altering its pages does not alter the next caller's
     second = render_pages(load(json.loads(path.read_text(encoding="utf-8"))))
     assert len(_PAGES) == 1 and second[0].root.items
+
+
+def _walk(item):
+    yield item
+    for c in getattr(item, "items", []):
+        yield from _walk(c)
+
+
+def test_sheet_numbers_of_a_drawing_set():
+    from uniwire.model import View
+    from uniwire.render import sheet_numbers
+    v = View()
+    assert sheet_numbers([(v, 2), (v, 1)]) == ([1, 2, 3], 3)
+    partial = View(first_folio=3, total_folios=6)
+    assert sheet_numbers([(partial, 1), (v, 1)]) == ([3, 4], 6)  # the second view follows the first
+    assert sheet_numbers([(partial, 2), (View(first_folio=6), 1)]) == ([3, 4, 6], 6)  # its own first sheet
+    assert sheet_numbers([(View(first_folio=3), 2)]) == ([3, 4], None)  # partial set, total unknown: "3"
+    assert sheet_numbers([(partial, 5)])[1] == 7  # never "7 / 6"
+
+
+def test_drawing_set_prints_its_sheet_numbers_in_title_blocks_and_references():
+    from tests.dense_docs import split_main_doc
+    from uniwire.render import default_view, render_views
+    from uniwire.render.scene import Text
+    doc = load(split_main_doc())
+    v = default_view(doc).model_copy(update={"first_folio": 3, "total_folios": 20})
+    pages = render_views(doc, [v, v.model_copy(update={"kind": "multi-line", "first_folio": 1})])
+    n = len(pages) // 2
+    assert [p.attrs["data-uw-folio"] for p in pages[:n]] == [str(3 + i) for i in range(n)]
+    texts = [t.text for t in _walk(pages[0].root) if isinstance(t, Text)]
+    assert "3 / 20" in texts
+    refs = [int(m) for t in texts for m in re.findall(r"sheet (\d+)", t)]
+    assert refs and all(3 < r < 3 + n for r in refs)  # the sheets of the view as printed, not their position
