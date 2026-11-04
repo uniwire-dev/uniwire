@@ -425,9 +425,21 @@ class _Assigner:
 
 
 def _vfd_to_three_phase(node: Any, inp: list[str]) -> bool:
-    return (node.type == "motor_starter" and getattr(node, "method", None) == "vfd"
-            and len([c for c in inp if c in PHASES]) < 3
-            and any(c.type == "motor" and getattr(c, "phases", None) == 3 for c in node.children))
+    """A drive fed with fewer than three phases that feeds something three-phase: a three-phase load (a motor),
+    or a three-pole device, anywhere below it up to the next converter, drive or transformer."""
+    if not (node.type == "motor_starter" and getattr(node, "method", None) == "vfd"
+            and len([c for c in inp if c in PHASES]) < 3):
+        return False
+    stack = list(node.children)
+    while stack:
+        n = stack.pop()
+        if getattr(n, "phases", None) == 3 or getattr(n, "poles", None) in ("3P", "3P+N", "4P"):
+            return True
+        if n.type in CONVERTERS or n.type == "transformer" or (
+                n.type == "motor_starter" and getattr(n, "method", None) == "vfd"):
+            continue
+        stack.extend(n.children)
+    return False
 
 
 def _board_below(node: Any) -> bool:

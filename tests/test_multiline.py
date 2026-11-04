@@ -249,6 +249,24 @@ def test_single_phase_drive_feeds_a_three_phase_motor():
     assert texts.count("3G2.5") == 1  # beside its breaker only: the cable feeds the drive, not the motor behind it
 
 
+
+def test_single_phase_drive_feeds_three_phases_through_a_device_below_it():
+    doc = load({"installation": {"earthing": "TN-S", "system": "1P+N"}, "sources": [{"type": "grid", "children": [
+        {"type": "breaker", "id": "F1", "poles": "1P+N", "children": [
+            {"type": "motor_starter", "id": "T1", "method": "vfd", "children": [
+                {"type": "breaker", "id": "Q2", "poles": "3P", "children": [{"type": "motor", "id": "M1"}]}]}]},
+        {"type": "breaker", "id": "F2", "poles": "1P+N", "children": [
+            {"type": "motor_starter", "id": "T2", "method": "vfd", "children": [
+                {"type": "breaker", "id": "Q3", "children": [{"type": "motor", "id": "M2", "phases": 3}]}]}]},
+        {"type": "breaker", "id": "F3", "poles": "1P+N", "children": [
+            {"type": "motor_starter", "id": "T3", "method": "vfd", "children": [
+                {"type": "motor", "id": "M3", "phases": 1}]}]}]}]})
+    info = conductors(doc)
+    for t, q, m in (("T1", "Q2", "M1"), ("T2", "Q3", "M2")):
+        assert info[t].out == ["L1", "L2", "L3", "PE"], t  # a three-pole device or a three-phase motor below
+        assert info[q].inp == ["L1", "L2", "L3", "PE"] and info[m].inp == ["L1", "L2", "L3", "PE"], q
+    assert info["T3"].out == ["L1", "N", "PE"]  # a single-phase motor: the drive passes its supply on
+
 def test_dc_motor_and_transformer_pe():
     page = render_pages(load(json_example("11_tiny_house_off_grid_pv")), default_view(
         load(json_example("11_tiny_house_off_grid_pv")), kind="multi-line"))[0]
