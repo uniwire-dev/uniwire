@@ -20,6 +20,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   document was refused).
 * Drawings: a three-pole device on a three-wire network (`system` `3P`) is no longer marked `+N`: a device
   passes on the neutral of its supply, it never makes one.
+* Drawings: identical items drawn once (`count`) show how many: `x 12` under the tag of a device, `3 x 2.2 kW` under
+  a load in multi-line drawings, and a `count` row in the feeder table after the power, added when the document has
+  such items and the view does not list it. The SPEC says that ratings and powers are given per item.
 
 ## 0.1.8 (2026-11-02)
 

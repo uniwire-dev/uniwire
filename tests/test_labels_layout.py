@@ -769,3 +769,30 @@ def test_link_label_too_long_for_its_run_goes_on_two_lines_clear_of_the_symbols(
         w = text_width(t.text, t.size)
         x0 = t.p[0] - (w if t.anchor == "end" else 0.0)
         assert not any(_hit((x0, t.p[1] - 0.8 * t.size, x0 + w, t.p[1] + 0.2 * t.size), s) for s in syms), t.text
+
+
+def _identical_circuits():
+    return load({"uniwire": "1.1.0", "installation": {"earthing": "TN-S", "un_V": 400, "system": "3P+N"},
+                 "sources": [{"id": "g", "type": "grid", "children": [{"id": "b", "type": "board", "children": [
+                     {"id": "f1", "type": "rcbo", "ref": "-F1", "in_A": 10, "curve": "C", "idn_mA": 30,
+                      "poles": "1P+N", "count": 12, "children": [{"id": "l1", "type": "lighting", "p_kW": 0.4}]},
+                     {"id": "f2", "type": "breaker", "ref": "-F2", "in_A": 16, "curve": "C", "poles": "4P",
+                      "children": [{"id": "m1", "type": "motor", "label": "Fans", "p_kW": 2.2, "count": 3}]},
+                     {"id": "f3", "type": "breaker", "ref": "-F3", "in_A": 20, "curve": "C", "poles": "1P+N",
+                      "children": [{"id": "s1", "type": "socket", "p_kW": 2.0}]}]}]}]})
+
+
+def test_identical_circuits_drawn_once_show_how_many():
+    doc = _identical_circuits()
+    assert annotation(doc.sources[0].children[0].children[0])[0] == "x 12"
+    texts = _texts(render_pages(doc)[0].root)
+    assert {"Qty", "x 12", "x 3"} <= set(texts)  # a row added to the table, after the power of one circuit
+    multi = _texts(render_pages(doc, default_view(doc).model_copy(update={"kind": "multi-line"}))[0].root)
+    assert "x 12" in multi and "3 x 2.2 kW" in multi
+
+
+def test_no_count_row_without_identical_circuits():
+    doc = _identical_circuits()
+    for n in (doc.sources[0].children[0].children[0], doc.sources[0].children[0].children[1].children[0]):
+        n.count = None
+    assert "Qty" not in _texts(render_pages(doc)[0].root)
