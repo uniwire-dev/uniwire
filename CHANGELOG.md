@@ -13,6 +13,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   numbers take a decimal comma. Validation and command line messages stay in English.
 * Reference card: `meta.lang` is the language of the labels written in the document, which the texts drawn by
   uniwire follow.
+* MCP server: a tool accepts, as its document, the editor link a tool returned for it (`viewer_url`): a long
+  `#doc=` link carries the document, a short `#d=<id>` link reads it from the server's store (hosted server).
+  Before, an assistant that passed the link instead of the JSON was refused.
+* Documents: `phases` written as text (`"3"`) is read as a number, reported by `core.normalized` (before, the
+  document was refused).
+* Drawings: a three-pole device on a three-wire network (`system` `3P`) is no longer marked `+N`: a device
+  passes on the neutral of its supply, it never makes one.
 
 ## 0.1.8 (2026-11-02)
 

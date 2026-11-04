@@ -17,6 +17,8 @@ from .i18n import t as _t
 _POLES = {"1P", "1P+N", "2P", "3P", "3P+N", "4P"}
 _CORES_WITH_SECTION = re.compile(r"^\s*(\d+)\s*([GgXx])\s*(\d+(?:[.,]\d+)?)\s*(?:mm2|mm²)?\s*$")
 _RANGE_FIELDS = ("range_A", "idn_range_mA")
+#: Fields whose values are a few whole numbers: lax validation reads "16" as 16 elsewhere, not for these
+_INT_CHOICES = {"phases": (1, 3)}
 
 
 def _poles(v: Any) -> Any:
@@ -58,6 +60,11 @@ class _Tolerance:
             if new != n["poles"]:
                 self.note(where, "poles", n["poles"], new)
                 n["poles"] = new
+        for f, choices in _INT_CHOICES.items():
+            v = n.get(f)
+            if isinstance(v, str) and re.fullmatch(r"\s*\d+\s*", v) and int(v) in choices:
+                self.note(where, f, v, int(v))
+                n[f] = int(v)
         for f in _RANGE_FIELDS:
             v = n.get(f)
             if isinstance(v, list) and len(v) == 2 and all(isinstance(x, (int, float)) and not isinstance(x, bool)
