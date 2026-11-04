@@ -93,6 +93,8 @@ _TEXT: dict[str, dict[str, str]] = {
             "- Auxiliary devices outside the power tree (relays, CTs, IMDs) go in `devices` and connect through links.",
             "- Socket-outlets are `socket` nodes, even mixed with other loads (RCD rules).",
             "- A feeder continued elsewhere ends on `offpage`, not `spare` (a free way).",
+            "- `meta.lang` is the language of the labels you write (`\"nl\"`, `\"it\"`, `\"de\"`...): the texts "
+            "uniwire draws (title block, table headings, legends) follow it.",
         ]),
         "examples": "Examples",
         "ex1": "Minimal dwelling board",
@@ -169,6 +171,8 @@ _TEXT: dict[str, dict[str, str]] = {
             "raccordent par des liens.",
             "- Prises : nœuds `socket`, même mêlées à d'autres récepteurs (règles différentielles).",
             "- Départ continué ailleurs : `offpage`, pas `spare` (une réserve).",
+            "- `meta.lang` = la langue des libellés écrits (`\"nl\"`, `\"it\"`, `\"de\"`...) : les textes "
+            "dessinés par uniwire (cartouche, en-têtes du tableau, légendes) la suivent.",
         ]),
         "examples": "Exemples",
         "ex1": "Tableau de logement minimal",
