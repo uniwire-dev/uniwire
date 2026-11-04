@@ -39,6 +39,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   between the live conductors and earth (the PE, else an earth symbol). The conductors go on below them; one that
   feeds nothing below takes only the conductors it uses. A residual-current toroid (`instrument_transformer`
   `kind` `toroid`) is one ring around the live conductors.
+* Multi-line drawings: an inverter fed in DC (by a PV array, a battery) gives the AC conductors of the installation
+  at its output (before, its L+ and L- went on to the AC loads and devices below it). A converter's symbol shows
+  what it is fed with and what it gives: `= ~` for an inverter fed in DC, `= =` for a power supply fed in DC.
 
 ## 0.1.8 (2026-11-02)
 
