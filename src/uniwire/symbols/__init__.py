@@ -378,10 +378,10 @@ def _converter(name: str, a: str, b: str, source: bool) -> Symbol:
     return Symbol(name, items, y0 + s + 0.6 * M, s / 2, s / 2)
 
 
-def inverter(node: Any = None) -> Symbol:
-    """Inverter (IEC 60617 S00896): direct current top left, alternating current bottom right, whatever the
-    direction of the wiring."""
-    return _converter("inverter", "=", "~", False)
+def inverter(node: Any = None, ac_fed: bool = False) -> Symbol:
+    """Inverter (IEC 60617 S00896): what it is fed with top left, what it gives bottom right. Fed from the AC side
+    (``ac_fed``: a battery or PV array below it), it reads "~" then "=" top-down."""
+    return _converter("inverter", "~", "=", False) if ac_fed else _converter("inverter", "=", "~", False)
 
 
 def ups(node: Any = None) -> Symbol:
