@@ -59,6 +59,7 @@ from ..render.semantics import (
 )
 from ..resolve import Index, build_index, iter_nodes
 from ..symbols import BUSWAY_H, DASH, PLC_SLOT_W, Symbol, controller, offpage, symbol_for
+from ..symbols import inverter as inverter_symbol
 from ..symbols import motor as motor_symbol
 from ..units import fmt
 from .routing import (
@@ -697,6 +698,9 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                 # phases not stated: those of its feeder (a motor on a single-phase circuit is drawn 1~)
                 live = conductor_count(_feeder_chain(n, index), _supply_system(n, index, doc))
                 n.sym = motor_symbol(n.node, live)
+            elif (n.type == "inverter" and n.node is not None and n.node.id and n.node.children
+                  and all(_is_dc(c) for c in n.node.children) and not _fed_dc(n.node, index)):
+                n.sym = inverter_symbol(n.node, ac_fed=True)  # fed by the board, its DC side below it
             n.sym = _spread_symbol(doc, n.node, n.sym, here)
             n.left_room = _left_room(doc, n, here, lang)
 
@@ -1208,6 +1212,12 @@ def _dc_line(node: NodeBase, index: Index) -> bool:
         if n.type == "inverter":  # type: ignore[attr-defined]
             return False
     return False
+
+
+def _fed_dc(node: NodeBase, index: Index) -> bool:
+    """Whether ``node`` is fed from a DC line (its parent sits on one)."""
+    up = index.ancestors(node.id) if node.id else []
+    return bool(up) and _dc_line(up[0], index)
 
 
 def _needs_neutral(node: NodeBase) -> bool:

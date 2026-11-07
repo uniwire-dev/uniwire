@@ -68,3 +68,35 @@ def test_multiline_draws():
     doc = uniwire.load(DOC)
     pages = uniwire.render_pages(doc, View(id="ml", kind="multi-line"))
     assert pages and 'data-uw-cond="L+"' in page_to_svg(pages[0])
+
+
+def _ac_mark_low(doc, nid):
+    """Whether the "~" of inverter ``nid`` is in the lower half of its symbol (fed in DC) rather than the upper."""
+    from uniwire.render.scene import Group, Rect, Text
+
+    def find(g):
+        if isinstance(g, Group):
+            if g.id == nid:
+                return g
+            for c in g.items:
+                r = find(c)
+                if r is not None:
+                    return r
+        return None
+
+    g = find(uniwire.render_pages(uniwire.load(doc))[0].root)
+    box = next(i for i in g.items if isinstance(i, Rect))
+    tilde = next(i for i in g.items if isinstance(i, Text) and i.text == "~")
+    return tilde.p[1] > box.y + box.h / 2
+
+
+def test_inverter_drawn_in_the_direction_it_converts():
+    def doc(sources):
+        return {"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230}, "sources": sources}
+    fed_by_board = doc([{"type": "grid", "children": [{"type": "breaker", "in_A": 32, "children": [
+        {"type": "inverter", "id": "U1", "kind": "battery", "children": [{"type": "battery", "capacity_kWh": 10}]}]}]}])
+    fed_by_pv = doc([{"type": "pv_array", "children": [{"type": "inverter", "id": "U1", "children": [
+        {"type": "breaker", "in_A": 16, "children": [{"type": "socket"}]}]}]}])
+    assert not _ac_mark_low(fed_by_board, "U1")  # "~" over "=": fed by the board, its battery below
+    assert _ac_mark_low(fed_by_pv, "U1")  # "=" over "~": fed by the PV array
+    assert _ac_mark_low(DOC | {"sources": [{"type": "grid", "children": [dict(DOC["sources"][0]["children"][0], id="U1")]}]}, "U1")
