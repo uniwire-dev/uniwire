@@ -591,3 +591,18 @@ def test_iec60364_sockets_need_30ma():
     # with a national profile, left to it (no duplicate)
     both = d([mcb({"type": "socket"})], profiles=("vde0100", "iec60364"))
     assert [f.rule for f in check(both) if f.rule.endswith("rcd-30mA")] == ["vde0100.rcd-30mA"]
+
+
+def test_neutral_pole_on_a_network_without_neutral():
+    def found(system, poles, between=None):
+        board = {"type": "board", "children": [{"type": "breaker", "id": "Q", "in_A": 10, "poles": poles,
+                                                "children": [{"type": "socket"}]}]}
+        if between:
+            board = {"type": between, "children": [board]}
+        d = load({"installation": {"system": system, "un_V": 400},
+                  "sources": [{"type": "grid", "children": [board]}]})
+        return [f.node for f in check(d) if f.rule == "core.neutral-missing"]
+    assert found("3P", "1P+N") == ["Q"] and found("3P", "3P+N") == ["Q"]
+    assert found("3P", "2P") == [] and found("3P+N", "1P+N") == [] and found("3P", "4P") == []
+    assert found("3P", "1P+N", "transformer") == []  # the transformer may make its own neutral
+    assert found("3P", "1P+N", "power_supply") == []  # system not known after a converter
