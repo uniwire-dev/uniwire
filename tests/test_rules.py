@@ -591,3 +591,14 @@ def test_iec60364_sockets_need_30ma():
     # with a national profile, left to it (no duplicate)
     both = d([mcb({"type": "socket"})], profiles=("vde0100", "iec60364"))
     assert [f.rule for f in check(both) if f.rule.endswith("rcd-30mA")] == ["vde0100.rcd-30mA"]
+
+
+def test_view_direction_left_right_is_reported():
+    def found(direction):
+        d = load({"views": [{"id": "v1", "kind": "single-line", "direction": direction}],
+                  "sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 16, "children": [
+                      {"type": "socket"}]}]}]})
+        return [f.message for f in check(d) if f.rule == "core.view-direction"]
+    assert found("down") == [] and found("up") == []
+    assert len(found("right")) == 1 and "v1" in found("right")[0] and "'right'" in found("right")[0]
+    assert len(found("left")) == 1
