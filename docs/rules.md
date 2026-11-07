@@ -50,6 +50,7 @@ An unknown profile name produces a `profile` warning.
 | Rule | Check | Level |
 |---|---|---|
 | `core.ref-unique` | A reference designation is unique within a board (it may repeat across boards) | warning |
+| `core.folio-duplicate` | Two views do not start at the same sheet number (`first_folio`); the later one is numbered after the sheets before it | warning |
 | `core.rating-cascade` | A breaker, RCBO or fuse does not have a higher rating than the protective device directly upstream | warning |
 | `core.transfer-target` | A `transfer` link ends on a `transfer_switch` | error |
 | `core.transfer-source` | A transfer switch receives a second source (`transfer` link) | warning |
