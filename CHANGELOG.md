@@ -42,6 +42,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Multi-line drawings: an inverter fed in DC (by a PV array, a battery) gives the AC conductors of the installation
   at its output (before, its L+ and L- went on to the AC loads and devices below it). A converter's symbol shows
   what it is fed with and what it gives: `= ~` for an inverter fed in DC, `= =` for a power supply fed in DC.
+* Single-line drawings: an inverter fed from the AC side (a battery or a PV array below it) is drawn `~` over `=`,
+  in the direction it converts, as in multi-line drawings.
 
 ## 0.1.8 (2026-11-02)
 
