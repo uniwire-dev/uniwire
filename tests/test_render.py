@@ -120,3 +120,30 @@ def test_drawing_set_prints_its_sheet_numbers_in_title_blocks_and_references():
     assert "3 / 20" in texts
     refs = [int(m) for t in texts for m in re.findall(r"sheet (\d+)", t)]
     assert refs and all(3 < r < 3 + n for r in refs)  # the sheets of the view as printed, not their position
+
+
+def test_free_spare_way_is_not_drawn_as_a_conductor():
+    from uniwire.render.scene import Group, Line, Polyline
+
+    def edge(g, nid):
+        if isinstance(g, Group):
+            if g.attrs.get("data-uw-edge") == nid:
+                return g
+            return next((e for c in g.items if (e := edge(c, nid)) is not None), None)
+        return None
+
+    def strokes(g):
+        return [i for i in g.items if isinstance(i, (Line, Polyline))] + \
+            [s for i in g.items if isinstance(i, Group) for s in strokes(i)]
+
+    for kind in ("single-line", "multi-line"):
+        doc = load({"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230}, "sources": [{"type": "grid", "children": [
+            {"type": "board", "ref": "TD", "children": [
+                {"type": "breaker", "id": "q1", "in_A": 16, "children": [{"type": "socket"}]},
+                {"type": "spare", "id": "free"}, {"type": "spare", "id": "kept", "in_A": 16},
+                {"type": "breaker", "id": "q2", "in_A": 16, "children": [{"type": "spare", "id": "q2way"}]}]}]}],
+            "views": [{"id": "v", "kind": kind}]})
+        root = render_pages(doc)[0].root
+        assert all(s.style.dash for s in strokes(edge(root, "free"))), kind  # a free space, dashed
+        assert not any(s.style.dash for s in strokes(edge(root, "q1"))), kind
+        assert not any(s.style.dash for s in strokes(edge(root, "q2way"))), kind  # the spare way of a device
