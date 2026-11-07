@@ -8,6 +8,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings in Japanese (`meta.lang` "ja", "ja-JP"): title block, notes, legends, table headings ("記号", "こう長"),
+  type names, the short texts in symbols and the rule findings, with the usual terms of Japanese panel drawings
+  (漏電遮断器, 配線用遮断器, 電磁接触器, 熱動継電器, frames written "225 AF"). In PDF, the kanji of a Japanese document
+  take their Japanese forms. Validation and command line messages stay in English.
 * `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
   controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
   after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",
