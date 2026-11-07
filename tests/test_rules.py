@@ -473,7 +473,8 @@ def test_control_scope():
     coil = {"type": "contactor", "ref": "-KA1"}  # a relay coil fed by the 24 V supply, switching nothing
     lamp = {"type": "load", "ref": "-HL1", "label": "fault"}
     stop = {"type": "load", "label": "Emergency stop"}
-    for c in (coil, lamp, stop):
+    plural = {"type": "load", "label": "Bobines et voyants"}
+    for c in (coil, lamp, stop, plural):
         fs = [f for f in check(d(c)) if f.rule == "core.scope"]
         assert len(fs) == 1 and fs[0].level == "info"
     assert len([f for f in check(d(coil, lamp, stop)) if f.rule == "core.scope"]) == 1  # said once

@@ -109,7 +109,7 @@ CONTROL_REF = re.compile(r"^-?\d*(K[AMT]?|S[ABQ]?|HL?|B)\d", re.I)  # relays, sw
 CONTROL_WORDS = re.compile(
     r"\b(coils?|relays?|push[- ]?buttons?|emergency stop|e-stop|sensors?|limit switch|time switch|timer|"
     r"(mag)?locks?|electric strike|bobine|relais|serrure|gâche|ventouse|bouton|arrêt d'urgence|voyant|capteur|"
-    r"fin de course|minuterie)\b|线圈|继电器|按钮|急停|指示灯", re.I)
+    r"fin de course|minuterie)s?\b|线圈|继电器|按钮|急停|指示灯", re.I)
 IO_POINTS = {"di", "do", "ai", "ao", "bi", "bo"}  # a controller standing for one input or output of a PLC or BMS
 
 
