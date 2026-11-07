@@ -487,6 +487,28 @@ def test_control_scope():
                                                 {"type": "load", "ref": "-E1", "label": "router"})))
 
 
+def test_control_scope_controllers():
+    def scope(doc):
+        return [f for f in check(load(doc)) if f.rule == "core.scope"]
+
+    def psu(*children):
+        return {"sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 2, "children": [
+            {"type": "power_supply", "u2_V": 12, "children": list(children)}]}]}]}
+
+    # control devices entered as controllers on a control supply: a relay switching a door lock, a folio-numbered relay
+    assert scope(psu({"type": "controller", "label": "Relay board", "children": [{"type": "load", "label": "Door lock"}]}))
+    assert scope(psu({"type": "controller", "ref": "-21K4"}))
+    # one controller per input or output of a building controller, outside the tree
+    points = [{"type": "controller", "id": f"P{i}", "function": f} for i, f in enumerate(("DI", "AO"))]
+    assert scope({"sources": [{"type": "grid"}], "devices": points})
+    # a time switch, a twilight switch or an emergency stop on a board belong to the distribution
+    board = {"sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "controller", "ref": "-K1", "label": "Time switch", "function": "time_switch"},
+        {"type": "controller", "ref": "-B2", "label": "Twilight switch"},
+        {"type": "controller", "ref": "-S0", "label": "Emergency stop"}]}]}]}
+    assert not scope(board)
+
+
 def test_main_breaker_symbol_follows_rcd():
     from uniwire.symbols import symbol_for
 

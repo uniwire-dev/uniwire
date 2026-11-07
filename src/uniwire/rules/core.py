@@ -100,18 +100,29 @@ def phases_from_feeder(doc: Document, idx: Index):
 
 
 # Control circuits entered in the power tree: switching devices fed by a control power supply that switch nothing
-# (their coils drawn as power devices), and coils, push buttons and signal lamps entered as loads (IEC 81346 letter codes K, S, H).
+# (their coils drawn as power devices), coils, push buttons, signal lamps and sensors entered as loads (IEC 81346 letter
+# codes K, S, H, B), the same entered as controllers on a control power supply, and lists of PLC inputs and outputs.
 # Control links of a distribution diagram (load shedding, off-peak contactor, PLC command) are not concerned.
 CONTROL_FED = {"contactor", "impulse_relay", "thermal_relay", "motor_starter"}
-CONTROL_REF = re.compile(r"^-?(K[AMT]?|S[ABQ]?|HL?)\d", re.I)
-CONTROL_WORDS = ("coil", "relay", "push button", "pushbutton", "emergency stop", "e-stop", "bobine", "relais",
-                 "bouton", "arrêt d'urgence", "voyant", "线圈", "继电器", "按钮", "急停", "指示灯")
+CONTROL_REF = re.compile(r"^-?\d*(K[AMT]?|S[ABQ]?|HL?|B)\d", re.I)  # relays, switches, lamps, sensors (IEC 81346),
+# after an optional folio number ("-12K3")
+CONTROL_WORDS = re.compile(
+    r"\b(coils?|relays?|push[- ]?buttons?|emergency stop|e-stop|sensors?|limit switch|time switch|timer|"
+    r"(mag)?locks?|electric strike|bobine|relais|serrure|gâche|ventouse|bouton|arrêt d'urgence|voyant|capteur|"
+    r"fin de course|minuterie)\b|线圈|继电器|按钮|急停|指示灯", re.I)
+IO_POINTS = {"di", "do", "ai", "ao", "bi", "bo"}  # a controller standing for one input or output of a PLC or BMS
 
 
 def _control_node(nid: str, n, idx: Index) -> bool:
+    if n.type == "controller" and str(getattr(n, "function", "") or "").strip().lower() in IO_POINTS:
+        return True
+    looks_control = bool(CONTROL_REF.match(n.ref or "") or CONTROL_WORDS.search(n.label or ""))
     if n.type == "load":  # type: ignore[attr-defined]
-        return bool(CONTROL_REF.match(n.ref or "")) or any(w in (n.label or "").lower() for w in CONTROL_WORDS)
-    if n.type not in CONTROL_FED or n.children:  # type: ignore[attr-defined]
+        return looks_control
+    if n.type == "controller":  # type: ignore[attr-defined]
+        if not looks_control:  # a time switch or an emergency stop on a board is part of the distribution
+            return False
+    elif n.type not in CONTROL_FED or n.children:  # type: ignore[attr-defined]
         return False
     up = next((a for a in idx.ancestors(nid) if a.type in VOLTAGE_CONVERTERS), None)  # type: ignore[attr-defined]
     return up is not None and up.type == "power_supply"  # type: ignore[attr-defined]
