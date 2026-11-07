@@ -74,6 +74,7 @@ EN: dict[str, str] = {
     "core.interlock_unused": "declared interlock {lock!r} is used by {count} member(s) ('locks'), at least 2 expected",
     "core.interlock_duplicate": "interlock {lock!r} declared twice",
     "core.view_direction": "view {view}: direction {direction!r} is not drawn yet, the view is drawn top-down",
+    "core.neutral_missing": "device {poles} on a network without neutral (system 3P): declare the system 3P+N if the neutral is distributed, otherwise a circuit between two phases is 2P",
     "core.control_scope": "this document describes control circuits ({nodes}): uniwire draws power distribution "
                           "(single-line and multi-line diagrams), not control schematics; coils, contacts, push "
                           "buttons and current paths are only summarized here, not drawn as a control schematic",
@@ -401,6 +402,7 @@ FR: dict[str, str] = {
     "core.interlock_unused": "le verrouillage déclaré {lock!r} n'équipe que {count} membre(s) ('locks'), 2 au moins attendus",
     "core.interlock_duplicate": "verrouillage {lock!r} déclaré deux fois",
     "core.view_direction": "vue {view} : la direction {direction!r} n'est pas encore dessinée, la vue est dessinée de haut en bas",
+    "core.neutral_missing": "appareil {poles} sur un réseau sans neutre (système 3P) : déclarer le système 3P+N si le neutre est distribué, sinon un circuit entre deux phases est en 2P",
     "core.control_scope": "ce document décrit des circuits de commande ({nodes}) : uniwire dessine la distribution "
                           "(schémas unifilaire et multifilaire), pas les schémas de commande ; bobines, contacts, "
                           "boutons et chemins de courant n'y figurent qu'en résumé, pas en schéma développé",
@@ -818,6 +820,7 @@ RU: dict[str, str] = {
                              "менее 2",
     "core.interlock_duplicate": "блокировка {lock!r} объявлена дважды",
     "core.view_direction": "вид {view}: направление {direction!r} пока не рисуется, вид нарисован сверху вниз",
+    "core.neutral_missing": "аппарат {poles} в сети без нейтрали (система 3P): укажите систему 3P+N, если нейтраль распределена, иначе цепь между двумя фазами — 2P",
     "core.control_scope": "этот документ описывает цепи управления ({nodes}): uniwire рисует распределение энергии "
                           "(однолинейные и многолинейные схемы), а не схемы управления; катушки, контакты, кнопки и "
                           "ветви цепей здесь только перечислены, а не нарисованы как принципиальная схема управления",
@@ -1060,6 +1063,7 @@ ZH: dict[str, str] = {
     "core.interlock_unused": "已声明的联锁 {lock!r} 被 {count} 个成员使用（'locks'），至少应为 2 个",
     "core.interlock_duplicate": "联锁 {lock!r} 重复声明",
     "core.view_direction": "视图 {view}：尚不支持方向 {direction!r}，该视图按从上到下绘制",
+    "core.neutral_missing": "{poles} 器件位于无中性线的电网（系统 3P）：若配出中性线，请将系统声明为 3P+N，否则两相之间的回路应为 2P",
     "core.control_scope": "本文档描述了控制回路（{nodes}）：uniwire 绘制配电（单线图和多线图），而非控制原理图；线圈、触点、按钮"
                           "和电流路径在此仅作概括，不绘制为控制原理图",
     "plc.duplicate_slots": "重复的槽位：{slots}",
@@ -1291,6 +1295,7 @@ ES: dict[str, str] = {
                              "menos 2",
     "core.interlock_duplicate": "enclavamiento {lock!r} declarado dos veces",
     "core.view_direction": "vista {view}: la dirección {direction!r} aún no se dibuja, la vista se dibuja de arriba abajo",
+    "core.neutral_missing": "aparato {poles} en una red sin neutro (sistema 3P): declarar el sistema 3P+N si el neutro está distribuido; si no, un circuito entre dos fases es 2P",
     "core.control_scope": "este documento describe circuitos de mando ({nodes}): uniwire dibuja la distribución de "
                           "potencia (esquemas unifilar y multifilar), no esquemas de mando; bobinas, contactos, pulsadores "
                           "y caminos de corriente solo se resumen aquí, no se dibujan como esquema de mando",
@@ -1549,6 +1554,7 @@ DE: dict[str, str] = {
                              "('locks'), mindestens 2 erwartet",
     "core.interlock_duplicate": "Verriegelung {lock!r} doppelt deklariert",
     "core.view_direction": "Ansicht {view}: die Richtung {direction!r} wird noch nicht gezeichnet, die Ansicht wird von oben nach unten gezeichnet",
+    "core.neutral_missing": "Gerät {poles} in einem Netz ohne Neutralleiter (System 3P): System 3P+N angeben, wenn der Neutralleiter mitgeführt wird, sonst ist ein Stromkreis zwischen zwei Außenleitern 2P",
     "core.control_scope": "dieses Dokument beschreibt Steuerstromkreise ({nodes}): uniwire zeichnet die Energieverteilung "
                           "(Übersichtsschaltplan und allpoliger Stromlaufplan), keine Steuerstromlaufpläne; Spulen, "
                           "Kontakte, Taster und Strompfade werden hier nur zusammengefasst, nicht als Stromlaufplan "
@@ -1810,6 +1816,7 @@ PT: dict[str, str] = {
                              "menos 2",
     "core.interlock_duplicate": "intertravamento {lock!r} declarado duas vezes",
     "core.view_direction": "vista {view}: a direção {direction!r} ainda não é desenhada, a vista é desenhada de cima para baixo",
+    "core.neutral_missing": "aparelho {poles} em uma rede sem neutro (sistema 3P): declarar o sistema 3P+N se o neutro for distribuído; caso contrário, um circuito entre duas fases é 2P",
     "core.control_scope": "este documento descreve circuitos de comando ({nodes}): o uniwire desenha a distribuição de "
                           "energia (diagramas unifilar e multifilar), não diagramas de comando; bobinas, contatos, "
                           "botoeiras e caminhos de corrente são só resumidos aqui, não desenhados como diagrama de comando",
@@ -2380,6 +2387,7 @@ NL: dict[str, str] = {
     "core.interlock_unused": "opgegeven vergrendeling {lock!r} wordt door {count} schakelapparaat/schakelapparaten gebruikt ('locks'), minstens 2 verwacht",
     "core.interlock_duplicate": "vergrendeling {lock!r} twee keer opgegeven",
     "core.view_direction": "weergave {view}: de richting {direction!r} wordt nog niet getekend, de weergave wordt van boven naar beneden getekend",
+    "core.neutral_missing": "apparaat {poles} op een net zonder nul (systeem 3P): geef systeem 3P+N op als de nul wordt meegevoerd, anders is een groep tussen twee fasen 2P",
     "core.control_scope": "dit document beschrijft stuurstroomkringen ({nodes}): uniwire tekent de energieverdeling (eendraads- en meerdraadsschema's), geen stuurstroomschema's; spoelen, contacten, drukknoppen en stroompaden worden hier alleen samengevat, niet als stuurstroomschema getekend",
     "plc.duplicate_slots": "dubbele slots: {slots}",
     "plc.unsorted_slots": "modules niet op slot gesorteerd",
