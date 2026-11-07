@@ -473,7 +473,8 @@ def test_control_scope():
     coil = {"type": "contactor", "ref": "-KA1"}  # a relay coil fed by the 24 V supply, switching nothing
     lamp = {"type": "load", "ref": "-HL1", "label": "fault"}
     stop = {"type": "load", "label": "Emergency stop"}
-    for c in (coil, lamp, stop):
+    plural = {"type": "load", "label": "Bobines et voyants"}
+    for c in (coil, lamp, stop, plural):
         fs = [f for f in check(d(c)) if f.rule == "core.scope"]
         assert len(fs) == 1 and fs[0].level == "info"
     assert len([f for f in check(d(coil, lamp, stop)) if f.rule == "core.scope"]) == 1  # said once
@@ -485,6 +486,28 @@ def test_control_scope():
     assert "core.scope" not in rules_of(check(shed))
     assert "core.scope" not in rules_of(check(d({"type": "contactor", "children": [{"type": "load"}]},
                                                 {"type": "load", "ref": "-E1", "label": "router"})))
+
+
+def test_control_scope_controllers():
+    def scope(doc):
+        return [f for f in check(load(doc)) if f.rule == "core.scope"]
+
+    def psu(*children):
+        return {"sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 2, "children": [
+            {"type": "power_supply", "u2_V": 12, "children": list(children)}]}]}]}
+
+    # control devices entered as controllers on a control supply: a relay switching a door lock, a folio-numbered relay
+    assert scope(psu({"type": "controller", "label": "Relay board", "children": [{"type": "load", "label": "Door lock"}]}))
+    assert scope(psu({"type": "controller", "ref": "-21K4"}))
+    # one controller per input or output of a building controller, outside the tree
+    points = [{"type": "controller", "id": f"P{i}", "function": f} for i, f in enumerate(("DI", "AO"))]
+    assert scope({"sources": [{"type": "grid"}], "devices": points})
+    # a time switch, a twilight switch or an emergency stop on a board belong to the distribution
+    board = {"sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "controller", "ref": "-K1", "label": "Time switch", "function": "time_switch"},
+        {"type": "controller", "ref": "-B2", "label": "Twilight switch"},
+        {"type": "controller", "ref": "-S0", "label": "Emergency stop"}]}]}]}
+    assert not scope(board)
 
 
 def test_main_breaker_symbol_follows_rcd():
