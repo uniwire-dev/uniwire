@@ -414,6 +414,21 @@ def test_device_without_poles_never_on_the_neutral_when_it_never_acts_on_it():
     assert switched(SimpleNamespace(type="thermal_relay", poles="4P"), conds) == (["L1", "L2", "L3", "N"], [])
 
 
+def test_device_switches_as_many_live_conductors_as_it_has_poles():
+    from types import SimpleNamespace
+
+    from uniwire.layout.multiline import switched
+
+    def sw(poles, conds, t="contactor"):
+        return switched(SimpleNamespace(type=t, poles=poles), conds)[0]
+
+    assert sw("3P", ["L1", "N", "PE"]) == ["L1", "N"]  # a pole left for the neutral: it is switched too
+    assert sw("3P", ["L1", "L2", "L3", "N", "PE"]) == ["L1", "L2", "L3"]  # the neutral goes straight through
+    assert sw("1P", ["L1", "N", "PE"], "breaker") == ["L1"]
+    assert sw("1P", ["L+", "L-", "PE"], "breaker") == ["L+"]  # one pole on a DC line: the positive conductor
+    assert sw("2P", ["L+", "L-", "PE"], "breaker") == ["L+", "L-"]
+
+
 def _parallel_doc():
     return load({"installation": {"earthing": "TN-S", "system": "3P+N"}, "sources": [{"type": "grid", "children": [
         {"type": "board", "id": "B", "children": [
