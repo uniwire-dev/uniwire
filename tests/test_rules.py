@@ -591,3 +591,12 @@ def test_iec60364_sockets_need_30ma():
     # with a national profile, left to it (no duplicate)
     both = d([mcb({"type": "socket"})], profiles=("vde0100", "iec60364"))
     assert [f.rule for f in check(both) if f.rule.endswith("rcd-30mA")] == ["vde0100.rcd-30mA"]
+
+
+def test_views_starting_at_the_same_sheet_number():
+    doc = {"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230},
+           "sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 16, "children": [{"type": "socket"}]}]}],
+           "views": [{"id": "ml", "kind": "multi-line", "first_folio": 10}, {"id": "sld", "first_folio": 10},
+                     {"id": "more", "first_folio": 12}]}
+    found = [f for f in check(load(doc)) if f.rule == "core.folio-duplicate"]
+    assert len(found) == 1 and "'sld'" in found[0].message and "'ml'" in found[0].message

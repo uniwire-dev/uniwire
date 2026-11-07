@@ -105,6 +105,10 @@ def test_sheet_numbers_of_a_drawing_set():
     assert sheet_numbers([(partial, 2), (View(first_folio=6), 1)]) == ([3, 4, 6], 6)  # its own first sheet
     assert sheet_numbers([(View(first_folio=3), 2)]) == ([3, 4], None)  # partial set, total unknown: "3"
     assert sheet_numbers([(partial, 5)])[1] == 7  # never "7 / 6"
+    # sheets that would take numbers already given follow the highest one: never two sheets with one number
+    assert sheet_numbers([(View(first_folio=100), 2), (View(first_folio=100), 1)]) == ([100, 101, 102], None)
+    assert sheet_numbers([(View(first_folio=1), 2), (View(first_folio=2), 1)]) == ([1, 2, 3], 3)
+    assert sheet_numbers([(View(first_folio=5), 1), (View(first_folio=1), 1)]) == ([5, 1], None)  # out of order: kept
 
 
 def test_drawing_set_prints_its_sheet_numbers_in_title_blocks_and_references():
