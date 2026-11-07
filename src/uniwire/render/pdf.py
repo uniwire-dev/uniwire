@@ -71,15 +71,16 @@ def _cjk(ch: str) -> bool:
             or 0xFF00 <= o <= 0xFFEF or 0x20000 <= o <= 0x3FFFF)
 
 
-def _cjk_font(text: str) -> str:
-    """CID font for the CJK characters of ``text``: Japanese when it has kana, Korean when it has hangul."""
+def _cjk_font(text: str, lang: str | None = None) -> str:
+    """CID font for the CJK characters of ``text``: Japanese when it has kana or the document is in Japanese (its
+    kanji then take the Japanese forms), Korean when it has hangul."""
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 
-    if any(0x3040 <= ord(ch) <= 0x30FF for ch in text):
-        name = _CJK_FONTS["ja"]
-    elif any(0xAC00 <= ord(ch) <= 0xD7AF or 0x1100 <= ord(ch) <= 0x11FF for ch in text):
+    if any(0xAC00 <= ord(ch) <= 0xD7AF or 0x1100 <= ord(ch) <= 0x11FF for ch in text):
         name = _CJK_FONTS["ko"]
+    elif lang == "ja" or any(0x3040 <= ord(ch) <= 0x30FF for ch in text):
+        name = _CJK_FONTS["ja"]
     else:
         name = _CJK_FONTS["zh"]
     if name not in pdfmetrics.getRegisteredFontNames():
@@ -87,7 +88,7 @@ def _cjk_font(text: str) -> str:
     return name
 
 
-def _runs(text: str, font: str, glyphs: frozenset[int] | None) -> list[tuple[str, str]]:
+def _runs(text: str, font: str, glyphs: frozenset[int] | None, lang: str | None = None) -> list[tuple[str, str]]:
     """``text`` cut into (font, part) runs: the CJK characters that ``font`` does not have go to a CID font."""
     def has(ch: str) -> bool:
         if glyphs is not None:
@@ -103,7 +104,7 @@ def _runs(text: str, font: str, glyphs: frozenset[int] | None) -> list[tuple[str
     for ch in text:
         f = font
         if _cjk(ch) and not has(ch):
-            f = cjk = cjk or _cjk_font(text)
+            f = cjk = cjk or _cjk_font(text, lang)
         if runs and runs[-1][0] == f:
             runs[-1] = (f, runs[-1][1] + ch)
         else:
@@ -214,7 +215,7 @@ def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None, 
             if it.rotate:
                 c.rotate(it.rotate)
             dy = {"middle": -0.35 * it.size, "hanging": -0.8 * it.size}.get(it.baseline, 0.0)
-            runs = _runs(text, bold if it.bold else regular, glyphs)
+            runs = _runs(text, bold if it.bold else regular, glyphs, lang)
             widths = [stringWidth(part, font, it.size) for font, part in runs]
             x = {"middle": -sum(widths) / 2, "end": -sum(widths)}.get(it.anchor, 0.0)
             for (font, part), w in zip(runs, widths):
