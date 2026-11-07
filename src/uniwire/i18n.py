@@ -73,6 +73,9 @@ EN: dict[str, str] = {
     "core.interlock_single": "lock {lock!r} is used by a single member and declared in no 'interlocks' entry: it interlocks nothing",
     "core.interlock_unused": "declared interlock {lock!r} is used by {count} member(s) ('locks'), at least 2 expected",
     "core.interlock_duplicate": "interlock {lock!r} declared twice",
+    "core.load_current": "about {i:g} A for {p:g} kW, above the rating of {prot} ({in_a:g} A)",
+    "core.load_current_count": "about {i:g} A for {count} x {p:g} kW, above the rating of {prot} ({in_a:g} A); the power of an item with 'count' is per item",
+    "core.load_current_circuits": "about {i:g} A for {p:g} kW, above the rating of {prot} ({in_a:g} A); with 'count' {count}, {prot} stands for {count} circuits, each feeding this load (powers are per item)",
     "core.control_scope": "this document describes control circuits ({nodes}): uniwire draws power distribution "
                           "(single-line and multi-line diagrams), not control schematics; coils, contacts, push "
                           "buttons and current paths are only summarized here, not drawn as a control schematic",
@@ -399,6 +402,9 @@ FR: dict[str, str] = {
     "core.interlock_single": "la serrure {lock!r} n'équipe qu'un seul membre et n'est déclarée dans aucune entrée 'interlocks' : elle ne verrouille rien",
     "core.interlock_unused": "le verrouillage déclaré {lock!r} n'équipe que {count} membre(s) ('locks'), 2 au moins attendus",
     "core.interlock_duplicate": "verrouillage {lock!r} déclaré deux fois",
+    "core.load_current": "environ {i:g} A pour {p:g} kW, au-dessus du calibre de {prot} ({in_a:g} A)",
+    "core.load_current_count": "environ {i:g} A pour {count} x {p:g} kW, au-dessus du calibre de {prot} ({in_a:g} A) ; la puissance d'un élément avec 'count' est par élément",
+    "core.load_current_circuits": "environ {i:g} A pour {p:g} kW, au-dessus du calibre de {prot} ({in_a:g} A) ; avec 'count' {count}, {prot} représente {count} circuits qui alimentent chacun ce récepteur (les puissances sont par élément)",
     "core.control_scope": "ce document décrit des circuits de commande ({nodes}) : uniwire dessine la distribution "
                           "(schémas unifilaire et multifilaire), pas les schémas de commande ; bobines, contacts, "
                           "boutons et chemins de courant n'y figurent qu'en résumé, pas en schéma développé",
@@ -815,6 +821,9 @@ RU: dict[str, str] = {
     "core.interlock_unused": "объявленная блокировка {lock!r}: число элементов ('locks') {count}, ожидается не "
                              "менее 2",
     "core.interlock_duplicate": "блокировка {lock!r} объявлена дважды",
+    "core.load_current": "около {i:g} А при {p:g} кВт, больше номинального тока {prot} ({in_a:g} А)",
+    "core.load_current_count": "около {i:g} А при {count} x {p:g} кВт, больше номинального тока {prot} ({in_a:g} А); мощность элемента с 'count' указывается на один элемент",
+    "core.load_current_circuits": "около {i:g} А при {p:g} кВт, больше номинального тока {prot} ({in_a:g} А); с 'count' {count} {prot} обозначает {count} линий, каждая из которых питает этот приёмник (мощности указываются на один элемент)",
     "core.control_scope": "этот документ описывает цепи управления ({nodes}): uniwire рисует распределение энергии "
                           "(однолинейные и многолинейные схемы), а не схемы управления; катушки, контакты, кнопки и "
                           "ветви цепей здесь только перечислены, а не нарисованы как принципиальная схема управления",
@@ -1056,6 +1065,9 @@ ZH: dict[str, str] = {
     "core.interlock_single": "锁 {lock!r} 仅被一个成员使用，且未在任何 'interlocks' 条目中声明：不起联锁作用",
     "core.interlock_unused": "已声明的联锁 {lock!r} 被 {count} 个成员使用（'locks'），至少应为 2 个",
     "core.interlock_duplicate": "联锁 {lock!r} 重复声明",
+    "core.load_current": "{p:g} kW 约 {i:g} A，超过 {prot} 的额定电流（{in_a:g} A）",
+    "core.load_current_count": "{count} x {p:g} kW 约 {i:g} A，超过 {prot} 的额定电流（{in_a:g} A）；带 'count' 的元件，功率按单件计",
+    "core.load_current_circuits": "{p:g} kW 约 {i:g} A，超过 {prot} 的额定电流（{in_a:g} A）；'count' 为 {count} 时，{prot} 代表 {count} 个回路，每个回路都供电给该负载（功率按单件计）",
     "core.control_scope": "本文档描述了控制回路（{nodes}）：uniwire 绘制配电（单线图和多线图），而非控制原理图；线圈、触点、按钮"
                           "和电流路径在此仅作概括，不绘制为控制原理图",
     "plc.duplicate_slots": "重复的槽位：{slots}",
@@ -1286,6 +1298,9 @@ ES: dict[str, str] = {
     "core.interlock_unused": "el enclavamiento declarado {lock!r} lo usan {count} miembro(s) ('locks'), se esperan al "
                              "menos 2",
     "core.interlock_duplicate": "enclavamiento {lock!r} declarado dos veces",
+    "core.load_current": "unos {i:g} A para {p:g} kW, por encima del calibre de {prot} ({in_a:g} A)",
+    "core.load_current_count": "unos {i:g} A para {count} x {p:g} kW, por encima del calibre de {prot} ({in_a:g} A); la potencia de un elemento con 'count' es por unidad",
+    "core.load_current_circuits": "unos {i:g} A para {p:g} kW, por encima del calibre de {prot} ({in_a:g} A); con 'count' {count}, {prot} representa {count} circuitos que alimentan cada uno esta carga (las potencias son por unidad)",
     "core.control_scope": "este documento describe circuitos de mando ({nodes}): uniwire dibuja la distribución de "
                           "potencia (esquemas unifilar y multifilar), no esquemas de mando; bobinas, contactos, pulsadores "
                           "y caminos de corriente solo se resumen aquí, no se dibujan como esquema de mando",
@@ -1543,6 +1558,9 @@ DE: dict[str, str] = {
     "core.interlock_unused": "deklarierte Verriegelung {lock!r} wird von {count} Schaltgerät(en) verwendet "
                              "('locks'), mindestens 2 erwartet",
     "core.interlock_duplicate": "Verriegelung {lock!r} doppelt deklariert",
+    "core.load_current": "etwa {i:g} A bei {p:g} kW, über dem Bemessungsstrom von {prot} ({in_a:g} A)",
+    "core.load_current_count": "etwa {i:g} A bei {count} x {p:g} kW, über dem Bemessungsstrom von {prot} ({in_a:g} A); die Leistung eines Elements mit 'count' gilt je Stück",
+    "core.load_current_circuits": "etwa {i:g} A bei {p:g} kW, über dem Bemessungsstrom von {prot} ({in_a:g} A); mit 'count' {count} steht {prot} für {count} Stromkreise, die jeweils diesen Verbraucher speisen (Leistungen gelten je Stück)",
     "core.control_scope": "dieses Dokument beschreibt Steuerstromkreise ({nodes}): uniwire zeichnet die Energieverteilung "
                           "(Übersichtsschaltplan und allpoliger Stromlaufplan), keine Steuerstromlaufpläne; Spulen, "
                           "Kontakte, Taster und Strompfade werden hier nur zusammengefasst, nicht als Stromlaufplan "
@@ -1803,6 +1821,9 @@ PT: dict[str, str] = {
     "core.interlock_unused": "o intertravamento declarado {lock!r} é usado por {count} membro(s) ('locks'), esperados pelo "
                              "menos 2",
     "core.interlock_duplicate": "intertravamento {lock!r} declarado duas vezes",
+    "core.load_current": "cerca de {i:g} A para {p:g} kW, acima da corrente nominal de {prot} ({in_a:g} A)",
+    "core.load_current_count": "cerca de {i:g} A para {count} x {p:g} kW, acima da corrente nominal de {prot} ({in_a:g} A); a potência de um elemento com 'count' é por unidade",
+    "core.load_current_circuits": "cerca de {i:g} A para {p:g} kW, acima da corrente nominal de {prot} ({in_a:g} A); com 'count' {count}, {prot} representa {count} circuitos que alimentam cada um esta carga (as potências são por unidade)",
     "core.control_scope": "este documento descreve circuitos de comando ({nodes}): o uniwire desenha a distribuição de "
                           "energia (diagramas unifilar e multifilar), não diagramas de comando; bobinas, contatos, "
                           "botoeiras e caminhos de corrente são só resumidos aqui, não desenhados como diagrama de comando",
@@ -2372,6 +2393,9 @@ NL: dict[str, str] = {
     "core.interlock_single": "slot {lock!r} wordt door één schakelapparaat gebruikt en staat in geen enkele 'interlocks'-regel: het vergrendelt niets",
     "core.interlock_unused": "opgegeven vergrendeling {lock!r} wordt door {count} schakelapparaat/schakelapparaten gebruikt ('locks'), minstens 2 verwacht",
     "core.interlock_duplicate": "vergrendeling {lock!r} twee keer opgegeven",
+    "core.load_current": "ongeveer {i:g} A bij {p:g} kW, boven de nominale stroom van {prot} ({in_a:g} A)",
+    "core.load_current_count": "ongeveer {i:g} A bij {count} x {p:g} kW, boven de nominale stroom van {prot} ({in_a:g} A); het vermogen van een element met 'count' geldt per stuk",
+    "core.load_current_circuits": "ongeveer {i:g} A bij {p:g} kW, boven de nominale stroom van {prot} ({in_a:g} A); met 'count' {count} staat {prot} voor {count} groepen die elk deze belasting voeden (vermogens gelden per stuk)",
     "core.control_scope": "dit document beschrijft stuurstroomkringen ({nodes}): uniwire tekent de energieverdeling (eendraads- en meerdraadsschema's), geen stuurstroomschema's; spoelen, contacten, drukknoppen en stroompaden worden hier alleen samengevat, niet als stuurstroomschema getekend",
     "plc.duplicate_slots": "dubbele slots: {slots}",
     "plc.unsorted_slots": "modules niet op slot gesorteerd",
