@@ -17,7 +17,10 @@
     "it": "Rete di distribuzione",
     "pl": "Sieć zasilająca",
     "tr": "Dağıtım şebekesi",
-    "nl": "Openbaar net"
+    "nl": "Openbaar net",
+    "hr": "Distribucijska mreža",
+    "sr": "Distributivna mreža",
+    "bs": "Distributivna mreža"
    },
    "symbol": "grid",
    "map": {
@@ -40,7 +43,10 @@
     "it": "Trasformatore",
     "pl": "Transformator",
     "tr": "Transformatör",
-    "nl": "Transformator"
+    "nl": "Transformator",
+    "hr": "Transformator",
+    "sr": "Transformator",
+    "bs": "Transformator"
    },
    "symbol": "transformer",
    "map": {
@@ -64,7 +70,10 @@
     "it": "Gruppo elettrogeno",
     "pl": "Zespół prądotwórczy",
     "tr": "Jeneratör",
-    "nl": "Aggregaat"
+    "nl": "Aggregaat",
+    "hr": "Agregat",
+    "sr": "Agregat",
+    "bs": "Agregat"
    },
    "symbol": "generator",
    "map": {
@@ -88,7 +97,10 @@
     "it": "UPS (gruppo di continuità)",
     "pl": "UPS (zasilacz bezprzerwowy)",
     "tr": "Kesintisiz güç kaynağı (KGK)",
-    "nl": "UPS"
+    "nl": "UPS",
+    "hr": "UPS (neprekidno napajanje)",
+    "sr": "UPS (besprekidno napajanje)",
+    "bs": "UPS (besprekidno napajanje)"
    },
    "symbol": "ups",
    "map": {
@@ -110,7 +122,10 @@
     "it": "Generatore fotovoltaico",
     "pl": "Generator fotowoltaiczny",
     "tr": "Fotovoltaik generatör",
-    "nl": "PV-veld"
+    "nl": "PV-veld",
+    "hr": "Fotonaponsko polje",
+    "sr": "Fotonaponsko polje",
+    "bs": "Fotonaponsko polje"
    },
    "symbol": "pv_array",
    "map": {
@@ -133,7 +148,10 @@
     "it": "Batteria",
     "pl": "Bateria akumulatorów",
     "tr": "Akü",
-    "nl": "Batterij"
+    "nl": "Batterij",
+    "hr": "Baterija",
+    "sr": "Baterija",
+    "bs": "Baterija"
    },
    "symbol": "battery",
    "map": {
@@ -157,7 +175,10 @@
     "it": "Inverter",
     "pl": "Falownik",
     "tr": "İnvertör",
-    "nl": "Omvormer"
+    "nl": "Omvormer",
+    "hr": "Izmjenjivač",
+    "sr": "Invertor",
+    "bs": "Invertor"
    },
    "symbol": "inverter",
    "map": {
@@ -180,7 +201,10 @@
     "it": "Contatore",
     "pl": "Licznik",
     "tr": "Sayaç",
-    "nl": "Meter"
+    "nl": "Meter",
+    "hr": "Brojilo",
+    "sr": "Brojilo",
+    "bs": "Brojilo"
    },
    "symbol": "meter",
    "map": {
@@ -203,7 +227,10 @@
     "it": "Interruttore automatico",
     "pl": "Wyłącznik nadprądowy",
     "tr": "Otomatik sigorta",
-    "nl": "Installatieautomaat"
+    "nl": "Installatieautomaat",
+    "hr": "Automatski prekidač",
+    "sr": "Automatski prekidač",
+    "bs": "Automatski prekidač"
    },
    "symbol": "breaker",
    "map": {
@@ -227,7 +254,10 @@
     "it": "Interruttore differenziale",
     "pl": "Wyłącznik różnicowoprądowy",
     "tr": "Kaçak akım koruma rölesi (KAKR)",
-    "nl": "Aardlekschakelaar"
+    "nl": "Aardlekschakelaar",
+    "hr": "Zaštitna strujna sklopka (FID)",
+    "sr": "Zaštitni uređaj diferencijalne struje (FID)",
+    "bs": "Zaštitna strujna sklopka (FID)"
    },
    "symbol": "rcd",
    "map": {
@@ -250,7 +280,10 @@
     "it": "Interruttore magnetotermico differenziale",
     "pl": "Wyłącznik różnicowonadprądowy (RCBO)",
     "tr": "Kaçak akım korumalı otomatik sigorta (RCBO)",
-    "nl": "Aardlekautomaat"
+    "nl": "Aardlekautomaat",
+    "hr": "Kombinirana zaštitna sklopka (RCBO)",
+    "sr": "Kombinovani zaštitni prekidač (RCBO)",
+    "bs": "Kombinovana zaštitna sklopka (RCBO)"
    },
    "symbol": "rcbo",
    "map": {
@@ -274,7 +307,10 @@
     "it": "Interruttore generale",
     "pl": "Wyłącznik główny",
     "tr": "Ana şalter",
-    "nl": "Hoofdschakelaar"
+    "nl": "Hoofdschakelaar",
+    "hr": "Glavni prekidač",
+    "sr": "Glavni prekidač",
+    "bs": "Glavni prekidač"
    },
    "symbol": "main_breaker",
    "map": {
@@ -298,7 +334,10 @@
     "it": "Fusibile",
     "pl": "Bezpiecznik",
     "tr": "Eriyen telli sigorta",
-    "nl": "Smeltveiligheid"
+    "nl": "Smeltveiligheid",
+    "hr": "Osigurač",
+    "sr": "Osigurač",
+    "bs": "Osigurač"
    },
    "symbol": "fuse",
    "map": {
@@ -321,7 +360,10 @@
     "it": "Interruttore di manovra-sezionatore con fusibili",
     "pl": "Rozłącznik bezpiecznikowy",
     "tr": "Sigortalı yük ayırıcı",
-    "nl": "Lastscheider met smeltveiligheden"
+    "nl": "Lastscheider met smeltveiligheden",
+    "hr": "Sklopka-rastavljač s osiguračima",
+    "sr": "Prekidač-rastavljač sa osiguračima",
+    "bs": "Sklopka-rastavljač s osiguračima"
    },
    "symbol": "fuse_switch",
    "map": {
@@ -344,7 +386,10 @@
     "it": "Interruttore di manovra-sezionatore",
     "pl": "Rozłącznik izolacyjny",
     "tr": "Yük ayırıcı",
-    "nl": "Lastscheider"
+    "nl": "Lastscheider",
+    "hr": "Sklopka-rastavljač",
+    "sr": "Prekidač-rastavljač",
+    "bs": "Sklopka-rastavljač"
    },
    "symbol": "switch_disconnector",
    "map": {
@@ -368,7 +413,10 @@
     "it": "Sezionatore",
     "pl": "Odłącznik",
     "tr": "Ayırıcı",
-    "nl": "Scheider"
+    "nl": "Scheider",
+    "hr": "Rastavljač",
+    "sr": "Rastavljač",
+    "bs": "Rastavljač"
    },
    "symbol": "disconnector",
    "map": {
@@ -392,7 +440,10 @@
     "it": "Contattore",
     "pl": "Stycznik",
     "tr": "Kontaktör",
-    "nl": "Magneetschakelaar"
+    "nl": "Magneetschakelaar",
+    "hr": "Sklopnik",
+    "sr": "Kontaktor",
+    "bs": "Kontaktor"
    },
    "symbol": "contactor",
    "map": {
@@ -415,7 +466,10 @@
     "it": "Relè passo-passo",
     "pl": "Przekaźnik bistabilny",
     "tr": "İmpuls röle",
-    "nl": "Impulsrelais"
+    "nl": "Impulsrelais",
+    "hr": "Impulsni relej",
+    "sr": "Impulsni relej",
+    "bs": "Impulsni relej"
    },
    "symbol": "impulse_relay",
    "map": {
@@ -438,7 +492,10 @@
     "it": "Relè termico",
     "pl": "Przekaźnik termiczny",
     "tr": "Termik röle",
-    "nl": "Thermisch relais"
+    "nl": "Thermisch relais",
+    "hr": "Termički relej",
+    "sr": "Termički relej",
+    "bs": "Termički relej"
    },
    "symbol": "thermal_relay",
    "map": {
@@ -460,7 +517,10 @@
     "it": "Avviatore motore",
     "pl": "Układ rozruchowy silnika",
     "tr": "Motor yol verici",
-    "nl": "Motorstarter"
+    "nl": "Motorstarter",
+    "hr": "Pokretač motora",
+    "sr": "Pokretač motora",
+    "bs": "Pokretač motora"
    },
    "symbol": "motor_starter",
    "map": {
@@ -482,7 +542,10 @@
     "it": "Commutatore di rete",
     "pl": "Przełącznik zasilania (SZR)",
     "tr": "Transfer şalteri",
-    "nl": "Omschakelaar"
+    "nl": "Omschakelaar",
+    "hr": "Preklopka mreža-agregat",
+    "sr": "Preklopka mreža-agregat",
+    "bs": "Preklopka mreža-agregat"
    },
    "symbol": "transfer_switch",
    "map": {
@@ -505,7 +568,10 @@
     "it": "Scaricatore di sovratensione (SPD)",
     "pl": "Ogranicznik przepięć (SPD)",
     "tr": "Parafudr (SPD)",
-    "nl": "Overspanningsbeveiliging"
+    "nl": "Overspanningsbeveiliging",
+    "hr": "Odvodnik prenapona (SPD)",
+    "sr": "Odvodnik prenapona (SPD)",
+    "bs": "Odvodnik prenapona (SPD)"
    },
    "symbol": "spd",
    "map": {
@@ -528,7 +594,10 @@
     "it": "Apparecchio di comando",
     "pl": "Sterownik",
     "tr": "Kontrol cihazı",
-    "nl": "Besturingsapparaat"
+    "nl": "Besturingsapparaat",
+    "hr": "Upravljački uređaj",
+    "sr": "Upravljački uređaj",
+    "bs": "Upravljački uređaj"
    },
    "symbol": "controller",
    "map": {
@@ -550,7 +619,10 @@
     "it": "Sbarre",
     "pl": "Szyny zbiorcze",
     "tr": "Bara",
-    "nl": "Verzamelrail"
+    "nl": "Verzamelrail",
+    "hr": "Sabirnice",
+    "sr": "Sabirnice",
+    "bs": "Sabirnice"
    },
    "symbol": "busbar",
    "map": {
@@ -573,7 +645,10 @@
     "it": "Quadro elettrico",
     "pl": "Rozdzielnica",
     "tr": "Dağıtım panosu",
-    "nl": "Verdeelinrichting"
+    "nl": "Verdeelinrichting",
+    "hr": "Razdjelnik",
+    "sr": "Razvodni orman",
+    "bs": "Razvodni ormar"
    },
    "symbol": "board",
    "map": {
@@ -596,7 +671,10 @@
     "it": "Dispersore",
     "pl": "Uziom",
     "tr": "Topraklama elektrodu",
-    "nl": "Aardelektrode"
+    "nl": "Aardelektrode",
+    "hr": "Uzemljivač",
+    "sr": "Uzemljivač",
+    "bs": "Uzemljivač"
    },
    "symbol": "earth",
    "map": {
@@ -619,7 +697,10 @@
     "it": "Illuminazione",
     "pl": "Oświetlenie",
     "tr": "Aydınlatma",
-    "nl": "Verlichting"
+    "nl": "Verlichting",
+    "hr": "Rasvjeta",
+    "sr": "Osvetljenje",
+    "bs": "Rasvjeta"
    },
    "symbol": "lighting",
    "map": {
@@ -642,7 +723,10 @@
     "it": "Prese",
     "pl": "Gniazda wtyczkowe",
     "tr": "Prizler",
-    "nl": "Wandcontactdozen"
+    "nl": "Wandcontactdozen",
+    "hr": "Utičnice",
+    "sr": "Priključnice",
+    "bs": "Utičnice"
    },
    "symbol": "socket",
    "map": {
@@ -665,7 +749,10 @@
     "it": "Riscaldamento",
     "pl": "Ogrzewanie",
     "tr": "Isıtma",
-    "nl": "Verwarming"
+    "nl": "Verwarming",
+    "hr": "Grijanje",
+    "sr": "Grejanje",
+    "bs": "Grijanje"
    },
    "symbol": "heating",
    "map": {
@@ -688,7 +775,10 @@
     "it": "Scaldacqua",
     "pl": "Podgrzewacz wody",
     "tr": "Termosifon",
-    "nl": "Boiler"
+    "nl": "Boiler",
+    "hr": "Bojler",
+    "sr": "Bojler",
+    "bs": "Bojler"
    },
    "symbol": "water_heater",
    "map": {
@@ -711,7 +801,10 @@
     "it": "Cottura",
     "pl": "Kuchnia elektryczna",
     "tr": "Pişirme",
-    "nl": "Koken"
+    "nl": "Koken",
+    "hr": "Kuhanje",
+    "sr": "Kuvanje",
+    "bs": "Kuhanje"
    },
    "symbol": "cooking",
    "map": {
@@ -734,7 +827,10 @@
     "it": "Elettrodomestico",
     "pl": "Urządzenie AGD",
     "tr": "Ev aleti",
-    "nl": "Apparaat"
+    "nl": "Apparaat",
+    "hr": "Kućanski uređaj",
+    "sr": "Kućni aparat",
+    "bs": "Kućni aparat"
    },
    "symbol": "appliance",
    "map": {
@@ -757,7 +853,10 @@
     "it": "Motore",
     "pl": "Silnik",
     "tr": "Motor",
-    "nl": "Motor"
+    "nl": "Motor",
+    "hr": "Motor",
+    "sr": "Motor",
+    "bs": "Motor"
    },
    "symbol": "motor",
    "map": {
@@ -781,7 +880,10 @@
     "it": "Stazione di ricarica (EV)",
     "pl": "Stacja ładowania pojazdów (EV)",
     "tr": "Elektrikli araç şarj ünitesi",
-    "nl": "Laadpunt"
+    "nl": "Laadpunt",
+    "hr": "Punionica (EV)",
+    "sr": "Punjač za vozila (EV)",
+    "bs": "Punjač za vozila (EV)"
    },
    "symbol": "ev_charger",
    "map": {
@@ -804,7 +906,10 @@
     "it": "Ventilazione",
     "pl": "Wentylacja",
     "tr": "Havalandırma",
-    "nl": "Ventilatie"
+    "nl": "Ventilatie",
+    "hr": "Ventilacija",
+    "sr": "Ventilacija",
+    "bs": "Ventilacija"
    },
    "symbol": "ventilation",
    "map": {
@@ -827,7 +932,10 @@
     "it": "Tapparelle",
     "pl": "Rolety",
     "tr": "Panjurlar",
-    "nl": "Rolluiken"
+    "nl": "Rolluiken",
+    "hr": "Rolete",
+    "sr": "Roletne",
+    "bs": "Roletne"
    },
    "symbol": "shutter",
    "map": {
@@ -850,7 +958,10 @@
     "it": "Utilizzatore",
     "pl": "Odbiornik",
     "tr": "Yük",
-    "nl": "Belasting"
+    "nl": "Belasting",
+    "hr": "Trošilo",
+    "sr": "Potrošač",
+    "bs": "Potrošač"
    },
    "symbol": "load",
    "map": {
@@ -873,7 +984,10 @@
     "it": "Riserva",
     "pl": "Rezerwa",
     "tr": "Yedek",
-    "nl": "Reserve"
+    "nl": "Reserve",
+    "hr": "Rezerva",
+    "sr": "Rezerva",
+    "bs": "Rezerva"
    },
    "symbol": "spare",
    "map": {}
@@ -893,7 +1007,10 @@
     "it": "Rimando ad altro foglio",
     "pl": "Odsyłacz do arkusza",
     "tr": "Sayfa bağlantısı",
-    "nl": "Bladverwijzing"
+    "nl": "Bladverwijzing",
+    "hr": "Uputnica na drugi list",
+    "sr": "Uputnica na drugi list",
+    "bs": "Uputnica na drugi list"
    },
    "symbol": "offpage",
    "map": {}
@@ -912,7 +1029,10 @@
     "it": "Trasformatore di misura (TA/TV)",
     "pl": "Przekładnik (prądowy/napięciowy)",
     "tr": "Ölçü transformatörü (AT/GT)",
-    "nl": "Meettransformator"
+    "nl": "Meettransformator",
+    "hr": "Mjerni transformator (SMT/NMT)",
+    "sr": "Merni transformator (SMT/NMT)",
+    "bs": "Mjerni transformator (SMT/NMT)"
    },
    "symbol": "instrument_transformer",
    "map": {
@@ -935,7 +1055,10 @@
     "it": "Relè di protezione",
     "pl": "Przekaźnik zabezpieczeniowy",
     "tr": "Koruma rölesi",
-    "nl": "Beveiligingsrelais"
+    "nl": "Beveiligingsrelais",
+    "hr": "Zaštitni relej",
+    "sr": "Zaštitni relej",
+    "bs": "Zaštitni relej"
    },
    "symbol": "protection_relay",
    "map": {
@@ -958,7 +1081,10 @@
     "it": "Sezionatore di terra",
     "pl": "Uziemnik",
     "tr": "Topraklama ayırıcısı",
-    "nl": "Aardingsschakelaar"
+    "nl": "Aardingsschakelaar",
+    "hr": "Zemljospojnik",
+    "sr": "Rastavljač za uzemljenje",
+    "bs": "Zemljospojnik"
    },
    "symbol": "earthing_switch",
    "map": {
@@ -981,7 +1107,10 @@
     "it": "Indicatore di presenza tensione",
     "pl": "Wskaźnik obecności napięcia",
     "tr": "Gerilim varlık göstergesi",
-    "nl": "Spanningsaanwijzer"
+    "nl": "Spanningsaanwijzer",
+    "hr": "Pokazivač prisutnosti napona",
+    "sr": "Indikator prisustva napona",
+    "bs": "Indikator prisustva napona"
    },
    "symbol": "voltage_indicator",
    "map": {
@@ -1003,7 +1132,10 @@
     "it": "Dispositivo di controllo dell'isolamento",
     "pl": "Urządzenie do monitorowania stanu izolacji",
     "tr": "İzolasyon izleme cihazı",
-    "nl": "Isolatiebewakingsapparaat"
+    "nl": "Isolatiebewakingsapparaat",
+    "hr": "Uređaj za nadzor izolacije",
+    "sr": "Uređaj za nadzor izolacije",
+    "bs": "Uređaj za nadzor izolacije"
    },
    "symbol": "insulation_monitor",
    "map": {
@@ -1025,7 +1157,10 @@
     "it": "Limitatore di sovratensione",
     "pl": "Bezpiecznik iskiernikowy",
     "tr": "Aşırı gerilim sınırlayıcı",
-    "nl": "Overspanningsbegrenzer"
+    "nl": "Overspanningsbegrenzer",
+    "hr": "Ograničivač prenapona",
+    "sr": "Ograničavač prenapona",
+    "bs": "Ograničavač prenapona"
    },
    "symbol": "surge_limiter",
    "map": {
@@ -1048,7 +1183,10 @@
     "it": "Impedenza di neutro",
     "pl": "Impedancja uziemiająca punkt neutralny",
     "tr": "Nötr topraklama empedansı",
-    "nl": "Sterpuntsaardingsimpedantie"
+    "nl": "Sterpuntsaardingsimpedantie",
+    "hr": "Impedancija uzemljenja zvjezdišta",
+    "sr": "Impedansa uzemljenja zvezdišta",
+    "bs": "Impedansa uzemljenja zvjezdišta"
    },
    "symbol": "neutral_impedance",
    "map": {
@@ -1070,7 +1208,10 @@
     "it": "Morsettiera",
     "pl": "Listwa zaciskowa",
     "tr": "Klemens grubu",
-    "nl": "Klemmenstrook"
+    "nl": "Klemmenstrook",
+    "hr": "Redne stezaljke",
+    "sr": "Redne stezaljke",
+    "bs": "Redne stezaljke"
    },
    "symbol": "terminal_block",
    "map": {
@@ -1093,7 +1234,10 @@
     "it": "Cassetta di derivazione",
     "pl": "Puszka rozgałęźna",
     "tr": "Buat",
-    "nl": "Lasdoos"
+    "nl": "Lasdoos",
+    "hr": "Razvodna kutija",
+    "sr": "Razvodna kutija",
+    "bs": "Razvodna kutija"
    },
    "symbol": "junction_box",
    "map": {
@@ -1116,7 +1260,10 @@
     "it": "Connettore",
     "pl": "Złącze",
     "tr": "Konnektör",
-    "nl": "Connector"
+    "nl": "Connector",
+    "hr": "Konektor",
+    "sr": "Konektor",
+    "bs": "Konektor"
    },
    "symbol": "connector",
    "map": {
@@ -1139,7 +1286,10 @@
     "it": "Convertitore DC (ottimizzatore, MPPT)",
     "pl": "Przekształtnik DC (optymalizator, MPPT)",
     "tr": "DC dönüştürücü (optimizer, MPPT)",
-    "nl": "DC-converter"
+    "nl": "DC-converter",
+    "hr": "DC pretvarač (optimizator, MPPT)",
+    "sr": "DC pretvarač (optimizator, MPPT)",
+    "bs": "DC pretvarač (optimizator, MPPT)"
    },
    "symbol": "dc_converter",
    "map": {
@@ -1162,7 +1312,10 @@
     "it": "Collettore di terra",
     "pl": "Szyna uziemiająca (PE)",
     "tr": "Topraklama barası",
-    "nl": "Aardrail"
+    "nl": "Aardrail",
+    "hr": "Sabirnica za uzemljenje",
+    "sr": "Sabirnica za uzemljenje",
+    "bs": "Sabirnica za uzemljenje"
    },
    "symbol": "earth_bar",
    "map": {
@@ -1185,7 +1338,10 @@
     "it": "Controllore programmabile (PLC)",
     "pl": "Sterownik programowalny (PLC)",
     "tr": "Programlanabilir kontrolör (PLC)",
-    "nl": "Programmeerbare besturing (PLC)"
+    "nl": "Programmeerbare besturing (PLC)",
+    "hr": "Programirljivi logički kontroler (PLC)",
+    "sr": "Programabilni logički kontroler (PLC)",
+    "bs": "Programabilni logički kontroler (PLC)"
    },
    "symbol": "plc",
    "map": {
@@ -1208,7 +1364,10 @@
     "it": "Alimentatore (AC/DC)",
     "pl": "Zasilacz (AC/DC)",
     "tr": "Güç kaynağı (AC/DC)",
-    "nl": "Voeding"
+    "nl": "Voeding",
+    "hr": "Izvor napajanja (AC/DC)",
+    "sr": "Izvor napajanja (AC/DC)",
+    "bs": "Izvor napajanja (AC/DC)"
    },
    "symbol": "power_supply",
    "map": {
