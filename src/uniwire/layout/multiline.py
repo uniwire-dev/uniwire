@@ -505,9 +505,11 @@ def _taps(node: Any, conds: list[str]) -> tuple[list[str], bool]:
 def switched(node: Any, conds: list[str]) -> tuple[list[str], list[str]]:
     """Poles of a switching device: (protected / switched conductors, unprotected neutral pole).
 
-    ``1P`` / ``3P``: the phases only (the neutral, if any, goes straight through); ``1P+N`` / ``3P+N``: the
-    phases plus a neutral pole without protection; ``2P`` / ``4P``: identical poles on every live conductor
-    (a ``2P`` on two phases, split-phase 240 V: those two, the neutral straight through).
+    ``1P`` / ``3P``: as many live conductors as the device has poles, the phases (or the positive conductor of a
+    DC line) first: the neutral goes straight through unless a pole is left for it (a 3-pole contactor on a phase
+    and neutral switches both); ``1P+N`` / ``3P+N``: the phases plus a neutral pole without protection; ``2P`` /
+    ``4P``: identical poles on every live conductor (a ``2P`` on two phases, split-phase 240 V: those two, the
+    neutral straight through).
     Without ``poles``: every live conductor, except for the devices that never act on the neutral (a fuse, a
     thermal overload relay), on the phases only. A PEN conductor is never switched."""
     phases = [c for c in conds if c in PHASES or c in DC]
@@ -520,6 +522,9 @@ def switched(node: Any, conds: list[str]) -> tuple[list[str], list[str]]:
         return phases + (["N"] if has_n else []), []
     if poles in ("1P+N", "3P+N") and has_n:
         return phases, ["N"]
+    if poles in ("1P", "3P"):
+        live = phases + (["N"] if has_n else [])
+        return live[:int(poles[0])], []
     return phases, []
 
 

@@ -13,6 +13,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",
   "DO", "AI", "AO", "BI", "BO"). A time switch, a twilight switch or an emergency stop on a board stay part of the
   distribution.
+* Multi-line drawings and conductor marks: a `1P` or `3P` device switches as many live conductors as it has poles,
+  the phases first. A 3-pole contactor on a phase and neutral circuit switches the neutral too (before, the neutral
+  went straight through); a `1P` device on a DC line has one pole, on the positive conductor (before, it was drawn
+  on both).
 * Drawings in Dutch (`meta.lang` "nl", "nl-NL", "nl-BE"): title block, notes, legends, table headings ("Codering",
   "Groep"), type names, the short texts in symbols and the rule findings, with the terms of NEN 1010 practice. Dutch
   numbers take a decimal comma. Validation and command line messages stay in English.
