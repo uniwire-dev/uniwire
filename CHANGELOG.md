@@ -8,6 +8,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
+  controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
+  after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",
+  "DO", "AI", "AO", "BI", "BO"). A time switch, a twilight switch or an emergency stop on a board stay part of the
+  distribution.
 * Drawings in Dutch (`meta.lang` "nl", "nl-NL", "nl-BE"): title block, notes, legends, table headings ("Codering",
   "Groep"), type names, the short texts in symbols and the rule findings, with the terms of NEN 1010 practice. Dutch
   numbers take a decimal comma. Validation and command line messages stay in English.
