@@ -190,8 +190,8 @@ class _Assigner:
             k, n = SOCKET_POLES[poles]
             ks.append(k)
             ns.append(n)
-        elif poles == "2P" and self.split_phase:
-            ks.append(2)
+        elif poles == "2P" and self.split_phase:  # both legs: a phase-to-phase circuit unless something below
+            ks.append(2)                           # uses the neutral (taken after the device's own cable)
             ns.append(None)
         elif poles in POLES:
             k, n = POLES[poles]
@@ -230,12 +230,44 @@ class _Assigner:
         if guess is not None:
             ks.append(guess[0])
             ns.append(guess[1])
+        if self.split_phase:
+            if poles == "2P":
+                ns.append(any(self._uses_neutral(c) for c in node.children))
+            leg = self._leg_voltage(node)
+            if leg is not None:
+                ks.append(1 if leg else 2)
+                ns.append(leg)
         if t in SINGLE_PHASE_LOADS and type_default:
             ks.append(1)
             ns.append(True)
         k = next((x for x in ks if x is not None), None)
         neutral = next((x for x in ns if x is not None), None)
         return names, k, neutral
+
+    def _leg_voltage(self, node: Any) -> Optional[bool]:
+        """Split-phase: a load whose voltage is the phase-to-neutral one (``True``: 100 V or 120 V, one leg and the
+        neutral) or the phase-to-phase one (``False``: 200 V or 240 V, both legs); ``None``: not stated."""
+        un = getattr(node, "un_V", None) if not node.children else None
+        inst = self.doc.installation
+        ull = inst.un_V
+        uln = inst.uln_V or (ull / 2 if ull else None)
+        if not un or not ull or not uln:
+            return None
+        if abs(un - uln) <= 0.15 * uln:
+            return True
+        if abs(un - ull) <= 0.15 * ull:
+            return False
+        return None
+
+    def _uses_neutral(self, node: Any) -> bool:
+        """Split-phase: whether something at or below ``node`` states that it uses the neutral (a device or load on
+        one leg, a load at the phase-to-neutral voltage, a socket-outlet or lighting circuit)."""
+        names, k, neutral = self.spec(node, type_default=False)
+        if neutral is not None:
+            return neutral
+        if k == 1 or (names and len(names) == 1) or node.type in ("socket", "lighting"):
+            return True
+        return any(self._uses_neutral(c) for c in node.children)
 
     def needs_n(self, node: Any) -> bool:
         key = id(node)

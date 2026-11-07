@@ -8,6 +8,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Multi-line drawings on a single-phase three-wire supply (`system` "split-phase", 100/200 V or 120/240 V): a `2P`
+  device feeds a phase-to-phase circuit, without the neutral, unless something below it uses the neutral (a device
+  or load on one leg, a load whose `un_V` is the phase-to-neutral voltage, a socket-outlet or lighting circuit). A
+  load's `un_V` also tells which of the two it is. Before, a 200 V or 240 V load under a `2P` breaker was drawn with
+  a neutral, unless its `phase` said "L1L2".
+* Title block: the voltage gives the phase-to-neutral and the phase-to-phase voltages when both are stated
+  (`uln_V`) and the system has a neutral: "3P+N 230/400 V", "split-phase 100/200 V".
 * `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
   controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
   after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",
