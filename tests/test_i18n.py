@@ -1,7 +1,7 @@
 import re
 
 from uniwire import load, render_pages
-from uniwire.i18n import CATALOGS, DE, EN, ES, FR, IT, NL, PL, PT, RU, TR, ZH, normalize_lang, t
+from uniwire.i18n import BS, CATALOGS, DE, EN, ES, FR, HR, IT, NL, PL, PT, RU, SR, TR, ZH, normalize_lang, t
 from uniwire.render.scene import Group, Text
 from uniwire.rules import check
 
@@ -20,14 +20,14 @@ def _texts(item) -> list[str]:
 
 def test_catalogs_have_same_keys():
     assert set(EN) == set(FR)
-    assert set(CATALOGS) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr", "nl"}
+    assert set(CATALOGS) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr", "nl", "hr", "sr", "bs"}
     drawing = {k for k in EN if k.split(".")[0] in ("tb", "notes", "legend", "ann", "cell", "about")}
     rules = {k for k in EN if k.split(".")[0] in ("core", "rules", "nfc15100", "vde0100", "iec60364", "enedis", "plc")}
-    for cat in (RU, ZH, ES, DE, PT, IT, PL, TR, NL):  # the drawing texts in every language
+    for cat in (RU, ZH, ES, DE, PT, IT, PL, TR, NL, HR, SR, BS):  # the drawing texts in every language
         assert drawing <= set(cat) <= set(EN)
         for k, v in cat.items():  # same placeholders and formats as the English text (the order follows each language)
             assert sorted(re.findall(r"{[^{}]*}", v)) == sorted(re.findall(r"{[^{}]*}", EN[k])), k
-    for cat in (RU, ZH, ES, DE, PT, NL, IT, PL, TR):  # and the rule messages (English for the CLI and validation)
+    for cat in (RU, ZH, ES, DE, PT, NL, IT, PL, TR, HR, SR, BS):  # and the rule messages (English for the CLI and validation)
         assert rules <= set(cat)
         assert set(cat) == set(RU)
 
@@ -105,11 +105,25 @@ def test_dutch_drawing_texts():
     assert "1,5" in " ".join(nl)  # decimal comma
 
 
+def test_croatian_serbian_bosnian_drawing_texts():
+    view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable", "circuit"]}
+
+    def texts(lang):
+        return [s for p in render_pages(load({**DOC, "meta": {"lang": lang}, "views": [view]})) for s in _texts(p.root)]
+    hr, sr, bs = texts("hr-HR"), texts("sr-Latn-RS"), texts("bs-BA")
+    assert {"Napomene", "Oznaka", "Kabel (mm²)", "Strujni krug", "List"} <= set(hr)
+    assert {"Napomene", "Oznaka", "Kabl (mm²)", "Strujno kolo", "List"} <= set(sr)
+    assert {"Napomene", "Oznaka", "Kabl (mm²)", "Strujni krug", "List"} <= set(bs)
+    assert all("1,5" in " ".join(x) for x in (hr, sr, bs))  # decimal comma
+    assert t("tb.default_sheet_title", lang="hr") == "Jednopolna shema"
+    assert t("tb.default_sheet_title", lang="sr") == t("tb.default_sheet_title", lang="bs") == "Jednopolna šema"
+
+
 def test_type_labels_in_every_language():
     from uniwire import registry
 
     for type_, info in registry.registry()["types"].items():
-        assert set(info["label"]) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr", "nl"}, type_
+        assert set(info["label"]) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr", "nl", "hr", "sr", "bs"}, type_
 
 
 def test_lang_selection(monkeypatch):
