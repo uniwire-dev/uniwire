@@ -618,3 +618,24 @@ def test_neutral_pole_on_a_network_without_neutral():
     assert found("2P", "1P+N") == ["Q"] and found("2P", "2P") == [] and found("split-phase", "1P+N") == []
     assert found("3P", "1P+N", "transformer") == []  # the transformer may make its own neutral
     assert found("3P", "1P+N", "power_supply") == []  # system not known after a converter
+
+
+def test_load_current_above_its_protection():
+    def found(item, in_a=16, poles="1P+N", count=None, system="1P+N"):
+        dev = {"type": "breaker", "id": "Q", "in_A": in_a, "poles": poles, "children": [dict(item, id="L")]}
+        if count:
+            dev["count"] = count
+        d = load({"installation": {"system": system, "un_V": 400 if system.startswith("3") else 230},
+                  "sources": [{"type": "grid", "children": [dev]}]})
+        return [f.message for f in check(d) if f.rule == "core.load-current"]
+    assert found({"type": "heating", "p_kW": 2}) == []  # 8.7 A
+    assert found({"type": "ev_charger", "p_kW": 3.7}) == []  # 16.1 A on 16 A: the rounding of the power
+    assert len(found({"type": "heating", "p_kW": 5})) == 1  # 21.7 A
+    msg = found({"type": "lighting", "p_kW": 0.8, "count": 4}, in_a=10)  # 4 x 0.8 kW: 13.9 A
+    assert len(msg) == 1 and "4 x 0.8 kW" in msg[0] and "count" in msg[0]
+    assert found({"type": "lighting", "p_kW": 0.8}, in_a=10, count=4) == []  # 4 circuits of one lamp each
+    msg = found({"type": "load", "p_kW": 12}, in_a=10, count=6)  # each of the 6 circuits feeds 12 kW
+    assert len(msg) == 1 and "6" in msg[0] and "count" in msg[0]
+    assert found({"type": "motor", "p_kW": 30, "phases": 3}, in_a=63, poles="3P", system="3P+N") == []  # 43 A
+    assert len(found({"type": "load", "p_kW": 72, "cos_phi": 0.9}, in_a=100, poles="4P", system="3P+N")) == 1
+    assert found({"type": "load", "p_kW": 15, "cos_phi": 0.7}, in_a=80, poles="2P", system="3P+N") == []  # 400 V?
