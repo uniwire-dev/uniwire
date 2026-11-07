@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from collections import defaultdict
 
@@ -97,6 +98,70 @@ def phases_from_feeder(doc: Document, idx: Index):
         live = conductor_count(([n] if cable else []) + chain, system)
         if live is not None and live <= 2:
             yield Finding("warning", "core.phases-feeder", _t("core.phases_feeder", live=live), nid)
+
+
+OVERCURRENT = ("breaker", "rcbo", "fuse", "main_breaker")
+LOAD_MARGIN = 1.1  # above the rating by more than this: not a rounding of the power (3.7 kW on 16 A)
+
+
+def _loads_below(n) -> list | None:
+    """Loads below ``n`` up to the next overcurrent protection (``None`` when there is one below it)."""
+    from ..registry import is_load
+
+    found = []
+    for c in n.children:
+        if c.type in OVERCURRENT:
+            return None
+        sub = _loads_below(c)
+        if sub is None:
+            return None
+        found += ([c] if is_load(c.type) else []) + sub
+    return found
+
+
+@rule("core")
+def load_current(doc: Document, idx: Index):
+    """The current of a load is not above the rating of the protection that feeds it alone. Powers are per item:
+    ``count`` items of a load add up; a protection with ``count`` stands for that many circuits, each feeding the
+    load below it."""
+    from ..labels import conductor_count
+    from ..registry import is_load
+
+    for nid, n in idx.nodes.items():
+        if not is_load(n.type) or not getattr(n, "p_kW", None):  # type: ignore[attr-defined]
+            continue
+        chain, prot = [n], None
+        for a in idx.ancestors(nid):
+            if a.type in VOLTAGE_CONVERTERS or a.type == "motor_starter" or getattr(a, "method", None) == "vfd":  # type: ignore[attr-defined]
+                break
+            if a.type in OVERCURRENT and getattr(a, "in_A", None):  # type: ignore[attr-defined]
+                prot = a
+                break
+            chain.append(a)
+        if prot is None or _loads_below(prot) != [n]:  # several loads: their diversity is not known here
+            continue
+        system = next((getattr(a, "system", None) for a in chain + [prot] + idx.ancestors(prot.id or "")
+                       if getattr(a, "system", None)), doc.installation.system)
+        un = getattr(n, "un_V", None) or doc.installation.un_V
+        if system == "DC" or not un:
+            continue
+        live = conductor_count(chain + [prot], system)
+        if live is None:
+            continue
+        if live >= 3:
+            u = math.sqrt(3) * un
+        elif getattr(prot, "poles", None) == "2P" or system == "3P":  # perhaps between two phases: the higher voltage
+            u = un
+        else:
+            u = doc.installation.uln_V or (un / math.sqrt(3) if un >= 300 else un)
+        items, circuits = getattr(n, "count", None) or 1, getattr(prot, "count", None) or 1
+        current = n.p_kW * 1000 * items / (u * (getattr(n, "cos_phi", None) or 1))  # type: ignore[attr-defined]
+        if current > LOAD_MARGIN * prot.in_A:  # type: ignore[attr-defined]
+            key = ("core.load_current_count" if items > 1 else "core.load_current_circuits" if circuits > 1
+                   else "core.load_current")
+            yield Finding("warning", "core.load-current",
+                          _t(key, p=float(n.p_kW), count=items if items > 1 else circuits,  # type: ignore[attr-defined]
+                             i=float(round(current)), prot=prot.ref or prot.id, in_a=float(prot.in_A)), nid)  # type: ignore[attr-defined]
 
 
 # Control circuits entered in the power tree: switching devices fed by a control power supply that switch nothing
