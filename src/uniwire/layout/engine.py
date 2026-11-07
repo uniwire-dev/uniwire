@@ -305,10 +305,10 @@ DC_ACCESSORIES = {"spd", "meter", "insulation_monitor"}  # beside a DC way, they
 
 def _is_dc(node: NodeBase) -> bool:
     """A child on the DC side of an inverter/charger: batteries, PV, DC converters, DC boards, or a device
-    (fuse, disconnector...) feeding one of them alone."""
+    (fuse, disconnector...) feeding one of them alone, or a device declared for direct current (``dc``)."""
     n = node
     while True:
-        if n.type in ("battery", "pv_array", "dc_converter"):
+        if n.type in ("battery", "pv_array", "dc_converter") or getattr(n, "dc", None):
             return True
         if n.type in ("board", "busbar"):
             return getattr(n, "kind", None) == "dc_box" or getattr(n, "system", None) == "DC"
