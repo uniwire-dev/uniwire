@@ -63,6 +63,7 @@ EN: dict[str, str] = {
     "core.normalized_field": "{where}: unknown field {old!r} read as {new!r}; use {new!r}",
     "core.transfer_target": "a 'transfer' link must end on a transfer switch (transfer_switch)",
     "core.tie_device": "bus tie without a described device",
+    "core.folio_duplicate": "view {view!r} starts at sheet {folio}, like view {other!r}: its sheets are numbered after those before it",
     "core.transfer_source": "transfer switch without a 2nd source ('transfer' link)",
     "core.terminal_node": "a {type} node is a leaf and feeds nothing: draw it below the device that connects it (its "
                           "protection, converter or inverter), power may flow both ways",
@@ -388,6 +389,7 @@ FR: dict[str, str] = {
     "core.normalized_field": "{where} : champ inconnu {old!r} lu comme {new!r} ; utiliser {new!r}",
     "core.transfer_target": "un lien 'transfer' doit aboutir sur un inverseur (transfer_switch)",
     "core.tie_device": "couplage sans appareil décrit",
+    "core.folio_duplicate": "la vue {view!r} commence au folio {folio}, comme la vue {other!r} : ses folios sont numérotés après les précédents",
     "core.transfer_source": "inverseur sans 2e source (lien 'transfer')",
     "core.terminal_node": "un nœud {type} est une feuille et n'alimente rien : le placer sous l'appareil qui le "
                           "raccorde (sa protection, son convertisseur ou son onduleur), l'énergie peut circuler dans "
@@ -802,6 +804,7 @@ RU: dict[str, str] = {
     "core.normalized_field": "{where}: неизвестное поле {old!r} прочитано как {new!r}; используйте {new!r}",
     "core.transfer_target": "связь 'transfer' должна заканчиваться на переключателе источников (transfer_switch)",
     "core.tie_device": "межсекционная связь без указания аппарата",
+    "core.folio_duplicate": "вид {view!r} начинается с листа {folio}, как и вид {other!r}: его листы пронумерованы после предыдущих",
     "core.transfer_source": "переключатель источников без второго источника (связь 'transfer')",
     "core.terminal_node": "узел {type} является конечным и ничего не питает: разместите его под аппаратом, через "
                           "который он подключён (защита, преобразователь или инвертор), энергия может идти в обе "
@@ -1047,6 +1050,7 @@ ZH: dict[str, str] = {
     "core.normalized_field": "{where}：未知字段 {old!r} 被读作 {new!r}；请使用 {new!r}",
     "core.transfer_target": "'transfer' 连接必须终止于转换开关（transfer_switch）",
     "core.tie_device": "母联未描述电器",
+    "core.folio_duplicate": "视图 {view!r} 与视图 {other!r} 均从第 {folio} 页开始：其图纸编号接在前面的图纸之后",
     "core.transfer_source": "转换开关没有第二电源（'transfer' 连接）",
     "core.terminal_node": "{type} 节点是末端节点，不应有下级回路：请将其画在连接它的电器（保护电器、变换器或逆变器）之下，"
                           "能量可双向流动",
@@ -1273,6 +1277,7 @@ ES: dict[str, str] = {
     "core.normalized_field": "{where}: campo desconocido {old!r} leído como {new!r}; usar {new!r}",
     "core.transfer_target": "un enlace 'transfer' debe terminar en un conmutador de transferencia (transfer_switch)",
     "core.tie_device": "acoplamiento sin aparato descrito",
+    "core.folio_duplicate": "la vista {view!r} empieza en la hoja {folio}, como la vista {other!r}: sus hojas se numeran a continuación de las anteriores",
     "core.transfer_source": "conmutador de transferencia sin segunda fuente (enlace 'transfer')",
     "core.terminal_node": "un nodo {type} es una hoja y no alimenta nada: colocarlo bajo el aparato que lo conecta "
                           "(su protección, convertidor o inversor), la energía puede circular en ambos sentidos",
@@ -1531,6 +1536,7 @@ DE: dict[str, str] = {
     "core.normalized_field": "{where}: unbekanntes Feld {old!r} als {new!r} gelesen; {new!r} verwenden",
     "core.transfer_target": "eine 'transfer'-Verbindung muss an einem Netzumschalter (transfer_switch) enden",
     "core.tie_device": "Kupplung ohne angegebenes Schaltgerät",
+    "core.folio_duplicate": "Ansicht {view!r} beginnt wie Ansicht {other!r} mit Blatt {folio}: ihre Blätter werden nach den vorherigen nummeriert",
     "core.transfer_source": "Netzumschalter ohne zweite Quelle ('transfer'-Verbindung)",
     "core.terminal_node": "ein Knoten {type} ist ein Endknoten und speist nichts: unter dem Gerät anordnen, über das er angeschlossen ist (sein Schutzorgan, Umrichter oder Wechselrichter); die Energie kann in beide Richtungen fließen",
     "core.rating_cascade": "Nennstrom {in_a:g} A größer als der des vorgeschalteten Schutzorgans {up} ({up_in_a:g} A)",
@@ -1791,6 +1797,7 @@ PT: dict[str, str] = {
     "core.normalized_field": "{where}: campo desconhecido {old!r} lido como {new!r}; use {new!r}",
     "core.transfer_target": "uma ligação 'transfer' deve terminar em uma chave de transferência (transfer_switch)",
     "core.tie_device": "interligação de barras sem dispositivo descrito",
+    "core.folio_duplicate": "a vista {view!r} começa na folha {folio}, como a vista {other!r}: as suas folhas são numeradas a seguir às anteriores",
     "core.transfer_source": "chave de transferência sem segunda fonte (ligação 'transfer')",
     "core.terminal_node": "um nó {type} é uma folha e não alimenta nada: desenhe-o abaixo do dispositivo que o conecta (sua proteção, conversor ou inversor), a energia pode circular nos dois sentidos",
     "core.rating_cascade": "corrente nominal {in_a:g} A acima da proteção a montante {up} ({up_in_a:g} A)",
@@ -2364,6 +2371,7 @@ NL: dict[str, str] = {
     "core.normalized_field": "{where}: onbekend veld {old!r} gelezen als {new!r}; gebruik {new!r}",
     "core.transfer_target": "een 'transfer'-verbinding moet eindigen op een omschakelaar (transfer_switch)",
     "core.tie_device": "railkoppeling zonder beschreven schakelapparaat",
+    "core.folio_duplicate": "aanzicht {view!r} begint net als aanzicht {other!r} bij blad {folio}: de bladen worden na de vorige genummerd",
     "core.transfer_source": "omschakelaar zonder 2e bron ('transfer'-verbinding)",
     "core.terminal_node": "een knooppunt {type} is een eindpunt en voedt niets: teken het onder het apparaat waarmee het is aangesloten (zijn beveiliging, converter of omvormer), de energie kan in beide richtingen stromen",
     "core.rating_cascade": "nominale stroom {in_a:g} A hoger dan de voorgeschakelde beveiliging {up} ({up_in_a:g} A)",

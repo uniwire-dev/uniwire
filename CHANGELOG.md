@@ -8,6 +8,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawing sets: two views starting at the same sheet number (`first_folio`) no longer give two sheets with one
+  number. The later view, and any view whose sheets would take numbers already given, is numbered after the highest
+  sheet before it, and the new warning `core.folio-duplicate` says so. Before, every reference "-> sheet n" to such
+  a number was ambiguous.
 * `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
   controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
   after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",
