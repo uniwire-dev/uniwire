@@ -76,3 +76,25 @@ def test_title_block_gives_both_voltages():
 def test_title_block_no_phase_to_neutral_voltage_without_neutral():
     doc = uniwire.load(WORKSHOP | {"installation": WORKSHOP["installation"] | {"uln_V": 115}})
     assert "115/200" not in page_to_svg(uniwire.render_pages(doc)[0])
+
+
+def test_split_phase_rules_only_below_a_split_phase_supply():
+    doc = uniwire.load({
+        "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230},
+        "sources": [{"type": "grid", "children": [{"type": "board", "ref": "DB", "children": [
+            {"type": "breaker", "ref": "Q1", "in_A": 16, "poles": "3P", "children": [{"type": "load", "un_V": 400}]},
+            {"type": "breaker", "ref": "Q3", "in_A": 16, "children": [{"type": "heating", "un_V": 400}]},
+            {"type": "breaker", "ref": "Q9", "in_A": 32, "poles": "3P", "children": [
+                {"type": "transformer", "ref": "T1", "u2_V": 240, "children": [
+                  {"type": "breaker", "ref": "Q90", "in_A": 63, "poles": "2P", "children": [
+                    {"type": "board", "ref": "SP", "system": "split-phase", "children": [
+                        {"type": "breaker", "ref": "Q91", "in_A": 20, "poles": "2P", "children": [
+                            {"type": "appliance", "un_V": 240}]},
+                        {"type": "breaker", "ref": "Q92", "in_A": 20, "poles": "2P", "children": [
+                            {"type": "appliance", "un_V": 120}]}]}]}]}]}]}]}]})
+    out = _out(doc)
+    assert out["Q1"][:3] == ["L1", "L2", "L3"]  # three-phase board: its 400 V loads keep their three phases
+    assert out["Q3"][:3] == ["L1", "L2", "L3"]
+    assert out["Q90"] == ["L1", "L2", "N", "PE"]  # between the transformer and its split-phase board
+    assert out["Q91"] == ["L1", "L2", "PE"]  # below the split-phase board: 240 V between the legs
+    assert out["Q92"] == ["L1", "L2", "N", "PE"]  # 120 V: the neutral goes with it
