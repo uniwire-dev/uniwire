@@ -39,6 +39,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Drawings: a link no longer runs on a busbar or right beside it, where it read as part of it. A transfer link
   from a standby supply to a changeover switch was routed onto the end of the busbar above the switch, and links
   between trains ran along their busbars: they looked connected to what the busbar feeds.
+* Single-line conductor marks: the phase of a single-phase line is also taken from the node above it that states
+  one (a group RCD on `L2` marks its circuits `L2+N`, before only `+N`), and is written on the line leaving a
+  single-phase device too. Two conductors on one phase are marked with both (`L1 N`, before `L1` alone). A mark
+  stops at a converter: the DC side of an inverter is no longer marked with the phase of its AC side, nor counted
+  with the poles or the cable above the inverter (a PV array behind a 4-pole device was marked `4`).
 * `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
   controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
   after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",
