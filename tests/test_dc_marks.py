@@ -50,3 +50,26 @@ def test_battery_line_marked_two_poles_and_its_motor_drawn_dc():
     every = [t for pg in render_views(doc) for t in texts(pg.root)]
     assert not any("+N" in t for t in every)
     assert "=" in every and "1~" not in every
+
+
+def test_dc_side_of_an_inverter_not_counted_with_its_ac_side():
+    """The poles and the cable above an inverter are those of its AC side: its PV array is marked two poles."""
+    from uniwire.render import render_pages
+    from uniwire.render.scene import Group
+
+    doc = uniwire.load({"installation": {"system": "3P+N", "earthing": "TT"}, "sources": [{"type": "grid", "children": [
+        {"type": "board", "children": [
+            {"type": "rcbo", "poles": "4P", "in_A": 16, "children": [
+                {"type": "inverter", "children": [{"type": "pv_array", "id": "PV1"}]}]},
+            {"type": "breaker", "poles": "3P", "in_A": 16, "cable": {"cores": "5G", "section_mm2": 4}, "children": [
+                {"type": "inverter", "children": [
+                    {"type": "switch_disconnector", "dc": True, "poles": "2P", "children": [
+                        {"type": "pv_array", "id": "PV2"}]}]}]}]}]}]})
+
+    def groups(g):
+        if isinstance(g, Group):
+            yield g
+            for i in g.items:
+                yield from groups(i)
+    marks = {g.id: g.cls for g in groups(render_pages(doc)[0].root) if g.cls and g.cls.startswith("conductor-mark")}
+    assert marks["PV1"] == marks["PV2"] == "conductor-mark cm-2"
