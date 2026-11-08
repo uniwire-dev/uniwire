@@ -3767,29 +3767,36 @@ BS: dict[str, str] = {
 _LATIN_CYRILLIC = dict(zip("abcčćdđefghijklmnoprsštuvzž", "абцчћдђефгхијклмнопрсштувзж"))
 _LATIN_CYRILLIC |= {k.upper(): v.upper() for k, v in _LATIN_CYRILLIC.items()}
 _LATIN_CYRILLIC |= {"lj": "љ", "Lj": "Љ", "LJ": "Љ", "nj": "њ", "Nj": "Њ", "NJ": "Њ", "dž": "џ", "Dž": "Џ", "DŽ": "Џ"}
-_TOKEN = re.compile(r"\{[^{}]*\}|'[^']*'|`[^`]*`|[A-Za-zČĆĐŠŽčćđšž]+|\S|\s+")
-#: Kept in Latin: symbols of quantities and units (SI symbols are Latin in every alphabet); the one-letter units,
-#: which are also words, only after a number.
-_SYMBOLS = {"uniwire", "cos", "Ib", "In", "Ir", "Ik", "Iz", "Icc", "mm", "cm", "km", "ms", "min", "kA", "mA", "kV",
-            "kVA", "kW", "kWh", "kWp", "Wp", "Hz"}
+_TOKEN = re.compile(r"\{[^{}]*\}|'[^']*'|`[^`]*`|\w+(?:[._]\w+)+|[A-Za-zČĆĐŠŽčćđšž]+|\S|\s+")
+#: Kept in Latin: symbols of quantities, unit symbols (Latin in every alphabet), names.
+_SYMBOLS = {"uniwire", "Apache", "duct", "cos", "Ib", "In", "Ir", "Ik", "Iz", "Icc", "mm", "cm", "km", "ms", "min", "kA",
+            "mA", "kV", "kVA", "kW", "kWh", "kWp", "Wp", "Hz"}
+#: One-letter units that are also words: kept next to a number, a placeholder, "·" or "/" (K·m/W, 2 h).
 _UNITS = {"m", "s", "h"}
+#: Abbreviations kept in Latin in Cyrillic text: standards, earthing systems, international device names. Serbian
+#: abbreviations (FID, VN, NN, VT) are transliterated; single capitals (classes, units, conductors) are kept.
+INTERNATIONAL = {"IEC", "EN", "DIN", "VDE", "NF", "UTE", "NEC", "CEI", "HTA", "PE", "PEN", "PVC", "XLPE", "RCBO", "RCD",
+                 "SPD", "UPS", "PLC", "IMD", "MPPT", "AC", "DC", "EV", "RDC", "DD", "TN", "TT", "IT", "IP", "WAGO"}
+
+
+def cyrillic_word(word: str) -> str:
+    """One Serbian Latin word in Cyrillic, letter for letter (digraphs lj, nj, dž included)."""
+    return re.sub(r"[LlNn][Jj]|[Dd][Žž]|.", lambda m: _LATIN_CYRILLIC.get(m.group(), m.group()), word)
 
 
 def cyrillic(text: str) -> str:
     """Serbian Latin text in Cyrillic, letter for letter. Kept as written: placeholders, quoted field names,
-    abbreviations in capitals (FID, PE, IEC), words with letters outside the alphabet, symbols such as Iz, and units
-    after a number."""
+    identifiers (``transfer_switch``, ``installation.premises``), international abbreviations and single capitals,
+    words with letters outside the alphabet, symbols of quantities, units."""
+    toks = _TOKEN.findall(text)
     out: list[str] = []
-    after_number = False
-    for tok in _TOKEN.findall(text):
-        if tok.isspace():
-            out.append(tok)
-            continue
-        word = tok[0].isalpha()
-        keep = (not word or tok.isupper() or tok in _SYMBOLS or (after_number and tok in _UNITS)
+    for i, tok in enumerate(toks):
+        prev = next((x for x in reversed(toks[:i]) if not x.isspace()), "")
+        near = prev[:1].isdigit() or prev.startswith("{") or prev in ("·", "/") or toks[i + 1:i + 2] in (["·"], ["/"])
+        keep = (not tok[0].isalpha() or tok in _SYMBOLS or (tok in _UNITS and near) or bool(re.search(r"[._]", tok))
+                or (tok.isupper() and (len(tok) == 1 or tok in INTERNATIONAL))
                 or any(c not in _LATIN_CYRILLIC for c in tok))
-        out.append(tok if keep else re.sub(r"[LlNn][Jj]|[Dd][Žž]|.", lambda m: _LATIN_CYRILLIC.get(m.group(), m.group()), tok))
-        after_number = tok[0].isdigit() or tok.startswith("{")
+        out.append(tok if keep else cyrillic_word(tok))
     return "".join(out)
 
 

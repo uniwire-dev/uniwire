@@ -177,13 +177,6 @@ def impulse_relay(node: Any = None) -> Symbol:
 
 
 #: Short texts drawn inside symbols, per render language (English fallback).
-def _cyrillic_caps(abbr: str) -> str:
-    """A Serbian abbreviation in capitals (``POK``, ``BOJ``) in Cyrillic (international ones stay as they are)."""
-    from ..i18n import cyrillic
-
-    return cyrillic(abbr.lower()).upper()
-
-
 ABBREVIATIONS: dict[str, dict[str, str]] = {
     "en": {"starter.vfd": "VFD", "starter.soft_starter": "SS", "starter.star_delta": "Y/Δ", "starter.reversing": "REV",
            "starter.": "MS", "impulse_relay": "IR", "water_heater": "WH", "oven": "OVEN", "washing_machine": "WM",
@@ -256,9 +249,17 @@ ABBREVIATIONS: dict[str, dict[str, str]] = {
            "dishwasher": "LV", "dryer": "SL", "freezer": "CONG", "fridge": "FRIG", "appliance": "APP",
            "ev_charger": "IRVE", "shutter": "VR", "insulation_monitor": "CPI", "plc": "API", "ups": "UPS"},
 }
-# Serbian in Cyrillic: the Serbian abbreviations transliterated, the international ones (as in English) kept
-ABBREVIATIONS["sr-Cyrl"] = {k: v if v == ABBREVIATIONS["en"].get(k) else _cyrillic_caps(v)
-                            for k, v in ABBREVIATIONS["sr"].items()}
+
+
+def _sr_cyrillic() -> dict[str, str]:
+    """Serbian in Cyrillic: the Serbian abbreviations letter for letter, the international ones (as in English) kept."""
+    from ..i18n import INTERNATIONAL, cyrillic_word
+
+    return {k: v if v == ABBREVIATIONS["en"].get(k) or v in INTERNATIONAL else cyrillic_word(v)
+            for k, v in ABBREVIATIONS["sr"].items()}
+
+
+ABBREVIATIONS["sr-Cyrl"] = _sr_cyrillic()
 
 
 def _abbr(key: str) -> str:
