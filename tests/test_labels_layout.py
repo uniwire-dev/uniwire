@@ -390,6 +390,20 @@ def test_mark_phase_comes_from_above_and_stops_at_a_converter():
     assert "S5" not in texts  # the same mark and the same text lower in the column: not repeated
 
 
+def test_mark_below_a_transformer_not_the_installation_system():
+    """A transformer cannot state its output: fed by two wires, its secondary is marked two; never with the
+    installation's four conductors, nor with the phase of its primary."""
+    doc = load({"installation": {"system": "3P+N", "earthing": "TN-S"}, "sources": [{"type": "grid", "children": [
+        {"type": "board", "children": [
+            {"type": "breaker", "poles": "1P+N", "phase": "L2", "children": [
+                {"type": "transformer", "u1_V": 230, "u2_V": 24, "children": [{"type": "lighting", "id": "L"}]}]},
+            {"type": "breaker", "poles": "2P", "children": [
+                {"type": "transformer", "u1_V": 400, "u2_V": 230, "children": [{"type": "socket", "id": "S"}]}]}]}]}]})
+    marks = dict(_marks(doc))
+    assert marks["L"] == marks["S"] == "cm-2"
+    assert _mark_texts(doc)["L"] == []
+
+
 def test_three_pole_device_with_neutral_downstream():
     from uniwire.labels import feeder_mark, poles_mark
     assert poles_mark("3P", True) == (3, True) and poles_mark("3P") == (3, False) and poles_mark("4P") == (4, False)
