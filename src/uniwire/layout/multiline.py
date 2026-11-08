@@ -80,6 +80,7 @@ from .engine import (
     LNode,
     SheetLayout,
     SheetSpec,
+    _bus_name,
     _device_homes,
     _is_dc,
     _signal_links,
@@ -779,7 +780,7 @@ def _build_roots(spec: SheetSpec, index: Index, info: dict[int, Conductors]) -> 
         out = list(info[id(parent)].out)
         root = MLNode(None, "bus_in", out, out, {c: None for c in out},
                       [_build(ch, spec, info, False) for ch in parent.children[s:e]],
-                      label=parent.ref or parent.label or nid, target=nid, bus_out=e < len(parent.children), root=True)
+                      label=_bus_name(parent, index), target=nid, bus_out=e < len(parent.children), root=True)
         return [root]
     roots = [_build(r, spec, info, True) for r in spec.roots]
     for r in roots:
@@ -2678,7 +2679,7 @@ def plan_multiline(doc: Document, view: View, index: Index | None = None,
                     spec.detached.add(cut)
                     continue
             if allow_bus_split:
-                conts = _split_bus(spec, roots, view, lang)
+                conts = _split_bus(spec, roots, view, lang, index)
             break
         out = [spec]
         for c in conts:
@@ -2742,7 +2743,7 @@ def _subtree(n: NodeBase) -> Iterator[NodeBase]:
         stack.extend(x.children)
 
 
-def _split_bus(spec: SheetSpec, roots: list[MLNode], view: View, lang: str) -> list[SheetSpec]:
+def _split_bus(spec: SheetSpec, roots: list[MLNode], view: View, lang: str, index: Index) -> list[SheetSpec]:
     cands = [n for r in roots for n in r.walk() if n.kind == "node" and n.rails and n.node is not None
              and len(n.children) >= 3]
     if not cands:
@@ -2769,7 +2770,7 @@ def _split_bus(spec: SheetSpec, roots: list[MLNode], view: View, lang: str) -> l
     prev = spec
     for s, e in chunks[1:]:
         c = SheetSpec([], detached=set(spec.detached), continuation=(node.id, s, e),  # type: ignore[arg-type]
-                      name=_t("render.continuation_name", lang, name=node.ref or node.label or node.id), prev=prev)
+                      name=_t("render.continuation_name", lang, name=_bus_name(node, index)), prev=prev)
         prev.next = c
         out.append(c)
         prev = c

@@ -149,3 +149,26 @@ def test_free_spare_way_is_not_drawn_as_a_conductor():
         assert not any(s.style.dash for s in strokes(edge(root, "q1"))), kind
         assert not any(s.style.dash for s in strokes(edge(root, "poles"))), kind  # its poles: a device is there
         assert not any(s.style.dash for s in strokes(edge(root, "q2way"))), kind  # the spare way of a device
+
+
+def test_continuation_sheet_keeps_the_board_frame_and_name():
+    from uniwire.render.scene import Group
+    from uniwire.render.svg import page_to_svg
+
+    def boards(g):
+        if isinstance(g, Group):
+            return ([g.id] if g.cls and "board" in g.cls.split() else []) + [b for c in g.items for b in boards(c)]
+        return []
+
+    feeders = [{"type": "breaker", "ref": f"-Q{i}", "in_A": 16, "children": [{"type": "socket"}]} for i in range(40)]
+    for kind in ("single-line", "multi-line"):
+        doc = load({"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230}, "sources": [{"type": "grid", "children": [
+            {"type": "board", "id": "td", "ref": "TD", "children": [{"type": "rcd", "ref": "-F1", "in_A": 63, "idn_mA": 30,
+                                                                     "children": feeders}]}]}],
+            "views": [{"id": "v", "kind": kind}]})
+        pages = render_pages(doc)
+        assert len(pages) > 1
+        texts = re.findall(r">([^<>]+)</text>", page_to_svg(pages[1]))
+        assert any(t.startswith("TD (") for t in texts) and not any(t.startswith("-F1 (") for t in texts), kind
+        if kind == "single-line":
+            assert "td" in boards(pages[1].root)  # the busbar is in the board: its frame on this sheet too
