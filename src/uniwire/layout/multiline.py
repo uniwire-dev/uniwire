@@ -1129,10 +1129,11 @@ def _separate_boards(ln: MLNode) -> None:
     if ln.is_board:
         subs = _sub_boards(ln)
         # below the frame, and side by side on one line (their frames, names and first devices aligned)
-        top = max([_frame_bottom(ln) + 3.0] + [sb.frame_top if sb.is_board else sb.y for sb in subs])
-        for sb in subs:
-            if (sb.frame_top if sb.is_board else sb.y) < top:
-                _shift(sb, top - (sb.frame_top if sb.is_board else sb.y))
+        tops = [sb.frame_top if sb.is_board else sb.y for sb in subs]
+        top = max([_frame_bottom(ln) + 3.0] + tops)
+        for sb, t in zip(subs, tops):
+            if t < top:
+                _shift(sb, top - t)
     for c in ln.children:
         _separate_boards(c)
 

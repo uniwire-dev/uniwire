@@ -67,3 +67,17 @@ def test_changeover_at_the_end_of_the_only_feeder_is_outside():
             {"type": "transfer_switch", "id": "TS", "children": [{"type": "motor", "p_kW": 7.5}]}]}]}]}]}
     (top, bottom), boxes = _drawn(doc, None)
     assert boxes["Q2"][1] < bottom < boxes["TS"][0]
+
+
+def test_accessories_beside_the_incomer_keep_the_board_busbar_inside():
+    ways = [{"type": "breaker", "id": f"Q{i}", "in_A": 16, "children": [{"type": "socket"}]} for i in (1, 2)]
+    doc = {"installation": {"earthing": "TT", "system": "3P+N", "un_V": 400}, "sources": [{"type": "grid", "children": [
+        {"type": "board", "id": "TD", "children": [
+            {"type": "spd", "id": "F0", "spd_type": "2"},
+            {"type": "meter", "id": "P0"},
+            {"type": "switch_disconnector", "id": "Q0", "in_A": 63, "cable": CABLE, "children": [
+                {"type": "busbar", "id": "JdB", "children": ways + [{"type": "spare"}]}]}]}]}]}
+    for view in (None, View(id="ml", kind="multi-line")):
+        (top, bottom), boxes = _drawn(doc, view)
+        for nid in ("JdB", "Q1", "Q2"):
+            assert top < boxes[nid][0] and boxes[nid][1] < bottom, (view, nid)
