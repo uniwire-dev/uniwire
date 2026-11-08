@@ -434,7 +434,8 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
     if field == "length_m":
         return fmt(cable.length_m, " m") if cable is not None and cable.length_m else ""
     if field == "p_kW":
-        power = (lambda kw: fmt(kw, " kW")) if column.get("power_kw") else fmt_power  # one unit in a table row
+        # one unit in a table row; in kW, what is below 1 kW to 2 significant digits ('0.83 kW', not '0.833 kW')
+        power = (lambda kw: fmt(float(f"{kw:.2g}") if kw < 1 else kw, " kW")) if column.get("power_kw") else fmt_power
         p = _g(leaf, "p_kW")
         if not p and _g(leaf, "p_max_kW"):
             return f"≤ {power(_g(leaf, 'p_max_kW'))}"
