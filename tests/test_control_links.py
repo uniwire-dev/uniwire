@@ -136,3 +136,21 @@ def test_leader_of_a_label_is_square_to_its_link():
     assert _leader_label(obs, [(30.0, 50.0), (70.0, 50.0), (70.0, 80.0)], "Feedback", 1.6, g)
     line = next(i for i in g.items if isinstance(i, Line))
     assert abs(line.a[0] - line.b[0]) < 1e-9 or abs(line.a[1] - line.b[1]) < 1e-9, line
+
+
+def test_a_link_between_two_plcs_leaves_the_channel_of_its_start():
+    """PLC to PLC: drawn out of the first PLC's channel, the second PLC's channel written by the link at its end;
+    only the module it leaves is widened (both were, and the second channel was not written)."""
+    d = panel(3, 0, feedback=False)
+    control = d["sources"][0]["children"][0]["children"][0]["children"][0]["children"][0]
+    control["children"].append({"type": "plc", "id": "PLC2", "ref": "-A3",
+                                "modules": [{"slot": 1, "kind": "di", "channels": 16}]})
+    d["links"] += [{"kind": "control", "from": "PLC", "from_port": "2.4", "to": "PLC2", "to_port": "1.5"},
+                   {"kind": "control", "from": "PLC", "from_port": "2.5", "to": "PLC2", "to_port": "1.6"}]
+    page = render_views(load(d))[0]
+    texts = [t.text for t, _l, _o in _walk(page.root) if isinstance(t, Text)]
+    for port in ("2.1", "2.2", "2.3", "2.4", "2.5", "1.5", "1.6"):
+        assert texts.count(port) == 1, port
+    module = [r for r, _l, _o in _walk(_node(page.root, "PLC2")) if isinstance(r, Rect)][-1]
+    plain = sorted((r for r, _l, _o in _walk(_node(page.root, "PLC")) if isinstance(r, Rect)), key=lambda r: r.x)[3]
+    assert abs(module.w - plain.w) < 1e-6  # as narrow as a module no link leaves (slot 3)
