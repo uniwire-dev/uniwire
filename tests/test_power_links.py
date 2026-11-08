@@ -245,3 +245,20 @@ def test_link_route_keeps_off_a_busbar():
                            record=False)
     over = [p[1] for p, q in zip(pts, pts[1:]) if p[1] == q[1] and min(p[0], q[0]) < 80.0 and max(p[0], q[0]) > 20.0]
     assert over and all(abs(y - 10.0) >= BUS_CLEAR_THIN for y in over)
+
+
+def test_tie_between_devices_on_two_sheets_drawn_at_both_ends():
+    from uniwire.render.svg import page_to_svg
+
+    def board(i):
+        return {"type": "board", "id": f"b{i}", "ref": f"TD{i}", "own_sheet": True, "children": [
+            {"type": "switch_disconnector", "id": f"qs{i}", "in_A": 250, "children": [
+                {"type": "breaker", "id": f"q{i}", "in_A": 16, "children": [{"type": "socket"}]},
+                {"type": "breaker", "in_A": 16, "children": [{"type": "socket"}]}]}]}
+    for kind in ("single-line", "multi-line"):
+        for ends in (("b1", "b2"), ("q1", "q2")):
+            doc = load({"sources": [{"type": "grid", "children": [board(1)]}, {"type": "grid", "children": [board(2)]}],
+                                "links": [{"kind": "tie", "from": ends[0], "to": ends[1], "label": "TIE"}],
+                                "views": [{"id": "v", "kind": kind}]})
+            pages = render_pages(doc)
+            assert sum("TIE" in page_to_svg(p) for p in pages) == 2, (kind, ends)  # one stub on each board's sheet

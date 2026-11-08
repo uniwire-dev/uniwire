@@ -2445,7 +2445,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 other = link.to if b is None else link.from_
                 at = End(n.bus_x1, n.bus_y, "right") if b is None else End(n.bus_x0, n.bus_y, "left")
                 _draw_offpage_link(link, n, other, nodes.get(other), obs, lg, lang, node_folio, offpage, at)
-            elif link.kind != "tie":
+            else:  # (a tie between devices or boards: from the end on this sheet, as the other links)
                 other = link.to if b is None else link.from_
                 at = spread.get((i, 0 if b is None else 1))  # a controller many links reach: its own point
                 if b is not None and link.kind == "infeed" and link.to in fed_ok:  # on its input conductor
