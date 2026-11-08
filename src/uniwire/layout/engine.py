@@ -4,6 +4,7 @@ import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Any, Optional
 
 from .. import registry
@@ -320,10 +321,24 @@ def _is_dc(node: NodeBase) -> bool:
         n = n.children[0]
 
 
+def _up_to_board(node: NodeBase, index: Index) -> list[NodeBase]:
+    """``node`` and its ancestors up to its board, stopping at equipment beyond a cable from that board (see
+    :func:`beyond_board`): what that equipment feeds is outside the board's frame."""
+    chain = [node] + index.ancestors(node.id or "")
+    end = next((i for i, a in enumerate(chain) if a.type == "board"), len(chain) - 1)  # type: ignore[attr-defined]
+    down = chain[:end + 1][::-1]  # from the board down to the node
+    head = True
+    for k, (p, c) in enumerate(zip(down, down[1:])):
+        head = head and len(p.children) == 1
+        if beyond_board(SimpleNamespace(node=c), SimpleNamespace(node=p), head):
+            return down[k + 1:][::-1]
+    return chain[:end + 1]
+
+
 def _bus_name(node: NodeBase, index: Index) -> str:
     """Name of the busbar a node feeds: its board's (or busbar's), not the device at its head (a meter, a breaker);
     a row of the board (a group RCD among others) adds its own: "TD, -ID2"."""
-    chain = [node] + index.ancestors(node.id or "")
+    chain = _up_to_board(node, index)
     owner = next((a for a in chain if a.type in ("board", "busbar")), node)  # type: ignore[attr-defined]
     name = owner.ref or owner.label or node.ref or node.label or node.id or ""
     path = chain[:chain.index(owner)]  # from the node up to the owner, excluded
@@ -340,8 +355,8 @@ def _build_sheet_roots(spec: SheetSpec, index: Index) -> list[LNode]:
         bus_sym = Symbol("bus_in", [], 0.0, 0.0, 0.0)
         root = LNode(None, "bus_in", bus_sym, [_build(c, spec, False) for c in kids],
                      label=_bus_name(parent, index), target=nid, bus_out=e < len(parent.children))
-        board = next((a for a in [parent] + index.ancestors(nid) if a.type == "board"), None)  # type: ignore[attr-defined]
-        if board is not None:  # the busbar is in a board: its frame on this sheet too
+        board = _up_to_board(parent, index)[-1]
+        if board.type == "board":  # type: ignore[attr-defined]  # the busbar is in a board: its frame here too
             return [LNode(board, "node", Symbol("board", [], 0.0, 0.0, 0.0), [root])]
         return [root]
     return [_build(r, spec, True) for r in spec.roots if r.id not in spec.moved]
