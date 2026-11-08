@@ -141,9 +141,11 @@ def test_free_spare_way_is_not_drawn_as_a_conductor():
             {"type": "board", "ref": "TD", "children": [
                 {"type": "breaker", "id": "q1", "in_A": 16, "children": [{"type": "socket"}]},
                 {"type": "spare", "id": "free"}, {"type": "spare", "id": "kept", "in_A": 16},
+                {"type": "spare", "id": "poles", "poles": "2P"},
                 {"type": "breaker", "id": "q2", "in_A": 16, "children": [{"type": "spare", "id": "q2way"}]}]}]}],
             "views": [{"id": "v", "kind": kind}]})
         root = render_pages(doc)[0].root
         assert all(s.style.dash for s in strokes(edge(root, "free"))), kind  # a free space, dashed
         assert not any(s.style.dash for s in strokes(edge(root, "q1"))), kind
+        assert not any(s.style.dash for s in strokes(edge(root, "poles"))), kind  # its poles: a device is there
         assert not any(s.style.dash for s in strokes(edge(root, "q2way"))), kind  # the spare way of a device
