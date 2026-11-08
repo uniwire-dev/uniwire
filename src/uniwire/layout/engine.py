@@ -2411,6 +2411,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
 
     done = _draw_band(doc, band, roots, tap_end, group_of, obs, lang) if band is not None else set()
     labels: list[tuple[int, list[tuple[float, float]], str, float, str]] = []
+    heads: dict[int, tuple[str, str]] = {}  # the nodes at the start and at the end of each label's route
     side_ends: dict[tuple[str, float, float], list[str]] = {}
     right_used: dict[str, int] = {}  # multi-line: links already leaving each node by its right side
     bottom_used: dict[str, int] = {}  # ... and by the bottom of a final device
@@ -2704,6 +2705,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         if on_conductor:  # infeed landing on the input conductor: junction dot
             lg.add(Circle(pts[-1], 0.45, Style(width=THIN, fill="#000000")))
         seq = pts if port_label is None or port_label[0] == 0 else pts[::-1]  # oriented PLC -> other end
+        heads[i] = (link.from_, link.to) if seq is pts else (link.to, link.from_)
         if i in bus_land and len(pts) > 2:  # on its channel, not on the short drop crowded with the other taps
             seq = pts[:-1]
         if port_label is not None:
@@ -2719,7 +2721,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
     degree = Counter(e for l in doc.links for e in (l.from_, l.to))
     for i, seq, txt, size, color in labels:
         units = text_units(txt)
-        far_end = color != "#000000" or degree[doc.links[i].to] <= degree[doc.links[i].from_]
+        far_end = color != "#000000" or degree[heads[i][1]] <= degree[heads[i][0]]
         if color == "#000000":
             # a clear place on one line near the preferred end, else near the other end, else on two lines (a short
             # link), near either end
@@ -2761,7 +2763,8 @@ LEADER_REACH = 25.0  # how far from its link a label may go, joined to it by a l
 
 def _leader_label(obs: Obstacles, pts: list[tuple[float, float]], txt: str, size: float, g: Group) -> bool:
     """A link label with no clear place along its route (a short link between neighbours): in the nearest free
-    space, a thin leader from the middle of the link's longest stretch to the label. False if none is near."""
+    space (searched from the middle of its longest stretch), a thin leader to it from the nearest point of the link.
+    False if none is near."""
     p, q = max(zip(pts, pts[1:]), key=lambda s: abs(s[0][0] - s[1][0]) + abs(s[0][1] - s[1][1]))
     mx, my = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
     w, h = text_width(txt, size), size * 1.1
@@ -2769,7 +2772,20 @@ def _leader_label(obs: Obstacles, pts: list[tuple[float, float]], txt: str, size
     if abs(x + w / 2 - mx) > LEADER_REACH + w / 2 or abs(y - my) > LEADER_REACH:
         return False
     box = (x, y, x + w, y + h)
-    tx, ty = min(max(mx, box[0]), box[2]), min(max(my, box[1]), box[3])  # the point of the label nearest the link
+
+    def nearest(s: tuple) -> tuple[float, tuple[float, float], tuple[float, float]]:
+        """The points of the stretch ``s`` and of the label nearest each other: a straight leader, square to the
+        stretch whenever the label is beside it (a slanting leader reads as one more link)."""
+        (ax, ay), (bx, by) = s
+        if abs(ay - by) < 1e-9:  # horizontal: under or over the label if it can
+            px = min(max((box[0] + box[2]) / 2, min(ax, bx)), max(ax, bx))
+            p = (px, ay)
+        else:
+            py_ = min(max((box[1] + box[3]) / 2, min(ay, by)), max(ay, by))
+            p = (ax, py_)
+        t = (min(max(p[0], box[0]), box[2]), min(max(p[1], box[1]), box[3]))
+        return abs(p[0] - t[0]) + abs(p[1] - t[1]), p, t
+    _, (mx, my), (tx, ty) = min((nearest(s) for s in zip(pts, pts[1:])), key=lambda c: c[0])
     g.add(Line((mx, my), (tx, ty), Style(width=THIN)))
     g.add(Text((x, y + 0.85 * size), txt, size))
     obs.add_box(box)
