@@ -405,9 +405,16 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
             return column["own_ref"]
         return (prot.ref if prot is not None and prot.ref else _g(leaf, "ref")) or ""
     if field == "protection":
-        return protection_short(prot) if prot is not None else ""
+        if prot is None:
+            return ""
+        txt = protection_short(prot)
+        sens = fmt_sensitivity(_g(prot, "idn_mA")) if _g(prot, "idn_mA") else ""
+        if column.get("idn_column") and sens and txt.endswith(sens):  # the residual current has its own row
+            txt = txt[:-len(sens)].strip()
+        return txt
     if field == "in_A":
-        return fmt(_g(prot, "in_A"), " A") if prot is not None and _g(prot, "in_A") else ""
+        src = prot if prot is not None else column.get("rated")  # no protection: the switching device
+        return fmt(_g(src, "in_A"), " A") if src is not None and _g(src, "in_A") else ""
     if field == "curve":
         return _g(prot, "curve") or ""
     if field == "icn_kA":
@@ -437,10 +444,12 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
     if field == "length_m":
         return fmt(cable.length_m, " m") if cable is not None and cable.length_m else ""
     if field == "p_kW":
+        # one unit in a table row; in kW, what is below 1 kW to 2 significant digits ('0.83 kW', not '0.833 kW')
+        power = (lambda kw: fmt(float(f"{kw:.2g}") if kw < 1 else kw, " kW")) if column.get("power_kw") else fmt_power
         p = _g(leaf, "p_kW")
         if not p and _g(leaf, "p_max_kW"):
-            return f"≤ {fmt_power(_g(leaf, 'p_max_kW'))}"
-        return fmt_power(p) if p else ""
+            return f"≤ {power(_g(leaf, 'p_max_kW'))}"
+        return power(p) if p else ""
     if field == "phase":
         ph = _g(leaf, "phase") or _g(prot, "phase")
         if not ph and (_g(prot, "poles") in THREE_PHASE_POLES or _g(leaf, "phases") == 3):

@@ -404,6 +404,45 @@ def test_mark_below_a_transformer_not_the_installation_system():
     assert _mark_texts(doc)["L"] == []
 
 
+
+def test_mark_at_the_source_and_below_a_transformer():
+    """The line leaving a source carries the installation's system, not that of a single-phase board further
+    down; the secondary of a transformer carries its vector group (Dyn11: four conductors), not the system of a
+    three-wire board below it."""
+    sub = {"type": "breaker", "poles": "1P+N", "children": [{"type": "board", "system": "1P+N", "children": [
+        {"type": "breaker", "in_A": 16, "children": [{"type": "socket"}]}]}]}
+    doc = load({"installation": {"system": "3P+N", "earthing": "TN-S"}, "sources": [{"type": "grid", "id": "G", "children": [
+        {"type": "main_breaker", "in_A": 100, "children": [{"type": "board", "children": [
+            {"type": "breaker", "poles": "4P", "children": [{"type": "motor", "p_kW": 11}]}, sub]}]}]}]})
+    assert dict(_marks(doc))["G"] == "cm-4"
+    hv = load({"installation": {"system": "3P+N", "earthing": "TN-S"}, "sources": [{"type": "grid", "id": "G", "children": [
+        {"type": "breaker", "poles": "3P", "children": [{"type": "busbar", "system": "3P", "children": [
+            {"type": "breaker", "children": [{"type": "load"}]}, {"type": "breaker", "children": [{"type": "load"}]}]}]}]}]})
+    assert dict(_marks(hv))["G"] == "cm-3"  # a system declared on the line leaving the source is that line's
+    mcc = {"type": "breaker", "poles": "3P", "children": [{"type": "board", "system": "3P", "children": [
+        {"type": "breaker", "poles": "3P", "children": [{"type": "motor", "p_kW": 5.5}]}]}]}
+    doc = load({"installation": {"system": "3P+N", "earthing": "TN-S"}, "sources": [{"type": "grid", "un_V": 20000, "children": [
+        {"type": "transformer", "id": "T", "u1_V": 20000, "u2_V": 400, "coupling": "Dyn11", "children": [
+            {"type": "main_breaker", "in_A": 630, "children": [{"type": "board", "children": [
+                mcc, {"type": "breaker", "poles": "1P+N", "children": [{"type": "socket"}]}]}]}]}]}]})
+    assert dict(_marks(doc))["T"] == "cm-4"
+
+
+def test_declared_systems_win_over_the_vector_group_and_the_installation():
+    """A three-wire board declared below a Dyn11 transformer (IT) keeps its secondary three-wire: a star point is not
+    a distributed neutral. A single-phase standby source takes what is declared below it, not the installation's."""
+    motors = [{"type": "breaker", "poles": "3P", "children": [{"type": "motor", "p_kW": 7.5}]} for _ in range(2)]
+    it = load({"installation": {"system": "3P", "earthing": "IT", "un_V": 400}, "sources": [{"type": "grid", "un_V": 20000, "children": [
+        {"type": "transformer", "id": "T", "u1_V": 20000, "u2_V": 400, "coupling": "Dyn11", "children": [
+            {"type": "main_breaker", "poles": "3P", "children": [{"type": "board", "system": "3P", "children": motors}]}]}]}]})
+    assert dict(_marks(it)).get("T") in (None, "cm-3")
+    sockets = [{"type": "breaker", "children": [{"type": "socket"}]} for _ in range(2)]
+    gen = load({"installation": {"system": "3P+N", "earthing": "TN-S", "un_V": 400}, "sources": [
+        {"type": "grid", "children": [{"type": "breaker", "children": [{"type": "load"}]}]},
+        {"type": "generator", "id": "GEN", "un_V": 230, "children": [{"type": "breaker", "poles": "1P+N", "children": [
+            {"type": "board", "system": "1P+N", "children": sockets}]}]}]})
+    assert dict(_marks(gen))["GEN"] == "cm-2"
+
 def test_three_pole_device_with_neutral_downstream():
     from uniwire.labels import feeder_mark, poles_mark
     assert poles_mark("3P", True) == (3, True) and poles_mark("3P") == (3, False) and poles_mark("4P") == (4, False)
@@ -841,3 +880,33 @@ def test_no_count_row_without_identical_circuits():
     for n in (doc.sources[0].children[0].children[0], doc.sources[0].children[0].children[1].children[0]):
         n.count = None
     assert "Qty" not in _texts(render_pages(doc)[0].root)
+
+
+def test_table_rows_one_unit_one_place_and_ratings_without_protection():
+    def table(cartouche):
+        doc = load({"installation": {"system": "1P+N", "un_V": 230}, "views": [{"id": "v", "cartouche": cartouche}],
+                    "sources": [{"type": "grid", "children": [{"type": "board", "children": [
+                        {"type": "rcbo", "ref": "-Q1", "in_A": 16, "curve": "C", "idn_mA": 30,
+                         "children": [{"type": "lighting", "p_kW": 0.6}]},
+                        {"type": "breaker", "ref": "-Q2", "in_A": 20, "curve": "C", "children": [{"type": "socket", "p_kW": 3}]},
+                        {"type": "contactor", "ref": "-KM1", "in_A": 25, "children": [{"type": "water_heater", "p_kW": 2}]}]}]}]})
+        root = render_pages(doc)[0].root
+        return next(_texts(g) for g in _items_groups(root) if g.cls == "cartouche")
+    t = table(["label", "ref", "protection", "idn_mA", "in_A", "p_kW"])
+    assert "C16" in t and "C16 30 mA" not in t and "30 mA" in t  # the residual current in its own row only
+    assert "0.6 kW" in t and "600 W" not in t  # one unit in the power row
+    assert t.count("25 A") == 1  # the contactor's rating: the column has no protection
+    assert "C16 30 mA" in table(["label", "ref", "protection", "p_kW"])  # no RCD row: kept with the protection
+
+
+def test_table_rating_not_taken_from_a_board_and_small_kw_rounded():
+    doc = load({"installation": {"system": "3P+N", "un_V": 400},
+                "views": [{"id": "v", "cartouche": ["label", "ref", "protection", "in_A", "p_kW"]}],
+                "sources": [{"type": "grid", "children": [{"type": "breaker", "ref": "-Q1", "in_A": 32, "children": [
+                    {"type": "busbar", "children": [
+                        {"type": "board", "ref": "EN1", "in_A": 63, "children": [{"type": "heating", "label": "Heater", "p_kW": 2}]},
+                        {"type": "transformer", "ref": "-T2", "u1_V": 400, "u2_V": 24, "children": [
+                            {"type": "lighting", "p_kW": 0.8333}]}]}]}]}]})
+    t = next(_texts(g) for g in _items_groups(render_pages(doc)[0].root) if g.cls == "cartouche")
+    assert "63 A" not in t  # the busbar rating of a board is not the rating of a feeder
+    assert "0.83 kW" in t and "2 kW" in t
