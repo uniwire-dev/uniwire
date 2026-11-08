@@ -4,6 +4,7 @@ import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Any, Optional
 
 from .. import registry
@@ -306,10 +307,10 @@ DC_ACCESSORIES = {"spd", "meter", "insulation_monitor"}  # beside a DC way, they
 
 def _is_dc(node: NodeBase) -> bool:
     """A child on the DC side of an inverter/charger: batteries, PV, DC converters, DC boards, or a device
-    (fuse, disconnector...) feeding one of them alone."""
+    (fuse, disconnector...) feeding one of them alone, or a device declared for direct current (``dc``)."""
     n = node
     while True:
-        if n.type in ("battery", "pv_array", "dc_converter"):
+        if n.type in ("battery", "pv_array", "dc_converter") or getattr(n, "dc", None):
             return True
         if n.type in ("board", "busbar"):
             return getattr(n, "kind", None) == "dc_box" or getattr(n, "system", None) == "DC"
@@ -320,10 +321,24 @@ def _is_dc(node: NodeBase) -> bool:
         n = n.children[0]
 
 
+def _up_to_board(node: NodeBase, index: Index) -> list[NodeBase]:
+    """``node`` and its ancestors up to its board, stopping at equipment beyond a cable from that board (see
+    :func:`beyond_board`): what that equipment feeds is outside the board's frame."""
+    chain = [node] + index.ancestors(node.id or "")
+    end = next((i for i, a in enumerate(chain) if a.type == "board"), len(chain) - 1)  # type: ignore[attr-defined]
+    down = chain[:end + 1][::-1]  # from the board down to the node
+    head = True
+    for k, (p, c) in enumerate(zip(down, down[1:])):
+        head = head and len(p.children) == 1
+        if beyond_board(SimpleNamespace(node=c), SimpleNamespace(node=p), head):
+            return down[k + 1:][::-1]
+    return chain[:end + 1]
+
+
 def _bus_name(node: NodeBase, index: Index) -> str:
     """Name of the busbar a node feeds: its board's (or busbar's), not the device at its head (a meter, a breaker);
     a row of the board (a group RCD among others) adds its own: "TD, -ID2"."""
-    chain = [node] + index.ancestors(node.id or "")
+    chain = _up_to_board(node, index)
     owner = next((a for a in chain if a.type in ("board", "busbar")), node)  # type: ignore[attr-defined]
     name = owner.ref or owner.label or node.ref or node.label or node.id or ""
     path = chain[:chain.index(owner)]  # from the node up to the owner, excluded
@@ -340,8 +355,8 @@ def _build_sheet_roots(spec: SheetSpec, index: Index) -> list[LNode]:
         bus_sym = Symbol("bus_in", [], 0.0, 0.0, 0.0)
         root = LNode(None, "bus_in", bus_sym, [_build(c, spec, False) for c in kids],
                      label=_bus_name(parent, index), target=nid, bus_out=e < len(parent.children))
-        board = next((a for a in [parent] + index.ancestors(nid) if a.type == "board"), None)  # type: ignore[attr-defined]
-        if board is not None:  # the busbar is in a board: its frame on this sheet too
+        board = _up_to_board(parent, index)[-1]
+        if board.type == "board":  # type: ignore[attr-defined]  # the busbar is in a board: its frame here too
             return [LNode(board, "node", Symbol("board", [], 0.0, 0.0, 0.0), [root])]
         return [root]
     return [_build(r, spec, True) for r in spec.roots if r.id not in spec.moved]
@@ -534,27 +549,54 @@ def _shift(ln: LNode, dy: float) -> None:
             n.bus_y += dy
 
 
-def _owned(board: LNode) -> Iterator[LNode]:
-    """Nodes belonging to the board (excluding sub-boards and loads)."""
-    stack = list(board.children)
-    yield board
+# equipment that is not a way of the board feeding it when a cable joins them: drawn below the board frame
+REMOTE_EQUIPMENT = {"inverter", "transformer", "ups", "transfer_switch", "busbar"}
+# beside a board's incoming chain, with nothing below them, they do not make it a branch: accessories,
+# measurement, control
+BESIDE_TYPES = SIDE_TYPES | DC_ACCESSORIES | {"instrument_transformer", "controller", "plc"}
+
+
+def beyond_board(ln: Any, parent: Any, head: bool) -> bool:
+    """Whether the layout node ``ln`` (child of ``parent``) is equipment at the far end of a cable from its board:
+    an inverter, a UPS, a transformer fed at high voltage... with a cable of its own or after a device with one (the
+    cable of the board itself is its incoming one). What it feeds is outside the board too. ``head``: ``ln`` is the
+    board's only child, or the only child of that one, and so on: a busbar there is the board's own."""
+    n, p = ln.node, parent.node
+    if n is None or p is None or n.type not in REMOTE_EQUIPMENT or (head and n.type == "busbar"):
+        return False
+    if n.type == "transformer" and not (getattr(n, "u1_V", None) or 0) > 1000:
+        return False  # a control or isolating transformer is a device of the board
+    return bool(getattr(n, "cable", None)) or (p.type != "board" and bool(getattr(p, "cable", None)))
+
+
+def board_parts(board: Any) -> Iterator[tuple[Any, bool]]:
+    """The nodes under ``board`` down to its sub-boards, loads and equipment beyond a cable: (node, inside), the
+    sub-boards and that equipment with ``inside`` False (not descended into)."""
+    def heads(n: Any, head: bool) -> list[tuple[Any, Any, bool]]:
+        # the head goes on through the only way of n; an accessory beside it with nothing below it (a surge
+        # protector, a meter, an insulation monitor, an earth bar, a controller...) does not end it
+        ways = [c for c in n.children if c.children or c.type not in BESIDE_TYPES]
+        return [(c, n, head and ways == [c]) for c in n.children]
+
+    stack = heads(board, True)
     while stack:
-        n = stack.pop()
-        if n.is_board or n.bottom:
+        n, p, head = stack.pop()
+        if n.is_board or beyond_board(n, p, head):
+            yield n, False
             continue
-        yield n
-        stack.extend(n.children)
+        yield n, True
+        stack.extend(heads(n, head))
+
+
+def _owned(board: LNode) -> Iterator[LNode]:
+    """Nodes belonging to the board (excluding sub-boards, loads and equipment beyond a cable)."""
+    yield board
+    yield from (n for n, inside in board_parts(board) if inside and not n.bottom)
 
 
 def _sub_boards(board: LNode) -> list[LNode]:
-    out, stack = [], list(board.children)
-    while stack:
-        n = stack.pop()
-        if n.is_board:
-            out.append(n)
-            continue
-        stack.extend(n.children)
-    return out
+    """Sub-boards, and equipment beyond a cable, under the board: drawn below its frame."""
+    return [n for n, inside in board_parts(board) if not inside]
 
 
 def _board_bottom(board: LNode) -> float:
@@ -568,10 +610,15 @@ def _separate_boards(ln: LNode) -> None:
             if not subs:
                 continue
             # below the frame, and side by side on one line (their frames, names and first devices aligned)
-            top = max([_board_bottom(n) + 4.0] + [sb.frame_top for sb in subs])
+            top = max([_board_bottom(n) + 4.0] + [_top(sb) for sb in subs])
             for sb in subs:
-                if top > sb.frame_top:
-                    _shift(sb, top - sb.frame_top)
+                if top > _top(sb):
+                    _shift(sb, top - _top(sb))
+
+
+def _top(ln: LNode) -> float:
+    """Top of a sub-board frame, or of equipment below a board with room above it (clear of the frame)."""
+    return ln.frame_top if ln.is_board else ln.y - 8.0
 
 
 def _translate(ln: LNode, dx: float, dy: float) -> None:
@@ -834,6 +881,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         if id(r) not in anchored:
             continue
         target, _ = anchored[id(r)]
+        _needs(r, view, lang)  # the name of a board in it keeps its room
         _measure(r, pitch)
         _place_x(r, 0.0, pitch)
         for n in r.walk():
@@ -848,7 +896,8 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         boxes += [_frame_box(n) for m in main + placed for n in m.walk() if n.is_board]
         obstacles = [b for b in boxes if b[3] > top - 1 and b[1] < sy - 2 and b[2] > target.x - 3]
         right = max([b[2] for b in obstacles] + [sx])
-        new_x = max(sx, right + 3.0 + r.sym.left)
+        own = _boxes(r) + [_frame_box(n) for n in r.walk() if n.is_board]  # its board frame too, left of it
+        new_x = max(sx, right + 3.0 + max(r.sym.left, last.x - min(b[0] for b in own)))
         _translate(r, new_x - last.x, top)
         placed.append(r)
 
@@ -924,7 +973,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
     g = Group(cls="diagram")
     for r in roots:
         _draw_tree(r, g, y_load, view, folio_of)
-    for r in main:
+    for r in main + placed:  # placed: the supplies on a transfer switch, their boards framed too
         for n in r.walk():
             if n.is_board:
                 _draw_board_frame(n, g)
@@ -1434,8 +1483,8 @@ def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: 
     drawn = drawn or {}
     parent = parent or {}
     for ln in columns:
-        if not (ln.bottom or ln.open_feeder):
-            continue  # nothing leaves the column below the node (surge arrester, controller...)
+        if not (ln.bottom or ln.open_feeder) or _free_way(ln, parent.get(id(ln))):
+            continue  # nothing leaves the column below the node (surge arrester, controller, free space...)
         chain = _feeder_chain(ln, index)
         if not chain:
             continue
@@ -1494,6 +1543,14 @@ def _first_boards(doc: Document) -> list[NodeBase]:
 
 
 # ---------------------------------------------------------------- strokes
+def _free_way(ln: LNode, parent: Optional[LNode]) -> bool:
+    """A spare way with no device (no rating, no poles) straight on a busbar or in a board: a free space, drawn
+    dashed and without a conductor mark, not a conductor leaving the busbar (below a device, it is that device's
+    spare way). Same rule as multi-line drawings."""
+    return (parent is not None and (parent.bus_y is not None or parent.is_board) and ln.node is not None
+            and ln.node.type == "spare" and not (getattr(ln.node, "in_A", None) or getattr(ln.node, "poles", None)))
+
+
 def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callable[[str], Optional[int]] | None = None,
                parent_id: Optional[str] = None) -> None:
     trunk = BUSWAY_H / 2 if ln.bus_y is not None and ln.sym.name == "busway" else 0.0
@@ -1535,7 +1592,8 @@ def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callabl
             bg.add(Line((ln.bus_x0, ln.bus_y), (x1, ln.bus_y), Style(width=BUS)))
         g.add(bg)
         for c in ln.bus_children:
-            eg = edge_group(c.id, me, [Line((c.x, ln.bus_y + trunk), (c.x, c.frame_top if c.is_board else c.y))])
+            eg = edge_group(c.id, me, [Line((c.x, ln.bus_y + trunk), (c.x, c.frame_top if c.is_board else c.y),
+                                            DASH if _free_way(c, ln) else Style())])
             if c.is_board:
                 eg.add(Line((c.x, c.frame_top), (c.x, c.y)))
             g.add(eg)
@@ -1543,10 +1601,11 @@ def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callabl
         for c in ln.bus_children:
             top = c.frame_top if c.is_board else c.y
             eg = edge_group(c.id, me)
+            style = DASH if _free_way(c, ln) else Style()
             if ln.x == c.x:
-                eg.add(Line((ln.x, ln.out_y), (c.x, top)))
+                eg.add(Line((ln.x, ln.out_y), (c.x, top), style))
             else:
-                eg.add(Polyline([(ln.x, ln.out_y), (ln.x, ln.out_y + 1.5), (c.x, ln.out_y + 1.5), (c.x, top)]))
+                eg.add(Polyline([(ln.x, ln.out_y), (ln.x, ln.out_y + 1.5), (c.x, ln.out_y + 1.5), (c.x, top)], style))
             if c.is_board:
                 eg.add(Line((c.x, c.frame_top), (c.x, c.y)))
             g.add(eg)
