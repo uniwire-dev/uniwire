@@ -8,6 +8,20 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line conductor marks: the line leaving the supply of the installation carries the system declared on that
+  line, else the installation's (before, a single-phase or DC board further down made it a two-conductor line); a
+  standby or lower-voltage source still takes the system declared below it. The secondary of a transformer
+  carries the system declared on its line, else its vector group (`coupling` "Dyn11": four conductors), instead of
+  the installation's.
+* Drawings on several sheets: a `tie` link between two devices or boards (not busbars) whose ends are on two sheets
+  is drawn at both ends, with a stub naming the other end and its sheet. Before, it was not drawn at all.
+* Drawings: a switch at the far end of an outgoing cable, in front of the equipment it serves (a local isolator
+  before a transformer, an inverter or a UPS), is drawn below the board frame with that equipment. Before, a
+  transformer joined by a cable left the frame while one behind its local isolator stayed inside.
+* `nfc15100.heating`: the heating power of a circuit counts every item (`p_kW` is per item, `count` items, as in the
+  SPEC and `core.load-current`). Before, three 1.25 kW heaters on 16 A were read as 1.25 kW.
+* Drawings with many links draw faster (about two times on the slowest documents seen): the router costs each
+  segment against the obstacles near it only, and costs a segment it meets again once. The drawings are the same.
 * Feeder table: the residual current of an RCBO or an RCD is written in the RCD row only, not also with the
   protection ("C16", then "30 mA"; without an RCD row it stays "C16 30 mA"). The powers of one row share their
   unit: "0.6 kW" beside "3 kW", not "600 W", below 1 kW to two significant digits ("0.83 kW"); a row below 1 kW
