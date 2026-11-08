@@ -8,6 +8,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings: a link no longer runs on a busbar or right beside it, where it read as part of it. A transfer link
+  from a standby supply to a changeover switch was routed onto the end of the busbar above the switch, and links
+  between trains ran along their busbars: they looked connected to what the busbar feeds.
 * `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
   controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
   after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",
