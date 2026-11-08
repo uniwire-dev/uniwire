@@ -693,3 +693,7 @@ def test_views_starting_at_the_same_sheet_number():
                      {"id": "more", "first_folio": 12}]}
     found = [f for f in check(load(doc)) if f.rule == "core.folio-duplicate"]
     assert len(found) == 1 and "'sld'" in found[0].message and "'ml'" in found[0].message
+    doc["views"] = [{"id": "ml", "kind": "multi-line"}, {"id": "sld", "first_folio": 1}]  # the first starts at 1
+    assert [f.rule for f in check(load(doc)) if f.rule == "core.folio-duplicate"] == ["core.folio-duplicate"]
+    doc["views"] = [{"id": "ml", "kind": "multi-line"}, {"id": "sld"}]  # the second follows the first
+    assert not [f for f in check(load(doc)) if f.rule == "core.folio-duplicate"]
