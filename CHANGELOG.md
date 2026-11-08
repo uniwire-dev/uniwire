@@ -8,6 +8,22 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
+  inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
+  from the board was drawn on its AC side, and the inverter was drawn "=" over "~".
+* Multi-line drawings on a single-phase three-wire supply (`system` "split-phase", 100/200 V or 120/240 V): a `2P`
+  device feeds a phase-to-phase circuit, without the neutral, unless something below it uses the neutral (a device
+  or load on one leg, a load whose `un_V` is the phase-to-neutral voltage, a socket-outlet or lighting circuit). A
+  load's `un_V` also tells which of the two it is, against the voltages of its own supply. Before, a 200 V or 240 V
+  load under a `2P` breaker was drawn with a neutral, unless its `phase` said "L1L2". These rules apply below a
+  split-phase supply only (the nearest system declared above, a transformer taking the one declared below it):
+  before, anywhere in a document that had one, so a three-phase motor fed by a 4-core cable elsewhere was drawn on
+  two phases.
+* Title block: the voltage gives the phase-to-neutral and the phase-to-phase voltages when both are stated
+  (`uln_V`) and the system has a neutral: "3P+N 230/400 V", "split-phase 100/200 V".
+* Drawings: a spare way with no device (`spare` without `in_A` or `poles`) is a free space, drawn dashed (multi-line: grey
+  dashed, like an equipped spare way) and without a conductor mark. Before, it was drawn as a conductor leaving the
+  busbar with no protection.
 * Drawings: a board frame no longer encloses the equipment at the far end of its outgoing cables. An inverter, a
   UPS, a transfer switch, a busbar (other than the board's own) or a transformer fed above 1000 V, with a `cable`
   of its own or after a device with one, is drawn below the frame with what it feeds (SPEC §3.1).

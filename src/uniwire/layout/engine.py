@@ -305,10 +305,10 @@ DC_ACCESSORIES = {"spd", "meter", "insulation_monitor"}  # beside a DC way, they
 
 def _is_dc(node: NodeBase) -> bool:
     """A child on the DC side of an inverter/charger: batteries, PV, DC converters, DC boards, or a device
-    (fuse, disconnector...) feeding one of them alone."""
+    (fuse, disconnector...) feeding one of them alone, or a device declared for direct current (``dc``)."""
     n = node
     while True:
-        if n.type in ("battery", "pv_array", "dc_converter"):
+        if n.type in ("battery", "pv_array", "dc_converter") or getattr(n, "dc", None):
             return True
         if n.type in ("board", "busbar"):
             return getattr(n, "kind", None) == "dc_box" or getattr(n, "system", None) == "DC"
@@ -1444,8 +1444,8 @@ def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: 
     drawn = drawn or {}
     parent = parent or {}
     for ln in columns:
-        if not (ln.bottom or ln.open_feeder):
-            continue  # nothing leaves the column below the node (surge arrester, controller...)
+        if not (ln.bottom or ln.open_feeder) or _free_way(ln, parent.get(id(ln))):
+            continue  # nothing leaves the column below the node (surge arrester, controller, free space...)
         chain = _feeder_chain(ln, index)
         if not chain:
             continue
@@ -1504,6 +1504,14 @@ def _first_boards(doc: Document) -> list[NodeBase]:
 
 
 # ---------------------------------------------------------------- strokes
+def _free_way(ln: LNode, parent: Optional[LNode]) -> bool:
+    """A spare way with no device (no rating, no poles) straight on a busbar or in a board: a free space, drawn
+    dashed and without a conductor mark, not a conductor leaving the busbar (below a device, it is that device's
+    spare way). Same rule as multi-line drawings."""
+    return (parent is not None and (parent.bus_y is not None or parent.is_board) and ln.node is not None
+            and ln.node.type == "spare" and not (getattr(ln.node, "in_A", None) or getattr(ln.node, "poles", None)))
+
+
 def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callable[[str], Optional[int]] | None = None,
                parent_id: Optional[str] = None) -> None:
     trunk = BUSWAY_H / 2 if ln.bus_y is not None and ln.sym.name == "busway" else 0.0
@@ -1545,7 +1553,8 @@ def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callabl
             bg.add(Line((ln.bus_x0, ln.bus_y), (x1, ln.bus_y), Style(width=BUS)))
         g.add(bg)
         for c in ln.bus_children:
-            eg = edge_group(c.id, me, [Line((c.x, ln.bus_y + trunk), (c.x, c.frame_top if c.is_board else c.y))])
+            eg = edge_group(c.id, me, [Line((c.x, ln.bus_y + trunk), (c.x, c.frame_top if c.is_board else c.y),
+                                            DASH if _free_way(c, ln) else Style())])
             if c.is_board:
                 eg.add(Line((c.x, c.frame_top), (c.x, c.y)))
             g.add(eg)
@@ -1553,10 +1562,11 @@ def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callabl
         for c in ln.bus_children:
             top = c.frame_top if c.is_board else c.y
             eg = edge_group(c.id, me)
+            style = DASH if _free_way(c, ln) else Style()
             if ln.x == c.x:
-                eg.add(Line((ln.x, ln.out_y), (c.x, top)))
+                eg.add(Line((ln.x, ln.out_y), (c.x, top), style))
             else:
-                eg.add(Polyline([(ln.x, ln.out_y), (ln.x, ln.out_y + 1.5), (c.x, ln.out_y + 1.5), (c.x, top)]))
+                eg.add(Polyline([(ln.x, ln.out_y), (ln.x, ln.out_y + 1.5), (c.x, ln.out_y + 1.5), (c.x, top)], style))
             if c.is_board:
                 eg.add(Line((c.x, c.frame_top), (c.x, c.y)))
             g.add(eg)
