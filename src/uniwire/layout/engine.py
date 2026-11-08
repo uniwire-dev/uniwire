@@ -1101,6 +1101,16 @@ def sheet_node_ids(doc: Document, spec: SheetSpec, index: Index) -> set[str]:
     return ids
 
 
+def feeding_sheet(specs: list[SheetSpec], i: int, rid: Optional[str], index: Index,
+                  sheet_of: dict[str, int]) -> Optional[int]:
+    """Sheet that feeds the board ``rid`` drawn from sheet ``i`` on: among the sheets that leave it out, the one
+    where its feeding device is drawn (a board nested in another one drawn apart is left out of the first sheet
+    too), else the first of them."""
+    holders = [j for j, s in enumerate(specs, 1) if rid in s.detached and j != i]
+    j = sheet_of.get(index.parent.get(rid or "") or "")
+    return j if j in holders else next(iter(holders), None)
+
+
 DEVICE_PAD_MM = 2.5  # free margin around an auxiliary device (symbol and text)
 DEVICE_AXIS_MM = 30.0  # length of the reserved axis below a load
 
@@ -2292,11 +2302,16 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 other = link.to if b is None else link.from_
                 at = End(n.bus_x1, n.bus_y, "right") if b is None else End(n.bus_x0, n.bus_y, "left")
                 _draw_offpage_link(link, n, other, nodes.get(other), obs, lg, lang, node_folio, offpage, at)
-            elif link.kind not in ("transfer", "tie"):
+            elif link.kind != "tie":
                 other = link.to if b is None else link.from_
                 at = spread.get((i, 0 if b is None else 1))  # a controller many links reach: its own point
                 if b is not None and link.kind == "infeed" and link.to in fed_ok:  # on its input conductor
                     at = landing(i, b, _end(b, link.kind, fed=True))
+                elif link.kind == "transfer":  # the standby supply: out of its output, into the side input
+                    if b is not None and b.sym.side_input is not None:
+                        at = End(b.x + b.sym.side_input[0], b.y + b.sym.side_input[1], "up")
+                    elif a is not None and not a.children:  # (below a device feeding on: its side)
+                        at = End(a.x, a.out_y if a.sym.has_output else a.y + a.sym.height, "down")
                 _draw_offpage_link(link, a or b, other, nodes.get(other), obs, lg, lang, node_folio, offpage, at)
             continue
         if far and i in far:
