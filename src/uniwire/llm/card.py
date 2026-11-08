@@ -15,7 +15,7 @@ from typing import Any, Literal, get_args, get_origin
 
 from pydantic import BaseModel
 
-from ..i18n import normalize_lang
+from ..i18n import cyrillic, normalize_lang
 from ..model import FORMAT_VERSION, NODE_TYPES, SCHEMA_ID, Cable, Document, Installation, Interlock, Link, Meta, View
 from ..model import base as _base
 from ..model import document as _document
@@ -303,6 +303,8 @@ def types_by_category() -> dict[str, list[str]]:
 def type_label(type_: str, lang: str) -> str:
     """Label of a node type in ``lang`` (registry), falling back to English, then to the type name."""
     labels = registry()["types"].get(type_, {}).get("label", {})
+    if lang == "sr-Cyrl" and labels.get("sr"):  # Serbian in Cyrillic: the Latin name transliterated
+        return cyrillic(labels["sr"])
     return labels.get(lang) or labels.get("en") or type_
 
 
