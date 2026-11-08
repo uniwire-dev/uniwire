@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterator
@@ -711,8 +712,29 @@ def _boxes(ln: LNode) -> list[tuple[float, float, float, float]]:
     return out
 
 
+def _line_system(node: NodeBase) -> Optional[str]:
+    """System declared on the line leaving ``node``, down to where it branches (not beyond a transformer)."""
+    n = node
+    while len(n.children) == 1 and n.children[0].type != "transformer":  # type: ignore[attr-defined]
+        n = n.children[0]
+        if getattr(n, "system", None):
+            return n.system  # type: ignore[attr-defined]
+    return None
+
+
+_VECTOR = re.compile(r"^(YN|ZN|Y|D|Z)(yn|zn|y|d|z)")
+
+
 def _system_of(node: NodeBase, doc: Document) -> Optional[str]:
-    """Supply system downstream of a source: first explicit ``system`` below it, else the installation's."""
+    """Supply system downstream of a source or transformer: one declared on its line before it branches (what the
+    user says wins: a Dyn star point is not always a distributed neutral), else a transformer's vector group
+    (``Dyn11``: a neutral, ``Dd0``: none), else the first explicit ``system`` below it, else the installation's."""
+    declared = _line_system(node)
+    if declared:
+        return declared
+    m = _VECTOR.match(getattr(node, "coupling", None) or "")
+    if m:
+        return "3P+N" if m[2].endswith("n") else "3P"
     stack = list(node.children)
     while stack:
         n = stack.pop(0)
@@ -1327,24 +1349,33 @@ def _needs_neutral(node: NodeBase) -> bool:
 
 
 def _source_mark(src: NodeBase, doc: Document) -> Optional[Mark]:
-    """Line leaving a source: its own system, else the first one declared below (not beyond a transformer);
-    the high-voltage side of a transformer is a three-conductor line."""
+    """Line leaving a source: its own system, else one declared on that line before it branches (a busbar right
+    below it). Then, for the supply of the installation (a grid not below its voltage), the installation's system
+    before any declared further down (a single-phase or DC board further down does not make the supply
+    single-phase); for another source (a generator, an inverter, a lower-voltage supply), the first declared below
+    first. The high-voltage side of a transformer is a three-conductor line."""
     if getattr(src, "system", None):
         return system_mark(src.system)  # type: ignore[attr-defined]
     hv = (src.un_V or 0) > 1000
+    if not hv and _line_system(src):
+        return system_mark(_line_system(src))
+    below = None
     stack = list(src.children)
     while stack:
         n = stack.pop(0)
         if n.type == "transformer":  # type: ignore[attr-defined]
             u1 = getattr(n, "u1_V", None) or src.un_V
             hv = hv or (u1 or 0) > 1000
-            if u1 is None:
+            if u1 is None and below is None:
                 return None
             continue
-        if getattr(n, "system", None) and not hv:
-            return system_mark(n.system)  # type: ignore[attr-defined]
+        below = below or getattr(n, "system", None)
         stack.extend(n.children)
-    return system_mark("3P") if hv else system_mark(doc.installation.system)
+    if hv:
+        return system_mark("3P")
+    inst = doc.installation
+    main = src.type == "grid" and not (src.un_V and inst.un_V and src.un_V < inst.un_V)  # type: ignore[attr-defined]
+    return system_mark((inst.system or below) if main else (below or inst.system))
 
 
 def _line_marks(doc: Document) -> tuple[dict[int, Optional[Mark]], dict[int, Optional[Mark]]]:

@@ -8,6 +8,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line conductor marks: the line leaving the supply of the installation carries the system declared on that
+  line, else the installation's (before, a single-phase or DC board further down made it a two-conductor line); a
+  standby or lower-voltage source still takes the system declared below it. The secondary of a transformer
+  carries the system declared on its line, else its vector group (`coupling` "Dyn11": four conductors), instead of
+  the installation's.
 * Drawings on several sheets: a `tie` link between two devices or boards (not busbars) whose ends are on two sheets
   is drawn at both ends, with a stub naming the other end and its sheet. Before, it was not drawn at all.
 * Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
