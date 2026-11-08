@@ -179,9 +179,9 @@ def _seg_cost(obs: Obstacles, a: Point, b: Point, lane: float = LANE, solid: boo
         if solid:  # a long run along a busbar, close enough to read as part of it or as a second busbar
             cost += sum(300.0 for y, h0, h1 in obs.buses
                         if abs(y - y0) < BUS_CLEAR and min(h1, seg[2]) - max(h0, seg[0]) > BUS_RUN)
-        else:  # a thin link hugging a busbar (a thick line) is lost in it, and runs over the feeders' texts
+        else:  # a thin link on or hugging a busbar (a thick line) is lost in it, and runs over the feeders' texts
             cost += sum(RUN_ALONG for y, h0, h1 in obs.buses
-                        if lane * 0.9 <= abs(y - y0) < BUS_CLEAR_THIN and min(h1, seg[2]) - max(h0, seg[0]) > FRAME_RUN)
+                        if abs(y - y0) < BUS_CLEAR_THIN and min(h1, seg[2]) - max(h0, seg[0]) > FRAME_RUN)
     return cost
 
 
@@ -429,9 +429,9 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
             if ov > 0 and abs(p - pos) < obs.frame_clear:
                 k = obs.frame_along * (1.0 - abs(p - pos) / obs.frame_clear) if abs(p - pos) >= lane / 2 else obs.box_cross
                 c += k * ov / FRAME_RUN
-        for p, v0, v1 in bus:
+        for p, v0, v1 in bus:  # on a busbar or hugging it
             ov = min(v1, b) - max(v0, a)
-            if ov > 0 and lane * 0.9 <= abs(p - pos) < BUS_CLEAR_THIN:
+            if ov > 0 and abs(p - pos) < BUS_CLEAR_THIN:
                 c += RUN_ALONG * ov / FRAME_RUN
         return c
 
