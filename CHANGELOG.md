@@ -32,6 +32,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   `electrical`, `mechanical` or `removable_link` is written "interlock K1", not "key K1", which stays for trapped
   keys. Multi-line drawings no longer repeat the tag at the start of a device label ("-KM1" over "-KM1 water
   heater"), as single-line drawings already did.
+* Drawings and rule messages in Serbian in Cyrillic (`meta.lang` "sr-Cyrl", "sr-Cyrl-RS"): the Serbian texts
+  transliterated letter for letter. References, units, symbols of quantities (Iz, Ik) and abbreviations in
+  capitals (FID, IEC) stay in Latin letters. Before, such a document got the Latin texts.
 * Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
   inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
   from the board was drawn on its AC side, and the inverter was drawn "=" over "~".

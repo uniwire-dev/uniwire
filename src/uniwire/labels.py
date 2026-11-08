@@ -8,7 +8,7 @@ from collections.abc import Iterable
 from typing import Any, Optional
 
 from . import registry
-from .i18n import DECIMAL_COMMA, normalize_lang, render_lang
+from .i18n import DECIMAL_COMMA, cyrillic, normalize_lang, render_lang
 from .i18n import t as _t
 from .model import Cable, NodeBase
 from .units import fmt, fmt_power, fmt_sensitivity
@@ -609,3 +609,4 @@ CARTOUCHE_TITLES = {
         "install": "Raceway / method",
     },
 }
+CARTOUCHE_TITLES["sr-Cyrl"] = {k: cyrillic(v) for k, v in CARTOUCHE_TITLES["sr"].items()}
