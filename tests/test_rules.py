@@ -612,3 +612,48 @@ def test_load_current_above_its_protection():
     assert found({"type": "motor", "p_kW": 30, "phases": 3}, in_a=63, poles="3P", system="3P+N") == []  # 43 A
     assert len(found({"type": "load", "p_kW": 72, "cos_phi": 0.9}, in_a=100, poles="4P", system="3P+N")) == 1
     assert found({"type": "load", "p_kW": 15, "cos_phi": 0.7}, in_a=80, poles="2P", system="3P+N") == []  # 400 V?
+
+
+def test_load_current_at_the_voltage_of_its_network():
+    def found(installation, top, item, kids_of=None):
+        node = dict(item, id="L")
+        d = load({"installation": installation, "sources": [dict(top, children=[node]) if kids_of is None else
+                                                             dict(top, children=[kids_of(node)])]})
+        return [f.message for f in check(d) if f.rule == "core.load-current"]
+    us = {"system": "3P+N", "un_V": 208, "uln_V": 120}
+    grid = {"type": "grid"}
+
+    def stepped_up(poles, in_a):  # 208 V installation, 480 V after a transformer
+        return lambda load_: {"type": "transformer", "u1_V": 208, "u2_V": 480, "children": [
+            {"type": "breaker", "in_A": in_a, "poles": poles, "children": [load_]}]}
+    assert found(us, grid, {"type": "motor", "p_kW": 20, "phases": 3}, stepped_up("3P", 40)) == []  # 24 A
+    assert found(us, grid, {"type": "lighting", "p_kW": 4, "un_V": 277}, stepped_up("1P", 20)) == []  # 14.4 A
+    split = {"system": "split-phase", "un_V": 240, "uln_V": 120}
+
+    def breaker(poles, in_a, cable=None):
+        return lambda load_: {"type": "breaker", "in_A": in_a, **({"poles": poles} if poles else {}),
+                              **({"cable": {"cores": cable}} if cable else {}), "children": [load_]}
+    assert len(found(split, grid, {"type": "cooking", "p_kW": 9.6}, breaker("2P", 30, "3-#10+G"))) == 1  # 40 A
+    assert len(found(split, grid, {"type": "cooking", "p_kW": 9.6}, breaker(None, 30))) == 1  # 240 V: 40 A
+    assert len(found({"system": "split-phase", "un_V": 240}, grid, {"type": "heating", "p_kW": 2.4},
+                     breaker("1P", 15))) == 1  # 120 V: 20 A
+    assert found({"system": "split-phase", "un_V": 200}, grid, {"type": "heating", "p_kW": 2.4},
+                 breaker("2P", 15)) == []  # 200 V: 12 A
+    dc = {"system": "1P+N", "un_V": 230, "uln_V": 230}
+    battery = {"type": "battery", "un_V": 48, "capacity_kWh": 5}
+    assert found(dc, battery, {"type": "load", "p_kW": 0.5, "un_V": 48}, breaker("1P", 16)) == []  # 10.4 A
+    assert len(found(dc, battery, {"type": "load", "p_kW": 1.2, "un_V": 48}, breaker("1P", 16))) == 1  # 25 A
+    assert found(dc, battery, {"type": "load", "p_kW": 1.2}, breaker("1P", 16)) == []  # voltage not known
+
+
+def test_load_current_poles_of_a_socket_and_below_a_transformer():
+    def found(top_kids, installation=None):
+        d = load({"installation": installation or {"system": "3P+N", "un_V": 400},
+                  "sources": [{"type": "grid", "children": top_kids}]})
+        return [f.node for f in check(d) if f.rule == "core.load-current"]
+    socket = {"type": "socket", "id": "L", "p_kW": 20, "poles": "3P+N+T", "cos_phi": 0.9}  # 32 A three-phase
+    assert found([{"type": "rcbo", "in_A": 32, "poles": "4P", "children": [socket]}]) == []
+    heater = {"type": "heating", "id": "L", "p_kW": 5}  # 21.7 A at 230 V
+    below = {"type": "transformer", "u1_V": 20000, "u2_V": 400, "children": [
+        {"type": "breaker", "in_A": 16, "poles": "1P+N", "children": [heater]}]}
+    assert found([below]) == ["L"]  # phase to neutral below a 400 V secondary
