@@ -164,7 +164,7 @@
     "pl": "Falownik",
     "tr": "İnvertör",
     "nl": "Omvormer",
-    "ja": "インバータ"
+    "ja": "パワーコンディショナ（PCS）"
    },
    "symbol": "inverter",
    "map": {
@@ -237,7 +237,7 @@
     "pl": "Wyłącznik różnicowoprądowy",
     "tr": "Kaçak akım koruma rölesi (KAKR)",
     "nl": "Aardlekschakelaar",
-    "ja": "漏電遮断器（過電流素子なし）"
+    "ja": "漏電遮断器（地絡保護専用）"
    },
    "symbol": "rcd",
    "map": {
@@ -261,7 +261,7 @@
     "pl": "Wyłącznik różnicowonadprądowy (RCBO)",
     "tr": "Kaçak akım korumalı otomatik sigorta (RCBO)",
     "nl": "Aardlekautomaat",
-    "ja": "漏電遮断器（過電流素子付）"
+    "ja": "漏電遮断器（過負荷短絡保護兼用）"
    },
    "symbol": "rcbo",
    "map": {
@@ -1189,7 +1189,7 @@
     "pl": "Przekształtnik DC (optymalizator, MPPT)",
     "tr": "DC dönüştürücü (optimizer, MPPT)",
     "nl": "DC-converter",
-    "ja": "直流変換装置"
+    "ja": "DC-DC コンバータ"
    },
    "symbol": "dc_converter",
    "map": {
@@ -1213,7 +1213,7 @@
     "pl": "Szyna uziemiająca (PE)",
     "tr": "Topraklama barası",
     "nl": "Aardrail",
-    "ja": "接地端子バー"
+    "ja": "接地母線"
    },
    "symbol": "earth_bar",
    "map": {

@@ -544,10 +544,10 @@ CARTOUCHE_TITLES = {
     },
     "ja": {
         "label": "名称", "ref": "記号", "protection": "保護", "in_A": "定格電流", "curve": "特性", "icn_kA": "遮断容量",
-        "idn_mA": "感度電流", "rcd_type": "漏電形式", "poles": "極数", "cable": "ケーブル（mm²）", "cable_awg": "ケーブル",
+        "idn_mA": "感度電流", "rcd_type": "ELB 形式", "poles": "極数", "cable": "ケーブル（mm²）", "cable_awg": "ケーブル",
         "section_mm2": "断面積", "length_m": "こう長", "p_kW": "容量", "phase": "相", "room": "室名", "points": "箇所",
-        "circuit": "回路", "ib_A": "Ib", "cos_phi": "力率", "count": "数量", "un_V": "電圧", "frame_A": "フレーム",
-        "cable_type": "ケーブル種類", "cable_ref": "ケーブル番号", "install": "布設方法",
+        "circuit": "回路", "ib_A": "Ib", "cos_phi": "力率", "count": "数量", "un_V": "電圧", "frame_A": "AF",
+        "cable_type": "ケーブル種別", "cable_ref": "ケーブル番号", "install": "布設方法",
     },
     "nl": {
         "label": "Omschrijving", "ref": "Codering", "protection": "Beveiliging", "in_A": "Nominaal",

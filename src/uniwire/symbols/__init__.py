@@ -223,7 +223,7 @@ ABBREVIATIONS: dict[str, dict[str, str]] = {
     "ja": {"starter.vfd": "INV", "starter.soft_starter": "SS", "starter.star_delta": "Y/Δ", "starter.reversing": "正逆",
            "starter.": "MS", "impulse_relay": "IR", "water_heater": "給湯", "oven": "オーブン", "washing_machine": "洗濯",
            "dishwasher": "食洗", "dryer": "乾燥", "freezer": "冷凍", "fridge": "冷蔵", "appliance": "家電", "ev_charger": "EV",
-           "shutter": "シャッタ", "insulation_monitor": "IMD", "plc": "PLC", "ups": "UPS"},
+           "shutter": "シャッター", "insulation_monitor": "IMD", "plc": "PLC", "ups": "UPS"},
     "nl": {"starter.vfd": "FO", "starter.soft_starter": "SS", "starter.star_delta": "Y/Δ",
            "starter.reversing": "L/R", "starter.": "MS", "impulse_relay": "IR", "water_heater": "BLR",
            "oven": "OVEN", "washing_machine": "WM", "dishwasher": "VW", "dryer": "WD", "freezer": "VRZ",
