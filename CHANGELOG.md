@@ -34,7 +34,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   devices seemed to hang straight from the source.
 * Drawings cut into continuation sheets: a busbar continued on another sheet keeps the frame of its board there
   (single-line), and the continuation is named after the board in multi-line drawings too ("TD (cont.)"), not
-  after the device at the head of the busbar ("-F1 (cont.)").
+  after the device at the head of the busbar ("-F1 (cont.)"). The busbar of a row of the board (a group RCD among
+  others) is named after the board and the row in both: "TD, -ID2 (cont.)" (before, "TD" in single-line drawings).
 * `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
   controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
   after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",
