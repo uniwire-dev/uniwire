@@ -100,6 +100,30 @@ def phases_from_feeder(doc: Document, idx: Index):
             yield Finding("warning", "core.phases-feeder", _t("core.phases_feeder", live=live), nid)
 
 
+def _system_at(doc: Document, idx: Index, nid: str):
+    """System (``1P+N``, ``3P``...) of the network a node is on: the nearest one declared on it or above it, not
+    across a converter that makes its own (``None`` when not known there)."""
+    n = idx.nodes[nid]
+    for a in [n, *idx.ancestors(nid)]:
+        if getattr(a, "system", None):
+            return a.system
+        if a is not n and a.type in VOLTAGE_CONVERTERS:  # type: ignore[attr-defined]
+            return None
+    return doc.installation.system
+
+
+@rule("core")
+def neutral_on_network(doc: Document, idx: Index):
+    """A device with a neutral pole (``1P+N``, ``3P+N``) needs a neutral: not on a network without one (``3P``,
+    ``2P``)."""
+    for nid, n in idx.nodes.items():
+        poles = getattr(n, "poles", None)
+        system = _system_at(doc, idx, nid) if poles in ("1P+N", "3P+N") else None
+        if system in ("3P", "2P"):
+            yield Finding("warning", "core.neutral-missing", _t("core.neutral_missing", poles=poles, system=system),
+                          nid)
+
+
 OVERCURRENT = ("breaker", "rcbo", "fuse", "main_breaker")
 LOAD_MARGIN = 1.1  # above the rating by more than this: not a rounding of the power (3.7 kW on 16 A)
 
@@ -244,6 +268,15 @@ def control_scope(doc: Document, idx: Index):
     if nodes:
         names = [idx.nodes[i].ref or i for i in nodes[:3]] + (["..."] if len(nodes) > 3 else [])
         yield Finding("info", "core.scope", _t("core.control_scope", nodes=", ".join(names)), nodes[0])
+
+
+@rule("core")
+def view_direction(doc: Document, idx: Index):
+    """A view asking for a left-right drawing: drawn top-down for now, say so instead of drawing it silently."""
+    for i, v in enumerate(doc.views):
+        if v.direction in ("right", "left"):
+            yield Finding("info", "core.view-direction",
+                          _t("core.view_direction", view=v.id or v.title or i + 1, direction=v.direction))
 
 
 def _closed_node(n) -> bool:
