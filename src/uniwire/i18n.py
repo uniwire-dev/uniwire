@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import contextvars
 import os
+import re
 from typing import Any, Optional
 
 #: Language of the document being rendered (set by ``render_pages``); used by number formatting,
@@ -351,6 +352,9 @@ EN: dict[str, str] = {
     "ann.modules": "{count} module(s)",
     "ann.normally_open": "N.O.",
     "ann.locks": "key {keys}",
+    "ann.spd_type": "Type {type}",
+    "ann.interlock": "interlock {keys}",
+    "tb.split_phase": "split-phase",
     "cell.points_one": "{count} pt",
     "cell.points": "{count} pts",
     "cell.upstream": "{value} (upstream)",
@@ -680,6 +684,9 @@ FR: dict[str, str] = {
     "ann.modules": "{count} module(s)",
     "ann.normally_open": "NO",
     "ann.locks": "clé {keys}",
+    "ann.spd_type": "Type {type}",
+    "ann.interlock": "verrouillage {keys}",
+    "tb.split_phase": "monophasé 3 fils",
     "cell.points_one": "{count} pt",
     "cell.points": "{count} pts",
     "cell.upstream": "{value} (amont)",
@@ -795,6 +802,9 @@ RU: dict[str, str] = {
     "ann.modules": "модулей: {count}",
     "ann.normally_open": "НО",
     "ann.locks": "ключ {keys}",
+    "ann.spd_type": "Тип {type}",
+    "ann.interlock": "блокировка {keys}",
+    "tb.split_phase": "однофазная трёхпроводная",
     "cell.points_one": "{count} шт.",
     "cell.points": "{count} шт.",
     "cell.upstream": "{value} (выше по цепи)",
@@ -1048,6 +1058,9 @@ ZH: dict[str, str] = {
     "ann.modules": "{count} 块组件",
     "ann.normally_open": "常开",
     "ann.locks": "钥匙 {keys}",
+    "ann.spd_type": "{type}型",
+    "ann.interlock": "联锁 {keys}",
+    "tb.split_phase": "单相三线",
     "cell.points_one": "{count} 点",
     "cell.points": "{count} 点",
     "cell.upstream": "{value}（上级）",
@@ -1278,6 +1291,9 @@ ES: dict[str, str] = {
     "ann.modules": "{count} módulo(s)",
     "ann.normally_open": "NA",
     "ann.locks": "llave {keys}",
+    "ann.spd_type": "Tipo {type}",
+    "ann.interlock": "enclavamiento {keys}",
+    "tb.split_phase": "monofásico a tres hilos",
     "cell.points_one": "{count} punto",
     "cell.points": "{count} puntos",
     "cell.upstream": "{value} (aguas arriba)",
@@ -1544,6 +1560,9 @@ DE: dict[str, str] = {
     "ann.modules": "{count} Modul(e)",
     "ann.normally_open": "normal offen",
     "ann.locks": "Schlüssel {keys}",
+    "ann.spd_type": "Typ {type}",
+    "ann.interlock": "Verriegelung {keys}",
+    "tb.split_phase": "Einphasen-Dreileiter",
     "cell.points_one": "{count} Auslass",
     "cell.points": "{count} Auslässe",
     "cell.upstream": "{value} (vorgeschaltet)",
@@ -1809,6 +1828,9 @@ PT: dict[str, str] = {
     "ann.modules": "{count} módulo(s)",
     "ann.normally_open": "NA",
     "ann.locks": "chave {keys}",
+    "ann.spd_type": "Tipo {type}",
+    "ann.interlock": "intertravamento {keys}",
+    "tb.split_phase": "monofásico a três fios",
     "cell.points_one": "{count} ponto",
     "cell.points": "{count} pontos",
     "cell.upstream": "{value} (a montante)",
@@ -2057,6 +2079,9 @@ IT: dict[str, str] = {
     "ann.modules": "{count} modulo/i",
     "ann.normally_open": "NA",
     "ann.locks": "chiave {keys}",
+    "ann.spd_type": "Tipo {type}",
+    "ann.interlock": "interblocco {keys}",
+    "tb.split_phase": "monofase a tre fili",
     "cell.points_one": "{count} punto",
     "cell.points": "{count} punti",
     "cell.upstream": "{value} (a monte)",
@@ -2279,6 +2304,9 @@ PL: dict[str, str] = {
     "ann.modules": "moduły: {count}",
     "ann.normally_open": "NO",
     "ann.locks": "klucz {keys}",
+    "ann.spd_type": "Typ {type}",
+    "ann.interlock": "blokada {keys}",
+    "tb.split_phase": "jednofazowy trójprzewodowy",
     "cell.points_one": "{count} pkt",
     "cell.points": "{count} pkt",
     "cell.upstream": "{value} (zab. nadrz.)",
@@ -2501,6 +2529,9 @@ TR: dict[str, str] = {
     "ann.modules": "{count} modül",
     "ann.normally_open": "NA",
     "ann.locks": "anahtar {keys}",
+    "ann.spd_type": "Tip {type}",
+    "ann.interlock": "{keys} kilitlemesi",
+    "tb.split_phase": "tek fazlı üç telli",
     "cell.points_one": "{count} nokta",
     "cell.points": "{count} nokta",
     "cell.upstream": "{value} (üst koruma)",
@@ -2722,6 +2753,9 @@ NL: dict[str, str] = {
     "ann.modules": "{count} module(s)",
     "ann.normally_open": "NO",
     "ann.locks": "sleutel {keys}",
+    "ann.spd_type": "Type {type}",
+    "ann.interlock": "vergrendeling {keys}",
+    "tb.split_phase": "eenfasig driedraads",
     "cell.points_one": "{count} pt",
     "cell.points": "{count} ptn",
     "cell.upstream": "{value} (voorgeschakeld)",
@@ -3051,6 +3085,9 @@ JA: dict[str, str] = {
     "ann.modules": "モジュール {count} 枚",
     "ann.normally_open": "常時開",
     "ann.locks": "キー {keys}",
+    "ann.spd_type": "クラス{type}",
+    "ann.interlock": "インターロック {keys}",
+    "tb.split_phase": "単相3線",
     "cell.points_one": "{count} 箇所",
     "cell.points": "{count} 箇所",
     "cell.upstream": "{value}（上位）",
@@ -3162,6 +3199,9 @@ HR: dict[str, str] = {
     "ann.modules": "modula: {count}",
     "ann.normally_open": "NO",
     "ann.locks": "ključ {keys}",
+    "ann.spd_type": "Tip {type}",
+    "ann.interlock": "blokada {keys}",
+    "tb.split_phase": "jednofazni trovodni",
     "cell.points_one": "{count} točka",
     "cell.points": "{count} toč.",
     "cell.upstream": "{value} (ispred)",
@@ -3382,6 +3422,9 @@ SR: dict[str, str] = {
     "ann.modules": "modula: {count}",
     "ann.normally_open": "NO",
     "ann.locks": "ključ {keys}",
+    "ann.spd_type": "Tip {type}",
+    "ann.interlock": "blokada {keys}",
+    "tb.split_phase": "monofazni troprovodni",
     "cell.points_one": "{count} tačka",
     "cell.points": "{count} tač.",
     "cell.upstream": "{value} (ispred)",
@@ -3602,6 +3645,9 @@ BS: dict[str, str] = {
     "ann.modules": "modula: {count}",
     "ann.normally_open": "NO",
     "ann.locks": "ključ {keys}",
+    "ann.spd_type": "Tip {type}",
+    "ann.interlock": "blokada {keys}",
+    "tb.split_phase": "jednofazni troprovodni",
     "cell.points_one": "{count} tačka",
     "cell.points": "{count} tač.",
     "cell.upstream": "{value} (ispred)",
@@ -3717,17 +3763,60 @@ BS: dict[str, str] = {
     "enedis.service_cable_section": "pojedinačni priključni kabl {section:g} mm²: standardni presjek je 35 mm² aluminij (2 x 35 jednofazno, 4 x 35 trofazno)",
     "enedis.decoupling": "{what}: navedite njegovu zaštitu za odvajanje od mreže, obaveznu za proizvodnju i skladištenje (`protection`, npr. NF EN 50549-1 / NF EN 50549-10)",
 }
+# Serbian is written in both alphabets, which map one to one: the Cyrillic texts are the Latin ones transliterated.
+_LATIN_CYRILLIC = dict(zip("abcčćdđefghijklmnoprsštuvzž", "абцчћдђефгхијклмнопрсштувзж"))
+_LATIN_CYRILLIC |= {k.upper(): v.upper() for k, v in _LATIN_CYRILLIC.items()}
+_LATIN_CYRILLIC |= {"lj": "љ", "Lj": "Љ", "LJ": "Љ", "nj": "њ", "Nj": "Њ", "NJ": "Њ", "dž": "џ", "Dž": "Џ", "DŽ": "Џ"}
+_TOKEN = re.compile(r"\{[^{}]*\}|'[^']*'|`[^`]*`|\w+(?:[._]\w+)+|[A-Za-zČĆĐŠŽčćđšž]+|\S|\s+")
+#: Kept in Latin: symbols of quantities, unit symbols (Latin in every alphabet), names.
+_SYMBOLS = {"uniwire", "Apache", "duct", "cos", "Ib", "In", "Ir", "Ik", "Iz", "Icc", "mm", "cm", "km", "ms", "min", "kA",
+            "mA", "kV", "kVA", "kW", "kWh", "kWp", "Wp", "Hz"}
+#: One-letter units that are also words: kept next to a number, a placeholder, "·" or "/" (K·m/W, 2 h).
+_UNITS = {"m", "s", "h"}
+#: Abbreviations kept in Latin in Cyrillic text: standards, earthing systems, international device names. Serbian
+#: abbreviations (FID, VN, NN, VT) are transliterated; single capitals (classes, units, conductors) are kept.
+INTERNATIONAL = {"IEC", "EN", "DIN", "VDE", "NF", "UTE", "NEC", "CEI", "HTA", "PE", "PEN", "PVC", "XLPE", "RCBO", "RCD",
+                 "SPD", "UPS", "PLC", "IMD", "MPPT", "AC", "DC", "EV", "RDC", "DD", "TN", "TT", "IT", "IP", "WAGO"}
+
+
+def cyrillic_word(word: str) -> str:
+    """One Serbian Latin word in Cyrillic, letter for letter (digraphs lj, nj, dž included)."""
+    return re.sub(r"[LlNn][Jj]|[Dd][Žž]|.", lambda m: _LATIN_CYRILLIC.get(m.group(), m.group()), word)
+
+
+def cyrillic(text: str) -> str:
+    """Serbian Latin text in Cyrillic, letter for letter. Kept as written: placeholders, quoted field names,
+    identifiers (``transfer_switch``, ``installation.premises``), international abbreviations and single capitals,
+    words with letters outside the alphabet, symbols of quantities, units."""
+    toks = _TOKEN.findall(text)
+    out: list[str] = []
+    for i, tok in enumerate(toks):
+        prev = next((x for x in reversed(toks[:i]) if not x.isspace()), "")
+        near = prev[:1].isdigit() or prev.startswith("{") or prev in ("·", "/") or toks[i + 1:i + 2] in (["·"], ["/"])
+        keep = (not tok[0].isalpha() or tok in _SYMBOLS or (tok in _UNITS and near) or bool(re.search(r"[._]", tok))
+                or (tok.isupper() and (len(tok) == 1 or tok in INTERNATIONAL))
+                or any(c not in _LATIN_CYRILLIC for c in tok))
+        out.append(tok if keep else cyrillic_word(tok))
+    return "".join(out)
+
+
+SR_CYRL: dict[str, str] = {k: cyrillic(v) for k, v in SR.items()}
+
 CATALOGS: dict[str, dict[str, str]] = {
     "en": EN, "fr": FR, "ru": RU, "zh": ZH, "es": ES, "de": DE, "pt": PT, "it": IT, "pl": PL, "tr": TR, "ja": JA,
-    "nl": NL, "hr": HR, "sr": SR, "bs": BS,
+    "nl": NL, "hr": HR, "sr": SR, "sr-Cyrl": SR_CYRL, "bs": BS,
 }
 
 
 def normalize_lang(lang: Optional[str]) -> str:
-    """Map a BCP 47 tag (``fr``, ``fr-FR``, ``en_GB``...) to a catalog language, English if unknown."""
+    """Map a BCP 47 tag (``fr``, ``fr-FR``, ``en_GB``...) to a catalog language, English if unknown. Serbian with
+    the script ``Cyrl`` (``sr-Cyrl``, ``sr-Cyrl-RS``) is ``sr-Cyrl``; plain ``sr`` is Latin."""
     if not lang:
         return DEFAULT_LANG
-    base = lang.replace("_", "-").split("-")[0].lower()
+    parts = lang.replace("_", "-").split("-")
+    base = parts[0].lower()
+    if base == "sr" and any(p.lower() == "cyrl" for p in parts[1:]):
+        return "sr-Cyrl"
     return base if base in CATALOGS else DEFAULT_LANG
 
 
@@ -3755,7 +3844,7 @@ def t(key: str, lang: Optional[str] = None, **kwargs: Any) -> str:
 
 
 #: Languages whose messages write decimals with a comma ('1,5 mm²').
-DECIMAL_COMMA = {"fr", "ru", "es", "de", "pt", "it", "pl", "tr", "nl", "hr", "sr", "bs"}
+DECIMAL_COMMA = {"fr", "ru", "es", "de", "pt", "it", "pl", "tr", "nl", "hr", "sr", "sr-Cyrl", "bs"}
 
 
 def number(value: float, lang: Optional[str] = None) -> str:

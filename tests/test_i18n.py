@@ -20,7 +20,7 @@ def _texts(item) -> list[str]:
 
 def test_catalogs_have_same_keys():
     assert set(EN) == set(FR)
-    assert set(CATALOGS) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr", "nl", "hr", "sr", "bs", "ja"}
+    assert set(CATALOGS) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr", "nl", "hr", "sr", "sr-Cyrl", "bs", "ja"}
     drawing = {k for k in EN if k.split(".")[0] in ("tb", "notes", "legend", "ann", "cell", "about")}
     rules = {k for k in EN if k.split(".")[0] in ("core", "rules", "nfc15100", "vde0100", "iec60364", "enedis", "plc")}
     for cat in (RU, ZH, ES, DE, PT, IT, PL, TR, NL, HR, SR, BS, JA):  # the drawing texts in every language
@@ -133,6 +133,31 @@ def test_croatian_serbian_bosnian_drawing_texts():
     assert t("tb.default_sheet_title", lang="sr") == t("tb.default_sheet_title", lang="bs") == "Jednopolna šema"
 
 
+
+def test_serbian_in_cyrillic():
+    from uniwire.i18n import cyrillic
+
+    assert normalize_lang("sr-Cyrl") == normalize_lang("sr-Cyrl-RS") == "sr-Cyrl"
+    assert normalize_lang("sr") == normalize_lang("sr-Latn-RS") == normalize_lang("sr-RS") == "sr"
+    # letter for letter, digraphs included; kept: placeholders, quoted fields, identifiers, international
+    # abbreviations, single capitals, symbols, units
+    assert cyrillic("Uzemljivač i punjač, džep") == "Уземљивач и пуњач, џеп"
+    assert cyrillic("Iz {iz:g} A, kabl 2,5 mm² od 25 m, 'count' FID (IEC)") == "Iz {iz:g} A, кабл 2,5 mm² од 25 m, 'count' ФИД (IEC)"
+    assert cyrillic("VN / SN (> 1 kV AC), VT/NT, tip A, NF EN, PEN") == "ВН / СН (> 1 kV AC), ВТ/НТ, тип A, NF EN, PEN"
+    assert cyrillic("transfer_switch, installation.premises, D-duct") == "transfer_switch, installation.premises, D-duct"
+    assert cyrillic("otpornost tla {rho:g} K·m/W, s njim") == "отпорност тла {rho:g} K·m/W, с њим"
+    from uniwire.llm.card import type_label
+    from uniwire.symbols import ABBREVIATIONS
+
+    assert ABBREVIATIONS["sr-Cyrl"]["dishwasher"] == "МС" and ABBREVIATIONS["sr-Cyrl"]["ups"] == "UPS"
+    assert type_label("rcd", "sr-Cyrl").endswith("(ФИД)")
+    view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable", "circuit"]}
+    texts = [s for p in render_pages(load({**DOC, "meta": {"lang": "sr-Cyrl"}, "views": [view]})) for s in _texts(p.root)]
+    assert {"Напомене", "Ознака", "Кабл (mm²)", "Струјно коло", "Лист"} <= set(texts)
+    assert "1,5" in " ".join(texts)  # decimal comma
+    message = t("core.rating_cascade", lang="sr-Cyrl", in_a=32.0, up="-Q1", up_in_a=16.0)
+    assert message.startswith("називна струја 32 A") and "-Q1 (16 A)" in message  # the reference as written
+
 def test_type_labels_in_every_language():
     from uniwire import registry
 
@@ -165,3 +190,46 @@ def test_title_block_follows_meta_lang():
     texts_en = _texts(render_pages(load({**DOC, "meta": {"lang": "en"}}))[0].root)
     assert "Régime de neutre" in texts_fr and "Earthing system" not in texts_fr
     assert "Earthing system" in texts_en and "Régime de neutre" not in texts_en
+
+
+def test_drawn_words_follow_the_language():
+    """The surge protector type, a non-key interlock, the split-phase system and a tag repeated in a label."""
+    doc = {"installation": {"earthing": "TN-S", "system": "split-phase", "un_V": 240, "uln_V": 120},
+           "interlocks": [{"key": "E1", "kind": "electrical"}, {"key": "K1"}],
+           "sources": [{"type": "grid", "children": [{"type": "board", "ref": "TD", "children": [
+               {"type": "spd", "ref": "-F1", "spd_type": "2"},
+               {"type": "contactor", "ref": "-KM1", "label": "-KM1 water heater", "in_A": 25, "locks": ["K1"],
+                "children": [{"type": "water_heater", "p_kW": 3}]},
+               {"type": "switch_disconnector", "ref": "-Q2", "in_A": 40, "locks": ["E1"],
+                "children": [{"type": "socket"}]}]}]}]}
+
+    def texts(lang, kind="single-line"):
+        d = load({**doc, "meta": {"lang": lang}, "views": [{"id": "v", "kind": kind}]})
+        return [s for p in render_pages(d) for s in _texts(p.root)]
+
+    it = texts("it")
+    assert "Tipo 2" in it and "Type 2" not in it
+    assert "interblocco E1" in it and "chiave K1" in it  # an electrical interlock has no key
+    assert any(s.startswith("monofase a tre fili 120/240 V") for s in it)
+    en = texts("en")
+    assert "interlock E1" in en and "key K1" in en and "key E1" not in en
+    ml = texts("en", "multi-line")  # the tag drawn above the label is not repeated in it
+    assert "-KM1" in ml and "water heater" in ml and "-KM1 water heater" not in ml
+
+
+def test_tag_stripped_from_a_label_keeps_a_second_tag():
+    from uniwire.labels import without_ref
+
+    assert without_ref("-Q1/-Q2 feeders", "-Q1") == "-Q2 feeders"
+    assert without_ref("-Q1-Q2 tie", "-Q1") == "-Q2 tie"
+    assert without_ref("-Q1 - feeders", "-Q1") == "feeders"
+    assert without_ref("-Q10 label", "-Q1") == "-Q10 label"  # another tag, not this one
+
+
+def test_label_that_is_a_rating_once_the_tag_is_gone_is_drawn_once():
+    doc = load({"installation": {"system": "1P+N", "un_V": 230}, "views": [{"id": "v", "kind": "multi-line"}],
+                "sources": [{"type": "grid", "children": [{"type": "board", "children": [
+                    {"type": "switch_disconnector", "ref": "-Q5", "label": "-Q5 16 A", "in_A": 16,
+                     "children": [{"type": "socket"}]}]}]}]})
+    texts = [s for p in render_pages(doc) for s in _texts(p.root)]
+    assert texts.count("16 A") == 1
