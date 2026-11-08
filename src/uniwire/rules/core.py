@@ -113,11 +113,14 @@ def _system_at(doc: Document, idx: Index, nid: str):
 
 @rule("core")
 def neutral_on_network(doc: Document, idx: Index):
-    """A device with a neutral pole (``1P+N``, ``3P+N``) needs a neutral: not on a network without one (``3P``)."""
+    """A device with a neutral pole (``1P+N``, ``3P+N``) needs a neutral: not on a network without one (``3P``,
+    ``2P``)."""
     for nid, n in idx.nodes.items():
         poles = getattr(n, "poles", None)
-        if poles in ("1P+N", "3P+N") and _system_at(doc, idx, nid) == "3P":
-            yield Finding("warning", "core.neutral-missing", _t("core.neutral_missing", poles=poles), nid)
+        system = _system_at(doc, idx, nid) if poles in ("1P+N", "3P+N") else None
+        if system in ("3P", "2P"):
+            yield Finding("warning", "core.neutral-missing", _t("core.neutral_missing", poles=poles, system=system),
+                          nid)
 
 
 # Control circuits entered in the power tree: switching devices fed by a control power supply that switch nothing
