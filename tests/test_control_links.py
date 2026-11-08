@@ -3,7 +3,7 @@ naming its terminals, drives on a fieldbus. Invented machine panels."""
 
 import pytest
 
-from tests.drawing_audit import _walk
+from tests.drawing_audit import _walk, audit
 from uniwire import load
 from uniwire.layout.engine import _leader_label
 from uniwire.layout.routing import Obstacles
@@ -62,6 +62,47 @@ def _box(g: Group) -> tuple[float, float, float, float]:
     rects = [r for r, _l, _o in _walk(g) if isinstance(r, Rect)]
     return (min(r.x for r in rects), min(r.y for r in rects), max(r.x + r.w for r in rects),
             max(r.y + r.h for r in rects))
+
+
+@pytest.mark.parametrize("motors,drives", [(6, 2), (10, 3), (4, 4)])
+def test_many_control_links_each_keep_their_own_run(motors, drives):
+    """Every link on its own channel, none along another or along a frame, no text crossed (the channels below the
+    PLC were once fewer than its links: they ran on one another)."""
+    page = render_views(load(panel(motors, drives)))[0]
+    findings = [f for f in audit(page.root) if not (f.kind == "shared_run" and "share 3 mm" in f.what)]
+    assert findings == [], "\n".join(map(str, findings))  # (the fieldbus links leave the PLC by one point)
+
+
+def test_channel_numbers_are_written_at_the_plc_under_its_module():
+    """A link's PLC channel is written by its wire under the module (read at the PLC, as on the panel), once."""
+    doc = load(panel(10, 3))
+    page = render_views(doc)[0]
+    x0, _y0, x1, y1 = _box(_node(page.root, "PLC"))
+    ports = [l.from_port if l.from_ == "PLC" else l.to_port for l in doc.links if "PLC" in (l.from_, l.to)
+             and (l.from_port or l.to_port)]
+    texts = [t for t, _l, _o in _walk(page.root) if isinstance(t, Text) and t.text in ports]
+    assert sorted(t.text for t in texts) == sorted(ports)
+    for t in texts:
+        assert t.rotate == 90 and x0 <= t.p[0] <= x1 and y1 < t.p[1] < y1 + 5.0, t
+
+
+def test_a_module_many_links_leave_is_drawn_wider():
+    plain = render_views(load(panel(1, 0, feedback=False)))[0]
+    busy = render_views(load(panel(10, 0)))[0]
+    w = [_box(_node(p.root, "PLC"))[2] - _box(_node(p.root, "PLC"))[0] for p in (plain, busy)]
+    assert w[1] > w[0] + 2 * 9 * 2.0  # ten wires leaving two modules: about 2.6 mm apart
+
+
+def test_terminal_numbers_of_a_controller_are_written_inside_it():
+    """A safety relay naming its terminals: each number inside its box, by the link's point (they were left out)."""
+    doc = load(panel(4, 1))
+    page = render_views(doc)[0]
+    x0, y0, x1, y1 = _box(_node(page.root, "SR"))
+    terms = [l.from_port for l in doc.links if l.from_ == "SR"]
+    texts = {t.text: t for t, _l, _o in _walk(page.root) if isinstance(t, Text) and t.text in terms}
+    assert sorted(texts) == sorted(terms)
+    for t in texts.values():
+        assert x0 < t.p[0] < x1 and y0 < t.p[1] < y1, t
 
 
 @pytest.mark.parametrize("i", [1, 6, 10])

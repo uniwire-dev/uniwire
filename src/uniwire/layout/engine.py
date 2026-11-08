@@ -60,7 +60,7 @@ from ..render.semantics import (
     ref_group,
 )
 from ..resolve import Index, build_index, iter_nodes
-from ..symbols import BUSWAY_H, DASH, PLC_SLOT_W, Symbol, controller, offpage, symbol_for
+from ..symbols import BUSWAY_H, DASH, PORT_STEP, Symbol, controller, offpage, plc, symbol_for
 from ..symbols import inverter as inverter_symbol
 from ..symbols import motor as motor_symbol
 from ..units import fmt
@@ -259,9 +259,10 @@ SPREAD_FROM = 3  # from this many links on a controller, one point each (fewer: 
 
 
 def _signal_links(doc: Document, nid: Optional[str]) -> list[int]:
-    """Control, data and measure links attached to the node ``nid`` by its side (not by a PLC channel)."""
+    """Control, data and measure links attached to the controller ``nid`` by its side (a terminal named in the
+    link included: a controller has no PLC channels)."""
     return [i for i, l in enumerate(doc.links) if l.kind not in SWITCHED_LINKS and l.kind != "earth"
-            and ((l.from_ == nid and not l.from_port) or (l.to == nid and not l.to_port))]
+            and nid in (l.from_, l.to)]
 
 
 SPREAD_OFF = 5.0  # ... for a link to another sheet: its stub carries two lines of text
@@ -291,14 +292,24 @@ def _left_room(doc: Document, n: LNode, here: set[str], lang: str) -> float:
 
 def _spread_symbol(doc: Document, node: Optional[NodeBase], sym: Symbol, here: Optional[set[str]] = None) -> Symbol:
     """A controller many links reach: drawn taller, room for one link end each on its sides (``here``: the nodes
-    drawn on the sheet; a link to another one ends on an off-page stub, which takes more room)."""
+    drawn on the sheet; a link to another one ends on an off-page stub, which takes more room). A PLC: its modules
+    wide enough for the links leaving them."""
+    if node is not None and sym.name == "plc" and node.id:  # a module many links leave: wider, one wire each
+        wired = Counter(_port_slot(None, p, sym) for l in doc.links
+                        for nid, p in ((l.from_, l.from_port), (l.to, l.to_port)) if nid == node.id and p)
+        return plc(node, dict(wired)) if any(c > 1 for s, c in wired.items() if s) else sym
     if node is None or sym.name != "controller" or not node.id:
         return sym
     ids = _signal_links(doc, node.id)
     count = len(ids)
     others = [doc.links[i].to if doc.links[i].from_ == node.id else doc.links[i].from_ for i in ids]
     body = sum(SPREAD_OFF if here is not None and o not in here else SPREAD_STEP for o in others) + 1.5
-    return controller(node, body) if count >= SPREAD_FROM and body > sym.height - 2 * 2.5 else sym
+    terms = [p for i in ids for nid, p in ((doc.links[i].from_, doc.links[i].from_port),
+                                           (doc.links[i].to, doc.links[i].to_port)) if nid == node.id and p]
+    inner = max((text_width(p, PORT_SIZE) + TERM_PAD for p in terms), default=0.0)
+    if count >= SPREAD_FROM and (body > sym.height - 2 * 2.5 or inner):
+        return controller(node, max(body, sym.height - 2 * 2.5), inner)
+    return sym
 
 
 DC_PORT_TYPES = {"inverter", "ups"}
@@ -945,9 +956,15 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
     everything = [n for r in roots for n in r.walk()]
 
     # common baseline of the loads
+    channels = _port_channels_bottom(doc, everything)
+    for b in everything if channels else ():  # a board holding a PLC: its frame round the channels of its links
+        own = [n for n in _owned(b)]
+        if b.is_board and any(n.sym.extra.get("slot_w") for n in own):
+            b.pad_bottom = max(b.pad_bottom, channels - max(n.content_bottom() for n in own))
     non_bottom = [n for n in everything if not n.bottom]
     y_load = max([n.content_bottom() + 7.5 for n in non_bottom]
-                 + [_board_bottom(n) + 2.0 + 5.5 for n in everything if n.is_board and n.pad_bottom], default=0.0)
+                 + [_board_bottom(n) + 2.0 + 5.5 for n in everything if n.is_board and n.pad_bottom]
+                 + [channels + 3.0 if channels else 0.0], default=0.0)
     for n in everything:
         if n.bottom:
             n.y = y_load
@@ -2034,8 +2051,8 @@ def _right_end(n: LNode) -> Optional[End]:
     return End(n.x + n.sym.right + n.sym.extra.get("end_gap", 0.8), y, "right") if y < n.y + n.sym.height - 0.4 else None
 
 
-def _port_slot(n: LNode, port: Optional[str]) -> Optional[int]:
-    ports = n.sym.extra.get("ports") if port else None
+def _port_slot(n: Optional[LNode], port: Optional[str], sym: Optional[Symbol] = None) -> Optional[int]:
+    ports = (sym or n.sym).extra.get("ports") if port else None  # type: ignore[union-attr]
     if not ports:
         return None
     try:
@@ -2043,6 +2060,45 @@ def _port_slot(n: LNode, port: Optional[str]) -> Optional[int]:
     except ValueError:
         return None
     return slot if slot in ports else None
+
+
+PORT_SIZE, PORT_COLOR = 1.3, "#1565c0"  # the channel number of a link leaving a PLC module
+TERM_PAD = 0.8  # a terminal number inside a controller: this far from its side (and from the symbol's text)
+PORT_GAP = 0.65  # ... written this far beside its wire (outside the clearance a route keeps from a text)
+
+
+def _port_channels_bottom(doc: Document, nodes: list[LNode]) -> float:
+    """Single-line: how low the channels of the links leaving PLC modules downwards reach when each finds one of
+    its own below the modules (their runs side by side, never one on another), the other control links running
+    beside them in the same band: as many channels as links overlap anywhere along the sheet, below the lowest
+    module and its channel numbers. 0: no link leaves a PLC module."""
+    pos = {n.node.id: n for n in nodes if n.node is not None and n.node.id}
+    low, spans = 0.0, []
+    for l in doc.links:
+        if l.kind in SWITCHED_LINKS or l.from_ not in pos or l.to not in pos:
+            continue
+        lane = SIGNAL_LANE
+        for nid, port in ((l.from_, l.from_port), (l.to, l.to_port)):
+            n = pos[nid]
+            if port and _port_slot(n, port) is not None:
+                low = max(low, n.y + n.sym.extra.get("port_y", n.sym.height) + 0.5 + text_width(port, PORT_SIZE))
+                lane = PORT_LANE
+        spans.append((min(pos[l.from_].x, pos[l.to].x), max(pos[l.from_].x, pos[l.to].x), lane))
+    if not low:
+        return 0.0
+    return low + 1.0 + max(sum(w for a, b, w in spans if a <= x <= b) for x, _, _ in spans)
+
+
+PORT_LANE = 1.5  # spacing of the channels reserved under PLC modules
+
+
+def _port_point(n: LNode, slot: int, j: int, count: int, obs: Obstacles) -> tuple[float, float]:
+    """Where the ``j``-th of the ``count`` links leaving a PLC module leaves it: spread under the module, one wire
+    every ``PORT_STEP`` when it has the width for it (multi-line: drawn reduced, closer)."""
+    room = n.sym.extra.get("slot_w", {}).get(slot, 7.0 if slot == 0 else 3.4) - 1.2
+    gap = min(max(PORT_STEP if obs.min_lane == 0 else 1.0, 0.9 * obs.min_lane), room / max(count - 1, 1))
+    return (n.x + n.sym.extra["ports"][slot] + (j - (count - 1) / 2) * gap,
+            n.y + n.sym.extra.get("port_y", n.sym.height))
 
 
 # ------------------------------------------------- alternative supplies band
@@ -2357,6 +2413,20 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             first[i] = abs(dist)
     order = sorted((i for i in range(len(doc.links)) if only is None or i in only),
                    key=lambda i: (i in first, first.get(i, 0.0)))
+    # single-line: the channel of each link written up its wire under the module, on the side away from its run
+    port_texts: dict[int, Text] = {}
+    for (nid, slot), group in lanes.items() if obs.min_lane == 0 else ():
+        n = _find(roots, nid)
+        for dist, i in group:
+            if only is not None and i not in only or n is None:
+                continue
+            link = doc.links[i]
+            port = str(link.from_port if link.from_ == nid and link.from_port else link.to_port)
+            px, py = _port_point(n, slot, *lane_of[i], obs)
+            w = text_width(port, PORT_SIZE)
+            x = px - PORT_GAP - 0.05 * PORT_SIZE if dist >= 0 else px + PORT_GAP + 0.75 * PORT_SIZE
+            port_texts[i] = Text((x, py + 0.5 + w), port, PORT_SIZE, rotate=90, color=PORT_COLOR)
+            obs.add_box((x - 0.75 * PORT_SIZE, py + 0.5, x + 0.05 * PORT_SIZE, py + 0.5 + w))
     if obs.grid:  # the straight drop under every PLC port is kept for its own link
         for i in order:
             link = doc.links[i]
@@ -2364,11 +2434,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 n = _find(roots, nid)
                 slot = _port_slot(n, port) if n is not None else None
                 if slot is not None:
-                    j, count = lane_of.get(i, (0, 1))
-                    room = (7.0 if slot == 0 else PLC_SLOT_W) - 1.2
-                    gap = min(max(1.0, 0.9 * obs.min_lane), room / max(count - 1, 1))
-                    px = n.x + n.sym.extra["ports"][slot] + (j - (count - 1) / 2) * gap
-                    py = n.y + n.sym.extra.get("port_y", n.sym.height)
+                    px, py = _port_point(n, slot, *lane_of.get(i, (0, 1)), obs)
                     obs.add_vline(px, py, py + 3.0)
                     break
     nodes = {n.id: n for n, _, _ in iter_nodes(doc)}
@@ -2556,17 +2622,18 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             slot = _port_slot(n, port)
             if slot is None:
                 continue
-            j, count = lane_of.get(i, (0, 1))
-            room = (7.0 if slot == 0 else PLC_SLOT_W) - 1.2
-            gap = min(max(1.0, 0.9 * obs.min_lane), room / max(count - 1, 1))  # multi-line: drawn reduced
-            px = n.x + n.sym.extra["ports"][slot] + (j - (count - 1) / 2) * gap
-            ends[k] = End(px, n.y + n.sym.extra.get("port_y", n.sym.height), "down")
+            px, py = _port_point(n, slot, *lane_of.get(i, (0, 1)), obs)
+            ends[k] = End(px, py, "down")
             port_label = (k, str(port))
             break
+        # the terminals named on a device that is not a PLC module: written by the link, at that end
+        terminals = [(k, str(port)) for k, (n, port) in enumerate(((a, link.from_port), (b, link.to_port)))
+                     if port and (port_label is None or port_label[0] != k) and _port_slot(n, port) is None]
         lo = min(e.y for e in ends) - 30.0
         hi = max(max(e.y for e in ends) + 30.0, max(e.y for e in ends) + 2.0)
         if max(e.y for e in ends) < y_max:
-            hi = min(hi, y_max)
+            hi = min(hi, y_max) if port_label is None or obs.min_lane else y_max  # (the channels kept for the
+            # links leaving PLC modules reach further down than 30 mm: see _port_channels_bottom)
         on_conductor = ends[1].y < b.y and link.to in fed_ok
         if on_conductor:  # infeed landing on an input conductor: never come back up from below the feeder
             hi = min(hi, max(e.y for e in ends) + 0.5)
@@ -2708,8 +2775,18 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         heads[i] = (link.from_, link.to) if seq is pts else (link.to, link.from_)
         if i in bus_land and len(pts) > 2:  # on its channel, not on the short drop crowded with the other taps
             seq = pts[:-1]
-        if port_label is not None:
-            labels.append((i, seq, port_label[1], 1.3, "#1565c0"))
+        for k, port in terminals:
+            e = spread.get((i, k))
+            if e is not None and e in ends:  # on a controller's side: inside its box, by the link's point
+                inside = e.x + 0.8 + TERM_PAD / 2 if e.side == "left" else e.x - 0.8 - TERM_PAD / 2
+                lg.add(Text((inside, e.y), port, PORT_SIZE, "start" if e.side == "left" else "end", "middle",
+                            color=PORT_COLOR))
+            else:  # elsewhere: by the link, near that end
+                labels.append((i, pts if k == 1 else pts[::-1], port, PORT_SIZE, PORT_COLOR))
+        if i in port_texts:
+            lg.add(port_texts[i])
+        elif port_label is not None:
+            labels.append((i, seq, port_label[1], PORT_SIZE, PORT_COLOR))
         text = link.label  # a data link without a label: its protocol, unless a device text already gives it
         if not text and link.kind == "data" and link.protocol \
                 and not any(link.protocol in t for t in (a.ann or []) + (b.ann or [])):
