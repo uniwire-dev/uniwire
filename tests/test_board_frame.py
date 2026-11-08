@@ -81,3 +81,49 @@ def test_accessories_beside_the_incomer_keep_the_board_busbar_inside():
         (top, bottom), boxes = _drawn(doc, view)
         for nid in ("JdB", "Q1", "Q2"):
             assert top < boxes[nid][0] and boxes[nid][1] < bottom, (view, nid)
+
+
+RING = {"installation": {"earthing": "TN-S", "system": "3P", "un_V": 11000}, "sources": [{"type": "grid", "children": [
+    {"type": "board", "id": "RMU", "ref": "RMU", "children": [
+        {"type": "breaker", "id": "QF1", "in_A": 400, "poles": "3P", "cable": CABLE, "children": [
+            {"type": "transformer", "id": "TA", "sn_kVA": 1000, "u1_V": 11000, "u2_V": 415}]},
+        {"type": "breaker", "id": "QF2", "in_A": 400, "poles": "3P", "cable": CABLE, "children": [
+            {"type": "switch_disconnector", "id": "QL2", "in_A": 400, "poles": "3P", "children": [
+                {"type": "transformer", "id": "TB", "sn_kVA": 1000, "u1_V": 11000, "u2_V": 415}]},
+            {"type": "spd", "id": "F2"}]}]}]}]}
+
+
+@pytest.mark.parametrize("view", [None, View(id="ml", kind="multi-line")])
+def test_transformer_behind_its_local_switch_is_outside_the_board_too(view):
+    (top, bottom), boxes = _drawn(RING, view)
+    assert boxes["TA"][0] > bottom  # a transformer at the end of a cable
+    assert boxes["TB"][0] > bottom and boxes["QL2"][0] > bottom  # and one behind its local switch, with the switch
+    assert boxes["QF2"][1] < bottom  # the outgoing breaker stays in the board
+
+
+HEAD = {"installation": {"earthing": "TT", "system": "3P+N", "un_V": 400}, "sources": [{"type": "grid", "children": [
+    {"type": "board", "id": "DB", "ref": "DB", "children": [
+        {"type": "switch_disconnector", "id": "Q0", "in_A": 100, "cable": CABLE, "children": [  # its incoming cable
+            {"type": "rcd", "id": "RCD", "in_A": 63, "idn_mA": 30, "children": [
+                {"type": "busbar", "id": "BB", "in_A": 63, "children": [
+                    {"type": "breaker", "id": "Q1", "in_A": 16, "children": [{"type": "socket"}]},
+                    {"type": "breaker", "id": "Q2", "in_A": 16, "children": [{"type": "socket"}]}]}]}]}]}]}]}
+RISER = {"installation": {"earthing": "TT", "system": "3P+N", "un_V": 400}, "sources": [{"type": "grid", "children": [
+    {"type": "board", "id": "DB", "ref": "DB", "children": [
+        {"type": "switch_disconnector", "id": "Q0", "in_A": 250, "cable": CABLE, "children": [  # its incoming cable
+            {"type": "breaker", "id": "Q1", "in_A": 160, "children": [
+                {"type": "busbar", "id": "BW", "kind": "busway", "in_A": 160, "children": [
+                    {"type": "breaker", "id": "Q11", "in_A": 16, "children": [{"type": "socket"}]}]}]},
+            {"type": "breaker", "id": "Q2", "in_A": 63, "children": [
+                {"type": "ups", "id": "UPS", "sn_kVA": 10, "children": [{"type": "socket"}]}]},
+            {"type": "breaker", "id": "Q3", "in_A": 16, "children": [{"type": "socket"}]}]}]}]}]}
+
+
+@pytest.mark.parametrize("view", [None, View(id="ml", kind="multi-line")])
+def test_the_incoming_cable_does_not_send_the_board_ways_out(view):
+    (top, bottom), boxes = _drawn(HEAD, view)
+    for nid in ("RCD", "BB", "Q1", "Q2"):  # the board's own head chain and ways, after its incoming cable
+        assert boxes[nid][1] < bottom, nid
+    (top, bottom), boxes = _drawn(RISER, view)
+    for nid in ("Q1", "Q2", "Q3"):  # ways of the board fed through the incoming cable, whatever they feed
+        assert boxes[nid][1] < bottom, nid
