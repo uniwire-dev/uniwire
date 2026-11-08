@@ -480,7 +480,8 @@ reference library, after IEC 60617. Other sets are registered by packages instal
 (entry point group `uniwire.symbol_sets`, see the API documentation); a set may give only some symbols, the
 others are drawn from `iec`. A set that is not installed does not refuse the document: it is drawn with the `iec`
 symbols and the rule `core.symbol-set-unknown` says so. Like views, the symbol set never changes the meaning of the
-document.
+document. In multi-line views, switching and protective devices are drawn pole by pole by the renderer: a symbol set
+does not change them.
 
 ## 8. Derived graph form
 

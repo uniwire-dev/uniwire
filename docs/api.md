@@ -204,7 +204,11 @@ mine = "my_package.symbols:SYMBOLS"
 ```
 
 A document naming a set that is not installed is drawn with the `iec` symbols, with the finding
-`core.symbol-set-unknown`. `uniwire symbols --set mine` draws every symbol of a set. Example:
+`core.symbol-set-unknown`. A package that fails to load, or a factory that raises or returns something else than a
+`Symbol`, does not stop the drawing: the `iec` symbol is drawn instead and `core.symbol-set-error` gives the error
+(`uniwire.symbols.FAILURES` keeps them). The layout knows a symbol by the name it is registered under, not by
+`Symbol.name`, which only names the SVG class (`sym-<name>`). In multi-line views, switching and protective devices
+are drawn pole by pole by the renderer: a symbol set does not change them. `uniwire symbols --set mine` draws every symbol of a set. Example:
 [`examples/code/symbol_set.py`](https://github.com/uniwire-dev/uniwire/blob/main/examples/code/symbol_set.py).
 
 ## Command line

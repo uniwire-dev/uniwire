@@ -61,6 +61,7 @@ from ..render.semantics import (
 )
 from ..resolve import Index, build_index, iter_nodes
 from ..symbols import BUSWAY_H, DASH, PORT_STEP, Symbol, symbol, symbol_for
+from ..symbols import kind as symbol_kind
 from ..units import fmt
 from .routing import (
     LANE,
@@ -272,7 +273,7 @@ LEFT_ROOM_MAX = 45.0
 def _left_room(doc: Document, n: LNode, here: set[str], lang: str) -> float:
     """A controller many links reach (see ``_spread_symbol``): room on its left for the texts of its links (the
     labels, and the stubs of the links to other sheets), so that its column does not crowd the one before."""
-    if n.sym.name != "controller" or n.node is None:
+    if symbol_kind(n.sym) != "controller" or n.node is None:
         return 0.0
     ids = _signal_links(doc, n.node.id)
     if len(ids) < SPREAD_FROM:
@@ -292,7 +293,7 @@ def _spread_symbol(doc: Document, node: Optional[NodeBase], sym: Symbol, here: O
     """A controller many links reach: drawn taller, room for one link end each on its sides (``here``: the nodes
     drawn on the sheet; a link to another one ends on an off-page stub, which takes more room). A PLC: its modules
     wide enough for the links leaving them."""
-    if node is not None and sym.name == "plc" and node.id:  # a module many links leave: wider, one wire each
+    if node is not None and symbol_kind(sym) == "plc" and node.id:  # a module many links leave: wider, one wire each
         plcs = {n.id: symbol_for(n) for n, _, _ in iter_nodes(doc) if n.type == "plc" and n.id}
         plcs[node.id] = sym
         wired: Counter = Counter()
@@ -303,7 +304,7 @@ def _spread_symbol(doc: Document, node: Optional[NodeBase], sym: Symbol, here: O
             if here is None or (link.to, link.from_)[ce[0]] in here:
                 wired[ce[1]] += 1
         return symbol("plc", node, dict(wired)) if any(c > 1 for c in wired.values()) else sym
-    if node is None or sym.name != "controller" or not node.id:
+    if node is None or symbol_kind(sym) != "controller" or not node.id:
         return sym
     ids = _signal_links(doc, node.id)
     count = len(ids)
@@ -1664,7 +1665,7 @@ def _free_way(ln: LNode, parent: Optional[LNode]) -> bool:
 
 def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callable[[str], Optional[int]] | None = None,
                parent_id: Optional[str] = None) -> None:
-    trunk = BUSWAY_H / 2 if ln.bus_y is not None and ln.sym.name == "busway" else 0.0
+    trunk = BUSWAY_H / 2 if ln.bus_y is not None and symbol_kind(ln.sym) == "busway" else 0.0
     if ln.kind == "node" or ln.kind == "stub":
         if not (ln.is_board and ln.sym.height == 0) and not trunk:  # busway with tap-offs: drawn as its trunk
             sg = ln.sym.group(ln.x, ln.y, ln.id)
@@ -2675,7 +2676,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 if ml and link.kind == "earth" and "pe_end" in n.sym.extra:  # on the PE conductor of the feeder
                     alts.append([End(*n.sym.extra["pe_end"], "right")])
                     continue
-                if ml and n.sym.name in ("earth", "earth_bar"):  # an earth electrode / bar: on its terminal, the
+                if ml and symbol_kind(n.sym) in ("earth", "earth_bar"):  # an earth electrode / bar: on its terminal, the
                     alts.append([End(n.x, n.y, s) for s in ("up", "left", "right")])  # conductor turning down
                     continue
                 r = _right_end(n) if e.side == "left" and (port_label is None or port_label[0] != k) else None
@@ -2699,7 +2700,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             if obs.grid and sides and i in sides:  # second drawing: each end on its side, in its slot
                 for k, (n, side) in enumerate(zip((a, b), sides[i])):
                     pick = next((e for e in alts[k] if e.side == side), alts[k][0])
-                    if n.sym.name in ("earth", "earth_bar"):  # one point, whatever the side
+                    if symbol_kind(n.sym) in ("earth", "earth_bar"):  # one point, whatever the side
                         alts[k] = [pick]
                         continue
                     ids = slots.get((n.id, side), [i])
@@ -2895,7 +2896,7 @@ def _spread_ends(doc: Document, roots: list[LNode], order: list[int]) -> dict[tu
     for r in roots:
         for n in r.walk():
             ids = [i for i in _signal_links(doc, n.node.id if n.node is not None else None) if i in order]
-            if n.sym.name != "controller" or len(ids) < SPREAD_FROM:
+            if symbol_kind(n.sym) != "controller" or len(ids) < SPREAD_FROM:
                 continue
             top, bottom = n.y + 2.5 + 0.75, n.y + n.sym.height - 2.5 - 0.75  # the box, 1 M below and above its leads
             ab = n.ann_box()
