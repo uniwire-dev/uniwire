@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import contextvars
 import os
+import re
 from typing import Any, Optional
 
 #: Language of the document being rendered (set by ``render_pages``); used by number formatting,
@@ -3717,17 +3718,53 @@ BS: dict[str, str] = {
     "enedis.service_cable_section": "pojedinačni priključni kabl {section:g} mm²: standardni presjek je 35 mm² aluminij (2 x 35 jednofazno, 4 x 35 trofazno)",
     "enedis.decoupling": "{what}: navedite njegovu zaštitu za odvajanje od mreže, obaveznu za proizvodnju i skladištenje (`protection`, npr. NF EN 50549-1 / NF EN 50549-10)",
 }
+# Serbian is written in both alphabets, which map one to one: the Cyrillic texts are the Latin ones transliterated.
+_LATIN_CYRILLIC = dict(zip("abcčćdđefghijklmnoprsštuvzž", "абцчћдђефгхијклмнопрсштувзж"))
+_LATIN_CYRILLIC |= {k.upper(): v.upper() for k, v in _LATIN_CYRILLIC.items()}
+_LATIN_CYRILLIC |= {"lj": "љ", "Lj": "Љ", "LJ": "Љ", "nj": "њ", "Nj": "Њ", "NJ": "Њ", "dž": "џ", "Dž": "Џ", "DŽ": "Џ"}
+_TOKEN = re.compile(r"\{[^{}]*\}|'[^']*'|`[^`]*`|[A-Za-zČĆĐŠŽčćđšž]+|\S|\s+")
+#: Kept in Latin: symbols of quantities and units (SI symbols are Latin in every alphabet); the one-letter units,
+#: which are also words, only after a number.
+_SYMBOLS = {"uniwire", "cos", "Ib", "In", "Ir", "Ik", "Iz", "Icc", "mm", "cm", "km", "ms", "min", "kA", "mA", "kV",
+            "kVA", "kW", "kWh", "kWp", "Wp", "Hz"}
+_UNITS = {"m", "s", "h"}
+
+
+def cyrillic(text: str) -> str:
+    """Serbian Latin text in Cyrillic, letter for letter. Kept as written: placeholders, quoted field names,
+    abbreviations in capitals (FID, PE, IEC), words with letters outside the alphabet, symbols such as Iz, and units
+    after a number."""
+    out: list[str] = []
+    after_number = False
+    for tok in _TOKEN.findall(text):
+        if tok.isspace():
+            out.append(tok)
+            continue
+        word = tok[0].isalpha()
+        keep = (not word or tok.isupper() or tok in _SYMBOLS or (after_number and tok in _UNITS)
+                or any(c not in _LATIN_CYRILLIC for c in tok))
+        out.append(tok if keep else re.sub(r"[LlNn][Jj]|[Dd][Žž]|.", lambda m: _LATIN_CYRILLIC.get(m.group(), m.group()), tok))
+        after_number = tok[0].isdigit() or tok.startswith("{")
+    return "".join(out)
+
+
+SR_CYRL: dict[str, str] = {k: cyrillic(v) for k, v in SR.items()}
+
 CATALOGS: dict[str, dict[str, str]] = {
     "en": EN, "fr": FR, "ru": RU, "zh": ZH, "es": ES, "de": DE, "pt": PT, "it": IT, "pl": PL, "tr": TR, "ja": JA,
-    "nl": NL, "hr": HR, "sr": SR, "bs": BS,
+    "nl": NL, "hr": HR, "sr": SR, "sr-Cyrl": SR_CYRL, "bs": BS,
 }
 
 
 def normalize_lang(lang: Optional[str]) -> str:
-    """Map a BCP 47 tag (``fr``, ``fr-FR``, ``en_GB``...) to a catalog language, English if unknown."""
+    """Map a BCP 47 tag (``fr``, ``fr-FR``, ``en_GB``...) to a catalog language, English if unknown. Serbian with
+    the script ``Cyrl`` (``sr-Cyrl``, ``sr-Cyrl-RS``) is ``sr-Cyrl``; plain ``sr`` is Latin."""
     if not lang:
         return DEFAULT_LANG
-    base = lang.replace("_", "-").split("-")[0].lower()
+    parts = lang.replace("_", "-").split("-")
+    base = parts[0].lower()
+    if base == "sr" and any(p.lower() == "cyrl" for p in parts[1:]):
+        return "sr-Cyrl"
     return base if base in CATALOGS else DEFAULT_LANG
 
 
@@ -3755,7 +3792,7 @@ def t(key: str, lang: Optional[str] = None, **kwargs: Any) -> str:
 
 
 #: Languages whose messages write decimals with a comma ('1,5 mm²').
-DECIMAL_COMMA = {"fr", "ru", "es", "de", "pt", "it", "pl", "tr", "nl", "hr", "sr", "bs"}
+DECIMAL_COMMA = {"fr", "ru", "es", "de", "pt", "it", "pl", "tr", "nl", "hr", "sr", "sr-Cyrl", "bs"}
 
 
 def number(value: float, lang: Optional[str] = None) -> str:
