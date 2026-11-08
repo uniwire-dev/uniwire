@@ -100,3 +100,18 @@ def test_inverter_drawn_in_the_direction_it_converts():
     assert not _ac_mark_low(fed_by_board, "U1")  # "~" over "=": fed by the board, its battery below
     assert _ac_mark_low(fed_by_pv, "U1")  # "=" over "~": fed by the PV array
     assert _ac_mark_low(DOC | {"sources": [{"type": "grid", "children": [dict(DOC["sources"][0]["children"][0], id="U1")]}]}, "U1")
+
+
+def test_device_declared_dc_is_on_the_dc_side():
+    dc_spd = {"type": "spd", "ref": "-F2", "spd_type": "2", "dc": True}
+    fed_by_board = {"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230}, "sources": [
+        {"type": "grid", "children": [{"type": "breaker", "in_A": 32, "children": [
+            {"type": "inverter", "id": "U1", "kind": "hybrid", "children": [
+                {"type": "pv_array", "p_kW": 4}, {"type": "battery", "capacity_kWh": 10}, dc_spd]}]}]}]}
+    assert not _ac_mark_low(fed_by_board, "U1")  # still "~" over "=": everything below it is DC
+    with_ac = dict(DOC)
+    with_ac["sources"] = [{"type": "grid", "children": [dict(DOC["sources"][0]["children"][0], children=[
+        DOC["sources"][0]["children"][0]["children"][0], dc_spd, {"type": "battery", "capacity_kWh": 10}])]}]
+    inv = _inverter(uniwire.load(with_ac))
+    assert inv.dc_side == 2  # the DC surge protector beside the battery, not on the AC busbar
+    assert [c.type for c in inv.bus_children] == ["switch_disconnector"]
