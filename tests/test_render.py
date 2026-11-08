@@ -190,3 +190,26 @@ def test_continuation_of_a_row_of_the_board_names_the_board_and_the_row():
         assert len(pages) > 1
         texts = re.findall(r">([^<>]+)</text>", page_to_svg(pages[1]))
         assert "TD, -ID2 (continued from sheet 1)" in texts, (kind, texts)
+
+
+def test_continuation_of_equipment_beyond_a_cable_is_outside_the_board():
+    from uniwire.render.scene import Group
+    from uniwire.render.svg import page_to_svg
+
+    def boards(g):
+        if isinstance(g, Group):
+            return ([g.id] if g.cls and "board" in g.cls.split() else []) + [b for c in g.items for b in boards(c)]
+        return []
+
+    ways = [{"type": "breaker", "ref": f"-Q{i}", "in_A": 16, "children": [{"type": "socket"}]} for i in range(40)]
+    for kind in ("single-line", "multi-line"):
+        doc = load({"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230}, "sources": [{"type": "grid", "children": [
+            {"type": "board", "id": "tgbt", "ref": "TGBT", "children": [
+                {"type": "breaker", "ref": "-Q1", "in_A": 63, "cable": {"section_mm2": 16, "cores": "3G"}, "children": [
+                    {"type": "ups", "ref": "UPS1", "sn_kVA": 10, "children": ways}]},
+                {"type": "breaker", "ref": "-Q2", "in_A": 16, "children": [{"type": "socket"}]}]}]}],
+            "views": [{"id": "v", "kind": kind, "paper": "A4"}]})
+        pages = render_pages(doc)
+        texts = re.findall(r">([^<>]+)</text>", page_to_svg(pages[1]))
+        assert "UPS1 (continued from sheet 1)" in texts, (kind, texts)  # fed through its own cable: not in TGBT
+        assert "tgbt" not in boards(pages[1].root), kind
