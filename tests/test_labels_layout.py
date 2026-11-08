@@ -427,6 +427,22 @@ def test_mark_at_the_source_and_below_a_transformer():
                 mcc, {"type": "breaker", "poles": "1P+N", "children": [{"type": "socket"}]}]}]}]}]}]})
     assert dict(_marks(doc))["T"] == "cm-4"
 
+
+def test_declared_systems_win_over_the_vector_group_and_the_installation():
+    """A three-wire board declared below a Dyn11 transformer (IT) keeps its secondary three-wire: a star point is not
+    a distributed neutral. A single-phase standby source takes what is declared below it, not the installation's."""
+    motors = [{"type": "breaker", "poles": "3P", "children": [{"type": "motor", "p_kW": 7.5}]} for _ in range(2)]
+    it = load({"installation": {"system": "3P", "earthing": "IT", "un_V": 400}, "sources": [{"type": "grid", "un_V": 20000, "children": [
+        {"type": "transformer", "id": "T", "u1_V": 20000, "u2_V": 400, "coupling": "Dyn11", "children": [
+            {"type": "main_breaker", "poles": "3P", "children": [{"type": "board", "system": "3P", "children": motors}]}]}]}]})
+    assert dict(_marks(it)).get("T") in (None, "cm-3")
+    sockets = [{"type": "breaker", "children": [{"type": "socket"}]} for _ in range(2)]
+    gen = load({"installation": {"system": "3P+N", "earthing": "TN-S", "un_V": 400}, "sources": [
+        {"type": "grid", "children": [{"type": "breaker", "children": [{"type": "load"}]}]},
+        {"type": "generator", "id": "GEN", "un_V": 230, "children": [{"type": "breaker", "poles": "1P+N", "children": [
+            {"type": "board", "system": "1P+N", "children": sockets}]}]}]})
+    assert dict(_marks(gen))["GEN"] == "cm-2"
+
 def test_three_pole_device_with_neutral_downstream():
     from uniwire.labels import feeder_mark, poles_mark
     assert poles_mark("3P", True) == (3, True) and poles_mark("3P") == (3, False) and poles_mark("4P") == (4, False)
