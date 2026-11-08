@@ -8,6 +8,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line link labels: a label with no room along its link is joined to it by a leader square to the link, from
+  the point of the link nearest the label (it ran slanting from the middle of the longest stretch and read as one
+  more link). The label of a link read by a PLC channel (a contactor's feedback to an input) goes near the device,
+  like the label of a link driven by a PLC channel (it went among the wires under the PLC).
 * Single-line conductor marks: the line leaving the supply of the installation carries the system declared on that
   line, else the installation's (before, a single-phase or DC board further down made it a two-conductor line); a
   standby or lower-voltage source still takes the system declared below it. The secondary of a transformer
