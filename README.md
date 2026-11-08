@@ -47,7 +47,7 @@ review and diff.
   enclosure frames, title block, revisions and notes. **SVG** output is deterministic and diff-friendly;
   the multi-sheet **PDF** has clickable links between sheets.
 * **Drawings in English, French, German, Spanish, Portuguese, Italian, Dutch, Polish, Turkish, Croatian, Serbian,
-  Bosnian, Russian and Simplified Chinese**, selected per document with `meta.lang`.
+  Bosnian, Russian, Simplified Chinese and Japanese**, selected per document with `meta.lang`.
 * **LLM tooling**: a reference card generated from the model (`uniwire card`), a text outline with
   stable ids (`uniwire describe`), id-based edits (`uniwire patch`), an MCP server (`uniwire-mcp`, stdio)
   and a hosted MCP endpoint at <https://mcp.uniwire.sh/mcp>, plus

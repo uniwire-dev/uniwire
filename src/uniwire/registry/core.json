@@ -18,6 +18,7 @@
     "pl": "Sieć zasilająca",
     "tr": "Dağıtım şebekesi",
     "nl": "Openbaar net",
+    "ja": "商用電源",
     "hr": "Distribucijska mreža",
     "sr": "Distributivna mreža",
     "bs": "Distributivna mreža"
@@ -44,6 +45,7 @@
     "pl": "Transformator",
     "tr": "Transformatör",
     "nl": "Transformator",
+    "ja": "変圧器",
     "hr": "Transformator",
     "sr": "Transformator",
     "bs": "Transformator"
@@ -71,6 +73,7 @@
     "pl": "Zespół prądotwórczy",
     "tr": "Jeneratör",
     "nl": "Aggregaat",
+    "ja": "発電機",
     "hr": "Agregat",
     "sr": "Agregat",
     "bs": "Agregat"
@@ -98,6 +101,7 @@
     "pl": "UPS (zasilacz bezprzerwowy)",
     "tr": "Kesintisiz güç kaynağı (KGK)",
     "nl": "UPS",
+    "ja": "無停電電源装置（UPS）",
     "hr": "UPS (neprekidno napajanje)",
     "sr": "UPS (besprekidno napajanje)",
     "bs": "UPS (besprekidno napajanje)"
@@ -123,6 +127,7 @@
     "pl": "Generator fotowoltaiczny",
     "tr": "Fotovoltaik generatör",
     "nl": "PV-veld",
+    "ja": "太陽電池アレイ",
     "hr": "Fotonaponsko polje",
     "sr": "Fotonaponsko polje",
     "bs": "Fotonaponsko polje"
@@ -149,6 +154,7 @@
     "pl": "Bateria akumulatorów",
     "tr": "Akü",
     "nl": "Batterij",
+    "ja": "蓄電池",
     "hr": "Baterija",
     "sr": "Baterija",
     "bs": "Baterija"
@@ -176,6 +182,7 @@
     "pl": "Falownik",
     "tr": "İnvertör",
     "nl": "Omvormer",
+    "ja": "パワーコンディショナ（PCS）",
     "hr": "Izmjenjivač",
     "sr": "Invertor",
     "bs": "Invertor"
@@ -202,6 +209,7 @@
     "pl": "Licznik",
     "tr": "Sayaç",
     "nl": "Meter",
+    "ja": "電力量計",
     "hr": "Brojilo",
     "sr": "Brojilo",
     "bs": "Brojilo"
@@ -228,6 +236,7 @@
     "pl": "Wyłącznik nadprądowy",
     "tr": "Otomatik sigorta",
     "nl": "Installatieautomaat",
+    "ja": "配線用遮断器",
     "hr": "Automatski prekidač",
     "sr": "Automatski prekidač",
     "bs": "Automatski prekidač"
@@ -255,6 +264,7 @@
     "pl": "Wyłącznik różnicowoprądowy",
     "tr": "Kaçak akım koruma rölesi (KAKR)",
     "nl": "Aardlekschakelaar",
+    "ja": "漏電遮断器（地絡保護専用）",
     "hr": "Zaštitna strujna sklopka (FID)",
     "sr": "Zaštitni uređaj diferencijalne struje (FID)",
     "bs": "Zaštitna strujna sklopka (FID)"
@@ -281,6 +291,7 @@
     "pl": "Wyłącznik różnicowonadprądowy (RCBO)",
     "tr": "Kaçak akım korumalı otomatik sigorta (RCBO)",
     "nl": "Aardlekautomaat",
+    "ja": "漏電遮断器（過負荷短絡保護兼用）",
     "hr": "Kombinirana zaštitna sklopka (RCBO)",
     "sr": "Kombinovani zaštitni prekidač (RCBO)",
     "bs": "Kombinovana zaštitna sklopka (RCBO)"
@@ -308,6 +319,7 @@
     "pl": "Wyłącznik główny",
     "tr": "Ana şalter",
     "nl": "Hoofdschakelaar",
+    "ja": "主幹遮断器",
     "hr": "Glavni prekidač",
     "sr": "Glavni prekidač",
     "bs": "Glavni prekidač"
@@ -335,6 +347,7 @@
     "pl": "Bezpiecznik",
     "tr": "Eriyen telli sigorta",
     "nl": "Smeltveiligheid",
+    "ja": "ヒューズ",
     "hr": "Osigurač",
     "sr": "Osigurač",
     "bs": "Osigurač"
@@ -361,6 +374,7 @@
     "pl": "Rozłącznik bezpiecznikowy",
     "tr": "Sigortalı yük ayırıcı",
     "nl": "Lastscheider met smeltveiligheden",
+    "ja": "ヒューズ付負荷開閉器",
     "hr": "Sklopka-rastavljač s osiguračima",
     "sr": "Prekidač-rastavljač sa osiguračima",
     "bs": "Sklopka-rastavljač s osiguračima"
@@ -387,6 +401,7 @@
     "pl": "Rozłącznik izolacyjny",
     "tr": "Yük ayırıcı",
     "nl": "Lastscheider",
+    "ja": "負荷開閉器",
     "hr": "Sklopka-rastavljač",
     "sr": "Prekidač-rastavljač",
     "bs": "Sklopka-rastavljač"
@@ -414,6 +429,7 @@
     "pl": "Odłącznik",
     "tr": "Ayırıcı",
     "nl": "Scheider",
+    "ja": "断路器",
     "hr": "Rastavljač",
     "sr": "Rastavljač",
     "bs": "Rastavljač"
@@ -441,6 +457,7 @@
     "pl": "Stycznik",
     "tr": "Kontaktör",
     "nl": "Magneetschakelaar",
+    "ja": "電磁接触器",
     "hr": "Sklopnik",
     "sr": "Kontaktor",
     "bs": "Kontaktor"
@@ -467,6 +484,7 @@
     "pl": "Przekaźnik bistabilny",
     "tr": "İmpuls röle",
     "nl": "Impulsrelais",
+    "ja": "インパルスリレー",
     "hr": "Impulsni relej",
     "sr": "Impulsni relej",
     "bs": "Impulsni relej"
@@ -493,6 +511,7 @@
     "pl": "Przekaźnik termiczny",
     "tr": "Termik röle",
     "nl": "Thermisch relais",
+    "ja": "熱動継電器",
     "hr": "Termički relej",
     "sr": "Termički relej",
     "bs": "Termički relej"
@@ -518,6 +537,7 @@
     "pl": "Układ rozruchowy silnika",
     "tr": "Motor yol verici",
     "nl": "Motorstarter",
+    "ja": "電動機始動器",
     "hr": "Pokretač motora",
     "sr": "Pokretač motora",
     "bs": "Pokretač motora"
@@ -543,6 +563,7 @@
     "pl": "Przełącznik zasilania (SZR)",
     "tr": "Transfer şalteri",
     "nl": "Omschakelaar",
+    "ja": "切替開閉器",
     "hr": "Preklopka mreža-agregat",
     "sr": "Preklopka mreža-agregat",
     "bs": "Preklopka mreža-agregat"
@@ -569,6 +590,7 @@
     "pl": "Ogranicznik przepięć (SPD)",
     "tr": "Parafudr (SPD)",
     "nl": "Overspanningsbeveiliging",
+    "ja": "サージ防護デバイス（SPD）",
     "hr": "Odvodnik prenapona (SPD)",
     "sr": "Odvodnik prenapona (SPD)",
     "bs": "Odvodnik prenapona (SPD)"
@@ -595,6 +617,7 @@
     "pl": "Sterownik",
     "tr": "Kontrol cihazı",
     "nl": "Besturingsapparaat",
+    "ja": "制御装置",
     "hr": "Upravljački uređaj",
     "sr": "Upravljački uređaj",
     "bs": "Upravljački uređaj"
@@ -620,6 +643,7 @@
     "pl": "Szyny zbiorcze",
     "tr": "Bara",
     "nl": "Verzamelrail",
+    "ja": "母線",
     "hr": "Sabirnice",
     "sr": "Sabirnice",
     "bs": "Sabirnice"
@@ -646,6 +670,7 @@
     "pl": "Rozdzielnica",
     "tr": "Dağıtım panosu",
     "nl": "Verdeelinrichting",
+    "ja": "分電盤",
     "hr": "Razdjelnik",
     "sr": "Razvodni orman",
     "bs": "Razvodni ormar"
@@ -672,6 +697,7 @@
     "pl": "Uziom",
     "tr": "Topraklama elektrodu",
     "nl": "Aardelektrode",
+    "ja": "接地極",
     "hr": "Uzemljivač",
     "sr": "Uzemljivač",
     "bs": "Uzemljivač"
@@ -698,6 +724,7 @@
     "pl": "Oświetlenie",
     "tr": "Aydınlatma",
     "nl": "Verlichting",
+    "ja": "照明",
     "hr": "Rasvjeta",
     "sr": "Osvetljenje",
     "bs": "Rasvjeta"
@@ -724,6 +751,7 @@
     "pl": "Gniazda wtyczkowe",
     "tr": "Prizler",
     "nl": "Wandcontactdozen",
+    "ja": "コンセント",
     "hr": "Utičnice",
     "sr": "Priključnice",
     "bs": "Utičnice"
@@ -750,6 +778,7 @@
     "pl": "Ogrzewanie",
     "tr": "Isıtma",
     "nl": "Verwarming",
+    "ja": "暖房",
     "hr": "Grijanje",
     "sr": "Grejanje",
     "bs": "Grijanje"
@@ -776,6 +805,7 @@
     "pl": "Podgrzewacz wody",
     "tr": "Termosifon",
     "nl": "Boiler",
+    "ja": "給湯器",
     "hr": "Bojler",
     "sr": "Bojler",
     "bs": "Bojler"
@@ -802,6 +832,7 @@
     "pl": "Kuchnia elektryczna",
     "tr": "Pişirme",
     "nl": "Koken",
+    "ja": "調理機器",
     "hr": "Kuhanje",
     "sr": "Kuvanje",
     "bs": "Kuhanje"
@@ -828,6 +859,7 @@
     "pl": "Urządzenie AGD",
     "tr": "Ev aleti",
     "nl": "Apparaat",
+    "ja": "家電機器",
     "hr": "Kućanski uređaj",
     "sr": "Kućni aparat",
     "bs": "Kućni aparat"
@@ -854,6 +886,7 @@
     "pl": "Silnik",
     "tr": "Motor",
     "nl": "Motor",
+    "ja": "電動機",
     "hr": "Motor",
     "sr": "Motor",
     "bs": "Motor"
@@ -881,6 +914,7 @@
     "pl": "Stacja ładowania pojazdów (EV)",
     "tr": "Elektrikli araç şarj ünitesi",
     "nl": "Laadpunt",
+    "ja": "EV 充電設備",
     "hr": "Punionica (EV)",
     "sr": "Punjač za vozila (EV)",
     "bs": "Punjač za vozila (EV)"
@@ -907,6 +941,7 @@
     "pl": "Wentylacja",
     "tr": "Havalandırma",
     "nl": "Ventilatie",
+    "ja": "換気",
     "hr": "Ventilacija",
     "sr": "Ventilacija",
     "bs": "Ventilacija"
@@ -933,6 +968,7 @@
     "pl": "Rolety",
     "tr": "Panjurlar",
     "nl": "Rolluiken",
+    "ja": "電動シャッター",
     "hr": "Rolete",
     "sr": "Roletne",
     "bs": "Roletne"
@@ -959,6 +995,7 @@
     "pl": "Odbiornik",
     "tr": "Yük",
     "nl": "Belasting",
+    "ja": "負荷",
     "hr": "Trošilo",
     "sr": "Potrošač",
     "bs": "Potrošač"
@@ -985,6 +1022,7 @@
     "pl": "Rezerwa",
     "tr": "Yedek",
     "nl": "Reserve",
+    "ja": "予備",
     "hr": "Rezerva",
     "sr": "Rezerva",
     "bs": "Rezerva"
@@ -1008,6 +1046,7 @@
     "pl": "Odsyłacz do arkusza",
     "tr": "Sayfa bağlantısı",
     "nl": "Bladverwijzing",
+    "ja": "他シート参照",
     "hr": "Uputnica na drugi list",
     "sr": "Uputnica na drugi list",
     "bs": "Uputnica na drugi list"
@@ -1030,6 +1069,7 @@
     "pl": "Przekładnik (prądowy/napięciowy)",
     "tr": "Ölçü transformatörü (AT/GT)",
     "nl": "Meettransformator",
+    "ja": "計器用変成器",
     "hr": "Mjerni transformator (SMT/NMT)",
     "sr": "Merni transformator (SMT/NMT)",
     "bs": "Mjerni transformator (SMT/NMT)"
@@ -1056,6 +1096,7 @@
     "pl": "Przekaźnik zabezpieczeniowy",
     "tr": "Koruma rölesi",
     "nl": "Beveiligingsrelais",
+    "ja": "保護継電器",
     "hr": "Zaštitni relej",
     "sr": "Zaštitni relej",
     "bs": "Zaštitni relej"
@@ -1082,6 +1123,7 @@
     "pl": "Uziemnik",
     "tr": "Topraklama ayırıcısı",
     "nl": "Aardingsschakelaar",
+    "ja": "接地開閉器",
     "hr": "Zemljospojnik",
     "sr": "Rastavljač za uzemljenje",
     "bs": "Zemljospojnik"
@@ -1108,6 +1150,7 @@
     "pl": "Wskaźnik obecności napięcia",
     "tr": "Gerilim varlık göstergesi",
     "nl": "Spanningsaanwijzer",
+    "ja": "検電表示器",
     "hr": "Pokazivač prisutnosti napona",
     "sr": "Indikator prisustva napona",
     "bs": "Indikator prisustva napona"
@@ -1133,6 +1176,7 @@
     "pl": "Urządzenie do monitorowania stanu izolacji",
     "tr": "İzolasyon izleme cihazı",
     "nl": "Isolatiebewakingsapparaat",
+    "ja": "絶縁監視装置",
     "hr": "Uređaj za nadzor izolacije",
     "sr": "Uređaj za nadzor izolacije",
     "bs": "Uređaj za nadzor izolacije"
@@ -1158,6 +1202,7 @@
     "pl": "Bezpiecznik iskiernikowy",
     "tr": "Aşırı gerilim sınırlayıcı",
     "nl": "Overspanningsbegrenzer",
+    "ja": "過電圧制限器",
     "hr": "Ograničivač prenapona",
     "sr": "Ograničavač prenapona",
     "bs": "Ograničavač prenapona"
@@ -1184,6 +1229,7 @@
     "pl": "Impedancja uziemiająca punkt neutralny",
     "tr": "Nötr topraklama empedansı",
     "nl": "Sterpuntsaardingsimpedantie",
+    "ja": "中性点接地インピーダンス",
     "hr": "Impedancija uzemljenja zvjezdišta",
     "sr": "Impedansa uzemljenja zvezdišta",
     "bs": "Impedansa uzemljenja zvjezdišta"
@@ -1209,6 +1255,7 @@
     "pl": "Listwa zaciskowa",
     "tr": "Klemens grubu",
     "nl": "Klemmenstrook",
+    "ja": "端子台",
     "hr": "Redne stezaljke",
     "sr": "Redne stezaljke",
     "bs": "Redne stezaljke"
@@ -1235,6 +1282,7 @@
     "pl": "Puszka rozgałęźna",
     "tr": "Buat",
     "nl": "Lasdoos",
+    "ja": "接続箱",
     "hr": "Razvodna kutija",
     "sr": "Razvodna kutija",
     "bs": "Razvodna kutija"
@@ -1261,6 +1309,7 @@
     "pl": "Złącze",
     "tr": "Konnektör",
     "nl": "Connector",
+    "ja": "コネクタ",
     "hr": "Konektor",
     "sr": "Konektor",
     "bs": "Konektor"
@@ -1287,6 +1336,7 @@
     "pl": "Przekształtnik DC (optymalizator, MPPT)",
     "tr": "DC dönüştürücü (optimizer, MPPT)",
     "nl": "DC-converter",
+    "ja": "DC-DC コンバータ",
     "hr": "DC pretvarač (optimizator, MPPT)",
     "sr": "DC pretvarač (optimizator, MPPT)",
     "bs": "DC pretvarač (optimizator, MPPT)"
@@ -1313,6 +1363,7 @@
     "pl": "Szyna uziemiająca (PE)",
     "tr": "Topraklama barası",
     "nl": "Aardrail",
+    "ja": "接地母線",
     "hr": "Sabirnica za uzemljenje",
     "sr": "Sabirnica za uzemljenje",
     "bs": "Sabirnica za uzemljenje"
@@ -1339,6 +1390,7 @@
     "pl": "Sterownik programowalny (PLC)",
     "tr": "Programlanabilir kontrolör (PLC)",
     "nl": "Programmeerbare besturing (PLC)",
+    "ja": "プログラマブルコントローラ",
     "hr": "Programirljivi logički kontroler (PLC)",
     "sr": "Programabilni logički kontroler (PLC)",
     "bs": "Programabilni logički kontroler (PLC)"
@@ -1365,6 +1417,7 @@
     "pl": "Zasilacz (AC/DC)",
     "tr": "Güç kaynağı (AC/DC)",
     "nl": "Voeding",
+    "ja": "電源装置",
     "hr": "Izvor napajanja (AC/DC)",
     "sr": "Izvor napajanja (AC/DC)",
     "bs": "Izvor napajanja (AC/DC)"

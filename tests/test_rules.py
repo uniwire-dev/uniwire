@@ -591,3 +591,109 @@ def test_iec60364_sockets_need_30ma():
     # with a national profile, left to it (no duplicate)
     both = d([mcb({"type": "socket"})], profiles=("vde0100", "iec60364"))
     assert [f.rule for f in check(both) if f.rule.endswith("rcd-30mA")] == ["vde0100.rcd-30mA"]
+
+
+def test_view_direction_left_right_is_reported():
+    def found(direction):
+        d = load({"views": [{"id": "v1", "kind": "single-line", "direction": direction}],
+                  "sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 16, "children": [
+                      {"type": "socket"}]}]}]})
+        return [f.message for f in check(d) if f.rule == "core.view-direction"]
+    assert found("down") == [] and found("up") == []
+    assert len(found("right")) == 1 and "v1" in found("right")[0] and "'right'" in found("right")[0]
+    assert len(found("left")) == 1
+
+
+def test_neutral_pole_on_a_network_without_neutral():
+    def found(system, poles, between=None):
+        board = {"type": "board", "children": [{"type": "breaker", "id": "Q", "in_A": 10, "poles": poles,
+                                                "children": [{"type": "socket"}]}]}
+        if between:
+            board = {"type": between, "children": [board]}
+        d = load({"installation": {"system": system, "un_V": 400},
+                  "sources": [{"type": "grid", "children": [board]}]})
+        return [f.node for f in check(d) if f.rule == "core.neutral-missing"]
+    assert found("3P", "1P+N") == ["Q"] and found("3P", "3P+N") == ["Q"]
+    assert found("3P", "2P") == [] and found("3P+N", "1P+N") == [] and found("3P", "4P") == []
+    assert found("2P", "1P+N") == ["Q"] and found("2P", "2P") == [] and found("split-phase", "1P+N") == []
+    assert found("3P", "1P+N", "transformer") == []  # the transformer may make its own neutral
+    assert found("3P", "1P+N", "power_supply") == []  # system not known after a converter
+
+
+def test_load_current_above_its_protection():
+    def found(item, in_a=16, poles="1P+N", count=None, system="1P+N"):
+        dev = {"type": "breaker", "id": "Q", "in_A": in_a, "poles": poles, "children": [dict(item, id="L")]}
+        if count:
+            dev["count"] = count
+        d = load({"installation": {"system": system, "un_V": 400 if system.startswith("3") else 230},
+                  "sources": [{"type": "grid", "children": [dev]}]})
+        return [f.message for f in check(d) if f.rule == "core.load-current"]
+    assert found({"type": "heating", "p_kW": 2}) == []  # 8.7 A
+    assert found({"type": "ev_charger", "p_kW": 3.7}) == []  # 16.1 A on 16 A: the rounding of the power
+    assert len(found({"type": "heating", "p_kW": 5})) == 1  # 21.7 A
+    msg = found({"type": "lighting", "p_kW": 0.8, "count": 4}, in_a=10)  # 4 x 0.8 kW: 13.9 A
+    assert len(msg) == 1 and "4 x 0.8 kW" in msg[0] and "count" in msg[0]
+    assert found({"type": "lighting", "p_kW": 0.8}, in_a=10, count=4) == []  # 4 circuits of one lamp each
+    msg = found({"type": "load", "p_kW": 12}, in_a=10, count=6)  # each of the 6 circuits feeds 12 kW
+    assert len(msg) == 1 and "6" in msg[0] and "count" in msg[0]
+    assert found({"type": "motor", "p_kW": 30, "phases": 3}, in_a=63, poles="3P", system="3P+N") == []  # 43 A
+    assert len(found({"type": "load", "p_kW": 72, "cos_phi": 0.9}, in_a=100, poles="4P", system="3P+N")) == 1
+    assert found({"type": "load", "p_kW": 15, "cos_phi": 0.7}, in_a=80, poles="2P", system="3P+N") == []  # 400 V?
+
+
+def test_load_current_at_the_voltage_of_its_network():
+    def found(installation, top, item, kids_of=None):
+        node = dict(item, id="L")
+        d = load({"installation": installation, "sources": [dict(top, children=[node]) if kids_of is None else
+                                                             dict(top, children=[kids_of(node)])]})
+        return [f.message for f in check(d) if f.rule == "core.load-current"]
+    us = {"system": "3P+N", "un_V": 208, "uln_V": 120}
+    grid = {"type": "grid"}
+
+    def stepped_up(poles, in_a):  # 208 V installation, 480 V after a transformer
+        return lambda load_: {"type": "transformer", "u1_V": 208, "u2_V": 480, "children": [
+            {"type": "breaker", "in_A": in_a, "poles": poles, "children": [load_]}]}
+    assert found(us, grid, {"type": "motor", "p_kW": 20, "phases": 3}, stepped_up("3P", 40)) == []  # 24 A
+    assert found(us, grid, {"type": "lighting", "p_kW": 4, "un_V": 277}, stepped_up("1P", 20)) == []  # 14.4 A
+    split = {"system": "split-phase", "un_V": 240, "uln_V": 120}
+
+    def breaker(poles, in_a, cable=None):
+        return lambda load_: {"type": "breaker", "in_A": in_a, **({"poles": poles} if poles else {}),
+                              **({"cable": {"cores": cable}} if cable else {}), "children": [load_]}
+    assert len(found(split, grid, {"type": "cooking", "p_kW": 9.6}, breaker("2P", 30, "3-#10+G"))) == 1  # 40 A
+    assert len(found(split, grid, {"type": "cooking", "p_kW": 9.6}, breaker(None, 30))) == 1  # 240 V: 40 A
+    assert len(found({"system": "split-phase", "un_V": 240}, grid, {"type": "heating", "p_kW": 2.4},
+                     breaker("1P", 15))) == 1  # 120 V: 20 A
+    assert found({"system": "split-phase", "un_V": 200}, grid, {"type": "heating", "p_kW": 2.4},
+                 breaker("2P", 15)) == []  # 200 V: 12 A
+    dc = {"system": "1P+N", "un_V": 230, "uln_V": 230}
+    battery = {"type": "battery", "un_V": 48, "capacity_kWh": 5}
+    assert found(dc, battery, {"type": "load", "p_kW": 0.5, "un_V": 48}, breaker("1P", 16)) == []  # 10.4 A
+    assert len(found(dc, battery, {"type": "load", "p_kW": 1.2, "un_V": 48}, breaker("1P", 16))) == 1  # 25 A
+    assert found(dc, battery, {"type": "load", "p_kW": 1.2}, breaker("1P", 16)) == []  # voltage not known
+
+
+def test_load_current_poles_of_a_socket_and_below_a_transformer():
+    def found(top_kids, installation=None):
+        d = load({"installation": installation or {"system": "3P+N", "un_V": 400},
+                  "sources": [{"type": "grid", "children": top_kids}]})
+        return [f.node for f in check(d) if f.rule == "core.load-current"]
+    socket = {"type": "socket", "id": "L", "p_kW": 20, "poles": "3P+N+T", "cos_phi": 0.9}  # 32 A three-phase
+    assert found([{"type": "rcbo", "in_A": 32, "poles": "4P", "children": [socket]}]) == []
+    heater = {"type": "heating", "id": "L", "p_kW": 5}  # 21.7 A at 230 V
+    below = {"type": "transformer", "u1_V": 20000, "u2_V": 400, "children": [
+        {"type": "breaker", "in_A": 16, "poles": "1P+N", "children": [heater]}]}
+    assert found([below]) == ["L"]  # phase to neutral below a 400 V secondary
+
+
+def test_views_starting_at_the_same_sheet_number():
+    doc = {"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230},
+           "sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 16, "children": [{"type": "socket"}]}]}],
+           "views": [{"id": "ml", "kind": "multi-line", "first_folio": 10}, {"id": "sld", "first_folio": 10},
+                     {"id": "more", "first_folio": 12}]}
+    found = [f for f in check(load(doc)) if f.rule == "core.folio-duplicate"]
+    assert len(found) == 1 and "'sld'" in found[0].message and "'ml'" in found[0].message
+    doc["views"] = [{"id": "ml", "kind": "multi-line"}, {"id": "sld", "first_folio": 1}]  # the first starts at 1
+    assert [f.rule for f in check(load(doc)) if f.rule == "core.folio-duplicate"] == ["core.folio-duplicate"]
+    doc["views"] = [{"id": "ml", "kind": "multi-line"}, {"id": "sld"}]  # the second follows the first
+    assert not [f for f in check(load(doc)) if f.rule == "core.folio-duplicate"]

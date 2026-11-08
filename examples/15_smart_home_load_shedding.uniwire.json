@@ -47,7 +47,7 @@
               {"type": "breaker", "ref": "-Q15", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
                "children": [{"type": "socket", "label": "Prises chambres", "points": 10}]},
               {"type": "breaker", "ref": "-Q16", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
-               "children": [{"type": "shutter", "label": "Volets roulants", "count": 7, "p_kW": 0.7}]},
+               "children": [{"type": "shutter", "label": "Volets roulants", "count": 7, "p_kW": 0.1}]},
               {"type": "breaker", "ref": "-Q17", "use": "C2", "cable": {"cores": "3G", "section_mm2": 1.5},
                "children": [{"type": "ventilation", "label": "VMC", "p_kW": 0.04}]}
             ]},
@@ -69,10 +69,10 @@
                  "product": {"manufacturer": "Legrand", "range": "DX³", "description": "Gestionnaire d'énergie 3 voies, entrée TIC"}}]},
               {"type": "breaker", "ref": "-Q31", "use": "C20", "cable": {"cores": "3G", "section_mm2": 2.5},
                "children": [{"type": "contactor", "id": "KD31", "ref": "-KD31", "use": "KD",
-                             "children": [{"type": "heating", "label": "Radiateurs séjour", "p_kW": 4, "count": 2, "pilot_wire": true}]}]},
+                             "children": [{"type": "heating", "label": "Radiateurs séjour", "p_kW": 2, "count": 2, "pilot_wire": true}]}]},
               {"type": "breaker", "ref": "-Q32", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
                "children": [{"type": "contactor", "id": "KD32", "ref": "-KD32", "use": "KD",
-                             "children": [{"type": "heating", "label": "Radiateurs chambres", "p_kW": 3, "count": 3, "pilot_wire": true}]}]},
+                             "children": [{"type": "heating", "label": "Radiateurs chambres", "p_kW": 1, "count": 3, "pilot_wire": true}]}]},
               {"type": "breaker", "ref": "-Q33", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
                "children": [{"type": "contactor", "id": "KD33", "ref": "-KD33", "use": "KD",
                              "children": [{"type": "heating", "label": "Sèche-serviettes SdB", "p_kW": 1.5, "pilot_wire": true}]}]}

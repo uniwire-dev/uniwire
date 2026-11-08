@@ -183,7 +183,7 @@
                                   "coil_V": 24,
                                   "children": [
                                     {
-                                      "type": "motor", "label": "Jet fans level −1", "count": 4, "p_kW": 6,
+                                      "type": "motor", "label": "Jet fans level −1", "count": 4, "p_kW": 1.5,
                                       "phases": 3, "priority": "safety"
                                     }
                                   ]
@@ -203,7 +203,7 @@
                                   "coil_V": 24,
                                   "children": [
                                     {
-                                      "type": "motor", "label": "Jet fans level −2/−3", "count": 4, "p_kW": 6,
+                                      "type": "motor", "label": "Jet fans level −2/−3", "count": 4, "p_kW": 1.5,
                                       "phases": 3, "priority": "safety"
                                     }
                                   ]
