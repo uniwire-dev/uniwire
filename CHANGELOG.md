@@ -8,6 +8,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings with many links draw faster (about two times on the slowest documents seen): the router costs each
+  segment against the obstacles near it only, and costs a segment it meets again once. The drawings are the same.
 * Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
   inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
   from the board was drawn on its AC side, and the inverter was drawn "=" over "~".
