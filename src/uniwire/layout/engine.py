@@ -1473,10 +1473,11 @@ def _first_boards(doc: Document) -> list[NodeBase]:
 
 # ---------------------------------------------------------------- strokes
 def _free_way(ln: LNode, parent: Optional[LNode]) -> bool:
-    """A spare way with no device (no rating) straight on a busbar or in a board: a free space, drawn dashed and
-    without a conductor mark, not a conductor leaving the busbar (below a device, it is that device's spare way)."""
+    """A spare way with no device (no rating, no poles) straight on a busbar or in a board: a free space, drawn
+    dashed and without a conductor mark, not a conductor leaving the busbar (below a device, it is that device's
+    spare way). Same rule as multi-line drawings."""
     return (parent is not None and (parent.bus_y is not None or parent.is_board) and ln.node is not None
-            and ln.node.type == "spare" and not getattr(ln.node, "in_A", None))  # type: ignore[attr-defined]
+            and ln.node.type == "spare" and not (getattr(ln.node, "in_A", None) or getattr(ln.node, "poles", None)))
 
 
 def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callable[[str], Optional[int]] | None = None,
