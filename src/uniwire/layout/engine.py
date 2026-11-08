@@ -2975,7 +2975,7 @@ def _column_info(ln: LNode, index: Index, lang: str) -> dict[str, Any]:
         if info["cable"] is None and n.cable is not None:
             info["cable"] = n.cable
     # without a protection of its own, the rating of the device switching the feeder (contactor, impulse relay...)
-    info["rated"] = next((n for n in path[1:] if getattr(n, "in_A", None)), None)
+    info["rated"] = next((n for n in path[1:] if n.type in SWITCHING and getattr(n, "in_A", None)), None)  # type: ignore[attr-defined]
     for n in chain:
         if n.type in ("rcd", "rcbo", "main_breaker") and getattr(n, "idn_mA", None):  # type: ignore[attr-defined]
             info["rcd"] = n
