@@ -360,6 +360,50 @@ def test_conductor_marks_where_the_conductors_change():
     assert not _marks(off)
 
 
+def _mark_texts(doc):
+    """{node id: texts of its conductor mark}."""
+    return {g.id: [i.text for i in g.items if hasattr(i, "text")] for g in _items_groups(render_pages(doc)[0].root)
+            if g.cls and g.cls.startswith("conductor-mark")}
+
+
+def test_mark_phase_comes_from_above_and_stops_at_a_converter():
+    doc = load({"installation": {"system": "3P+N", "earthing": "TT"}, "sources": [{"type": "grid", "children": [
+        {"type": "board", "children": [
+            {"type": "rcd", "id": "R", "poles": "2P", "phase": "L2", "children": [
+                {"type": "breaker", "poles": "1P+N", "children": [{"type": "socket", "id": "S1"}]},
+                {"type": "breaker", "poles": "1P+N", "children": [{"type": "lighting", "id": "S2"}]}]},
+            {"type": "breaker", "id": "Q3", "poles": "2P", "phase": "L1", "children": [{"type": "socket", "id": "S3"}]},
+            {"type": "breaker", "id": "Q5", "poles": "1P+N", "phase": "L2", "children": [
+                {"type": "transfer_switch", "id": "TS", "poles": "2P", "children": [
+                    {"type": "breaker", "poles": "2P", "children": [{"type": "socket", "id": "S5"}]}]}]},
+            {"type": "breaker", "poles": "2P", "phase": "L3", "children": [{"type": "contactor", "id": "K", "poles": "3P",
+                                                                           "children": [{"type": "water_heater"}]}]},
+            {"type": "breaker", "id": "Q4", "poles": "1P+N", "phase": "L3", "children": [
+                {"type": "inverter", "kind": "micro", "children": [{"type": "pv_array", "id": "PV"}]}]}]}]}]})
+    texts = _mark_texts(doc)
+    assert texts["S1"] == texts["S2"] == ["L2+N"]  # the phase of the group above them
+    assert texts["R"] == ["L2 N"] and texts["S3"] == ["L1 N"]  # two poles on one phase: the phase and the neutral
+    assert texts["Q4"] == ["L3+N"]  # the line leaving a single-phase device: its phase too
+    assert texts["PV"] == []  # the DC side of a micro-inverter is not on the phase of its AC side
+    assert texts.get("K", []) == []  # a phase names a two-wire line only, never three strokes
+    assert texts["Q5"] == ["L2+N"] and texts["TS"] == ["L2 N"]  # the conductors change at each device
+    assert "S5" not in texts  # the same mark and the same text lower in the column: not repeated
+
+
+def test_mark_below_a_transformer_not_the_installation_system():
+    """A transformer cannot state its output: fed by two wires, its secondary is marked two; never with the
+    installation's four conductors, nor with the phase of its primary."""
+    doc = load({"installation": {"system": "3P+N", "earthing": "TN-S"}, "sources": [{"type": "grid", "children": [
+        {"type": "board", "children": [
+            {"type": "breaker", "poles": "1P+N", "phase": "L2", "children": [
+                {"type": "transformer", "u1_V": 230, "u2_V": 24, "children": [{"type": "lighting", "id": "L"}]}]},
+            {"type": "breaker", "poles": "2P", "children": [
+                {"type": "transformer", "u1_V": 400, "u2_V": 230, "children": [{"type": "socket", "id": "S"}]}]}]}]}]})
+    marks = dict(_marks(doc))
+    assert marks["L"] == marks["S"] == "cm-2"
+    assert _mark_texts(doc)["L"] == []
+
+
 def test_three_pole_device_with_neutral_downstream():
     from uniwire.labels import feeder_mark, poles_mark
     assert poles_mark("3P", True) == (3, True) and poles_mark("3P") == (3, False) and poles_mark("4P") == (4, False)
@@ -697,11 +741,12 @@ def test_long_description_in_the_table_wraps_before_it_shrinks():
 def test_power_supply_output_is_marked_with_its_two_poles_not_its_input():
     doc = load({"installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
                 "sources": [{"type": "grid", "children": [{"type": "board", "children": [
-                    {"type": "breaker", "ref": "-Q2", "in_A": 2, "poles": "1P+N", "phase": "L1", "children": [
-                        {"type": "power_supply", "ref": "-T1", "u1_V": 230, "u2_V": 24}]},
-                    {"type": "socket", "label": "Sockets", "phase": "L2"}]}]}]})
-    texts = _texts(render_pages(doc)[0].root)
-    assert "L1+N" not in texts and "L2" in texts  # the socket keeps its phase; the 24 V output is not "L1+N"
+                    {"type": "breaker", "id": "Q2", "ref": "-Q2", "in_A": 2, "poles": "1P+N", "phase": "L1", "children": [
+                        {"type": "power_supply", "id": "T1", "ref": "-T1", "u1_V": 230, "u2_V": 24}]},
+                    {"type": "socket", "id": "S", "label": "Sockets", "phase": "L2"}]}]}]})
+    texts = _mark_texts(doc)
+    assert texts["T1"] == []  # the 24 V output is not "L1+N"
+    assert texts["Q2"] == ["L1+N"] and texts["S"] == ["L2 N"]  # its input and the socket keep their phase
 
 
 def _dc_doc():

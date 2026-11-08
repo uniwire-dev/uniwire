@@ -42,7 +42,7 @@
               {"type": "breaker", "ref": "-Q13", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
                "children": [{"type": "socket", "label": "Prises entrée/SdB", "points": 3}]},
               {"type": "breaker", "ref": "-Q14", "use": "C16", "cable": {"cores": "3G", "section_mm2": 1.5},
-               "children": [{"type": "heating", "label": "Convecteurs", "p_kW": 2.5, "pilot_wire": true, "count": 2}]}
+               "children": [{"type": "heating", "label": "Convecteurs", "p_kW": 1.25, "pilot_wire": true, "count": 2}]}
             ]},
             {"type": "rcd", "ref": "-F2", "use": "ID40", "rcd_type": "A", "label": "Interrupteur différentiel 2", "children": [
               {"type": "breaker", "ref": "-Q21", "use": "C32", "cable": {"cores": "3G", "section_mm2": 6},

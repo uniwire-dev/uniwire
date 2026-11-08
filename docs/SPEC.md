@@ -91,7 +91,10 @@ Every node has the following common fields (all optional except `type`):
 * A node with **several children** implicitly carries a **busbar**. The `busbar` type makes it
   possible to declare it explicitly in order to give it characteristics (In, dimensions, Ik).
 * A `board` (distribution board, cabinet, enclosure) is a **container**: it has no electrical function
-  of its own; it groups its descendants down to the next board. It is drawn as a dashed frame.
+  of its own; it groups its descendants down to the next board. It is drawn as a dashed frame. An `inverter`, `ups`,
+  `transfer_switch`, `busbar` (other than the board's own, at its head) or `transformer` with a primary above
+  1000 V (`u1_V`) that has a `cable`, or is fed by a device that has one, is at the far end of that cable: it is
+  drawn below the frame, with what it feeds.
 * Loads (category `load`), `pv_array` and `battery` are **leaves**.
 * A protective device without children represents an outgoing circuit whose load is not described (drawn as an arrow).
 
@@ -199,7 +202,7 @@ Further fields: `cable`, `normally_open`, `status` (`temporary`...).
 
 ### Metadata and views
 `meta.drawing_number`, `meta.scale`, `meta.contributors[]`; `installation.ik1_kA`, `uln_V`, `du_max_pct`.
-`views[].direction` accepts `up`, `right`, `left` (direction away from the source; the reference renderer draws downwards).
+`views[].direction` accepts `up`, `right`, `left` (direction away from the source; the reference renderer draws downwards, `up` mirrored, and reports `right` and `left` with the `core.view-direction` finding).
 Additional circuit schedule rows: `circuit`, `ib_A`, `cos_phi`, `cable_type`, `cable_ref`, `install`, `frame_A`,
 `count`, `un_V`.
 
@@ -371,7 +374,7 @@ Common enumerations: `poles` ∈ {1P, 1P+N, 2P, 3P, 3P+N, 4P}.
 | `conductor_marks` | `true` | Conductor-count strokes (IEC 60617: one stroke per conductor, or one stroke and the number) and phase of single-phase circuits on each outgoing feeder, on the line leaving each source / transformer, and below each switching device whose `poles` change the conductors of the line above it (not repeated lower in the same column). A neutral the device does not cut is shown apart: `3P+N` → three strokes and `+N`, `4P` → one stroke and `4`; `3P` gets `+N` only when circuits below use the neutral and its supply has one (never below a three-wire `3P` network). PE is not counted |
 | `frames` | `[]` | Enclosure frames `{label, nodes[]}` drawn around arbitrary nodes (cabinet, cubicle) when they do not form a `board` subtree |
 | `title_block` | `true` | Sheet border and title block |
-| `first_folio`, `total_folios` | 1, - | Numbering within a partial set of sheets ("sheet 1/3"). Drawn together, the views make one set: a view without `first_folio` follows the one before it |
+| `first_folio`, `total_folios` | 1, - | Numbering within a partial set of sheets ("sheet 1/3"). Drawn together, the views make one set: a view without `first_folio` follows the one before it, and so does a view whose sheets would take numbers already given |
 | `show_pe` | `true` | `multi-line` views: draw the protective conductor (PE) |
 | `color` | `none` | Colour mode: `conductors` (multi-line: every conductor in its colour; single-line: single-phase feeders in their phase colour), `phase` (single-phase feeders by phase, phase cell of the schedule tinted), `source` (what each source (tree root) feeds in normal operation; normally-open alternative supplies in the colour of the source they come from, dashed), `status` (`status` of nodes and links, inherited downstream: existing grey, new black, future blue dashed, temporary orange, removed red), `voltage` (MV > 1 kV AC, LV, ELV ≤ 50 V AC, DC). Strokes only: texts stay black, frames and earth / data links keep their colour; a legend of the colours used is drawn in a free corner of each sheet. Omitted: black drawing |
 | `palette` | - | Colour overrides `{key: "#rrggbb"}` for the colour mode: conductor names (`L1` … `PE`, `PEN`, `L+`, `L-`), source ids, status values, `mv` / `lv` / `elv` / `dc` |
