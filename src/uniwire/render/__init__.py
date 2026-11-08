@@ -71,8 +71,9 @@ def _view_pages(doc: Document, view: View) -> list[Page]:
     finally:
         RENDER_LANG.reset(token)
         NORTH_AMERICAN.reset(na_token)
+    tag = doc.meta.lang or "en"  # the language of the texts: a browser picks the glyph forms (Japanese, Chinese) by it
     for i, page in enumerate(pages, 1):
-        page.attrs.update({"data-uw-sheet": str(i), "data-uw-view-kind": view.kind})
+        page.attrs.update({"lang": tag, "xml:lang": tag, "data-uw-sheet": str(i), "data-uw-view-kind": view.kind})
     if key is not None:
         _PAGES[key] = copy.deepcopy(pages)
     while len(_PAGES) > _PAGES_MAX:
