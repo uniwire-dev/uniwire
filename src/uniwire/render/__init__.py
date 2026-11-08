@@ -12,7 +12,7 @@ from typing import Any, Optional
 
 from ..i18n import normalize_lang
 from ..i18n import t as _t
-from ..layout.engine import PAPER, drawing_area, layout_sheet, plan_sheets, sheet_node_ids
+from ..layout.engine import PAPER, drawing_area, feeding_sheet, layout_sheet, plan_sheets, sheet_node_ids
 from ..model import Document, View
 from ..resolve import build_index
 from .colors import colorize
@@ -103,12 +103,15 @@ def render_views(doc: Document, views: Optional[Iterable[View]] = None) -> list[
 def sheet_numbers(views: list[tuple[View, int]]) -> tuple[list[int], Optional[int]]:
     """Printed number of each sheet of one drawing set (its views in order, with their number of sheets), and the
     total to print after it. A view numbered from its ``first_folio`` (when given), else following the view
-    before it (from 1 for the first). The total is the ``total_folios`` given (the largest, never less than the
-    last sheet: '7 / 6' would be false), else the last sheet when the set starts at 1, else none ('3', not '3 / 4',
-    for a partial set)."""
+    before it (from 1 for the first). A view whose sheets would take numbers already given follows the highest one
+    (two sheets with one number make every "-> sheet n" ambiguous; ``core.folio-duplicate``). The total is the
+    ``total_folios`` given (the largest, never less than the last sheet: '7 / 6' would be false), else the last
+    sheet when the set starts at 1, else none ('3', not '3 / 4', for a partial set)."""
     numbers: list[int] = []
     for v, n in views:
         start = v.first_folio if "first_folio" in v.model_fields_set or not numbers else numbers[-1] + 1
+        if set(range(start, start + n)) & set(numbers):
+            start = max(numbers) + 1
         numbers += range(start, start + n)
     given = [v.total_folios for v, _ in views if v.total_folios]
     last = max(numbers, default=0)
@@ -227,7 +230,7 @@ def _render_sheets(doc: Document, view: View, lang: str) -> tuple[list[Page], li
         incoming_ref: tuple[Optional[int], Optional[str]] = (None, None)
         if i > 1 and spec.roots and not spec.continuation and index.parent.get(spec.roots[0].id or ""):
             rid = spec.roots[0].id  # a board drawn on its own sheet (not a group of trees): fed from another one
-            src = next((j for j, s in enumerate(specs, 1) if rid in s.detached and j != i), None)
+            src = feeding_sheet(specs, i, rid, index, folio_of_node)
             incoming_ref = (src, index.parent.get(rid or ""))
             feeder = next((a for a in index.ancestors(rid or "") if a.ref), None)
             what = _t("render.incoming_from", lang, ref=feeder.ref) if feeder is not None else _t("render.incoming", lang)

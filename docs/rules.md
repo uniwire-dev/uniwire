@@ -41,7 +41,7 @@ house.uniwire.json: 2 finding(s)
 
 In Python, a `Finding` has the attributes `level`, `rule`, `message`, `node` and `source`. Rules based on a
 standard carry a `source` (the document and clause the rule relies on) and a `confidence` (`high` or
-`medium`), available in `uniwire.rules.RULE_INFO`. Messages are translated: set `UNIWIRE_LANG` to `fr`, `de`, `es`, `pt`, `ru` or `zh`.
+`medium`), available in `uniwire.rules.RULE_INFO`. Messages are translated: set `UNIWIRE_LANG` to `fr`, `de`, `es`, `pt`, `it`, `nl`, `pl`, `tr`, `ru` or `zh`.
 
 An unknown profile name produces a `profile` warning.
 
@@ -50,12 +50,16 @@ An unknown profile name produces a `profile` warning.
 | Rule | Check | Level |
 |---|---|---|
 | `core.ref-unique` | A reference designation is unique within a board (it may repeat across boards) | warning |
+| `core.folio-duplicate` | Two views do not start at the same sheet number (`first_folio`); the later one is numbered after the sheets before it | warning |
 | `core.rating-cascade` | A breaker, RCBO or fuse does not have a higher rating than the protective device directly upstream | warning |
 | `core.transfer-target` | A `transfer` link ends on a `transfer_switch` | error |
 | `core.transfer-source` | A transfer switch receives a second source (`transfer` link) | warning |
 | `core.tie-device` | A `tie` link describes its coupling device | info |
 | `core.scope` | The document describes control circuits (contactors or relays fed by a control power supply and switching nothing, coils, push buttons or signal lamps entered as loads): uniwire draws power distribution, not control schematics, so they are only summarized | info |
 | `core.phases-feeder` | A three-phase load (`phases: 3`) is fed by a circuit with three phases: not by a single-phase one (`1P+N` or `2P` protection, `3G` cable, single-phase supply); a drive or a converter in between makes its own phases | warning |
+| `core.view-direction` | A view asks for a left-right drawing (`direction` `right` or `left`): it is drawn top-down, left-right drawing is not available yet | info |
+| `core.neutral-missing` | A device with a neutral pole (`1P+N`, `3P+N`) is on a network that has no neutral (`system` `3P` or `2P`, declared on the device, a board, a source or the installation, and not made by a transformer or converter in between) | warning |
+| `core.load-current` | The current of a load (`p_kW` per item: `count` items of a load add up, a protection with `count` stands for that many circuits each feeding the load; `cos_phi` when given) is not more than 10% above the rating of the overcurrent protection that feeds it alone, on the same network (no converter, drive or starter in between), at the voltage of the load (`un_V`) or of the network of its protection (board, source, transformer secondary, installation); where a circuit may be single-phase or between two phases, at the higher voltage; DC circuits only with the load's `un_V` | warning |
 | `core.terminal-node` | PV arrays, batteries, SPDs and earth electrodes feed nothing (a battery root of `sources`, the only source of a DC system, may) | warning |
 | `core.normalized` | A near-miss value was read in its canonical form on load: `poles: 2` as `"2P"`, `cable.cores: 3` as `"3G"`, `"3G2.5"` as `"3G"` plus `section_mm2: 2.5`, a `[15, 45]` range as `"15-45"`, a view `type`/`single_line` as `kind`/`single-line`, `meta.description` as a note, a number written for a text as that text, a text too long for `symbol_text` without its spaces, else as its initials (`"Air conditioner"` as `"AC"`), else its beginning, and in an object a single unknown field beside a single missing required one under the missing name. Ambiguous values are not guessed: validation rejects them. `uniwire normalize` writes the canonical form | warning |
 | `core.interlock` | Nodes and links sharing a `locks` key: no more members closed in normal operation than the interlock has `keys` (SPEC §4.1); a declared interlock is used by at least 2 members; an undeclared lock is not alone | error / warning |

@@ -192,7 +192,7 @@
                               "children": [
                                 {
                                   "type": "load", "ref": "-E7", "label": "Gas cooler EC fans (x6)",
-                                  "symbol_text": "EC", "p_kW": 9, "count": 6, "location": "Roof"
+                                  "symbol_text": "EC", "p_kW": 1.5, "count": 6, "location": "Roof"
                                 }
                               ]
                             },
