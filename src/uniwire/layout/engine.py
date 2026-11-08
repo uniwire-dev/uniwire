@@ -329,8 +329,8 @@ def _up_to_board(node: NodeBase, index: Index) -> list[NodeBase]:
     down = chain[:end + 1][::-1]  # from the board down to the node
     head = True
     for k, (p, c) in enumerate(zip(down, down[1:])):
-        head = head and len(p.children) == 1
-        if beyond_board(SimpleNamespace(node=c), SimpleNamespace(node=p), head):
+        p_head, head = head, head and len(p.children) == 1
+        if beyond_board(SimpleNamespace(node=c), SimpleNamespace(node=p), head, p_head):
             return down[k + 1:][::-1]
     return chain[:end + 1]
 
@@ -556,17 +556,18 @@ REMOTE_EQUIPMENT = {"inverter", "transformer", "ups", "transfer_switch", "busbar
 BESIDE_TYPES = SIDE_TYPES | DC_ACCESSORIES | {"instrument_transformer", "controller", "plc"}
 
 
-def beyond_board(ln: Any, parent: Any, head: bool) -> bool:
+def beyond_board(ln: Any, parent: Any, head: bool, parent_head: bool = False) -> bool:
     """Whether the layout node ``ln`` (child of ``parent``) is equipment at the far end of a cable from its board:
     an inverter, a UPS, a transformer fed at high voltage... with a cable of its own or after a device with one (the
     cable of the board itself is its incoming one). What it feeds is outside the board too. ``head``: ``ln`` is the
-    board's only child, or the only child of that one, and so on: a busbar there is the board's own."""
+    board's only child, or the only child of that one, and so on: a busbar there is the board's own; ``parent_head``:
+    the parent is in that chain (its cable is the board's incoming one)."""
     n, p = ln.node, parent.node
     if n is None or p is None or (head and n.type == "busbar"):
         return False
     after_cable = p.type != "board" and bool(getattr(p, "cable", None))
     if not _remote(n):  # a local switch at the far end of the cable, in front of the equipment, goes with it
-        return after_cable and _leads_to_remote(n)
+        return not parent_head and after_cable and _leads_to_remote(n)
     return bool(getattr(n, "cable", None)) or after_cable
 
 
@@ -577,28 +578,29 @@ def _remote(n: Any) -> bool:
 
 
 def _leads_to_remote(n: Any) -> bool:
-    """Whether the only way out of ``n`` (accessories beside it apart) leads to such equipment."""
+    """Whether the only way out of ``n`` (accessories beside it apart) leads to such equipment (a busbar or
+    busway is not: it is what the cable feeds, not equipment behind a local switch)."""
     while not _remote(n):
         ways = [c for c in n.children if c.children or c.type not in BESIDE_TYPES]
         if len(ways) != 1 or n.type == "board" or getattr(n, "cable", None):
             return False
         n = ways[0]
-    return True
+    return n.type != "busbar"
 
 
 def board_parts(board: Any) -> Iterator[tuple[Any, bool]]:
     """The nodes under ``board`` down to its sub-boards, loads and equipment beyond a cable: (node, inside), the
     sub-boards and that equipment with ``inside`` False (not descended into)."""
-    def heads(n: Any, head: bool) -> list[tuple[Any, Any, bool]]:
+    def heads(n: Any, head: bool) -> list[tuple[Any, Any, bool, bool]]:
         # the head goes on through the only way of n; an accessory beside it with nothing below it (a surge
         # protector, a meter, an insulation monitor, an earth bar, a controller...) does not end it
         ways = [c for c in n.children if c.children or c.type not in BESIDE_TYPES]
-        return [(c, n, head and ways == [c]) for c in n.children]
+        return [(c, n, head and ways == [c], head) for c in n.children]
 
     stack = heads(board, True)
     while stack:
-        n, p, head = stack.pop()
-        if n.is_board or beyond_board(n, p, head):
+        n, p, head, p_head = stack.pop()
+        if n.is_board or beyond_board(n, p, head, p_head):
             yield n, False
             continue
         yield n, True
