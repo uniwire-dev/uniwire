@@ -47,7 +47,7 @@ def test_normally_open_link_dashed_with_its_device(tmp_path):
     assert any(abs(a / b - 2.5) < 0.01 for a, b in dashes)
     for dev in ("X21", "X22", "X13"):  # the removable links carried by the infeed links are drawn
         assert f'id="{dev}"' in svg
-    assert "N.O., key LA" in svg
+    assert "N.O., interlock LA" in svg  # a removable-link interlock, not a key
 
 
 def test_normally_open_annotation_in_french():
@@ -217,3 +217,20 @@ def test_continuation_of_equipment_beyond_a_cable_is_outside_the_board():
         texts = re.findall(r">([^<>]+)</text>", page_to_svg(pages[1]))
         assert "UPS1 (continued from sheet 1)" in texts, (kind, texts)  # fed through its own cable: not in TGBT
         assert "tgbt" not in boards(pages[1].root), kind
+
+
+def test_svg_states_the_language_of_the_document():
+    import xml.dom.minidom
+
+    from uniwire.render.svg import page_to_svg
+
+    def root(meta):
+        doc = load({"meta": meta, "sources": [{"type": "grid", "children": [{"type": "socket"}]}]})
+        return xml.dom.minidom.parseString(page_to_svg(render_pages(doc)[0])).documentElement
+
+    ja = root({"lang": "ja-JP"})  # browsers draw Japanese kanji in their Japanese forms, not the Chinese ones
+    assert ja.getAttribute("xml:lang") == "ja-JP" and ja.getAttribute("lang") == "ja-JP"
+    assert root({}).getAttribute("xml:lang") == "en"
+    assert root({"lang": "en_GB"}).getAttribute("xml:lang") == "en-GB"  # a valid tag, whatever was written
+    assert root({"lang": " fr "}).getAttribute("lang") == "fr"
+    assert root({"lang": "Français"}).getAttribute("xml:lang") == "en"  # not a tag: the language drawn in
