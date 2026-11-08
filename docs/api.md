@@ -193,7 +193,9 @@ symbol_sets()                                       # ['iec', 'mine']
 A factory takes the arguments of the built-in function of the same name in `uniwire.symbols` (the node first; some
 take variants, such as `motor(node, live, dc)` or `generator(node, system)`) and returns a `Symbol` in millimetres:
 input terminal at (0, 0), y pointing down, output terminal at (0, `height`), `left` and `right` its width on each
-side of the conductor. Registering again under the same name adds or replaces symbols; `iec` cannot be replaced.
+side of the conductor. A symbol that replaces `plc` keeps the `extra` values the built-in one sets (`ports`,
+`port_y`, `slot_w`): the layout places the links and widens the modules from them; the simplest way is to start from
+the built-in symbol and change its drawing. Registering again under the same name adds or replaces symbols; `iec` cannot be replaced.
 
 A package makes its set available to every program that uses uniwire with an entry point in the group
 `uniwire.symbol_sets`: its name is the set's name, its object the mapping (or a function returning it).
