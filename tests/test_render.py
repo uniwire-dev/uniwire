@@ -231,3 +231,6 @@ def test_svg_states_the_language_of_the_document():
     ja = root({"lang": "ja-JP"})  # browsers draw Japanese kanji in their Japanese forms, not the Chinese ones
     assert ja.getAttribute("xml:lang") == "ja-JP" and ja.getAttribute("lang") == "ja-JP"
     assert root({}).getAttribute("xml:lang") == "en"
+    assert root({"lang": "en_GB"}).getAttribute("xml:lang") == "en-GB"  # a valid tag, whatever was written
+    assert root({"lang": " fr "}).getAttribute("lang") == "fr"
+    assert root({"lang": "Français"}).getAttribute("xml:lang") == "en"  # not a tag: the language drawn in
