@@ -8,6 +8,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
+  inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
+  from the board was drawn on its AC side, and the inverter was drawn "=" over "~".
 * Multi-line drawings on a single-phase three-wire supply (`system` "split-phase", 100/200 V or 120/240 V): a `2P`
   device feeds a phase-to-phase circuit, without the neutral, unless something below it uses the neutral (a device
   or load on one leg, a load whose `un_V` is the phase-to-neutral voltage, a socket-outlet or lighting circuit). A
