@@ -13,6 +13,7 @@ import typing
 
 import uniwire
 from uniwire.bom import bom_csv
+from uniwire.i18n import CATALOGS
 from uniwire.render import default_view, render_pages
 from uniwire.render.svg import page_to_svg
 from uniwire.resolve import UniwireError, dump, iter_nodes, resolve
@@ -26,6 +27,14 @@ _OPTION_FIELD = re.compile(r"colou?rs?|palette", re.I)
 
 def _set_lang(lang: str) -> None:
     os.environ["UNIWIRE_LANG"] = "fr" if str(lang).lower().startswith("fr") else "en"
+
+
+def _set_doc_lang(doc) -> None:
+    """Findings in the language the document states (that of its drawing) when uniwire has it, else the
+    interface's."""
+    lang = (doc.meta.lang or "") if "lang" in doc.meta.model_fields_set else ""
+    if lang.replace("_", "-").split("-")[0].lower() in CATALOGS:
+        os.environ["UNIWIRE_LANG"] = lang
 
 
 def _split_issue(issue: str) -> dict:
@@ -163,6 +172,7 @@ def process(request: str) -> str:
         return json.dumps(res)
 
     res["stage"] = "render"
+    _set_doc_lang(doc)
     res["lang"] = doc.meta.lang or "en"
     res["title"] = doc.meta.title or ""
     paths = _node_paths(data)
@@ -219,6 +229,7 @@ def export_pdf(request: str) -> str:
     req = json.loads(request)
     _set_lang(req.get("lang", "en"))
     doc, _ = _load(req["text"])
+    _set_doc_lang(doc)
     try:
         view = default_view(doc, req.get("view") or None, req.get("kind") or None)
     except KeyError:
