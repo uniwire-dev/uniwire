@@ -201,3 +201,33 @@ def test_pdf_cjk_text(tmp_path, monkeypatch):
     page.root.add(Text((5, 10), "照明 客厅", 5))
     pdf.write_pdf([page], tmp_path / "t.pdf")
     assert b"STSong-Light" in (tmp_path / "t.pdf").read_bytes()
+
+
+@pytest.mark.parametrize("kind", ["single-line", "multi-line"])
+def test_nested_own_sheet_board_refers_to_the_sheet_of_its_feeder(kind):
+    board = {"type": "board", "own_sheet": True}
+    doc = load({"installation": {"system": "3P+N", "earthing": "TT"}, "sources": [{"type": "grid", "children": [
+        {"type": "breaker", "ref": "-Q0", "poles": "4P", "children": [dict(board, id="A", children=[
+            {"type": "breaker", "ref": "-Q1", "poles": "1P+N", "children": [{"type": "socket"}]},
+            {"type": "breaker", "ref": "-Q4", "poles": "4P", "children": [dict(board, id="B", children=[
+                {"type": "breaker", "ref": "-Q5", "poles": "1P+N", "children": [{"type": "socket"}]}])]}])]}]}]})
+    sheets = _svgs(doc, kind)
+    assert len(sheets) == 3
+    back = [g.get("data-uw-target-sheet") for g in _groups(sheets[2], "uw-ref")]
+    assert "2" in back and "1" not in back  # -Q4 feeding board B is drawn on sheet 2, with board A
+
+
+def test_transfer_link_to_another_sheet_drawn_at_both_ends():
+    feeders = [{"type": "breaker", "poles": "1P+N", "in_A": 16, "children": [{"type": "socket"}]} for _ in range(40)]
+    doc = load({"installation": {"system": "1P+N", "earthing": "TT"}, "views": [{"paper": "A4"}], "sources": [
+        {"type": "grid", "children": [{"type": "board", "children": feeders + [
+            {"type": "transfer_switch", "id": "ATS", "ref": "-QI", "poles": "2P", "children": [
+                {"type": "breaker", "poles": "1P+N", "children": [{"type": "socket"}]}]}]}]},
+        {"type": "battery", "children": [{"type": "inverter", "children": [
+            {"type": "rcbo", "id": "OUT", "ref": "-F9", "poles": "1P+N", "in_A": 16}]}]}],
+        "links": [{"from": "OUT", "to": "ATS", "kind": "transfer"}]})
+    ends = [svg for svg in _svgs(doc) if any(g.get("data-uw-kind") == "transfer" for g in _groups(svg, "uw-link"))]
+    assert len(ends) == 2  # the switch and the standby supply on two sheets: a stub at each end, naming the other
+    for svg in ends:
+        links = [g for g in _groups(svg, "uw-link") if g.get("data-uw-kind") == "transfer"]
+        assert any("→" in (t.text or "") for g in links for t in g.iter(NS + "text"))
