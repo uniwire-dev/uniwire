@@ -185,21 +185,57 @@ def _seg_cost(obs: Obstacles, a: Point, b: Point, lane: float = LANE, solid: boo
     return cost
 
 
-def _leg(obs: Obstacles, e: End, y: float, lane: float = LANE) -> tuple[float, list[Point]]:
+def _narrow(obs: Obstacles, x0: float, x1: float, lane: float) -> Obstacles:
+    """The obstacles that can count in ``_seg_cost`` for a segment between x0 and x1 (a superset, in the same
+    order: the sums, hence the costs, are exactly the same, over far fewer obstacles)."""
+    m = max(CLEAR, lane, obs.near_wire, obs.frame_clear) + 0.01
+    lo, hi = x0 - m, x1 + m
+    return Obstacles([b for b in obs.boxes if b[0] < hi and lo < b[2]],
+                     [v for v in obs.vwires if lo < v[0] < hi],
+                     [h for h in obs.hlines if h[1] < hi and lo < h[2]],
+                     [h for h in obs.buses if h[1] < hi and lo < h[2]],
+                     obs.frames, obs.near_wire,
+                     [c for c in obs.conductors if (c[0] == "v" and lo < c[1] < hi) or (c[0] == "h" and c[2] < hi and lo < c[3])],
+                     obs.box_cross, obs.frame_clear, obs.frame_along, obs.min_lane, obs.label_pad, obs.run_along,
+                     obs.label_channel, obs.grid)
+
+
+class _Costs:
+    """``_seg_cost`` over one set of obstacles that does not change, for the many segments ``route`` tries: each
+    segment on the obstacles near it (``_narrow``), and a segment met again (a stub, a leg) costed once."""
+
+    def __init__(self, obs: Obstacles, lane: float):
+        self.obs, self.lane = obs, lane
+        self.near: dict[tuple[float, float], Obstacles] = {}
+        self.done: dict[tuple, float] = {}
+
+    def __call__(self, a: Point, b: Point, solid: bool = False) -> float:
+        key = (a, b, solid)
+        if key not in self.done:
+            span = (min(a[0], b[0]), max(a[0], b[0]))
+            if span not in self.near:
+                self.near[span] = _narrow(self.obs, span[0], span[1], self.lane)
+            self.done[key] = _seg_cost(self.near[span], a, b, self.lane, solid)
+        return self.done[key]
+
+
+def _leg(obs: Obstacles, e: End, y: float, lane: float = LANE,
+         seg: Optional[_Costs] = None) -> tuple[float, list[Point]]:
     """Cheapest way from the end ``e`` to the channel height ``y``: (cost, points from e to the channel)."""
+    cost = seg or (lambda a, b: _seg_cost(obs, a, b, lane))
     if e.side == "down":
         if y < e.y + 1.0:
             return 1e9, []
-        return _seg_cost(obs, (e.x, e.y), (e.x, y), lane), [(e.x, e.y), (e.x, y)]
+        return cost((e.x, e.y), (e.x, y)), [(e.x, e.y), (e.x, y)]
     if e.side == "up":  # high enough above the busbar not to read as its extension
         if y > e.y - 4.0:
             return 1e9, []
-        return _seg_cost(obs, (e.x, y), (e.x, e.y), lane), [(e.x, e.y), (e.x, y)]
+        return cost((e.x, y), (e.x, e.y)), [(e.x, e.y), (e.x, y)]
     best: tuple[float, list[Point]] = (1e9, [])
     for s in e.stubs:
         xs = e.x + s if e.side == "right" else e.x - s
         pts = [(e.x, e.y), (xs, e.y), (xs, y)]
-        c = _seg_cost(obs, pts[0], pts[1], lane) + _seg_cost(obs, pts[1], pts[2], lane) + 0.15 * s
+        c = cost(pts[0], pts[1]) + cost(pts[1], pts[2]) + 0.15 * s
         if c < best[0]:
             best = (c, pts)
     return best
@@ -215,17 +251,18 @@ def route(obs: Obstacles, a: End, b: End, y_min: Optional[float] = None, y_max: 
     lo = min(a.y, b.y) - 30.0 if y_min is None else y_min
     hi = max(a.y, b.y) + 30.0 if y_max is None else y_max
     sub = obs.window((min(a.x, b.x) - 12.0, lo - 2.0, max(a.x, b.x) + 12.0, hi + 2.0))
+    seg = _Costs(sub, lane)
     best: tuple[float, list[Point]] = (1e18, [])
     n = int((hi - lo) / step)
     for i in range(n + 1):
         y = lo + i * step
-        ca, pa = _leg(sub, a, y, lane)
+        ca, pa = _leg(sub, a, y, lane, seg)
         if ca >= 1e9:
             continue
-        cb, pb = _leg(sub, b, y, lane)
+        cb, pb = _leg(sub, b, y, lane, seg)
         if cb >= 1e9:
             continue
-        ch = _seg_cost(sub, pa[-1], pb[-1], lane, solid)
+        ch = seg(pa[-1], pb[-1], solid)
         length = abs(y - a.y) + abs(y - b.y)
         cost = ca + cb + ch + 0.08 * length
         if cost < best[0]:
@@ -414,47 +451,56 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
 
     def run_cost(pos: float, a: float, b: float, along: list, near_l: list, frames: list, bus: list) -> float:
         """Running from a to b at ``pos`` (x of a vertical, y of a horizontal move)."""
-        c = 0.0
+        c = 0.0  # the distance tested first: most lines are too far, their overlap is not needed
         for p, v0, v1 in along:
-            ov = min(v1, b) - max(v0, a)
-            if ov > 0 and abs(p - pos) < lane / 2:
-                c += obs.run_along * ov / 3.0
+            if abs(p - pos) < lane / 2 and v0 < b and a < v1:
+                c += obs.run_along * (min(v1, b) - max(v0, a)) / 3.0
         if near:
             for p, v0, v1 in near_l:
-                ov = min(v1, b) - max(v0, a)
-                if ov > 0 and lane / 2 <= abs(p - pos) < near:
-                    c += NEAR_RUN * ov
+                if lane / 2 <= abs(p - pos) < near and v0 < b and a < v1:
+                    c += NEAR_RUN * (min(v1, b) - max(v0, a))
         for p, v0, v1 in frames:  # the closer to a frame side run along, the worse
-            ov = min(v1, b) - max(v0, a)
-            if ov > 0 and abs(p - pos) < obs.frame_clear:
+            if abs(p - pos) < obs.frame_clear and v0 < b and a < v1:
                 k = obs.frame_along * (1.0 - abs(p - pos) / obs.frame_clear) if abs(p - pos) >= lane / 2 else obs.box_cross
-                c += k * ov / FRAME_RUN
+                c += k * (min(v1, b) - max(v0, a)) / FRAME_RUN
         for p, v0, v1 in bus:  # on a busbar or hugging it
-            ov = min(v1, b) - max(v0, a)
-            if ov > 0 and abs(p - pos) < BUS_CLEAR_THIN:
-                c += RUN_ALONG * ov / FRAME_RUN
+            if abs(p - pos) < BUS_CLEAR_THIN and v0 < b and a < v1:
+                c += RUN_ALONG * (min(v1, b) - max(v0, a)) / FRAME_RUN
         return c
 
-    cache: dict[tuple[int, int, int], float] = {}
+    cache: list[Optional[float]] = [None] * (nx * ny * 2)  # edge costs, by (lower end, axis): same both ways
+    gap_x: dict[int, tuple] = {}
+    gap_y: dict[int, tuple] = {}
 
     def edge(i: int, j: int, d: int) -> float:
-        key = (min(i, i + _DIRS[d][0]), min(j, j + _DIRS[d][1]), d >> 1)  # same cost both ways
-        if key in cache:
-            return cache[key]
+        di, dj = _DIRS[d]
+        key = ((i + di if di < 0 else i) * ny + (j + dj if dj < 0 else j)) * 2 + (d >> 1)
+        c = cache[key]
+        return edge_cost(i, j, d, key) if c is None else c
+
+    def edge_cost(i: int, j: int, d: int, key: int) -> float:
         di, dj = _DIRS[d]
         i2, j2 = i + di, j + dj
         c = sub.box_cross if (i, j) in blocked or (i2, j2) in blocked else 0.0
         if dj == 0:  # horizontal, at y = ys[j]
             y, a, b = ys[j], min(xs[i], xs[i2]), max(xs[i], xs[i2])
             c += GRID_LENGTH * (b - a) + run_cost(y, a, b, *lines_at(j, False))
-            c += sum(WIRE_CROSS for x, v0, v1 in between(vw, a, b) if v0 < y < v1)
-            c += sum(FRAME_CROSS for x, v0, v1 in between(fx, a, b) if v0 < y < v1)
+            g = min(i, i2)
+            if g not in gap_x:  # the lines crossed between two grid columns, the same on every row
+                gap_x[g] = (between(vw, a, b), between(fx, a, b))
+            wires, sides = gap_x[g]
+            c += sum(WIRE_CROSS for x, v0, v1 in wires if v0 < y < v1)
+            c += sum(FRAME_CROSS for x, v0, v1 in sides if v0 < y < v1)
         else:  # vertical, at x = xs[i]
             x, a, b = xs[i], min(ys[j], ys[j2]), max(ys[j], ys[j2])
             c += GRID_LENGTH * (b - a) + run_cost(x, a, b, *lines_at(i, True))
-            c += sum(BUS_CROSS for y, h0, h1 in between(buses, a, b) if h0 < x < h1)
-            c += sum(FRAME_CROSS for y, h0, h1 in between(fy, a, b) if h0 < x < h1)
-            c += sum(WIRE_CROSS for y, h0, h1 in between(hl, a, b) if h0 < x < h1)
+            g = min(j, j2)
+            if g not in gap_y:
+                gap_y[g] = (between(buses, a, b), between(fy, a, b), between(hl, a, b))
+            bars, sides, wires = gap_y[g]
+            c += sum(BUS_CROSS for y, h0, h1 in bars if h0 < x < h1)
+            c += sum(FRAME_CROSS for y, h0, h1 in sides if h0 < x < h1)
+            c += sum(WIRE_CROSS for y, h0, h1 in wires if h0 < x < h1)
         cache[key] = c
         return c
 
@@ -468,20 +514,23 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
                 if c > 1:
                     print("  step", round(xs[i], 1), round(ys[j], 1), "dir", d, "cost", round(c, 1))
                 i, j = i + _DIRS[d][0], j + _DIRS[d][1]
-    goal_at = {(xs.index(e.x), ys.index(e.y), _ARRIVE[e.side]): k for k, e in enumerate(goals)}
+    # states (column, row, direction of the last move) numbered (i * ny + j) * 4 + d: flat arrays, not dictionaries
+    goal_at = {(xs.index(e.x) * ny + ys.index(e.y)) * 4 + _ARRIVE[e.side]: k for k, e in enumerate(goals)}
     heap: list[tuple[float, int, int, int, int]] = []
-    origin: dict[tuple[int, int, int], int] = {}
-    prev: dict[tuple[int, int, int], Optional[tuple[int, int, int]]] = {}
-    dist: dict[tuple[int, int, int], float] = {}
+    size = nx * ny * 4
+    origin = [0] * size
+    prev = [-1] * size
+    dist = [1e18] * size
     for k, e in enumerate(starts):
-        st = (xs.index(e.x), ys.index(e.y), _LEAVE[e.side])
-        dist[st], prev[st], origin[st] = 0.0, None, k
-        heapq.heappush(heap, (0.0, *st, 1))
-    found = None
+        i, j, d = xs.index(e.x), ys.index(e.y), _LEAVE[e.side]
+        st = (i * ny + j) * 4 + d
+        dist[st], prev[st], origin[st] = 0.0, -1, k
+        heapq.heappush(heap, (0.0, i, j, d, 1))
+    found = -1
     while heap:
         cost, i, j, d, fresh = heapq.heappop(heap)
-        st = (i, j, d)
-        if cost > dist.get(st, 1e18):
+        st = (i * ny + j) * 4 + d
+        if cost > dist[st]:
             continue
         if not fresh and st in goal_at:
             found = st
@@ -493,20 +542,24 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
             i2, j2 = i + di, j + dj
             if not (0 <= i2 < nx and 0 <= j2 < ny):
                 continue
-            c = cost + edge(i, j, d2) + (bend if d2 != d else 0.0)
-            s2 = (i2, j2, d2)
-            if c < dist.get(s2, 1e18):
+            key = ((i2 if di < 0 else i) * ny + (j2 if dj < 0 else j)) * 2 + (d2 >> 1)
+            e = cache[key]
+            if e is None:
+                e = edge_cost(i, j, d2, key)
+            c = cost + e + (bend if d2 != d else 0.0)
+            s2 = (i2 * ny + j2) * 4 + d2
+            if c < dist[s2]:
                 dist[s2], prev[s2], origin[s2] = c, st, origin[st]
                 heapq.heappush(heap, (c, i2, j2, d2, 0))
-    if found is None:
+    if found < 0:
         return [], 0, 0
     if cost_out is not None:
         cost_out.append(dist[found])
     path = []
-    s: Optional[tuple[int, int, int]] = found
-    while s is not None:
-        path.append((xs[s[0]], ys[s[1]]))
-        if prev[s] is None:
+    s = found
+    while s >= 0:
+        path.append((xs[s // 4 // ny], ys[s // 4 % ny]))
+        if prev[s] < 0:
             first = s
         s = prev[s]
     path.reverse()
