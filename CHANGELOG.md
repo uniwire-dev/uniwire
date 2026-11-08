@@ -11,8 +11,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Single-line drawings with a PLC: every link leaving a PLC module gets its own channel below it. A module many links
   leave is drawn wider, one wire about every 2.6 mm, and the loads go down far enough for as many channels as links
   run side by side (they were spaced a fraction of a millimetre apart, and past eight links they ran on one
-  another). The channel of each link ("2.1") is written up its wire under the module, where it is read on the
-  panel, instead of near the device at the far end.
+  another). The same for the PLC's built-in I/O (slot 0) under its head. The channel of each link ("2.1") is
+  written up its wire under the module, where it is read on the panel, instead of near the device at the far end.
+  A board frame encloses a symbol wider than its column.
 * Terminal numbers named on a device that is not a PLC module (`from_port` / `to_port` on a safety relay, a
   controller) are drawn: inside the box of a controller many links reach, by each link's point, else by the link
   near that end. Before, they were left out of the drawing.
