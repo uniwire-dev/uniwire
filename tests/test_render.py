@@ -105,6 +105,10 @@ def test_sheet_numbers_of_a_drawing_set():
     assert sheet_numbers([(partial, 2), (View(first_folio=6), 1)]) == ([3, 4, 6], 6)  # its own first sheet
     assert sheet_numbers([(View(first_folio=3), 2)]) == ([3, 4], None)  # partial set, total unknown: "3"
     assert sheet_numbers([(partial, 5)])[1] == 7  # never "7 / 6"
+    # sheets that would take numbers already given follow the highest one: never two sheets with one number
+    assert sheet_numbers([(View(first_folio=100), 2), (View(first_folio=100), 1)]) == ([100, 101, 102], None)
+    assert sheet_numbers([(View(first_folio=1), 2), (View(first_folio=2), 1)]) == ([1, 2, 3], 3)
+    assert sheet_numbers([(View(first_folio=5), 1), (View(first_folio=1), 1)]) == ([5, 1], None)  # out of order: kept
 
 
 def test_drawing_set_prints_its_sheet_numbers_in_title_blocks_and_references():
@@ -120,3 +124,96 @@ def test_drawing_set_prints_its_sheet_numbers_in_title_blocks_and_references():
     assert "3 / 20" in texts
     refs = [int(m) for t in texts for m in re.findall(r"sheet (\d+)", t)]
     assert refs and all(3 < r < 3 + n for r in refs)  # the sheets of the view as printed, not their position
+
+
+def test_free_spare_way_is_not_drawn_as_a_conductor():
+    from uniwire.render.scene import Group, Line, Polyline
+
+    def edge(g, nid):
+        if isinstance(g, Group):
+            if g.attrs.get("data-uw-edge") == nid:
+                return g
+            return next((e for c in g.items if (e := edge(c, nid)) is not None), None)
+        return None
+
+    def strokes(g):
+        return [i for i in g.items if isinstance(i, (Line, Polyline))] + \
+            [s for i in g.items if isinstance(i, Group) for s in strokes(i)]
+
+    for kind in ("single-line", "multi-line"):
+        doc = load({"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230}, "sources": [{"type": "grid", "children": [
+            {"type": "board", "ref": "TD", "children": [
+                {"type": "breaker", "id": "q1", "in_A": 16, "children": [{"type": "socket"}]},
+                {"type": "spare", "id": "free"}, {"type": "spare", "id": "kept", "in_A": 16},
+                {"type": "spare", "id": "poles", "poles": "2P"},
+                {"type": "breaker", "id": "q2", "in_A": 16, "children": [{"type": "spare", "id": "q2way"}]}]}]}],
+            "views": [{"id": "v", "kind": kind}]})
+        root = render_pages(doc)[0].root
+        assert all(s.style.dash for s in strokes(edge(root, "free"))), kind  # a free space, dashed
+        assert not any(s.style.dash for s in strokes(edge(root, "q1"))), kind
+        assert not any(s.style.dash for s in strokes(edge(root, "poles"))), kind  # its poles: a device is there
+        assert not any(s.style.dash for s in strokes(edge(root, "q2way"))), kind  # the spare way of a device
+
+
+def test_continuation_sheet_keeps_the_board_frame_and_name():
+    from uniwire.render.scene import Group
+    from uniwire.render.svg import page_to_svg
+
+    def boards(g):
+        if isinstance(g, Group):
+            return ([g.id] if g.cls and "board" in g.cls.split() else []) + [b for c in g.items for b in boards(c)]
+        return []
+
+    feeders = [{"type": "breaker", "ref": f"-Q{i}", "in_A": 16, "children": [{"type": "socket"}]} for i in range(40)]
+    for kind in ("single-line", "multi-line"):
+        doc = load({"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230}, "sources": [{"type": "grid", "children": [
+            {"type": "board", "id": "td", "ref": "TD", "children": [{"type": "rcd", "ref": "-F1", "in_A": 63, "idn_mA": 30,
+                                                                     "children": feeders}]}]}],
+            "views": [{"id": "v", "kind": kind}]})
+        pages = render_pages(doc)
+        assert len(pages) > 1
+        texts = re.findall(r">([^<>]+)</text>", page_to_svg(pages[1]))
+        assert any(t.startswith("TD (") for t in texts) and not any(t.startswith("-F1 (") for t in texts), kind
+        if kind == "single-line":
+            assert "td" in boards(pages[1].root)  # the busbar is in the board: its frame on this sheet too
+
+
+def test_continuation_of_a_row_of_the_board_names_the_board_and_the_row():
+    from uniwire.render.svg import page_to_svg
+
+    def ways(n, p):
+        return [{"type": "breaker", "ref": f"-{p}{i}", "in_A": 16, "children": [{"type": "socket"}]} for i in range(n)]
+
+    for kind in ("single-line", "multi-line"):
+        doc = load({"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230}, "sources": [{"type": "grid", "children": [
+            {"type": "board", "ref": "TD", "children": [
+                {"type": "rcd", "ref": "-ID1", "in_A": 40, "idn_mA": 30, "children": ways(4, "Qa")},
+                {"type": "rcd", "ref": "-ID2", "in_A": 63, "idn_mA": 30, "children": ways(40, "Qb")}]}]}],
+            "views": [{"id": "v", "kind": kind, "paper": "A4"}]})
+        pages = render_pages(doc)
+        assert len(pages) > 1
+        texts = re.findall(r">([^<>]+)</text>", page_to_svg(pages[1]))
+        assert "TD, -ID2 (continued from sheet 1)" in texts, (kind, texts)
+
+
+def test_continuation_of_equipment_beyond_a_cable_is_outside_the_board():
+    from uniwire.render.scene import Group
+    from uniwire.render.svg import page_to_svg
+
+    def boards(g):
+        if isinstance(g, Group):
+            return ([g.id] if g.cls and "board" in g.cls.split() else []) + [b for c in g.items for b in boards(c)]
+        return []
+
+    ways = [{"type": "breaker", "ref": f"-Q{i}", "in_A": 16, "children": [{"type": "socket"}]} for i in range(40)]
+    for kind in ("single-line", "multi-line"):
+        doc = load({"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230}, "sources": [{"type": "grid", "children": [
+            {"type": "board", "id": "tgbt", "ref": "TGBT", "children": [
+                {"type": "breaker", "ref": "-Q1", "in_A": 63, "cable": {"section_mm2": 16, "cores": "3G"}, "children": [
+                    {"type": "ups", "ref": "UPS1", "sn_kVA": 10, "children": ways}]},
+                {"type": "breaker", "ref": "-Q2", "in_A": 16, "children": [{"type": "socket"}]}]}]}],
+            "views": [{"id": "v", "kind": kind, "paper": "A4"}]})
+        pages = render_pages(doc)
+        texts = re.findall(r">([^<>]+)</text>", page_to_svg(pages[1]))
+        assert "UPS1 (continued from sheet 1)" in texts, (kind, texts)  # fed through its own cable: not in TGBT
+        assert "tgbt" not in boards(pages[1].root), kind
