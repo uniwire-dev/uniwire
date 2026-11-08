@@ -232,3 +232,16 @@ def test_board_of_a_supply_on_a_transfer_switch_is_framed():
     assert len(frames) == 2  # the standby board drawn beside the changeover is framed too
     (a0, b0), (a1, b1) = sorted((f.x, f.x + f.w) for f in frames)
     assert b0 < a1  # side by side, not overlapping
+
+
+def test_link_route_keeps_off_a_busbar():
+    """A route close enough to a busbar to be read as part of it (on it, or less than a lane away) is paid for:
+    a link drawn there joins what the busbar feeds."""
+    from uniwire.layout.routing import BUS_CLEAR_THIN, End, Obstacles, route_grid
+
+    obs = Obstacles()
+    obs.add_hline(10.0, 20.0, 80.0, bus=True)
+    pts, _, _ = route_grid(obs, [End(10.0, 9.0, "right")], [End(90.0, 9.0, "left")], (0.0, 0.0, 100.0, 20.0),
+                           record=False)
+    over = [p[1] for p, q in zip(pts, pts[1:]) if p[1] == q[1] and min(p[0], q[0]) < 80.0 and max(p[0], q[0]) > 20.0]
+    assert over and all(abs(y - 10.0) >= BUS_CLEAR_THIN for y in over)
