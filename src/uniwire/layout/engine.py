@@ -297,7 +297,7 @@ def _spread_symbol(doc: Document, node: Optional[NodeBase], sym: Symbol, here: O
     if node is not None and sym.name == "plc" and node.id:  # a module many links leave: wider, one wire each
         wired = Counter(_port_slot(None, p, sym) for l in doc.links
                         for nid, p in ((l.from_, l.from_port), (l.to, l.to_port)) if nid == node.id and p)
-        return plc(node, dict(wired)) if any(c > 1 for s, c in wired.items() if s) else sym
+        return plc(node, dict(wired)) if any(c > 1 for s, c in wired.items() if s is not None) else sym
     if node is None or sym.name != "controller" or not node.id:
         return sym
     ids = _signal_links(doc, node.id)
@@ -1733,6 +1733,8 @@ def _frame_box(b: LNode) -> tuple[float, float, float, float]:
         ab = n.ann_box()
         if ab:
             x1 = max(x1, ab[2] + 1.0)
+        if n.kind == "node":  # a symbol wider than its column (a PLC with many wires) stays inside
+            x0 = min(x0, n.x - n.sym.left - 1.0)
     if b.frame_reach is not None:  # taps of feeds on its busbar, beyond its end (see _feed_taps)
         x1 = max(x1, b.frame_reach + 1.0)
     if b.frame_left is not None:

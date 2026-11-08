@@ -684,6 +684,9 @@ def plc(node: Any = None, wired: Optional[dict[int, int]] = None) -> Symbol:
     if len(label) > 10:  # 'Automation Series 7' -> 'Automation': the head shows the family, the annotation the rest
         label = label.split()[0][:12]
     head_w = max(7.0, text_width(label, 1.5) * 1.1 + 1.2)  # wide enough for the family name (bold)
+    built_in = (wired or {}).get(0, 1)  # links leaving the built-in I/O (slot 0): under the head
+    if built_in > 1:
+        head_w = max(head_w, 2 * PORT_EDGE + (built_in - 1) * PORT_STEP)
     widths = [max(PLC_SLOT_W, 2 * PORT_EDGE + (c - 1) * PORT_STEP) if c > 1 else PLC_SLOT_W
               for m in modules for c in [(wired or {}).get(m.slot, 1)]]
     w = head_w + sum(widths)

@@ -11,16 +11,17 @@ from uniwire.render import render_views
 from uniwire.render.scene import Group, Line, Rect, Text
 
 
-def panel(motors: int, drives: int, feedback: bool = True) -> dict:
+def panel(motors: int, drives: int, feedback: bool = True, out_slot: int = 2) -> dict:
     """A machine panel: ``motors`` started by contactors the PLC drives (and reads back), ``drives`` speed drives on
-    a fieldbus, every contactor and drive also stopped by a safety relay through its own terminal."""
+    a fieldbus, every contactor and drive also stopped by a safety relay through its own terminal. ``out_slot``:
+    the module driving the contactors (0: the PLC's built-in outputs)."""
     feeders, links = [], []
     for i in range(1, motors + 1):
         feeders.append({"type": "breaker", "id": f"Q{i}", "ref": f"-Q{i}", "in_A": 10, "curve": "D", "poles": "3P",
                         "children": [{"type": "contactor", "id": f"K{i}", "ref": f"-K{i}", "in_A": 12, "poles": "3P",
                                       "children": [{"type": "motor", "ref": f"-M{i}", "label": f"Belt {i}",
                                                     "p_kW": 2.2}]}]})
-        links.append({"kind": "control", "from": "PLC", "from_port": f"2.{i}", "to": f"K{i}", "label": f"Run {i}"})
+        links.append({"kind": "control", "from": "PLC", "from_port": f"{out_slot}.{i}", "to": f"K{i}", "label": f"Run {i}"})
         if feedback:
             links.append({"kind": "measure", "from": f"K{i}", "to": "PLC", "to_port": f"1.{i}", "label": f"Fb {i}"})
         links.append({"kind": "trip", "from": "SR", "from_port": f"S{i}", "to": f"K{i}"})
@@ -91,6 +92,17 @@ def test_a_module_many_links_leave_is_drawn_wider():
     busy = render_views(load(panel(10, 0)))[0]
     w = [_box(_node(p.root, "PLC"))[2] - _box(_node(p.root, "PLC"))[0] for p in (plain, busy)]
     assert w[1] > w[0] + 2 * 9 * 2.0  # ten wires leaving two modules: about 2.6 mm apart
+
+
+def test_built_in_outputs_many_links_leave_widen_the_head_inside_the_frame():
+    """Many links leaving the PLC's built-in I/O (slot 0): its head is drawn wider, their numbers apart from one
+    another (they were written on one another), the frame of the board round it."""
+    page = render_views(load(panel(10, 0, feedback=False, out_slot=0)))[0]
+    assert [f for f in audit(page.root) if f.kind in ("text_overlap", "text_crossed")] == []
+    plc = _box(_node(page.root, "PLC"))
+    frames = [r for r, _l, _o in _walk(page.root) if isinstance(r, Rect) and r.style.dash
+              and r.x < plc[0] + 1e-6 and plc[2] < r.x + r.w]
+    assert frames, "the PLC sticks out of its board's frame"
 
 
 def test_terminal_numbers_of_a_controller_are_written_inside_it():
