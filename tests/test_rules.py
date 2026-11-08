@@ -708,3 +708,28 @@ def test_views_starting_at_the_same_sheet_number():
     assert [f.rule for f in check(load(doc)) if f.rule == "core.folio-duplicate"] == ["core.folio-duplicate"]
     doc["views"] = [{"id": "ml", "kind": "multi-line"}, {"id": "sld"}]  # the second follows the first
     assert not [f for f in check(load(doc)) if f.rule == "core.folio-duplicate"]
+
+
+def test_views_whose_sheets_overlap_the_ones_before():
+    from uniwire.render import render_views
+    board = {"type": "breaker", "in_A": 40, "children": [{"type": "board", "id": "B", "own_sheet": True, "children": [
+        {"type": "breaker", "in_A": 16, "children": [{"type": "socket"}]}]}]}
+    doc = {"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230},
+           "sources": [{"type": "grid", "children": [board]}]}
+
+    def found(views):
+        return [(f.rule, f.message) for f in check(load({**doc, "views": views}))
+                if f.rule in ("core.folio-overlap", "core.folio-duplicate")]
+
+    assert len(render_views(load(doc))) == 2  # the board on its own sheet: a view has two sheets
+    (rule, msg), = found([{"id": "a", "first_folio": 10}, {"id": "b", "first_folio": 11}])  # 11: the 2nd of 'a'
+    assert rule == "core.folio-overlap" and "'b'" in msg and "'a'" in msg and "12" in msg
+    assert found([{"id": "a", "first_folio": 10}, {"id": "b", "first_folio": 12}]) == []  # follows on
+    assert found([{"id": "a", "first_folio": 10}, {"id": "b", "first_folio": 1}]) == []  # an earlier range, free
+    # runs into the one before: 'b' asks for 9 and 10 while 'a' has 10 and 11
+    assert [r for r, _ in found([{"id": "a", "first_folio": 10}, {"id": "b", "first_folio": 9}])] == [
+        "core.folio-overlap"]
+    # same first sheet: core.folio-duplicate only, not both
+    assert [r for r, _ in found([{"id": "a", "first_folio": 10}, {"id": "b", "first_folio": 10}])] == [
+        "core.folio-duplicate"]
+    assert found([{"id": "a"}, {"id": "b"}]) == []  # no first_folio after the first: nothing laid out, no clash

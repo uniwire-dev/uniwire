@@ -31,6 +31,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   drawn as before. A package that fails to load, or a symbol that fails to draw, gives the IEC symbol and the
   warning `core.symbol-set-error`. In multi-line views, switching and protective devices are drawn pole by pole and
   do not take the set's symbols.
+* Drawing sets: a new warning, `core.folio-overlap`, says when a view is numbered after the views before it
+  because its sheets would take numbers already given to them (a `first_folio` inside their range, or a view of
+  several sheets running into the first sheet of the next). Before, only two views starting at the same number were
+  reported (`core.folio-duplicate`) and the other cases were renumbered silently.
 * Single-line conductor marks: the line leaving the supply of the installation carries the system declared on that
   line, else the installation's (before, a single-phase or DC board further down made it a two-conductor line); a
   standby or lower-voltage source still takes the system declared below it. The secondary of a transformer

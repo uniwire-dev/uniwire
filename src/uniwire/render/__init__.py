@@ -123,16 +123,43 @@ def sheet_numbers(views: list[tuple[View, int]]) -> tuple[list[int], Optional[in
     (two sheets with one number make every "-> sheet n" ambiguous; ``core.folio-duplicate``). The total is the
     ``total_folios`` given (the largest, never less than the last sheet: '7 / 6' would be false), else the last
     sheet when the set starts at 1, else none ('3', not '3 / 4', for a partial set)."""
-    numbers: list[int] = []
-    for v, n in views:
-        start = v.first_folio if "first_folio" in v.model_fields_set or not numbers else numbers[-1] + 1
-        if set(range(start, start + n)) & set(numbers):
-            start = max(numbers) + 1
-        numbers += range(start, start + n)
+    numbers = [k for nums in _view_numbers(views)[0] for k in nums]
     given = [v.total_folios for v, _ in views if v.total_folios]
     last = max(numbers, default=0)
     total = max(given + [last]) if given else (last if numbers and numbers[0] == 1 else None)
     return numbers, total
+
+
+def _view_numbers(views: list[tuple[View, int]]) -> tuple[list[list[int]], list[tuple[int, int, int, int]]]:
+    """Printed numbers of the sheets of each view (see :func:`sheet_numbers`), and the views renumbered because
+    their sheets would take numbers already given: (view, its wanted first sheet, the earlier view holding one of
+    those numbers, its first sheet as printed), views by position."""
+    per_view: list[list[int]] = []
+    moved: list[tuple[int, int, int, int]] = []
+    numbers: list[int] = []
+    for i, (v, n) in enumerate(views):
+        start = v.first_folio if "first_folio" in v.model_fields_set or not numbers else numbers[-1] + 1
+        wanted = set(range(start, start + n))
+        if wanted & set(numbers):
+            other = next(j for j, nums in enumerate(per_view) if wanted & set(nums))
+            moved.append((i, start, other, max(numbers) + 1))
+            start = max(numbers) + 1
+        per_view.append(list(range(start, start + n)))
+        numbers += per_view[-1]
+    return per_view, moved
+
+
+def renumbered_views(doc: Document) -> list[tuple[int, int, int, int]]:
+    """Views of ``doc`` whose sheets would take numbers already given to the views before them, so are numbered
+    after them (``core.folio-overlap``): (view, wanted first sheet, earlier view, printed first sheet), views by
+    their position in ``doc.views``. It needs the number of sheets of each view, so lays them out (kept for the
+    drawing that usually follows); only done when a view after the first gives its own ``first_folio``, the one
+    case where numbers can clash."""
+    views = list(doc.views)
+    if not any("first_folio" in v.model_fields_set for v in views[1:]):
+        return []
+    counts = [(v, len(_view_pages(doc, v))) for v in views]
+    return _view_numbers(counts)[1]
 
 
 def number_sheets(pages: list[Page], views: list[tuple[View, int]]) -> None:
