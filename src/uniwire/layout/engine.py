@@ -527,6 +527,9 @@ def _shift(ln: LNode, dy: float) -> None:
 
 # equipment that is not a way of the board feeding it when a cable joins them: drawn below the board frame
 REMOTE_EQUIPMENT = {"inverter", "transformer", "ups", "transfer_switch", "busbar"}
+# beside a board's incoming chain, with nothing below them, they do not make it a branch: accessories,
+# measurement, control
+BESIDE_TYPES = SIDE_TYPES | DC_ACCESSORIES | {"instrument_transformer", "controller", "plc"}
 
 
 def beyond_board(ln: Any, parent: Any, head: bool) -> bool:
@@ -545,14 +548,20 @@ def beyond_board(ln: Any, parent: Any, head: bool) -> bool:
 def board_parts(board: Any) -> Iterator[tuple[Any, bool]]:
     """The nodes under ``board`` down to its sub-boards, loads and equipment beyond a cable: (node, inside), the
     sub-boards and that equipment with ``inside`` False (not descended into)."""
-    stack = [(c, board, len(board.children) == 1) for c in board.children]
+    def heads(n: Any, head: bool) -> list[tuple[Any, Any, bool]]:
+        # the head goes on through the only way of n; an accessory beside it with nothing below it (a surge
+        # protector, a meter, an insulation monitor, an earth bar, a controller...) does not end it
+        ways = [c for c in n.children if c.children or c.type not in BESIDE_TYPES]
+        return [(c, n, head and ways == [c]) for c in n.children]
+
+    stack = heads(board, True)
     while stack:
         n, p, head = stack.pop()
         if n.is_board or beyond_board(n, p, head):
             yield n, False
             continue
         yield n, True
-        stack.extend((c, n, head and len(n.children) == 1) for c in n.children)
+        stack.extend(heads(n, head))
 
 
 def _owned(board: LNode) -> Iterator[LNode]:
