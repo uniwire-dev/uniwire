@@ -116,7 +116,8 @@ def ref_label(ref: Optional[str], label: Optional[str]) -> str:
 def without_ref(label: str, ref: Optional[str]) -> str:
     """``label`` without a leading copy of the tag printed above it ('TX-A 3150 kVA' under 'TX-A')."""
     if ref and label.startswith(ref) and (len(label) == len(ref) or label[len(ref)] in " -:,/"):
-        return label[len(ref):].strip(" -:,/")
+        # separators after the tag, a dash only as a separator ("-Q1 - feeders"), not the start of a second tag
+        return re.sub(r"^[\s:,/]*(?:-\s+)?", "", label[len(ref):]).rstrip()
     return label
 
 
