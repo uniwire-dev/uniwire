@@ -8,6 +8,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line conductor marks: the line leaving a source carries the system declared on that line, else the
+  installation's (before, a single-phase board further down made it a two-conductor line), and the secondary of a
+  transformer carries its vector group (`coupling` "Dyn11": four conductors) instead of the system of a three-wire
+  board below it.
 * Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
   inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
   from the board was drawn on its AC side, and the inverter was drawn "=" over "~".

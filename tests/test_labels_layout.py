@@ -404,6 +404,29 @@ def test_mark_below_a_transformer_not_the_installation_system():
     assert _mark_texts(doc)["L"] == []
 
 
+
+def test_mark_at_the_source_and_below_a_transformer():
+    """The line leaving a source carries the installation's system, not that of a single-phase board further
+    down; the secondary of a transformer carries its vector group (Dyn11: four conductors), not the system of a
+    three-wire board below it."""
+    sub = {"type": "breaker", "poles": "1P+N", "children": [{"type": "board", "system": "1P+N", "children": [
+        {"type": "breaker", "in_A": 16, "children": [{"type": "socket"}]}]}]}
+    doc = load({"installation": {"system": "3P+N", "earthing": "TN-S"}, "sources": [{"type": "grid", "id": "G", "children": [
+        {"type": "main_breaker", "in_A": 100, "children": [{"type": "board", "children": [
+            {"type": "breaker", "poles": "4P", "children": [{"type": "motor", "p_kW": 11}]}, sub]}]}]}]})
+    assert dict(_marks(doc))["G"] == "cm-4"
+    hv = load({"installation": {"system": "3P+N", "earthing": "TN-S"}, "sources": [{"type": "grid", "id": "G", "children": [
+        {"type": "breaker", "poles": "3P", "children": [{"type": "busbar", "system": "3P", "children": [
+            {"type": "breaker", "children": [{"type": "load"}]}, {"type": "breaker", "children": [{"type": "load"}]}]}]}]}]})
+    assert dict(_marks(hv))["G"] == "cm-3"  # a system declared on the line leaving the source is that line's
+    mcc = {"type": "breaker", "poles": "3P", "children": [{"type": "board", "system": "3P", "children": [
+        {"type": "breaker", "poles": "3P", "children": [{"type": "motor", "p_kW": 5.5}]}]}]}
+    doc = load({"installation": {"system": "3P+N", "earthing": "TN-S"}, "sources": [{"type": "grid", "un_V": 20000, "children": [
+        {"type": "transformer", "id": "T", "u1_V": 20000, "u2_V": 400, "coupling": "Dyn11", "children": [
+            {"type": "main_breaker", "in_A": 630, "children": [{"type": "board", "children": [
+                mcc, {"type": "breaker", "poles": "1P+N", "children": [{"type": "socket"}]}]}]}]}]}]})
+    assert dict(_marks(doc))["T"] == "cm-4"
+
 def test_three_pole_device_with_neutral_downstream():
     from uniwire.labels import feeder_mark, poles_mark
     assert poles_mark("3P", True) == (3, True) and poles_mark("3P") == (3, False) and poles_mark("4P") == (4, False)
