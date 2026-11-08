@@ -8,6 +8,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings on several sheets: a `tie` link between two devices or boards (not busbars) whose ends are on two sheets
+  is drawn at both ends, with a stub naming the other end and its sheet. Before, it was not drawn at all.
 * Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
   inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
   from the board was drawn on its AC side, and the inverter was drawn "=" over "~".
