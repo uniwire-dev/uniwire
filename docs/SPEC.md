@@ -3,7 +3,7 @@ title: "Specification: electrical installations in JSON"
 description: "The uniwire format: a JSON power tree of sources, devices and loads, plus links, that describes an electrical installation and its diagrams."
 ---
 
-# uniwire format specification, version 1.1
+# uniwire format specification, version 1.2
 
 > Open exchange format for **describing electrical installations**, drawn as single-line and multi-line
 > diagrams (residential, commercial and industrial LV, with an MV/LV transformer at the head, standby sources, PV, EV charging (IRVE)).
@@ -40,7 +40,7 @@ The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are to be interpret
 ```json
 {
   "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
-  "uniwire": "1.1.0",
+  "uniwire": "1.2.0",
   "profiles": ["nfc15100"],
   "meta": { ... },
   "installation": { ... },
@@ -55,8 +55,9 @@ The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are to be interpret
 | Key | Required | Purpose |
 |---|---|---|
 | `$schema` | no | Schema URL (the major version appears in the path: `/v1/`) |
-| `uniwire` | no (default `1.1.0`) | Format version, semver `1.x.y` |
+| `uniwire` | no (default `1.2.0`) | Format version, semver `1.x.y` |
 | `profiles` | no | Business rule profiles to apply (`nfc15100`, `vde0100`, `iec60364`, `enedis`…) |
+| `symbols` | no (default `iec`) | Symbol set of the drawing *(1.2)* (§7.3) |
 | `meta` | no | Title, project, client, author, date, `revisions[]`, `notes[]`, `lang` |
 | `installation` | no | `earthing` (TT, TN-C, TN-S, TN-C-S, IT), `system` (1P+N, 3P+N…), `un_V`, `f_Hz`, `supply`, `subscribed_kVA`, `planned_kVA`, `ik3_kA`, `earth_resistance_ohm`, `surface_m2`, `standard`, `premises` (dwelling, commercial, office, industrial, public, agricultural, other: dwelling rules apply to `dwelling` or when absent) |
 | `templates` | no | Named attribute templates |
@@ -472,6 +473,15 @@ do not renumber printed ferrules (with `keep_manual`, the view then gives the sa
 
 Without `--view`, the rules of the first view that declares `wire_marking` apply (none: manual marks only).
 
+### 7.3 Symbol sets
+
+`symbols` names the set of symbols the document is drawn with. `iec` (the default) is the set built into the
+reference library, after IEC 60617. Other sets are registered by packages installed beside the library
+(entry point group `uniwire.symbol_sets`, see the API documentation); a set may give only some symbols, the
+others are drawn from `iec`. A set that is not installed does not refuse the document: it is drawn with the `iec`
+symbols and the rule `core.symbol-set-unknown` says so. Like views, the symbol set never changes the meaning of the
+document.
+
 ## 8. Derived graph form
 
 `uniwire graph file.uniwire.json` produces the canonical "network" form:
@@ -582,12 +592,13 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
 |---|---|
 | 1.0 | Initial release |
 | 1.1 | Cable: `grouped`, `arrangement`, `supports`, `spacing_m`, `soil_resistivity_K_m_W`, `third_harmonic_pct` (conditions that correct the current-carrying capacity) |
+| 1.2 | Document: `symbols` (symbol set of the drawing) |
 
 ## 12. Complete minimal example
 
 ```json
 {
-  "uniwire": "1.1.0",
+  "uniwire": "1.2.0",
   "installation": { "earthing": "TT", "system": "1P+N", "un_V": 230 },
   "sources": [
     { "type": "grid", "label": "Grid", "children": [
