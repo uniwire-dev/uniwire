@@ -9,7 +9,7 @@ from collections import defaultdict
 from ..i18n import t as _t
 from ..model import Document
 from ..resolve import Index
-from ..symbols import known_set, symbol_sets
+from ..symbols import ACTIVE_SET, FAILURES, SYMBOLS, known_set, symbol_for, symbol_sets
 from . import Finding, rule
 
 
@@ -341,9 +341,30 @@ def normalized_values(doc: Document, idx: Index):
 @rule("core")
 def symbol_set_unknown(doc: Document, idx: Index):
     """A symbol set that is not registered (no package brings it): the drawing uses the IEC symbols."""
-    if doc.symbols and known_set(doc.symbols) != doc.symbols:
+    if doc.symbols and known_set(doc.symbols) != doc.symbols and doc.symbols not in FAILURES:
         yield Finding("warning", "core.symbol-set-unknown",
                       _t("core.symbol_set_unknown", name=doc.symbols, known=", ".join(symbol_sets())))
+
+
+@rule("core")
+def symbol_set_error(doc: Document, idx: Index):
+    """A symbol set that failed (its package would not load, or a symbol of it raised): the IEC symbols are drawn
+    instead. Every node is drawn with the set here, so that a failing symbol is found before rendering."""
+    name = doc.symbols
+    if not name or name == "iec":
+        return
+    if known_set(name) == name:
+        token = ACTIVE_SET.set(name)
+        try:
+            for n in idx.nodes.values():
+                if n.type in SYMBOLS:
+                    symbol_for(n)
+        finally:
+            ACTIVE_SET.reset(token)
+    used = {n.type for n in idx.nodes.values()} | {"offpage"}
+    for what, error in sorted(FAILURES.get(name, {}).items()):
+        if what in used or what not in SYMBOLS:  # a symbol of this document, or the package itself
+            yield Finding("warning", "core.symbol-set-error", _t("core.symbol_set_error", name=name, what=what, error=error))
 
 
 @rule("core")

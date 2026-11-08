@@ -1,6 +1,9 @@
 """Symbol sets: a set registered from outside the library changes the drawing; an unknown one falls back to IEC."""
 
 import sys
+import threading
+import time
+from types import SimpleNamespace
 
 import pytest
 
@@ -9,7 +12,7 @@ from uniwire import check, load
 from uniwire.render import _PAGES, render_views
 from uniwire.render.scene import THIN, Line, Rect, Style
 from uniwire.render.svg import page_to_svg
-from uniwire.symbols import Symbol, register_symbol_set, symbol_sets
+from uniwire.symbols import Symbol, controller, register_symbol_set, symbol_sets
 from uniwire.symbols.sheet import symbol_sheet
 
 DOC = {"sources": [{"type": "grid", "children": [
@@ -30,7 +33,10 @@ def ring_motor(node=None, *args, **kwargs):
 @pytest.fixture(autouse=True)
 def clean_sets():
     saved, loaded = {k: dict(v) for k, v in symbols._SETS.items()}, symbols._loaded
+    failures = {k: dict(v) for k, v in symbols.FAILURES.items()}
     yield
+    symbols.FAILURES.clear()
+    symbols.FAILURES.update(failures)
     symbols._SETS.clear()
     symbols._SETS.update(saved)
     symbols._loaded = loaded
@@ -86,3 +92,83 @@ def test_set_from_a_package_entry_point(tmp_path, monkeypatch):
         assert "sym-package-breaker" in _svg({**DOC, "symbols": "packaged"})
     finally:
         sys.modules.pop("invented_symbols", None)
+
+
+def _rules(doc, rule):
+    return [f for f in check(load(doc)) if f.rule == rule]
+
+
+def test_registration_refuses_what_is_not_a_function():
+    with pytest.raises(TypeError, match="breaker"):
+        register_symbol_set("invented", {"breaker": "square"})
+    with pytest.raises(TypeError):
+        register_symbol_set("invented", [("breaker", square_breaker)])
+
+
+def _entry(name, load, value="pkg.mod:SET"):
+    return SimpleNamespace(name=name, value=value, load=load)
+
+
+def _missing():
+    raise ModuleNotFoundError("No module named 'pkg'")
+
+
+def test_broken_packages_do_not_stop_the_others(monkeypatch):
+    eps = [_entry("missing", _missing), _entry("iec", lambda: {"breaker": square_breaker}),
+           _entry("typo", lambda: {"brekaer": square_breaker}), _entry("notfunc", lambda: {"breaker": 3}),
+           _entry("good", lambda: {"breaker": square_breaker})]
+    monkeypatch.setattr(symbols, "entry_points", lambda group: eps)
+    monkeypatch.setattr(symbols, "_loaded", False)
+    assert "sym-square-breaker" in _svg({**DOC, "symbols": "good"})
+    assert symbol_sets() == ["iec", "good"]
+    assert set(symbols.FAILURES) >= {"missing", "iec", "typo", "notfunc"}
+    doc = {**DOC, "symbols": "missing"}
+    found = _rules(doc, "core.symbol-set-error")
+    assert len(found) == 1 and "ModuleNotFoundError" in found[0].message and "pkg.mod:SET" in found[0].message
+    assert not _rules(doc, "core.symbol-set-unknown")  # the error says why, once
+    assert _svg(doc) == _svg(DOC)
+
+
+def test_loading_is_finished_before_another_thread_reads_the_sets(monkeypatch):
+    def slow():
+        time.sleep(0.2)
+        return {"breaker": square_breaker}
+
+    monkeypatch.setattr(symbols, "entry_points", lambda group: [_entry("slow", slow)])
+    monkeypatch.setattr(symbols, "_loaded", False)
+    seen = []
+    threads = [threading.Thread(target=lambda: seen.append(symbols.known_set("slow"))) for _ in range(4)]
+    for th in threads:
+        th.start()
+    for th in threads:
+        th.join()
+    assert seen == ["slow"] * 4
+
+
+def test_a_failing_symbol_is_drawn_from_iec_with_a_finding():
+    def broken(node=None, *args, **kwargs):
+        raise ZeroDivisionError("bad symbol")
+
+    register_symbol_set("invented", {"breaker": broken, "socket": lambda node=None, **kw: "not a symbol"})
+    doc = {**DOC, "symbols": "invented"}
+    assert _svg(doc) == _svg(DOC)
+    found = sorted(f.message for f in _rules(doc, "core.symbol-set-error"))
+    assert len(found) == 2 and "ZeroDivisionError: bad symbol" in found[0] and "not a Symbol" in found[1]
+
+
+CONTROLLED = {"sources": [{"type": "grid", "children": [
+    {"type": "breaker", "id": f"q{i}", "ref": f"-Q{i}", "in_A": 16, "children": [{"type": "socket"}]} for i in range(4)]}],
+    "devices": [{"type": "controller", "id": "c1", "ref": "-K1"}],
+    "links": [{"kind": "control", "from": "c1", "to": f"q{i}"} for i in range(4)]}
+
+
+def test_layout_knows_a_renamed_symbol_by_its_kind():
+    def renamed(*args, **kwargs):
+        sym = controller(*args, **kwargs)
+        sym.name = "my-controller"
+        return sym
+
+    register_symbol_set("invented", {"controller": renamed})
+    own = _svg({**CONTROLLED, "symbols": "invented"})
+    assert "sym-my-controller" in own
+    assert own.replace("sym-my-controller", "sym-controller") == _svg(CONTROLLED)  # links spread the same
