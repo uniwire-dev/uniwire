@@ -8,6 +8,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* `nfc15100.heating`: the heating power of a circuit counts every item (`p_kW` is per item, `count` items, as in the
+  SPEC and `core.load-current`). Before, three 1.25 kW heaters on 16 A were read as 1.25 kW.
 * Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
   inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
   from the board was drawn on its AC side, and the inverter was drawn "=" over "~".
