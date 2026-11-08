@@ -1256,11 +1256,20 @@ def _feeder_chain(ln: LNode, index: Index) -> list[NodeBase]:
 
 
 def _supply_system(ln: LNode, index: Index, doc: Document) -> Optional[str]:
+    """System of the line feeding ``ln``: the nearest one stated at or above it, else the installation's. Below a
+    converter fed by two wires (a transformer cannot state its output): two wires, not the installation's."""
     if ln.node is None or not ln.node.id:
         return doc.installation.system
-    for n in [ln.node] + index.ancestors(ln.node.id):
+    up = [ln.node] + index.ancestors(ln.node.id)
+    for k, n in enumerate(up):
         if getattr(n, "system", None):
             return n.system  # type: ignore[attr-defined]
+        if k and n.type in CONVERTER_TYPES:  # type: ignore[attr-defined]
+            fed = next((a for a in up[k + 1:] if getattr(a, "poles", None) or getattr(a, "phase", None)), None)
+            two = fed is not None and (getattr(fed, "poles", None) in ("1P", "1P+N", "2P")
+                                       or getattr(fed, "phase", None) in ("L1", "L2", "L3", "L1L2", "L2L3", "L1L3"))
+            if two:
+                return "2P"
     return doc.installation.system
 
 
