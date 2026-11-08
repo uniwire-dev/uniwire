@@ -24,10 +24,12 @@ def category(type_: str) -> str:
 
 def label(type_: str, lang: str | None = None) -> str:
     """Human label of a type, in ``lang`` (default: the render / environment language)."""
-    from ..i18n import render_lang
+    from ..i18n import cyrillic, render_lang
 
     labels = info(type_)["label"]
     lang = lang or render_lang()
+    if lang == "sr-Cyrl" and labels.get("sr"):  # Serbian in Cyrillic: the Latin name transliterated
+        return cyrillic(labels["sr"])
     return labels.get(lang) or labels["en"]
 
 

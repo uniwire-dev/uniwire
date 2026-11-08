@@ -193,6 +193,7 @@ def _title_block(g: Group, doc: Document, x: float, y: float, w: float, h: float
         uln = None
     ik = getattr(here, "ik_kA", None) or inst.ik3_kA
     volts = (f"{fmt(uln)}/{fmt(un, ' V')}" if uln and uln != un else fmt(un, " V")) if un else ""  # "100/200 V"
+    system = L("tb.split_phase") if system == "split-phase" else system
     sys = " ".join(v for v in (system, volts) if v)
     _cell(tb, c2x, y, half, rh, L("tb.earthing"), inst.earthing or "")
     _cell(tb, c2x + half, y, half, rh, L("tb.voltage"), sys)

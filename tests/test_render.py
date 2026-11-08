@@ -47,7 +47,7 @@ def test_normally_open_link_dashed_with_its_device(tmp_path):
     assert any(abs(a / b - 2.5) < 0.01 for a, b in dashes)
     for dev in ("X21", "X22", "X13"):  # the removable links carried by the infeed links are drawn
         assert f'id="{dev}"' in svg
-    assert "N.O., key LA" in svg
+    assert "N.O., interlock LA" in svg  # a removable-link interlock, not a key
 
 
 def test_normally_open_annotation_in_french():

@@ -251,6 +251,17 @@ ABBREVIATIONS: dict[str, dict[str, str]] = {
 }
 
 
+def _sr_cyrillic() -> dict[str, str]:
+    """Serbian in Cyrillic: the Serbian abbreviations letter for letter, the international ones (as in English) kept."""
+    from ..i18n import INTERNATIONAL, cyrillic_word
+
+    return {k: v if v == ABBREVIATIONS["en"].get(k) or v in INTERNATIONAL else cyrillic_word(v)
+            for k, v in ABBREVIATIONS["sr"].items()}
+
+
+ABBREVIATIONS["sr-Cyrl"] = _sr_cyrillic()
+
+
 def _abbr(key: str) -> str:
     from ..i18n import render_lang
 

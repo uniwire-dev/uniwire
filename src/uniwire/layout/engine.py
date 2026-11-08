@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterator
@@ -329,8 +330,8 @@ def _up_to_board(node: NodeBase, index: Index) -> list[NodeBase]:
     down = chain[:end + 1][::-1]  # from the board down to the node
     head = True
     for k, (p, c) in enumerate(zip(down, down[1:])):
-        head = head and len(p.children) == 1
-        if beyond_board(SimpleNamespace(node=c), SimpleNamespace(node=p), head):
+        p_head, head = head, head and len(p.children) == 1
+        if beyond_board(SimpleNamespace(node=c), SimpleNamespace(node=p), head, p_head):
             return down[k + 1:][::-1]
     return chain[:end + 1]
 
@@ -556,32 +557,51 @@ REMOTE_EQUIPMENT = {"inverter", "transformer", "ups", "transfer_switch", "busbar
 BESIDE_TYPES = SIDE_TYPES | DC_ACCESSORIES | {"instrument_transformer", "controller", "plc"}
 
 
-def beyond_board(ln: Any, parent: Any, head: bool) -> bool:
+def beyond_board(ln: Any, parent: Any, head: bool, parent_head: bool = False) -> bool:
     """Whether the layout node ``ln`` (child of ``parent``) is equipment at the far end of a cable from its board:
     an inverter, a UPS, a transformer fed at high voltage... with a cable of its own or after a device with one (the
     cable of the board itself is its incoming one). What it feeds is outside the board too. ``head``: ``ln`` is the
-    board's only child, or the only child of that one, and so on: a busbar there is the board's own."""
+    board's only child, or the only child of that one, and so on: a busbar there is the board's own; ``parent_head``:
+    the parent is in that chain (its cable is the board's incoming one)."""
     n, p = ln.node, parent.node
-    if n is None or p is None or n.type not in REMOTE_EQUIPMENT or (head and n.type == "busbar"):
+    if n is None or p is None or (head and n.type == "busbar"):
         return False
-    if n.type == "transformer" and not (getattr(n, "u1_V", None) or 0) > 1000:
-        return False  # a control or isolating transformer is a device of the board
-    return bool(getattr(n, "cable", None)) or (p.type != "board" and bool(getattr(p, "cable", None)))
+    after_cable = p.type != "board" and bool(getattr(p, "cable", None))
+    if not _remote(n):  # a local switch at the far end of the cable, in front of the equipment, goes with it
+        return not parent_head and after_cable and _leads_to_remote(n)
+    return bool(getattr(n, "cable", None)) or after_cable
+
+
+def _remote(n: Any) -> bool:
+    """Equipment that is not a way of its board when a cable joins them (a control or isolating transformer, at
+    1000 V or less, is a device of the board)."""
+    return n.type in REMOTE_EQUIPMENT and not (n.type == "transformer" and not (getattr(n, "u1_V", None) or 0) > 1000)
+
+
+def _leads_to_remote(n: Any) -> bool:
+    """Whether the only way out of ``n`` (accessories beside it apart) leads to such equipment (a busbar or
+    busway is not: it is what the cable feeds, not equipment behind a local switch)."""
+    while not _remote(n):
+        ways = [c for c in n.children if c.children or c.type not in BESIDE_TYPES]
+        if len(ways) != 1 or n.type == "board" or getattr(n, "cable", None):
+            return False
+        n = ways[0]
+    return n.type != "busbar"
 
 
 def board_parts(board: Any) -> Iterator[tuple[Any, bool]]:
     """The nodes under ``board`` down to its sub-boards, loads and equipment beyond a cable: (node, inside), the
     sub-boards and that equipment with ``inside`` False (not descended into)."""
-    def heads(n: Any, head: bool) -> list[tuple[Any, Any, bool]]:
+    def heads(n: Any, head: bool) -> list[tuple[Any, Any, bool, bool]]:
         # the head goes on through the only way of n; an accessory beside it with nothing below it (a surge
         # protector, a meter, an insulation monitor, an earth bar, a controller...) does not end it
         ways = [c for c in n.children if c.children or c.type not in BESIDE_TYPES]
-        return [(c, n, head and ways == [c]) for c in n.children]
+        return [(c, n, head and ways == [c], head) for c in n.children]
 
     stack = heads(board, True)
     while stack:
-        n, p, head = stack.pop()
-        if n.is_board or beyond_board(n, p, head):
+        n, p, head, p_head = stack.pop()
+        if n.is_board or beyond_board(n, p, head, p_head):
             yield n, False
             continue
         yield n, True
@@ -711,8 +731,29 @@ def _boxes(ln: LNode) -> list[tuple[float, float, float, float]]:
     return out
 
 
+def _line_system(node: NodeBase) -> Optional[str]:
+    """System declared on the line leaving ``node``, down to where it branches (not beyond a transformer)."""
+    n = node
+    while len(n.children) == 1 and n.children[0].type != "transformer":  # type: ignore[attr-defined]
+        n = n.children[0]
+        if getattr(n, "system", None):
+            return n.system  # type: ignore[attr-defined]
+    return None
+
+
+_VECTOR = re.compile(r"^(YN|ZN|Y|D|Z)(yn|zn|y|d|z)")
+
+
 def _system_of(node: NodeBase, doc: Document) -> Optional[str]:
-    """Supply system downstream of a source: first explicit ``system`` below it, else the installation's."""
+    """Supply system downstream of a source or transformer: one declared on its line before it branches (what the
+    user says wins: a Dyn star point is not always a distributed neutral), else a transformer's vector group
+    (``Dyn11``: a neutral, ``Dd0``: none), else the first explicit ``system`` below it, else the installation's."""
+    declared = _line_system(node)
+    if declared:
+        return declared
+    m = _VECTOR.match(getattr(node, "coupling", None) or "")
+    if m:
+        return "3P+N" if m[2].endswith("n") else "3P"
     stack = list(node.children)
     while stack:
         n = stack.pop(0)
@@ -1327,24 +1368,33 @@ def _needs_neutral(node: NodeBase) -> bool:
 
 
 def _source_mark(src: NodeBase, doc: Document) -> Optional[Mark]:
-    """Line leaving a source: its own system, else the first one declared below (not beyond a transformer);
-    the high-voltage side of a transformer is a three-conductor line."""
+    """Line leaving a source: its own system, else one declared on that line before it branches (a busbar right
+    below it). Then, for the supply of the installation (a grid not below its voltage), the installation's system
+    before any declared further down (a single-phase or DC board further down does not make the supply
+    single-phase); for another source (a generator, an inverter, a lower-voltage supply), the first declared below
+    first. The high-voltage side of a transformer is a three-conductor line."""
     if getattr(src, "system", None):
         return system_mark(src.system)  # type: ignore[attr-defined]
     hv = (src.un_V or 0) > 1000
+    if not hv and _line_system(src):
+        return system_mark(_line_system(src))
+    below = None
     stack = list(src.children)
     while stack:
         n = stack.pop(0)
         if n.type == "transformer":  # type: ignore[attr-defined]
             u1 = getattr(n, "u1_V", None) or src.un_V
             hv = hv or (u1 or 0) > 1000
-            if u1 is None:
+            if u1 is None and below is None:
                 return None
             continue
-        if getattr(n, "system", None) and not hv:
-            return system_mark(n.system)  # type: ignore[attr-defined]
+        below = below or getattr(n, "system", None)
         stack.extend(n.children)
-    return system_mark("3P") if hv else system_mark(doc.installation.system)
+    if hv:
+        return system_mark("3P")
+    inst = doc.installation
+    main = src.type == "grid" and not (src.un_V and inst.un_V and src.un_V < inst.un_V)  # type: ignore[attr-defined]
+    return system_mark((inst.system or below) if main else (below or inst.system))
 
 
 def _line_marks(doc: Document) -> tuple[dict[int, Optional[Mark]], dict[int, Optional[Mark]]]:
@@ -2414,7 +2464,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 other = link.to if b is None else link.from_
                 at = End(n.bus_x1, n.bus_y, "right") if b is None else End(n.bus_x0, n.bus_y, "left")
                 _draw_offpage_link(link, n, other, nodes.get(other), obs, lg, lang, node_folio, offpage, at)
-            elif link.kind != "tie":
+            else:  # (a tie between devices or boards: from the end on this sheet, as the other links)
                 other = link.to if b is None else link.from_
                 at = spread.get((i, 0 if b is None else 1))  # a controller many links reach: its own point
                 if b is not None and link.kind == "infeed" and link.to in fed_ok:  # on its input conductor
@@ -2974,6 +3024,8 @@ def _column_info(ln: LNode, index: Index, lang: str) -> dict[str, Any]:
     for n in path:
         if info["cable"] is None and n.cable is not None:
             info["cable"] = n.cable
+    # without a protection of its own, the rating of the device switching the feeder (contactor, impulse relay...)
+    info["rated"] = next((n for n in path[1:] if n.type in SWITCHING and getattr(n, "in_A", None)), None)  # type: ignore[attr-defined]
     for n in chain:
         if n.type in ("rcd", "rcbo", "main_breaker") and getattr(n, "idn_mA", None):  # type: ignore[attr-defined]
             info["rcd"] = n
@@ -3005,8 +3057,13 @@ def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: 
     pitch = view.pitch_mm
     titles = CARTOUCHE_TITLES.get(lang, CARTOUCHE_TITLES["en"])
     infos = [_column_info(c, index, lang) for c in columns]
+    fields = view.cartouche or []
+    big = any((getattr(i["leaf"], "p_kW", None) or getattr(i["leaf"], "p_max_kW", None) or 0) >= 1 for i in infos)
     for i in infos:
-        i["rcd_type_column"] = "rcd_type" in (view.cartouche or [])
+        i["rcd_type_column"] = "rcd_type" in fields
+        i["idn_column"] = "idn_mA" in fields  # the residual current in its own row, not also in the protection's
+        i["power_kw"] = big  # powers of one row in kW when one of them is: '0.6 kW' beside '3 kW', not '600 W'
+
     # the same tag in two boards of one table: prefixed with the board's ("=PDU-A-Q1", "TD2 -Q1")
     def board_of(i: dict[str, Any]) -> Optional[NodeBase]:
         leaf = i.get("leaf")
