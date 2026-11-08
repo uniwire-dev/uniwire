@@ -562,11 +562,28 @@ def beyond_board(ln: Any, parent: Any, head: bool) -> bool:
     cable of the board itself is its incoming one). What it feeds is outside the board too. ``head``: ``ln`` is the
     board's only child, or the only child of that one, and so on: a busbar there is the board's own."""
     n, p = ln.node, parent.node
-    if n is None or p is None or n.type not in REMOTE_EQUIPMENT or (head and n.type == "busbar"):
+    if n is None or p is None or (head and n.type == "busbar"):
         return False
-    if n.type == "transformer" and not (getattr(n, "u1_V", None) or 0) > 1000:
-        return False  # a control or isolating transformer is a device of the board
-    return bool(getattr(n, "cable", None)) or (p.type != "board" and bool(getattr(p, "cable", None)))
+    after_cable = p.type != "board" and bool(getattr(p, "cable", None))
+    if not _remote(n):  # a local switch at the far end of the cable, in front of the equipment, goes with it
+        return after_cable and _leads_to_remote(n)
+    return bool(getattr(n, "cable", None)) or after_cable
+
+
+def _remote(n: Any) -> bool:
+    """Equipment that is not a way of its board when a cable joins them (a control or isolating transformer, at
+    1000 V or less, is a device of the board)."""
+    return n.type in REMOTE_EQUIPMENT and not (n.type == "transformer" and not (getattr(n, "u1_V", None) or 0) > 1000)
+
+
+def _leads_to_remote(n: Any) -> bool:
+    """Whether the only way out of ``n`` (accessories beside it apart) leads to such equipment."""
+    while not _remote(n):
+        ways = [c for c in n.children if c.children or c.type not in BESIDE_TYPES]
+        if len(ways) != 1 or n.type == "board" or getattr(n, "cable", None):
+            return False
+        n = ways[0]
+    return True
 
 
 def board_parts(board: Any) -> Iterator[tuple[Any, bool]]:
