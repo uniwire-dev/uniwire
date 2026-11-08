@@ -12,7 +12,7 @@ from typing import Any, Optional
 
 from ..i18n import normalize_lang
 from ..i18n import t as _t
-from ..layout.engine import PAPER, drawing_area, layout_sheet, plan_sheets, sheet_node_ids
+from ..layout.engine import PAPER, drawing_area, feeding_sheet, layout_sheet, plan_sheets, sheet_node_ids
 from ..model import Document, View
 from ..resolve import build_index
 from .colors import colorize
@@ -227,7 +227,7 @@ def _render_sheets(doc: Document, view: View, lang: str) -> tuple[list[Page], li
         incoming_ref: tuple[Optional[int], Optional[str]] = (None, None)
         if i > 1 and spec.roots and not spec.continuation and index.parent.get(spec.roots[0].id or ""):
             rid = spec.roots[0].id  # a board drawn on its own sheet (not a group of trees): fed from another one
-            src = next((j for j, s in enumerate(specs, 1) if rid in s.detached and j != i), None)
+            src = feeding_sheet(specs, i, rid, index, folio_of_node)
             incoming_ref = (src, index.parent.get(rid or ""))
             feeder = next((a for a in index.ancestors(rid or "") if a.ref), None)
             what = _t("render.incoming_from", lang, ref=feeder.ref) if feeder is not None else _t("render.incoming", lang)
