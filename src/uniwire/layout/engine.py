@@ -321,10 +321,15 @@ def _is_dc(node: NodeBase) -> bool:
 
 
 def _bus_name(node: NodeBase, index: Index) -> str:
-    """Name of the busbar a node feeds: its board's (or busbar's), not the device at its head (a meter, a breaker)."""
-    owner = next((a for a in [node] + index.ancestors(node.id or "")
-                  if a.type in ("board", "busbar")), node)  # type: ignore[attr-defined]
-    return owner.ref or owner.label or node.ref or node.label or node.id or ""
+    """Name of the busbar a node feeds: its board's (or busbar's), not the device at its head (a meter, a breaker);
+    a row of the board (a group RCD among others) adds its own: "TD, -ID2"."""
+    chain = [node] + index.ancestors(node.id or "")
+    owner = next((a for a in chain if a.type in ("board", "busbar")), node)  # type: ignore[attr-defined]
+    name = owner.ref or owner.label or node.ref or node.label or node.id or ""
+    path = chain[:chain.index(owner)]  # from the node up to the owner, excluded
+    if owner is node or all(len(a.children) == 1 for a in [owner] + path[:0:-1]):
+        return name  # the board's own busbar: the devices above it are its incomer
+    return f"{name}, {node.ref or node.label or node.id}"
 
 
 def _build_sheet_roots(spec: SheetSpec, index: Index) -> list[LNode]:

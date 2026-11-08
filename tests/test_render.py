@@ -143,3 +143,21 @@ def test_continuation_sheet_keeps_the_board_frame_and_name():
         assert any(t.startswith("TD (") for t in texts) and not any(t.startswith("-F1 (") for t in texts), kind
         if kind == "single-line":
             assert "td" in boards(pages[1].root)  # the busbar is in the board: its frame on this sheet too
+
+
+def test_continuation_of_a_row_of_the_board_names_the_board_and_the_row():
+    from uniwire.render.svg import page_to_svg
+
+    def ways(n, p):
+        return [{"type": "breaker", "ref": f"-{p}{i}", "in_A": 16, "children": [{"type": "socket"}]} for i in range(n)]
+
+    for kind in ("single-line", "multi-line"):
+        doc = load({"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230}, "sources": [{"type": "grid", "children": [
+            {"type": "board", "ref": "TD", "children": [
+                {"type": "rcd", "ref": "-ID1", "in_A": 40, "idn_mA": 30, "children": ways(4, "Qa")},
+                {"type": "rcd", "ref": "-ID2", "in_A": 63, "idn_mA": 30, "children": ways(40, "Qb")}]}]}],
+            "views": [{"id": "v", "kind": kind, "paper": "A4"}]})
+        pages = render_pages(doc)
+        assert len(pages) > 1
+        texts = re.findall(r">([^<>]+)</text>", page_to_svg(pages[1]))
+        assert "TD, -ID2 (continued from sheet 1)" in texts, (kind, texts)
