@@ -8,6 +8,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings: the surge protector type ("Tipo 2", "Typ 2") and the split-phase system in the title block are written
+  in the language of the drawing (before, "Type 2" and "split-phase" in every language). An interlock declared
+  `electrical`, `mechanical` or `removable_link` is written "interlock K1", not "key K1", which stays for trapped
+  keys. Multi-line drawings no longer repeat the tag at the start of a device label ("-KM1" over "-KM1 water
+  heater"), as single-line drawings already did.
 * Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
   inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
   from the board was drawn on its AC side, and the inverter was drawn "=" over "~".
