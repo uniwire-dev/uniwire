@@ -84,6 +84,7 @@ from .engine import (
     _is_dc,
     _signal_links,
     _wrap_words,
+    board_parts,
     drawing_area,
     interlock_mark,
     sheet_node_ids,
@@ -167,11 +168,34 @@ class _Assigner:
             self.split = {id(b) for b in _first_boards(doc)}
         else:
             self.split = set()
-        # North American split-phase (120/240 V): a "2P" breaker switches L1 and L2, a 3-wire cable is L1 L2 G
-        self.split_phase = doc.installation.system == "split-phase" or any(
-            getattr(n, "system", None) == "split-phase" for n in nodes)
+        # the supply each node is on (system, phase-to-phase and phase-to-neutral voltages): split-phase rules (a "2P"
+        # breaker switches L1 and L2, a 3-wire cable is L1 L2 G) apply below a split-phase supply only
+        self._supply: dict[int, tuple[Optional[str], Optional[float], Optional[float]]] = {}
+        inst = doc.installation
+        for src in doc.sources:
+            self._supplies(src, (inst.system, inst.un_V, inst.uln_V))
         for src in doc.sources:
             self._walk(src, None, False)
+
+    def _supplies(self, node: Any, ctx: tuple[Optional[str], Optional[float], Optional[float]]) -> None:
+        system, ull, uln = ctx
+        if node.type == "transformer":  # a new supply: its secondary voltage, its system declared below it
+            system, ull, uln = _declared_below(node), getattr(node, "u2_V", None), None
+        declared = getattr(node, "system", None)
+        if declared and declared != system:
+            system, uln = declared, None
+        if node.type in ("board", "busbar", "grid", "generator"):  # a supply stating its voltage
+            if getattr(node, "un_V", None):
+                ull, uln = node.un_V, getattr(node, "uln_V", None)
+        if system == "split-phase" and ull and not uln:
+            uln = ull / 2
+        self._supply[id(node)] = (system, ull, uln)
+        for c in node.children:
+            self._supplies(c, (system, ull, uln))
+
+    def _split_phase(self, node: Any) -> bool:
+        """Whether ``node`` is on a split-phase supply (the nearest system declared above it)."""
+        return self._supply.get(id(node), (None, None, None))[0] == "split-phase"
 
     # -- explicit description of a node: (phase names, number of phases, neutral)
     def spec(self, node: Any, type_default: bool = True) -> tuple[Optional[list[str]], Optional[int], Optional[bool]]:
@@ -190,8 +214,8 @@ class _Assigner:
             k, n = SOCKET_POLES[poles]
             ks.append(k)
             ns.append(n)
-        elif poles == "2P" and self.split_phase:
-            ks.append(2)
+        elif poles == "2P" and self._split_phase(node):  # both legs: a phase-to-phase circuit unless something below
+            ks.append(2)                           # uses the neutral (taken after the device's own cable)
             ns.append(None)
         elif poles in POLES:
             k, n = POLES[poles]
@@ -207,7 +231,7 @@ class _Assigner:
                 separate_pe = cable.pe_section_mm2 is not None and cable.pe_section_mm2 != cable.section_mm2
                 guessed = m[2] not in "Gg" and total % 2 == 1 and not cable.pen and not separate_pe
                 live = total - 1 if (m[2] in "Gg" or guessed) else total
-                k, n = ({2: (2, False), 3: (2, True)} if self.split_phase else
+                k, n = ({2: (2, False), 3: (2, True)} if self._split_phase(node) else
                         {2: (1, True), 3: (3, False), 4: (3, True)}).get(live, (None, None))
                 if guessed:  # only a guess: what the node states (a motor's phases, a board's system) comes first
                     guess = (k, n)
@@ -216,7 +240,7 @@ class _Assigner:
                     ns.append(n)
         if t == "motor":
             phases = getattr(node, "phases", None)
-            if phases == 1 and self.split_phase:  # 240 V on L1 L2 (no neutral), or 120 V on a phase and N
+            if phases == 1 and self._split_phase(node):  # 240 V on L1 L2 (no neutral), or 120 V on a phase and N
                 ks.append(None)
                 ns.append(False)
             else:
@@ -230,12 +254,42 @@ class _Assigner:
         if guess is not None:
             ks.append(guess[0])
             ns.append(guess[1])
+        if self._split_phase(node):
+            if poles == "2P":
+                ns.append(any(self._uses_neutral(c) for c in node.children))
+            leg = self._leg_voltage(node)
+            if leg is not None:
+                ks.append(1 if leg else 2)
+                ns.append(leg)
         if t in SINGLE_PHASE_LOADS and type_default:
             ks.append(1)
             ns.append(True)
         k = next((x for x in ks if x is not None), None)
         neutral = next((x for x in ns if x is not None), None)
         return names, k, neutral
+
+    def _leg_voltage(self, node: Any) -> Optional[bool]:
+        """Split-phase: a load whose voltage is the phase-to-neutral one (``True``: 100 V or 120 V, one leg and the
+        neutral) or the phase-to-phase one (``False``: 200 V or 240 V, both legs); ``None``: not stated."""
+        un = getattr(node, "un_V", None) if not node.children else None
+        _, ull, uln = self._supply.get(id(node), (None, None, None))  # the voltages of its own supply
+        if not un or not ull or not uln:
+            return None
+        if abs(un - uln) <= 0.15 * uln:
+            return True
+        if abs(un - ull) <= 0.15 * ull:
+            return False
+        return None
+
+    def _uses_neutral(self, node: Any) -> bool:
+        """Split-phase: whether something at or below ``node`` states that it uses the neutral (a device or load on
+        one leg, a load at the phase-to-neutral voltage, a socket-outlet or lighting circuit)."""
+        names, k, neutral = self.spec(node, type_default=False)
+        if neutral is not None:
+            return neutral
+        if k == 1 or (names and len(names) == 1) or node.type in ("socket", "lighting"):
+            return True
+        return any(self._uses_neutral(c) for c in node.children)
 
     def needs_n(self, node: Any) -> bool:
         key = id(node)
@@ -430,6 +484,18 @@ class _Assigner:
                 self._walk(c, out, pending, node)
 
 
+def _declared_below(node: Any) -> Optional[str]:
+    """The system of the supply a transformer makes: the first one declared below it (before another transformer)."""
+    stack = list(node.children)
+    while stack:
+        n = stack.pop(0)
+        if getattr(n, "system", None):
+            return n.system
+        if n.type != "transformer":
+            stack.extend(n.children)
+    return None
+
+
 def _vfd_to_three_phase(node: Any, inp: list[str]) -> bool:
     """A drive fed with fewer than three phases that feeds something three-phase: a three-phase load (a motor),
     or a three-pole device, anywhere below it up to the next converter, drive or transformer."""
@@ -554,6 +620,7 @@ class MLNode:
     x_left: float = 0.0
     y: float = 0.0
     frame_top: float = 0.0
+    free_way: bool = False  # a spare way with no device on the busbars: drawn grey dashed (_free_way)
     rail_y0: Optional[float] = None
     # power links outside the tree (see _plan_links)
     lead: float = 0.0  # room left of the column for the conductors of a link landing on it
@@ -1044,25 +1111,13 @@ def _shift(ln: MLNode, dy: float) -> None:
 
 
 def _owned(board: MLNode):
-    """Nodes inside a board frame: its subtree, without sub-boards and loads."""
-    stack = list(board.children)
-    while stack:
-        n = stack.pop()
-        if n.is_board or n.bottom:
-            continue
-        yield n
-        stack.extend(n.children)
+    """Nodes inside a board frame: its subtree, without sub-boards, loads and equipment beyond a cable."""
+    return (n for n, inside in board_parts(board) if inside and not n.bottom)
 
 
 def _sub_boards(board: MLNode) -> list[MLNode]:
-    out, stack = [], list(board.children)
-    while stack:
-        n = stack.pop()
-        if n.is_board:
-            out.append(n)
-            continue
-        stack.extend(n.children)
-    return out
+    """Sub-boards, and equipment beyond a cable, under the board: drawn below its frame."""
+    return [n for n, inside in board_parts(board) if not inside]
 
 
 def _frame_bottom(board: MLNode) -> float:
@@ -1074,10 +1129,11 @@ def _separate_boards(ln: MLNode) -> None:
     if ln.is_board:
         subs = _sub_boards(ln)
         # below the frame, and side by side on one line (their frames, names and first devices aligned)
-        top = max([_frame_bottom(ln) + 3.0] + [sb.frame_top for sb in subs])
-        for sb in subs:
-            if sb.frame_top < top:
-                _shift(sb, top - sb.frame_top)
+        tops = [sb.frame_top if sb.is_board else sb.y for sb in subs]
+        top = max([_frame_bottom(ln) + 3.0] + tops)
+        for sb, t in zip(subs, tops):
+            if t < top:
+                _shift(sb, top - t)
     for c in ln.children:
         _separate_boards(c)
 
@@ -1236,7 +1292,7 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
                     g.add(*_toroid(rl, y, y + DEV_H + 2.3))
         through()
         if t == "spare":
-            g = Group([_restyle(i, Style(width=THIN, dash=(1.0, 0.7), color="#777777")) for i in g.items], g.id, g.cls, dict(g.attrs))
+            g = Group([_restyle(i, SPARE) for i in g.items], g.id, g.cls, dict(g.attrs))
         return g
 
     if t == "transformer":
@@ -1536,6 +1592,21 @@ def _restyle(item: Any, style: Style) -> Any:
     return item
 
 
+SPARE = Style(width=THIN, dash=(1.0, 0.7), color="#777777")  # a spare way: its device, or a free space and its conductors
+
+
+def _free_way(ln: MLNode, parent: MLNode) -> bool:
+    """A spare way with no device (no rating, no poles) straight on the busbars or in a board: a free space, not
+    conductors leaving the busbars (below a device, it is that device's spare way)."""
+    return (bool(parent.rails) or parent.is_board) and ln.type == "spare" and \
+        not (getattr(ln.node, "in_A", None) or getattr(ln.node, "poles", None))
+
+
+def _spare_edge(eg: Group, ch: MLNode) -> None:
+    eg.items[:] = [_restyle(i, SPARE) for i in eg.items]
+    ch.free_way = True  # its box too (see _draw)
+
+
 def _draw_transition(ln: MLNode, ch: MLNode, g: Group) -> None:
     """Conductors from ``ln`` (no rails) down to its single child, with PEN splits and new conductors."""
     eg = edge_group(ch.id, ln.target if ln.kind == "bus_in" else ln.id)
@@ -1568,6 +1639,8 @@ def _draw_transition(ln: MLNode, ch: MLNode, g: Group) -> None:
         if n > 1:
             g.add(_dot(xs, yj))
     g.add(*labels)
+    if _free_way(ch, ln):
+        _spare_edge(g, ch)
 
 
 def _draw_dc_side(ln: MLNode, g: Group) -> None:
@@ -1614,6 +1687,8 @@ def _draw_rails(ln: MLNode, g: Group, sheet_left: float, folio_of: Callable[[str
                 continue
             taps[s].append(x)
             eg.add(cond_group(c, Line((x, ry[s]), (x, top if not ch.is_board else ch.y))))
+        if _free_way(ch, ln):
+            _spare_edge(eg, ch)
     for c, xs_ in ln.extra_taps.items():  # power links outside the tree tapped on the rails
         if c in taps:
             taps[c] += xs_
@@ -1670,6 +1745,8 @@ def _draw(ln: MLNode, g: Group, lang: str, view: View, sheet_left: float, folio_
         if ln.node is not None and getattr(ln.node, "external", False):
             sg = _restyle(sg, Style(width=THIN, dash=(1.2, 0.8), color="#555555"))
             sg.cls = (sg.cls or "") + " external"
+        elif ln.free_way:
+            sg = _restyle(sg, SPARE)
         if ln.kind == "stub":  # board drawn on its own sheet: reference to that sheet
             sg.id = None
             add_cls(sg, "uw-ref").attrs.update(ref_group(folio_of(ln.target or ""), ln.target).attrs)
@@ -1760,6 +1837,9 @@ def _draw_frames(roots: list[MLNode], g: Group, links: Optional[list[_Link]] = N
             lefts = [box[0] for n in _owned(b) if n.id in drawn and (box := bbox(drawn[n.id])) is not None]
             x0 = max(b.x_left - 0.5, min([x0] + [x - 2.0 for x in lefts]))
             y0, y1 = b.frame_top, _frame_bottom(b)
+            # the lanes of the power links leaving its devices run in it (the target may be outside it)
+            own = {id(n) for n in _owned(b)} | {id(b)}
+            y1 = max([y1] + [max(lk.lane.values()) + 3.0 for lk in links or [] if id(lk.a) in own and lk.lane])
             # a link between two of its devices (a bypass and its contactor) is in the board: inside its frame,
             # as far as the column on the left allows
             inside = {id(n) for n in b.walk()}

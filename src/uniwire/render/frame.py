@@ -187,8 +187,13 @@ def _title_block(g: Group, doc: Document, x: float, y: float, w: float, h: float
     c2x, c2 = x + c1, w * 0.30
     half = c2 / 2
     un = getattr(here, "un_V", None) or inst.un_V
+    system = getattr(here, "system", None) or inst.system or ""
+    uln = getattr(here, "uln_V", None) or (inst.uln_V if un == inst.un_V else None)
+    if system in ("3P", "2P", "DC"):  # no neutral: the phase-to-neutral voltage is not available
+        uln = None
     ik = getattr(here, "ik_kA", None) or inst.ik3_kA
-    sys = " ".join(v for v in (getattr(here, "system", None) or inst.system or "", fmt(un, " V") if un else "") if v)
+    volts = (f"{fmt(uln)}/{fmt(un, ' V')}" if uln and uln != un else fmt(un, " V")) if un else ""  # "100/200 V"
+    sys = " ".join(v for v in (system, volts) if v)
     _cell(tb, c2x, y, half, rh, L("tb.earthing"), inst.earthing or "")
     _cell(tb, c2x + half, y, half, rh, L("tb.voltage"), sys)
     pw = inst.subscribed_kVA or inst.planned_kVA
