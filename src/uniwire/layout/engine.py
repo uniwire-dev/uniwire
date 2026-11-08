@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterator
@@ -711,8 +712,15 @@ def _boxes(ln: LNode) -> list[tuple[float, float, float, float]]:
     return out
 
 
+_VECTOR = re.compile(r"^(YN|ZN|Y|D|Z)(yn|zn|y|d|z)")
+
+
 def _system_of(node: NodeBase, doc: Document) -> Optional[str]:
-    """Supply system downstream of a source: first explicit ``system`` below it, else the installation's."""
+    """Supply system downstream of a source or transformer: that of a transformer's vector group (``Dyn11``: a
+    neutral, ``Dd0``: none), else the first explicit ``system`` below it, else the installation's."""
+    m = _VECTOR.match(getattr(node, "coupling", None) or "")
+    if m:
+        return "3P+N" if m[2].endswith("n") else "3P"
     stack = list(node.children)
     while stack:
         n = stack.pop(0)
@@ -1327,24 +1335,31 @@ def _needs_neutral(node: NodeBase) -> bool:
 
 
 def _source_mark(src: NodeBase, doc: Document) -> Optional[Mark]:
-    """Line leaving a source: its own system, else the first one declared below (not beyond a transformer);
-    the high-voltage side of a transformer is a three-conductor line."""
+    """Line leaving a source: its own system, else one declared on that line before it branches (a busbar right
+    below it), else the installation's, else the first one declared below (not beyond a transformer): a
+    single-phase board further down does not make the supply single-phase. The high-voltage side of a
+    transformer is a three-conductor line."""
     if getattr(src, "system", None):
         return system_mark(src.system)  # type: ignore[attr-defined]
     hv = (src.un_V or 0) > 1000
+    n = src
+    while not hv and len(n.children) == 1 and n.children[0].type != "transformer":  # type: ignore[attr-defined]
+        n = n.children[0]
+        if getattr(n, "system", None):
+            return system_mark(n.system)  # type: ignore[attr-defined]
+    below = None
     stack = list(src.children)
     while stack:
         n = stack.pop(0)
         if n.type == "transformer":  # type: ignore[attr-defined]
             u1 = getattr(n, "u1_V", None) or src.un_V
             hv = hv or (u1 or 0) > 1000
-            if u1 is None:
+            if u1 is None and below is None:
                 return None
             continue
-        if getattr(n, "system", None) and not hv:
-            return system_mark(n.system)  # type: ignore[attr-defined]
+        below = below or getattr(n, "system", None)
         stack.extend(n.children)
-    return system_mark("3P") if hv else system_mark(doc.installation.system)
+    return system_mark("3P") if hv else system_mark(doc.installation.system or below)
 
 
 def _line_marks(doc: Document) -> tuple[dict[int, Optional[Mark]], dict[int, Optional[Mark]]]:
