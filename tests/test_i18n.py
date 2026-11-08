@@ -139,9 +139,18 @@ def test_serbian_in_cyrillic():
 
     assert normalize_lang("sr-Cyrl") == normalize_lang("sr-Cyrl-RS") == "sr-Cyrl"
     assert normalize_lang("sr") == normalize_lang("sr-Latn-RS") == normalize_lang("sr-RS") == "sr"
-    # letter for letter, digraphs included; kept: placeholders, quoted fields, capitals, symbols, units
+    # letter for letter, digraphs included; kept: placeholders, quoted fields, identifiers, international
+    # abbreviations, single capitals, symbols, units
     assert cyrillic("Uzemljivač i punjač, džep") == "Уземљивач и пуњач, џеп"
-    assert cyrillic("Iz {iz:g} A, kabl 2,5 mm² od 25 m, 'count' FID (IEC)") == "Iz {iz:g} A, кабл 2,5 mm² од 25 m, 'count' FID (IEC)"
+    assert cyrillic("Iz {iz:g} A, kabl 2,5 mm² od 25 m, 'count' FID (IEC)") == "Iz {iz:g} A, кабл 2,5 mm² од 25 m, 'count' ФИД (IEC)"
+    assert cyrillic("VN / SN (> 1 kV AC), VT/NT, tip A, NF EN, PEN") == "ВН / СН (> 1 kV AC), ВТ/НТ, тип A, NF EN, PEN"
+    assert cyrillic("transfer_switch, installation.premises, D-duct") == "transfer_switch, installation.premises, D-duct"
+    assert cyrillic("otpornost tla {rho:g} K·m/W, s njim") == "отпорност тла {rho:g} K·m/W, с њим"
+    from uniwire.llm.card import type_label
+    from uniwire.symbols import ABBREVIATIONS
+
+    assert ABBREVIATIONS["sr-Cyrl"]["dishwasher"] == "МС" and ABBREVIATIONS["sr-Cyrl"]["ups"] == "UPS"
+    assert type_label("rcd", "sr-Cyrl").endswith("(ФИД)")
     view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable", "circuit"]}
     texts = [s for p in render_pages(load({**DOC, "meta": {"lang": "sr-Cyrl"}, "views": [view]})) for s in _texts(p.root)]
     assert {"Напомене", "Ознака", "Кабл (mm²)", "Струјно коло", "Лист"} <= set(texts)
