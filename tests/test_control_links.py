@@ -138,6 +138,26 @@ def test_leader_of_a_label_is_square_to_its_link():
     assert abs(line.a[0] - line.b[0]) < 1e-9 or abs(line.a[1] - line.b[1]) < 1e-9, line
 
 
+def _belts(page) -> int:
+    return sum(1 for t, _l, _o in _walk(page.root) if isinstance(t, Text) and t.text.startswith("Belt "))
+
+
+def test_links_to_another_sheet_do_not_widen_the_modules():
+    """A busbar split over two sheets: the PLC's links to the ways on the second sheet end on off-page stubs, its
+    modules are only as wide as the links drawn under them, and its sheet keeps the ways that fit (with every link
+    counted, the first sheet kept 4 of 14 ways)."""
+    d = panel(14, 0)
+    d["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    pages = render_views(load(d))
+    assert len(pages) == 2 and _belts(pages[0]) + _belts(pages[1]) == 14
+    assert _belts(pages[0]) >= 5
+    plc = _node(pages[0].root, "PLC")
+    rects = sorted((r for r, _l, _o in _walk(plc) if isinstance(r, Rect)), key=lambda r: r.x)
+    on_sheet = _belts(pages[0])  # one output and one input each: modules 1 and 2 hold that many wires
+    unit = rects[3].w / 3.4  # the sheet's scale, from a module no link leaves
+    assert all(r.w <= (2 * 1.8 + (on_sheet - 1) * 2.6) * unit + 1e-6 for r in rects[1:3]), [r.w for r in rects]
+
+
 def test_a_link_between_two_plcs_leaves_the_channel_of_its_start():
     """PLC to PLC: drawn out of the first PLC's channel, the second PLC's channel written by the link at its end;
     only the module it leaves is widened (both were, and the second channel was not written)."""

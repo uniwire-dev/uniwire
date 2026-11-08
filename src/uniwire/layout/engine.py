@@ -3344,6 +3344,10 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
                 continue
             if allow_bus_split:
                 conts = _split_bus(spec, lay, view, index, normalize_lang(doc.meta.lang))
+                if conts:
+                    specs = [spec] + conts
+                    _refill(doc, view, index, specs, lay)
+                    conts = specs[1:]
             break
         out = [spec]
         for c in conts:
@@ -3464,6 +3468,59 @@ def _bus_room(lay: SheetLayout, bus: LNode, view: View, first: bool) -> float:
     """Width the ways of a busbar split over sheets may take on a sheet (``first``: the sheet of its supply)."""
     _, _, aw, _ = drawing_area(view)
     return aw / view.min_scale - 30.0 - ((bus.x - (lay.lnodes[0].x_left if lay.lnodes else 0)) if first else 0.0)
+
+
+def _refill(doc: Document, view: View, index: Index, specs: list[SheetSpec], lay: SheetLayout) -> None:
+    """A busbar split over the sheets ``specs`` was measured with everything on one sheet, where a PLC's modules
+    are wide enough for every link leaving them. On its own sheet the links to the other sheets end on off-page
+    stubs and its modules are narrower (see ``_spread_symbol``): the sheet of such a PLC takes the next ways as long
+    as they fit, measured on that sheet."""
+    bus_id = specs[0].bus_slice[0] if specs[0].bus_slice else None
+    bus = next((n for n in lay.lnodes if n.node is not None and n.node.id == bus_id), None)
+    if bus is None:
+        return
+    ways = [{n.id for n in _walk_nodes(c)} for c in index.nodes[bus_id].children]
+    plcs = {n.id: symbol_for(n) for n, _, _ in iter_nodes(doc) if n.type == "plc" and n.id}
+
+    def span(s: SheetSpec) -> tuple[int, int]:
+        return (s.bus_slice or s.continuation)[1:]  # type: ignore[index, return-value]
+
+    def reaches_out(k: int, a: int, b: int) -> bool:
+        """A PLC on the sheet whose channels reach ways of the busbar drawn on another sheet."""
+        inside = set().union(*ways[a:b])
+        out = set().union(*ways[:a], *ways[b:])
+        for link in doc.links:
+            ce = _channel_end(link, plcs.get)
+            if ce is not None:
+                at, other = (link.from_, link.to) if ce[0] == 0 else (link.to, link.from_)
+                if (at in inside or (k == 0 and at not in out)) and other in out:
+                    return True
+        return False
+
+    def put(s: SheetSpec, a: int, b: int) -> None:
+        if s.bus_slice:
+            s.bus_slice = (bus_id, a, b)  # type: ignore[assignment]
+        else:
+            s.continuation = (bus_id, a, b)  # type: ignore[assignment]
+
+    for k in range(len(specs) - 1):
+        while True:
+            (a, b), (na, nb) = span(specs[k]), span(specs[k + 1])
+            if nb - na < 1 or not reaches_out(k, a, b):
+                break
+            put(specs[k], a, b + 1)
+            sub = layout_sheet(doc, view, specs[k], index)
+            way = next((n for n in sub.lnodes if n.node is not None and n.node.id == bus_id), None)
+            if way is None or sum(c.width for c in way.children) > _bus_room(sub, way, view, k == 0):
+                put(specs[k], a, b)
+                break
+            put(specs[k + 1], na + 1, nb)
+    for k in range(len(specs) - 1, 0, -1):  # a continuation left with no way: dropped
+        if span(specs[k])[0] >= span(specs[k])[1]:
+            specs[k - 1].next = specs[k].next
+            if specs[k].next is not None:
+                specs[k].next.prev = specs[k - 1]
+            del specs[k]
 
 
 def _split_bus(spec: SheetSpec, lay: SheetLayout, view: View, index: Index, lang: str = "en") -> list[SheetSpec]:
