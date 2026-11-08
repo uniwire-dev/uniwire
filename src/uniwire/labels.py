@@ -23,6 +23,9 @@ def _g(node: Any, name: str) -> Any:
 
 #: Whether the document being drawn follows North-American practice (NEC / CEC): set by the renderer.
 NORTH_AMERICAN: contextvars.ContextVar[bool] = contextvars.ContextVar("uniwire_north_american", default=False)
+# kind of each declared interlock key ("trapped_key", "electrical"...), for the drawing being made
+INTERLOCK_KINDS: contextvars.ContextVar[Optional[dict[str, str]]] = contextvars.ContextVar("uniwire_interlock_kinds",
+                                                                                          default=None)
 
 
 def north_american(doc: Any) -> bool:
@@ -337,7 +340,8 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
     elif t == "transfer_switch":
         lines += [fmt(g("in_A"), " A") if g("in_A") else "", {"automatic": _t("ann.automatic", lang), "manual": _t("ann.manual", lang)}.get(g("mode") or "", "")]
     elif t == "spd":
-        lines += [f"Type {g('spd_type')}" if g("spd_type") else "", fmt(g("imax_kA"), " kA") if g("imax_kA") else ""]
+        lines += [_t("ann.spd_type", lang, type=g("spd_type")) if g("spd_type") else "",
+                  fmt(g("imax_kA"), " kA") if g("imax_kA") else ""]
     elif t == "busbar":
         lines += [fmt(g("in_A"), " A") if g("in_A") else "", g("dimensions") or ""]
     elif t == "board":
@@ -375,8 +379,13 @@ def state_text(node: Any, lang: str = "en", normally_open: bool = False, locks: 
     if normally_open or _g(node, "normal_state") == "open":
         parts.append(_t("ann.normally_open", lang))
     keys = list(dict.fromkeys([*(_g(node, "locks") or []), *locks]))
-    if keys:
-        parts.append(_t("ann.locks", lang, keys=" ".join(keys)))
+    kinds = INTERLOCK_KINDS.get() or {}
+    trapped = [k for k in keys if kinds.get(k, "trapped_key") == "trapped_key"]  # a key, unless declared otherwise
+    other = [k for k in keys if k not in trapped]  # electrical, mechanical, removable link: an interlock, no key
+    if trapped:
+        parts.append(_t("ann.locks", lang, keys=" ".join(trapped)))
+    if other:
+        parts.append(_t("ann.interlock", lang, keys=" ".join(other)))
     return ", ".join(parts)
 
 

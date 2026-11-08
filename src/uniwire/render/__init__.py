@@ -64,13 +64,15 @@ def _view_pages(doc: Document, view: View) -> list[Page]:
         _PAGES.move_to_end(key)
         return copy.deepcopy(_PAGES[key])
     from ..i18n import RENDER_LANG
-    from ..labels import NORTH_AMERICAN, north_american
+    from ..labels import INTERLOCK_KINDS, NORTH_AMERICAN, north_american
     token, na_token = RENDER_LANG.set(lang), NORTH_AMERICAN.set(north_american(doc))
+    ik_token = INTERLOCK_KINDS.set({i.key: i.kind for i in doc.interlocks if i.kind})
     try:
         pages = _render_pages(doc, view, lang)
     finally:
         RENDER_LANG.reset(token)
         NORTH_AMERICAN.reset(na_token)
+        INTERLOCK_KINDS.reset(ik_token)
     for i, page in enumerate(pages, 1):
         page.attrs.update({"data-uw-sheet": str(i), "data-uw-view-kind": view.kind})
     if key is not None:
