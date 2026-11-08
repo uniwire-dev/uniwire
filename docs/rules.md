@@ -100,7 +100,7 @@ method (part 5-52, guide UTE C 15-105).
 | `nfc15100.rcd-circuits` | *Dwelling*. At most 8 circuits per 30 mA RCD, counted down to the next RCD, through combs and boards (table 10-1G rule 3) | error |
 | `nfc15100.rcd-rating` | *Dwelling*. Rated current of a 30 mA RCD at least the current of the service breaker (from the subscribed power when known), or 1 × its heating, water heater and EV circuits + 0.5 × the others (table 10-1G rule 4) | warning |
 | `nfc15100.rcd-spread` | *Dwelling*. Lighting circuits on at least 2 RCDs, socket-outlet circuits too (table 10-1G rule 5) | error |
-| `nfc15100.heating` | *Dwelling*. Heating power per circuit: 3.5 / 4.5 / 5.75 / 7.25 kW at 16 / 20 / 25 / 32 A (table 10-1B) | warning |
+| `nfc15100.heating` | *Dwelling*. Heating power per circuit (`p_kW` per item, times `count`): 3.5 / 4.5 / 5.75 / 7.25 kW at 16 / 20 / 25 / 32 A (table 10-1B) | warning |
 | `nfc15100.dedicated-circuit` | *Dwelling*. Dedicated circuits: washing machine, dishwasher, dryer, oven, hob, water heater, EV charging (one load per circuit), heating and shutters (circuit reserved for that use); freezer recommended (10.1.3.4) | error (freezer: warning) |
 | `nfc15100.neutral-pole` | *Dwelling*. No 1P breaker on a circuit with a neutral: every circuit is isolated on all its live conductors (10.1.4.7.1.1) | error |
 | `nfc15100.spd-rcd` | *Dwelling*. The surge protective device at the origin is not behind a 30 mA RCD (10.1.4.7.3.1) | error |
