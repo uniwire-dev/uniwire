@@ -13,7 +13,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   run side by side (they were spaced a fraction of a millimetre apart, and past eight links they ran on one
   another). The same for the PLC's built-in I/O (slot 0) under its head. The channel of each link ("2.1") is
   written up its wire under the module, where it is read on the panel, instead of near the device at the far end.
-  A board frame encloses a symbol wider than its column.
+  A board frame encloses a symbol wider than its column. Only the links drawn under a module widen it (not those
+  ending on an off-page stub), and when a busbar is split over sheets, the sheet of such a PLC takes the ways that
+  still fit once its modules are narrower.
 * Terminal numbers named on a device that is not a PLC module (`from_port` / `to_port` on a safety relay, a
   controller) are drawn: inside the box of a controller many links reach, by each link's point, else by the link
   near that end. Before, they were left out of the drawing.
