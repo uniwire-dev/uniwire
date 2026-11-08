@@ -15,6 +15,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   the installation's.
 * Drawings on several sheets: a `tie` link between two devices or boards (not busbars) whose ends are on two sheets
   is drawn at both ends, with a stub naming the other end and its sheet. Before, it was not drawn at all.
+* Drawings: a switch at the far end of an outgoing cable, in front of the equipment it serves (a local isolator
+  before a transformer, an inverter or a UPS), is drawn below the board frame with that equipment. Before, a
+  transformer joined by a cable left the frame while one behind its local isolator stayed inside.
 * Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
   inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
   from the board was drawn on its AC side, and the inverter was drawn "=" over "~".
