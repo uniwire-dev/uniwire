@@ -8,6 +8,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings: a board frame no longer encloses the equipment at the far end of its outgoing cables. An inverter, a
+  UPS, a transfer switch, a busbar (other than the board's own) or a transformer fed above 1000 V, with a `cable`
+  of its own or after a device with one, is drawn below the frame with what it feeds (SPEC §3.1).
+  Before, a PV inverter and its DC isolator, a UPS, the transformers fed by a ring main unit or a transfer switch at
+  a pump were drawn inside the board.
 * `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
   controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
   after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",

@@ -84,6 +84,7 @@ from .engine import (
     _is_dc,
     _signal_links,
     _wrap_words,
+    board_parts,
     drawing_area,
     interlock_mark,
     sheet_node_ids,
@@ -1044,25 +1045,13 @@ def _shift(ln: MLNode, dy: float) -> None:
 
 
 def _owned(board: MLNode):
-    """Nodes inside a board frame: its subtree, without sub-boards and loads."""
-    stack = list(board.children)
-    while stack:
-        n = stack.pop()
-        if n.is_board or n.bottom:
-            continue
-        yield n
-        stack.extend(n.children)
+    """Nodes inside a board frame: its subtree, without sub-boards, loads and equipment beyond a cable."""
+    return (n for n, inside in board_parts(board) if inside and not n.bottom)
 
 
 def _sub_boards(board: MLNode) -> list[MLNode]:
-    out, stack = [], list(board.children)
-    while stack:
-        n = stack.pop()
-        if n.is_board:
-            out.append(n)
-            continue
-        stack.extend(n.children)
-    return out
+    """Sub-boards, and equipment beyond a cable, under the board: drawn below its frame."""
+    return [n for n, inside in board_parts(board) if not inside]
 
 
 def _frame_bottom(board: MLNode) -> float:
@@ -1074,10 +1063,10 @@ def _separate_boards(ln: MLNode) -> None:
     if ln.is_board:
         subs = _sub_boards(ln)
         # below the frame, and side by side on one line (their frames, names and first devices aligned)
-        top = max([_frame_bottom(ln) + 3.0] + [sb.frame_top for sb in subs])
+        top = max([_frame_bottom(ln) + 3.0] + [sb.frame_top if sb.is_board else sb.y for sb in subs])
         for sb in subs:
-            if sb.frame_top < top:
-                _shift(sb, top - sb.frame_top)
+            if (sb.frame_top if sb.is_board else sb.y) < top:
+                _shift(sb, top - (sb.frame_top if sb.is_board else sb.y))
     for c in ln.children:
         _separate_boards(c)
 
@@ -1760,6 +1749,9 @@ def _draw_frames(roots: list[MLNode], g: Group, links: Optional[list[_Link]] = N
             lefts = [box[0] for n in _owned(b) if n.id in drawn and (box := bbox(drawn[n.id])) is not None]
             x0 = max(b.x_left - 0.5, min([x0] + [x - 2.0 for x in lefts]))
             y0, y1 = b.frame_top, _frame_bottom(b)
+            # the lanes of the power links leaving its devices run in it (the target may be outside it)
+            own = {id(n) for n in _owned(b)} | {id(b)}
+            y1 = max([y1] + [max(lk.lane.values()) + 3.0 for lk in links or [] if id(lk.a) in own and lk.lane])
             # a link between two of its devices (a bypass and its contactor) is in the board: inside its frame,
             # as far as the column on the left allows
             inside = {id(n) for n in b.walk()}
