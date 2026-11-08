@@ -172,6 +172,41 @@ registry.iec81346_class("breaker")   # 'QAB'
 registry.iec81346_table()            # full IEC 81346-2 table if uniwire[iec81346] is installed, else {}
 ```
 
+## Symbol sets
+
+A document names the set of symbols it is drawn with in `symbols` (`iec` by default, the set built into the
+library). A set is registered under a name, and gives only the symbols it changes: the others are drawn as in
+`iec`.
+
+```python
+from uniwire.render.scene import THIN, Line, Rect, Style
+from uniwire.symbols import SYMBOLS, Symbol, register_symbol_set, symbol_sets
+
+def breaker(node=None, *variants, **named):   # node: the node drawn (None on the symbol sheet)
+    return Symbol("my-breaker", [Line((0, 0), (0, 3)), Rect(-2.5, 3, 5, 5, Style(width=THIN)), Line((0, 8), (0, 11))],
+                  height=11.0)
+
+register_symbol_set("mine", {"breaker": breaker})   # keys: names of SYMBOLS (node types and "offpage")
+symbol_sets()                                       # ['iec', 'mine']
+```
+
+A factory takes the arguments of the built-in function of the same name in `uniwire.symbols` (the node first; some
+take variants, such as `motor(node, live, dc)` or `generator(node, system)`) and returns a `Symbol` in millimetres:
+input terminal at (0, 0), y pointing down, output terminal at (0, `height`), `left` and `right` its width on each
+side of the conductor. Registering again under the same name adds or replaces symbols; `iec` cannot be replaced.
+
+A package makes its set available to every program that uses uniwire with an entry point in the group
+`uniwire.symbol_sets`: its name is the set's name, its object the mapping (or a function returning it).
+
+```toml
+[project.entry-points."uniwire.symbol_sets"]
+mine = "my_package.symbols:SYMBOLS"
+```
+
+A document naming a set that is not installed is drawn with the `iec` symbols, with the finding
+`core.symbol-set-unknown`. `uniwire symbols --set mine` draws every symbol of a set. Example:
+[`examples/code/symbol_set.py`](https://github.com/uniwire-dev/uniwire/blob/main/examples/code/symbol_set.py).
+
 ## Command line
 
 | Command | Purpose |
@@ -186,7 +221,7 @@ registry.iec81346_table()            # full IEC 81346-2 table if uniwire[iec8134
 | `uniwire markers FILE [--view ID] [-o FILE]` | Wire marker list as CSV (one row per end of a marked wire, `quantity`) |
 | `uniwire cables FILE [-o FILE]` | Cable schedule as CSV |
 | `uniwire marks FILE [--view ID] [--write] [-o FILE]` | Print the wire marks of a view; `--write` freezes them into the cables' `marks` (in place, or into `-o FILE`; the JSON is rewritten with 2-space indentation) |
-| `uniwire symbols [-o FILE]` | SVG sheet of all symbols |
+| `uniwire symbols [-o FILE] [--set NAME]` | SVG sheet of all symbols (of the symbol set `NAME`, `iec` by default) |
 | `uniwire normalize FILE` | Print the resolved document (templates applied, ids assigned, canonical units) |
 
 ```bash

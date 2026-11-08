@@ -15,6 +15,7 @@ from ..i18n import t as _t
 from ..layout.engine import PAPER, drawing_area, feeding_sheet, layout_sheet, plan_sheets, sheet_node_ids
 from ..model import Document, View
 from ..resolve import build_index
+from ..symbols import ACTIVE_SET, known_set
 from .colors import colorize
 from .frame import compose_page
 from .scene import Group, Item, Page, Text
@@ -77,12 +78,14 @@ def _view_pages(doc: Document, view: View) -> list[Page]:
     from ..labels import INTERLOCK_KINDS, NORTH_AMERICAN, north_american
     token, na_token = RENDER_LANG.set(lang), NORTH_AMERICAN.set(north_american(doc))
     ik_token = INTERLOCK_KINDS.set({i.key: i.kind for i in doc.interlocks if i.kind})
+    set_token = ACTIVE_SET.set(known_set(doc.symbols))
     try:
         pages = _render_pages(doc, view, lang)
     finally:
         RENDER_LANG.reset(token)
         NORTH_AMERICAN.reset(na_token)
         INTERLOCK_KINDS.reset(ik_token)
+        ACTIVE_SET.reset(set_token)
     tag = _lang_tag(doc.meta.lang)  # the language of the texts: a browser picks the glyph forms (Japanese, Chinese) by it
     for i, page in enumerate(pages, 1):
         page.attrs.update({"lang": tag, "xml:lang": tag, "data-uw-sheet": str(i), "data-uw-view-kind": view.kind})

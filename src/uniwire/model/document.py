@@ -10,7 +10,7 @@ from pydantic import Field, PrivateAttr, field_validator, model_validator
 from .base import ID_PATTERN, Cable, Installation, Meta, UWModel
 from .nodes import Node
 
-FORMAT_VERSION = "1.1.0"
+FORMAT_VERSION = "1.2.0"
 SCHEMA_ID = "https://uniwire.sh/schema/v1/uniwire.schema.json"
 
 LinkKind = Literal["transfer", "tie", "bypass", "parallel", "infeed", "earth", "control", "interlock", "trip",
@@ -214,6 +214,8 @@ class Document(UWModel):
     schema_: Optional[str] = Field(SCHEMA_ID, alias="$schema")
     uniwire: str = Field(FORMAT_VERSION, pattern=r"^1\.\d+\.\d+$", title="uniwire", description="Format version (semver)")
     profiles: list[str] = Field(default_factory=list, description="Rule profiles: 'nfc15100'...")
+    symbols: Optional[str] = Field(
+        None, description="Symbol set the drawing uses: 'iec' (the default, built in) or a set registered by a package")
     meta: Meta = Field(default_factory=Meta)
     installation: Installation = Field(default_factory=Installation)
     templates: dict[str, dict[str, Any]] = Field(

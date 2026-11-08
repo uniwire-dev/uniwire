@@ -39,14 +39,14 @@ inst.render("house.pdf")
 ## `Installation`
 
 ```python
-Installation(title=None, *, earthing=None, system=None, un=None, profiles=(), lang="en", **fields)
+Installation(title=None, *, earthing=None, system=None, un=None, profiles=(), lang="en", symbols=None, **fields)
 ```
 
 * `earthing` (`"TT"`, `"TN-S"`, `"IT"`…), `system` (`"1P+N"`, `"3P+N"`…), `un` (`"400 V"`) fill the
   `installation` object; any other `installation` or `meta` field can be given as a keyword
   (`project="EX-10"`, `subscribed_kVA=12`, `ik3_kA=10`, `author=...`).
 * `profiles` lists the rule profiles to apply; `lang` sets `meta.lang` (`"en"` or `"fr"`), which controls
-  the language of the drawing.
+  the language of the drawing; `symbols` names the symbol set of the drawing (see the API documentation).
 
 Methods and properties:
 
@@ -65,7 +65,7 @@ In Jupyter, an `Installation` displays its first sheet inline.
 
 ## Element classes
 
-There is one class per uniwire node type (53 in format 1.1). The class name is the type in CamelCase,
+There is one class per uniwire node type (53 in format 1.2). The class name is the type in CamelCase,
 with a few acronyms:
 
 | Category | Classes |

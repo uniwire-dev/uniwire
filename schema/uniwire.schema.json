@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uniwire.sh/schema/v1/uniwire.schema.json",
   "title": "uniwire: electrical installation",
-  "description": "uniwire 1.1.0 exchange format for describing electrical installations, drawn as single-line and multi-line diagrams (tree topology + links, characteristics, rendering preferences).",
+  "description": "uniwire 1.2.0 exchange format for describing electrical installations, drawn as single-line and multi-line diagrams (tree topology + links, characteristics, rendering preferences).",
   "$defs": {
     "Appliance": {
       "additionalProperties": false,
@@ -28141,7 +28141,7 @@
       "title": "$Schema"
     },
     "uniwire": {
-      "default": "1.1.0",
+      "default": "1.2.0",
       "description": "Format version (semver)",
       "pattern": "^1\\.\\d+\\.\\d+$",
       "title": "uniwire",
@@ -28154,6 +28154,19 @@
       },
       "title": "Profiles",
       "type": "array"
+    },
+    "symbols": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Symbol set the drawing uses: 'iec' (the default, built in) or a set registered by a package",
+      "title": "Symbols"
     },
     "meta": {
       "$ref": "#/$defs/Meta"

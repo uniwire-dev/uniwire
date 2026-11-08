@@ -395,7 +395,8 @@ class Installation:
     """Root of a uniwire document built in code."""
 
     def __init__(self, title: Optional[str] = None, *, earthing: Optional[str] = None, system: Optional[str] = None,
-                 un: Any = None, profiles: Iterable[str] = (), lang: str = "en", **meta_or_installation: Any) -> None:
+                 un: Any = None, profiles: Iterable[str] = (), lang: str = "en", symbols: Optional[str] = None,
+                 **meta_or_installation: Any) -> None:
         self.meta: dict[str, Any] = {"lang": lang}
         if title:
             self.meta["title"] = title
@@ -413,6 +414,7 @@ class Installation:
             else:
                 raise TypeError(f"Installation: unknown field {k!r}")
         self.profiles = list(profiles)
+        self.symbols = symbols
         self.views: list[dict[str, Any]] = []
         self._sources: list[Element] = []
         self._devices: list[Element] = []
@@ -477,6 +479,8 @@ class Installation:
         d: dict[str, Any] = {"$schema": SCHEMA_ID, "uniwire": FORMAT_VERSION}
         if self.profiles:
             d["profiles"] = self.profiles
+        if self.symbols:
+            d["symbols"] = self.symbols
         d["meta"] = self.meta
         if self.installation:
             d["installation"] = self.installation

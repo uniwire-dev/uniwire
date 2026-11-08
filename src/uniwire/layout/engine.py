@@ -60,9 +60,7 @@ from ..render.semantics import (
     ref_group,
 )
 from ..resolve import Index, build_index, iter_nodes
-from ..symbols import BUSWAY_H, DASH, PORT_STEP, Symbol, controller, offpage, plc, symbol_for
-from ..symbols import inverter as inverter_symbol
-from ..symbols import motor as motor_symbol
+from ..symbols import BUSWAY_H, DASH, PORT_STEP, Symbol, symbol, symbol_for
 from ..units import fmt
 from .routing import (
     LANE,
@@ -231,7 +229,7 @@ def _is_bottom(ln: LNode) -> bool:
 def _build(node: NodeBase, spec: SheetSpec, is_root: bool) -> LNode:
     if not is_root and node.id in spec.detached:
         label = node.ref or node.label or node.id or ""
-        return LNode(node, "stub", offpage(label), [], label=label, target=node.id)
+        return LNode(node, "stub", symbol("offpage", label), [], label=label, target=node.id)
     children = list(node.children)
     bus_out = False
     if spec.bus_slice and spec.bus_slice[0] == node.id:
@@ -304,7 +302,7 @@ def _spread_symbol(doc: Document, node: Optional[NodeBase], sym: Symbol, here: O
                 continue
             if here is None or (link.to, link.from_)[ce[0]] in here:
                 wired[ce[1]] += 1
-        return plc(node, dict(wired)) if any(c > 1 for c in wired.values()) else sym
+        return symbol("plc", node, dict(wired)) if any(c > 1 for c in wired.values()) else sym
     if node is None or sym.name != "controller" or not node.id:
         return sym
     ids = _signal_links(doc, node.id)
@@ -315,7 +313,7 @@ def _spread_symbol(doc: Document, node: Optional[NodeBase], sym: Symbol, here: O
                                            (doc.links[i].to, doc.links[i].to_port)) if nid == node.id and p]
     inner = max((text_width(p, PORT_SIZE) + TERM_PAD for p in terms), default=0.0)
     if count >= SPREAD_FROM and (body > sym.height - 2 * 2.5 or inner):
-        return controller(node, max(body, sym.height - 2 * 2.5), inner)
+        return symbol("controller", node, max(body, sym.height - 2 * 2.5), inner)
     return sym
 
 
@@ -808,14 +806,14 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
             if n.type == "generator" and n.node is not None:
                 n.sym = symbol_for(n.node, _system_of(n.node, doc))
             elif n.type == "motor" and n.node is not None and n.node.id and _dc_line(n.node, index):
-                n.sym = motor_symbol(n.node, dc=True)  # on a DC line: a DC motor, whatever its feeder's poles
+                n.sym = symbol("motor", n.node, dc=True)  # on a DC line: a DC motor, whatever its feeder's poles
             elif n.type == "motor" and n.node is not None and getattr(n.node, "phases", None) is None:
                 # phases not stated: those of its feeder (a motor on a single-phase circuit is drawn 1~)
                 live = conductor_count(_feeder_chain(n, index), _supply_system(n, index, doc))
-                n.sym = motor_symbol(n.node, live)
+                n.sym = symbol("motor", n.node, live)
             elif (n.type == "inverter" and n.node is not None and n.node.id and n.node.children
                   and all(_is_dc(c) for c in n.node.children) and not _fed_dc(n.node, index)):
-                n.sym = inverter_symbol(n.node, ac_fed=True)  # fed by the board, its DC side below it
+                n.sym = symbol("inverter", n.node, ac_fed=True)  # fed by the board, its DC side below it
             n.sym = _spread_symbol(doc, n.node, n.sym, here)
             n.left_room = _left_room(doc, n, here, lang)
 

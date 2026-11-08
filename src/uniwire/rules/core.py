@@ -9,6 +9,7 @@ from collections import defaultdict
 from ..i18n import t as _t
 from ..model import Document
 from ..resolve import Index
+from ..symbols import known_set, symbol_sets
 from . import Finding, rule
 
 
@@ -335,6 +336,14 @@ def normalized_values(doc: Document, idx: Index):
     """Near-miss values rewritten on load (``poles: 2`` read as ``"2P"``...): write them in canonical form."""
     for note in getattr(doc, "_normalized", []):
         yield Finding("warning", "core.normalized", note)
+
+
+@rule("core")
+def symbol_set_unknown(doc: Document, idx: Index):
+    """A symbol set that is not registered (no package brings it): the drawing uses the IEC symbols."""
+    if doc.symbols and known_set(doc.symbols) != doc.symbols:
+        yield Finding("warning", "core.symbol-set-unknown",
+                      _t("core.symbol_set_unknown", name=doc.symbols, known=", ".join(symbol_sets())))
 
 
 @rule("core")

@@ -102,6 +102,7 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("symbols", help=_t("cli.help.symbols"))
     p.add_argument("-o", "--out", default="symbols.svg")
+    p.add_argument("--set", default="iec", help=_t("cli.help.symbols_set"))
 
     p = sub.add_parser("normalize", help=_t("cli.help.normalize"))
     p.add_argument("file")
@@ -216,9 +217,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if a.cmd == "symbols":
         from .render.svg import page_to_svg
+        from .symbols import known_set, symbol_sets
         from .symbols.sheet import symbol_sheet
 
-        Path(a.out).write_text(page_to_svg(symbol_sheet()), "utf-8")
+        if known_set(a.set) != a.set:
+            print(_t("core.symbol_set_unknown", name=a.set, known=", ".join(symbol_sets())), file=sys.stderr)
+        Path(a.out).write_text(page_to_svg(symbol_sheet(symbols=a.set)), "utf-8")
         print(a.out)
         return 0
     if a.cmd == "normalize":

@@ -70,8 +70,7 @@ from ..render.semantics import (
     ref_group,
 )
 from ..resolve import Index, build_index, iter_nodes
-from ..symbols import ABBREVIATIONS, M, Symbol, symbol_for
-from ..symbols import grid as grid_symbol
+from ..symbols import ABBREVIATIONS, M, Symbol, symbol, symbol_for
 from ..units import fmt
 from .engine import (
     DC_PORT_TYPES,
@@ -1344,7 +1343,7 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
                                              closed=True), Line((x, y), (x, y + h))))
             return g
         if t == "grid":
-            gs = grid_symbol(node)
+            gs = symbol("grid", node)
             g.add(Group([transform(i, (x0 + x1) / 2, y) for i in gs.items]))
             g.add(Rect(x0, y + 10.0, x1 - x0, 2.0, Style(fill="#ffffff")))
             top = y + 12.0
