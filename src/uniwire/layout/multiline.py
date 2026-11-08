@@ -975,6 +975,7 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
                 label = without_ref(node.label, node.ref) if tag == node.ref else node.label
                 lines = [label if t == node.label else t for t in lines]
                 lines = [t for t in lines if t and (t == label or t.casefold() not in label.casefold())]
+                lines = list(dict.fromkeys(lines))  # a label that is a rating once the tag is gone ("-Q5 16 A")
             if ln.type == "spare":  # a spare way: what it is kept for, its rating
                 in_a = getattr(node, "in_A", None)
                 lines = [x for x in (node.label or registry.label("spare", lang), fmt(in_a, " A") if in_a else "",

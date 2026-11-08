@@ -190,3 +190,21 @@ def test_drawn_words_follow_the_language():
     assert "interlock E1" in en and "key K1" in en and "key E1" not in en
     ml = texts("en", "multi-line")  # the tag drawn above the label is not repeated in it
     assert "-KM1" in ml and "water heater" in ml and "-KM1 water heater" not in ml
+
+
+def test_tag_stripped_from_a_label_keeps_a_second_tag():
+    from uniwire.labels import without_ref
+
+    assert without_ref("-Q1/-Q2 feeders", "-Q1") == "-Q2 feeders"
+    assert without_ref("-Q1-Q2 tie", "-Q1") == "-Q2 tie"
+    assert without_ref("-Q1 - feeders", "-Q1") == "feeders"
+    assert without_ref("-Q10 label", "-Q1") == "-Q10 label"  # another tag, not this one
+
+
+def test_label_that_is_a_rating_once_the_tag_is_gone_is_drawn_once():
+    doc = load({"installation": {"system": "1P+N", "un_V": 230}, "views": [{"id": "v", "kind": "multi-line"}],
+                "sources": [{"type": "grid", "children": [{"type": "board", "children": [
+                    {"type": "switch_disconnector", "ref": "-Q5", "label": "-Q5 16 A", "in_A": 16,
+                     "children": [{"type": "socket"}]}]}]}]})
+    texts = [s for p in render_pages(doc) for s in _texts(p.root)]
+    assert texts.count("16 A") == 1
