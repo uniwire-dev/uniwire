@@ -36,7 +36,7 @@ from typing import Any, Optional
 from .. import registry
 from ..i18n import normalize_lang, render_lang
 from ..i18n import t as _t
-from ..labels import annotation, cable_text, drawn_cable_text, part_number
+from ..labels import annotation, cable_text, drawn_cable_text, part_number, without_ref
 from ..marks import marked_wires, marks_shown
 from ..model import Document, NodeBase, View
 from ..render.scene import (
@@ -969,14 +969,16 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
             node = ln.node
             feeds_bus = any(len(d.children) >= 2 for d in ln.walk())
             lines = [x for x in annotation(node, lang, show_label=feeds_bus) if x]
-            if node.label and node.label in lines:  # the lines below the label: not repeating it ('25 kVA')
-                lines = [t for t in lines if t == node.label or t.casefold() not in node.label.casefold()]
+            pn = part_number(node)
+            tag = pn if view.tag_field == "part_number" and pn else node.ref
+            if node.label and node.label in lines:  # the label: not repeating the tag above it, nor the lines below it
+                label = without_ref(node.label, node.ref) if tag == node.ref else node.label
+                lines = [label if t == node.label else t for t in lines]
+                lines = [t for t in lines if t and (t == label or t.casefold() not in label.casefold())]
             if ln.type == "spare":  # a spare way: what it is kept for, its rating
                 in_a = getattr(node, "in_A", None)
                 lines = [x for x in (node.label or registry.label("spare", lang), fmt(in_a, " A") if in_a else "",
                                      getattr(node, "poles", None) or "") if x]
-            pn = part_number(node)
-            tag = pn if view.tag_field == "part_number" and pn else node.ref
             if tag:
                 lines.insert(0, tag)
             ln.tagged = bool(tag)
