@@ -23,6 +23,9 @@ def _g(node: Any, name: str) -> Any:
 
 #: Whether the document being drawn follows North-American practice (NEC / CEC): set by the renderer.
 NORTH_AMERICAN: contextvars.ContextVar[bool] = contextvars.ContextVar("uniwire_north_american", default=False)
+# kind of each declared interlock key ("trapped_key", "electrical"...), for the drawing being made
+INTERLOCK_KINDS: contextvars.ContextVar[Optional[dict[str, str]]] = contextvars.ContextVar("uniwire_interlock_kinds",
+                                                                                          default=None)
 
 
 def north_american(doc: Any) -> bool:
@@ -113,7 +116,8 @@ def ref_label(ref: Optional[str], label: Optional[str]) -> str:
 def without_ref(label: str, ref: Optional[str]) -> str:
     """``label`` without a leading copy of the tag printed above it ('TX-A 3150 kVA' under 'TX-A')."""
     if ref and label.startswith(ref) and (len(label) == len(ref) or label[len(ref)] in " -:,/"):
-        return label[len(ref):].strip(" -:,/")
+        # separators after the tag, a dash only as a separator ("-Q1 - feeders"), not the start of a second tag
+        return re.sub(r"^[\s:,/]*(?:-\s+)?", "", label[len(ref):]).rstrip()
     return label
 
 
@@ -337,7 +341,8 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
     elif t == "transfer_switch":
         lines += [fmt(g("in_A"), " A") if g("in_A") else "", {"automatic": _t("ann.automatic", lang), "manual": _t("ann.manual", lang)}.get(g("mode") or "", "")]
     elif t == "spd":
-        lines += [f"Type {g('spd_type')}" if g("spd_type") else "", fmt(g("imax_kA"), " kA") if g("imax_kA") else ""]
+        lines += [_t("ann.spd_type", lang, type=g("spd_type")) if g("spd_type") else "",
+                  fmt(g("imax_kA"), " kA") if g("imax_kA") else ""]
     elif t == "busbar":
         lines += [fmt(g("in_A"), " A") if g("in_A") else "", g("dimensions") or ""]
     elif t == "board":
@@ -375,8 +380,13 @@ def state_text(node: Any, lang: str = "en", normally_open: bool = False, locks: 
     if normally_open or _g(node, "normal_state") == "open":
         parts.append(_t("ann.normally_open", lang))
     keys = list(dict.fromkeys([*(_g(node, "locks") or []), *locks]))
-    if keys:
-        parts.append(_t("ann.locks", lang, keys=" ".join(keys)))
+    kinds = INTERLOCK_KINDS.get() or {}
+    trapped = [k for k in keys if kinds.get(k, "trapped_key") == "trapped_key"]  # a key, unless declared otherwise
+    other = [k for k in keys if k not in trapped]  # electrical, mechanical, removable link: an interlock, no key
+    if trapped:
+        parts.append(_t("ann.locks", lang, keys=" ".join(trapped)))
+    if other:
+        parts.append(_t("ann.interlock", lang, keys=" ".join(other)))
     return ", ".join(parts)
 
 
@@ -395,9 +405,16 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
             return column["own_ref"]
         return (prot.ref if prot is not None and prot.ref else _g(leaf, "ref")) or ""
     if field == "protection":
-        return protection_short(prot) if prot is not None else ""
+        if prot is None:
+            return ""
+        txt = protection_short(prot)
+        sens = fmt_sensitivity(_g(prot, "idn_mA")) if _g(prot, "idn_mA") else ""
+        if column.get("idn_column") and sens and txt.endswith(sens):  # the residual current has its own row
+            txt = txt[:-len(sens)].strip()
+        return txt
     if field == "in_A":
-        return fmt(_g(prot, "in_A"), " A") if prot is not None and _g(prot, "in_A") else ""
+        src = prot if prot is not None else column.get("rated")  # no protection: the switching device
+        return fmt(_g(src, "in_A"), " A") if src is not None and _g(src, "in_A") else ""
     if field == "curve":
         return _g(prot, "curve") or ""
     if field == "icn_kA":
@@ -427,10 +444,12 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
     if field == "length_m":
         return fmt(cable.length_m, " m") if cable is not None and cable.length_m else ""
     if field == "p_kW":
+        # one unit in a table row; in kW, what is below 1 kW to 2 significant digits ('0.83 kW', not '0.833 kW')
+        power = (lambda kw: fmt(float(f"{kw:.2g}") if kw < 1 else kw, " kW")) if column.get("power_kw") else fmt_power
         p = _g(leaf, "p_kW")
         if not p and _g(leaf, "p_max_kW"):
-            return f"≤ {fmt_power(_g(leaf, 'p_max_kW'))}"
-        return fmt_power(p) if p else ""
+            return f"≤ {power(_g(leaf, 'p_max_kW'))}"
+        return power(p) if p else ""
     if field == "phase":
         ph = _g(leaf, "phase") or _g(prot, "phase")
         if not ph and (_g(prot, "poles") in THREE_PHASE_POLES or _g(leaf, "phases") == 3):

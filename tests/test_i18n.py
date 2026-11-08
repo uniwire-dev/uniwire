@@ -190,3 +190,46 @@ def test_title_block_follows_meta_lang():
     texts_en = _texts(render_pages(load({**DOC, "meta": {"lang": "en"}}))[0].root)
     assert "Régime de neutre" in texts_fr and "Earthing system" not in texts_fr
     assert "Earthing system" in texts_en and "Régime de neutre" not in texts_en
+
+
+def test_drawn_words_follow_the_language():
+    """The surge protector type, a non-key interlock, the split-phase system and a tag repeated in a label."""
+    doc = {"installation": {"earthing": "TN-S", "system": "split-phase", "un_V": 240, "uln_V": 120},
+           "interlocks": [{"key": "E1", "kind": "electrical"}, {"key": "K1"}],
+           "sources": [{"type": "grid", "children": [{"type": "board", "ref": "TD", "children": [
+               {"type": "spd", "ref": "-F1", "spd_type": "2"},
+               {"type": "contactor", "ref": "-KM1", "label": "-KM1 water heater", "in_A": 25, "locks": ["K1"],
+                "children": [{"type": "water_heater", "p_kW": 3}]},
+               {"type": "switch_disconnector", "ref": "-Q2", "in_A": 40, "locks": ["E1"],
+                "children": [{"type": "socket"}]}]}]}]}
+
+    def texts(lang, kind="single-line"):
+        d = load({**doc, "meta": {"lang": lang}, "views": [{"id": "v", "kind": kind}]})
+        return [s for p in render_pages(d) for s in _texts(p.root)]
+
+    it = texts("it")
+    assert "Tipo 2" in it and "Type 2" not in it
+    assert "interblocco E1" in it and "chiave K1" in it  # an electrical interlock has no key
+    assert any(s.startswith("monofase a tre fili 120/240 V") for s in it)
+    en = texts("en")
+    assert "interlock E1" in en and "key K1" in en and "key E1" not in en
+    ml = texts("en", "multi-line")  # the tag drawn above the label is not repeated in it
+    assert "-KM1" in ml and "water heater" in ml and "-KM1 water heater" not in ml
+
+
+def test_tag_stripped_from_a_label_keeps_a_second_tag():
+    from uniwire.labels import without_ref
+
+    assert without_ref("-Q1/-Q2 feeders", "-Q1") == "-Q2 feeders"
+    assert without_ref("-Q1-Q2 tie", "-Q1") == "-Q2 tie"
+    assert without_ref("-Q1 - feeders", "-Q1") == "feeders"
+    assert without_ref("-Q10 label", "-Q1") == "-Q10 label"  # another tag, not this one
+
+
+def test_label_that_is_a_rating_once_the_tag_is_gone_is_drawn_once():
+    doc = load({"installation": {"system": "1P+N", "un_V": 230}, "views": [{"id": "v", "kind": "multi-line"}],
+                "sources": [{"type": "grid", "children": [{"type": "board", "children": [
+                    {"type": "switch_disconnector", "ref": "-Q5", "label": "-Q5 16 A", "in_A": 16,
+                     "children": [{"type": "socket"}]}]}]}]})
+    texts = [s for p in render_pages(doc) for s in _texts(p.root)]
+    assert texts.count("16 A") == 1
