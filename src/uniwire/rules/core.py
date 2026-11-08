@@ -162,6 +162,15 @@ def control_scope(doc: Document, idx: Index):
         yield Finding("info", "core.scope", _t("core.control_scope", nodes=", ".join(names)), nodes[0])
 
 
+@rule("core")
+def view_direction(doc: Document, idx: Index):
+    """A view asking for a left-right drawing: drawn top-down for now, say so instead of drawing it silently."""
+    for i, v in enumerate(doc.views):
+        if v.direction in ("right", "left"):
+            yield Finding("info", "core.view-direction",
+                          _t("core.view_direction", view=v.id or v.title or i + 1, direction=v.direction))
+
+
 def _closed_node(n) -> bool:
     """Closed in normal operation. A transfer switch (changeover) engages its interlocked alternate position
     only when its normal_state says so explicitly."""
