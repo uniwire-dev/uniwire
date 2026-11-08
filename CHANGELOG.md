@@ -8,6 +8,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Feeder table: the residual current of an RCBO or an RCD is written in the RCD row only, not also with the
+  protection ("C16", then "30 mA"; without an RCD row it stays "C16 30 mA"). The powers of one row share their
+  unit: "0.6 kW" beside "3 kW", not "600 W" (a row below 1 kW throughout stays in watts). A feeder with no
+  protection of its own shows the rating of the device switching it (contactor, impulse relay) in the rating row.
 * Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
   inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
   from the board was drawn on its AC side, and the inverter was drawn "=" over "~".
