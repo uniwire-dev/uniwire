@@ -198,10 +198,11 @@ def normalized_values(doc: Document, idx: Index):
 
 @rule("core")
 def folio_duplicate(doc: Document, idx: Index):
-    """Two views starting at the same sheet number: the later one is numbered after the sheets before it."""
+    """Two views starting at the same sheet number: the later one is numbered after the sheets before it. A view
+    without ``first_folio`` starts at 1 when it comes first, else follows the view before it (no clash)."""
     first: dict[int, str] = {}
-    for v in doc.views:
-        if "first_folio" not in v.model_fields_set:
+    for i, v in enumerate(doc.views):
+        if "first_folio" not in v.model_fields_set and i:
             continue
         if v.first_folio in first:
             yield Finding("warning", "core.folio-duplicate", _t("core.folio_duplicate", view=v.id, other=first[v.first_folio],
