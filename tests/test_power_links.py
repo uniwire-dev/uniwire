@@ -219,3 +219,16 @@ def test_standby_supply_to_a_changeover_goes_round_the_feeders_it_would_cross():
 
     findings = [f for pg in render_views(load(STANDBY_ACROSS)) for f in audit(pg.root)]
     assert not [f for f in findings if f.kind in ("text_crossed", "link_on_conductor")], findings
+
+
+def test_link_route_keeps_off_a_busbar():
+    """A route close enough to a busbar to be read as part of it (on it, or less than a lane away) is paid for:
+    a link drawn there joins what the busbar feeds."""
+    from uniwire.layout.routing import BUS_CLEAR_THIN, End, Obstacles, route_grid
+
+    obs = Obstacles()
+    obs.add_hline(10.0, 20.0, 80.0, bus=True)
+    pts, _, _ = route_grid(obs, [End(10.0, 9.0, "right")], [End(90.0, 9.0, "left")], (0.0, 0.0, 100.0, 20.0),
+                           record=False)
+    over = [p[1] for p, q in zip(pts, pts[1:]) if p[1] == q[1] and min(p[0], q[0]) < 80.0 and max(p[0], q[0]) > 20.0]
+    assert over and all(abs(y - 10.0) >= BUS_CLEAR_THIN for y in over)
