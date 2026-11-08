@@ -8,6 +8,55 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
+  inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
+  from the board was drawn on its AC side, and the inverter was drawn "=" over "~".
+* Multi-line drawings on a single-phase three-wire supply (`system` "split-phase", 100/200 V or 120/240 V): a `2P`
+  device feeds a phase-to-phase circuit, without the neutral, unless something below it uses the neutral (a device
+  or load on one leg, a load whose `un_V` is the phase-to-neutral voltage, a socket-outlet or lighting circuit). A
+  load's `un_V` also tells which of the two it is, against the voltages of its own supply. Before, a 200 V or 240 V
+  load under a `2P` breaker was drawn with a neutral, unless its `phase` said "L1L2". These rules apply below a
+  split-phase supply only (the nearest system declared above, a transformer taking the one declared below it):
+  before, anywhere in a document that had one, so a three-phase motor fed by a 4-core cable elsewhere was drawn on
+  two phases.
+* Title block: the voltage gives the phase-to-neutral and the phase-to-phase voltages when both are stated
+  (`uln_V`) and the system has a neutral: "3P+N 230/400 V", "split-phase 100/200 V".
+* Drawings: a spare way with no device (`spare` without `in_A` or `poles`) is a free space, drawn dashed (multi-line: grey
+  dashed, like an equipped spare way) and without a conductor mark. Before, it was drawn as a conductor leaving the
+  busbar with no protection.
+* Drawings: a board frame no longer encloses the equipment at the far end of its outgoing cables. An inverter, a
+  UPS, a transfer switch, a busbar (other than the board's own) or a transformer fed above 1000 V, with a `cable`
+  of its own or after a device with one, is drawn below the frame with what it feeds (SPEC §3.1).
+  Before, a PV inverter and its DC isolator, a UPS, the transformers fed by a ring main unit or a transfer switch at
+  a pump were drawn inside the board.
+* Drawings: a board in a standby supply drawn beside the changeover switch it feeds (`transfer` link) is framed
+  and named like the others, clear of the frame of the board holding the changeover. Before, it had no frame: its
+  devices seemed to hang straight from the source.
+* Drawings cut into continuation sheets: a busbar continued on another sheet keeps the frame of its board there
+  (single-line), and the continuation is named after the board in multi-line drawings too ("TD (cont.)"), not
+  after the device at the head of the busbar ("-F1 (cont.)"). The busbar of a row of the board (a group RCD among
+  others) is named after the board and the row in both: "TD, -ID2 (cont.)" (before, "TD" in single-line drawings).
+* Drawings: a link no longer runs on a busbar or right beside it, where it read as part of it. A transfer link
+  from a standby supply to a changeover switch was routed onto the end of the busbar above the switch, and links
+  between trains ran along their busbars: they looked connected to what the busbar feeds.
+* Single-line conductor marks: the phase of a single-phase line is also taken from the node above it that states
+  one (a group RCD on `L2` marks its circuits `L2+N`, before only `+N`), and is written on the line leaving a
+  single-phase device too. Two conductors on one phase are marked with both (`L1 N`, before `L1` alone). A mark
+  stops at a converter: the DC side of an inverter is no longer marked with the phase of its AC side, nor counted
+  with the poles or the cable above the inverter (a PV array behind a 4-pole device was marked `4`).
+* Drawings on several sheets: a board drawn on its own sheet names the sheet of the device that feeds it (before,
+  a board inside another board drawn apart named the first sheet). A transfer link whose two ends are on different
+  sheets is drawn at each end, as a stub naming the other end and its sheet (before, it was left out: the
+  changeover switch showed one supply).
+* New finding `core.view-direction` (info): a view whose `direction` is `right` or `left` is drawn top-down, which
+  the reader is now told. Before, it was drawn top-down without a word.
+* New finding `core.neutral-missing` (warning): a device with a neutral pole (`1P+N`, `3P+N`) on a network without
+  neutral (`system` `3P` or `2P`). Either the neutral is distributed and the system has one, or a circuit between
+  two phases is `2P`.
+* New finding `core.load-current` (warning): the current of a load is more than 10% above the rating of the
+  protection that feeds it alone. Powers are per item: 12 lamps of 0.1 kW (`count` 12) under one breaker draw
+  1.2 kW, and a breaker with `count` 24 stands for 24 circuits each feeding the load below it. The message says so
+  when `count` is the cause. Six examples gave the total power of `count` items: they give it per item now.
 * Drawing sets: two views starting at the same sheet number (`first_folio`) no longer give two sheets with one
   number. The later view, and any view whose sheets would take numbers already given, is numbered after the highest
   sheet before it, and the new warning `core.folio-duplicate` says so. Before, every reference "-> sheet n" to such
