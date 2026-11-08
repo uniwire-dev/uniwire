@@ -51,8 +51,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * New finding `core.view-direction` (info): a view whose `direction` is `right` or `left` is drawn top-down, which
   the reader is now told. Before, it was drawn top-down without a word.
 * New finding `core.neutral-missing` (warning): a device with a neutral pole (`1P+N`, `3P+N`) on a network without
-  neutral (`system` `3P`). Either the neutral is distributed and the system is `3P+N`, or a circuit between two
-  phases is `2P`.
+  neutral (`system` `3P` or `2P`). Either the neutral is distributed and the system has one, or a circuit between
+  two phases is `2P`.
 * `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
   controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
   after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",

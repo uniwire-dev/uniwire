@@ -615,5 +615,6 @@ def test_neutral_pole_on_a_network_without_neutral():
         return [f.node for f in check(d) if f.rule == "core.neutral-missing"]
     assert found("3P", "1P+N") == ["Q"] and found("3P", "3P+N") == ["Q"]
     assert found("3P", "2P") == [] and found("3P+N", "1P+N") == [] and found("3P", "4P") == []
+    assert found("2P", "1P+N") == ["Q"] and found("2P", "2P") == [] and found("split-phase", "1P+N") == []
     assert found("3P", "1P+N", "transformer") == []  # the transformer may make its own neutral
     assert found("3P", "1P+N", "power_supply") == []  # system not known after a converter
