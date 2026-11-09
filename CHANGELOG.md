@@ -61,6 +61,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   number. The later view, and any view whose sheets would take numbers already given, is numbered after the highest
   sheet before it, and the new warning `core.folio-duplicate` says so. Before, every reference "-> sheet n" to such
   a number was ambiguous.
+* Rule messages in Italian, Polish and Turkish (`UNIWIRE_LANG` "it", "pl", "tr"), as in the other drawing
+  languages. The catalog test also compares the format of each placeholder (`{ref!r}`, `{in_a:g}`) with English.
 * `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
   controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
   after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",
