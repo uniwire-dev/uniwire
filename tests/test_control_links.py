@@ -216,7 +216,7 @@ def test_gap_link_crossings_cuts_the_link_not_the_conductor():
 
 
 def test_gaps_only_in_signal_links_and_at_every_kind_of_conductor():
-    from uniwire.render.scene import Polyline, Style
+    from uniwire.render.scene import Polyline
     from uniwire.render.semantics import cond_group, edge_group
 
     trunk = [Line((10.0, 0.0), (10.0, 20.0))]
