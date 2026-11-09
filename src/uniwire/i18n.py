@@ -73,6 +73,7 @@ EN: dict[str, str] = {
     "core.interlock_single": "lock {lock!r} is used by a single member and declared in no 'interlocks' entry: it interlocks nothing",
     "core.interlock_unused": "declared interlock {lock!r} is used by {count} member(s) ('locks'), at least 2 expected",
     "core.interlock_duplicate": "interlock {lock!r} declared twice",
+    "core.view_direction": "view {view}: direction {direction!r} is not drawn yet, the view is drawn top-down",
     "core.control_scope": "this document describes control circuits ({nodes}): uniwire draws power distribution "
                           "(single-line and multi-line diagrams), not control schematics; coils, contacts, push "
                           "buttons and current paths are only summarized here, not drawn as a control schematic",
@@ -399,6 +400,7 @@ FR: dict[str, str] = {
     "core.interlock_single": "la serrure {lock!r} n'équipe qu'un seul membre et n'est déclarée dans aucune entrée 'interlocks' : elle ne verrouille rien",
     "core.interlock_unused": "le verrouillage déclaré {lock!r} n'équipe que {count} membre(s) ('locks'), 2 au moins attendus",
     "core.interlock_duplicate": "verrouillage {lock!r} déclaré deux fois",
+    "core.view_direction": "vue {view} : la direction {direction!r} n'est pas encore dessinée, la vue est dessinée de haut en bas",
     "core.control_scope": "ce document décrit des circuits de commande ({nodes}) : uniwire dessine la distribution "
                           "(schémas unifilaire et multifilaire), pas les schémas de commande ; bobines, contacts, "
                           "boutons et chemins de courant n'y figurent qu'en résumé, pas en schéma développé",
@@ -815,6 +817,7 @@ RU: dict[str, str] = {
     "core.interlock_unused": "объявленная блокировка {lock!r}: число элементов ('locks') {count}, ожидается не "
                              "менее 2",
     "core.interlock_duplicate": "блокировка {lock!r} объявлена дважды",
+    "core.view_direction": "вид {view}: направление {direction!r} пока не рисуется, вид нарисован сверху вниз",
     "core.control_scope": "этот документ описывает цепи управления ({nodes}): uniwire рисует распределение энергии "
                           "(однолинейные и многолинейные схемы), а не схемы управления; катушки, контакты, кнопки и "
                           "ветви цепей здесь только перечислены, а не нарисованы как принципиальная схема управления",
@@ -1056,6 +1059,7 @@ ZH: dict[str, str] = {
     "core.interlock_single": "锁 {lock!r} 仅被一个成员使用，且未在任何 'interlocks' 条目中声明：不起联锁作用",
     "core.interlock_unused": "已声明的联锁 {lock!r} 被 {count} 个成员使用（'locks'），至少应为 2 个",
     "core.interlock_duplicate": "联锁 {lock!r} 重复声明",
+    "core.view_direction": "视图 {view}：尚不支持方向 {direction!r}，该视图按从上到下绘制",
     "core.control_scope": "本文档描述了控制回路（{nodes}）：uniwire 绘制配电（单线图和多线图），而非控制原理图；线圈、触点、按钮"
                           "和电流路径在此仅作概括，不绘制为控制原理图",
     "plc.duplicate_slots": "重复的槽位：{slots}",
@@ -1286,6 +1290,7 @@ ES: dict[str, str] = {
     "core.interlock_unused": "el enclavamiento declarado {lock!r} lo usan {count} miembro(s) ('locks'), se esperan al "
                              "menos 2",
     "core.interlock_duplicate": "enclavamiento {lock!r} declarado dos veces",
+    "core.view_direction": "vista {view}: la dirección {direction!r} aún no se dibuja, la vista se dibuja de arriba abajo",
     "core.control_scope": "este documento describe circuitos de mando ({nodes}): uniwire dibuja la distribución de "
                           "potencia (esquemas unifilar y multifilar), no esquemas de mando; bobinas, contactos, pulsadores "
                           "y caminos de corriente solo se resumen aquí, no se dibujan como esquema de mando",
@@ -1543,6 +1548,7 @@ DE: dict[str, str] = {
     "core.interlock_unused": "deklarierte Verriegelung {lock!r} wird von {count} Schaltgerät(en) verwendet "
                              "('locks'), mindestens 2 erwartet",
     "core.interlock_duplicate": "Verriegelung {lock!r} doppelt deklariert",
+    "core.view_direction": "Ansicht {view}: die Richtung {direction!r} wird noch nicht gezeichnet, die Ansicht wird von oben nach unten gezeichnet",
     "core.control_scope": "dieses Dokument beschreibt Steuerstromkreise ({nodes}): uniwire zeichnet die Energieverteilung "
                           "(Übersichtsschaltplan und allpoliger Stromlaufplan), keine Steuerstromlaufpläne; Spulen, "
                           "Kontakte, Taster und Strompfade werden hier nur zusammengefasst, nicht als Stromlaufplan "
@@ -1803,6 +1809,7 @@ PT: dict[str, str] = {
     "core.interlock_unused": "o intertravamento declarado {lock!r} é usado por {count} membro(s) ('locks'), esperados pelo "
                              "menos 2",
     "core.interlock_duplicate": "intertravamento {lock!r} declarado duas vezes",
+    "core.view_direction": "vista {view}: a direção {direction!r} ainda não é desenhada, a vista é desenhada de cima para baixo",
     "core.control_scope": "este documento descreve circuitos de comando ({nodes}): o uniwire desenha a distribuição de "
                           "energia (diagramas unifilar e multifilar), não diagramas de comando; bobinas, contatos, "
                           "botoeiras e caminhos de corrente são só resumidos aqui, não desenhados como diagrama de comando",
@@ -2372,6 +2379,7 @@ NL: dict[str, str] = {
     "core.interlock_single": "slot {lock!r} wordt door één schakelapparaat gebruikt en staat in geen enkele 'interlocks'-regel: het vergrendelt niets",
     "core.interlock_unused": "opgegeven vergrendeling {lock!r} wordt door {count} schakelapparaat/schakelapparaten gebruikt ('locks'), minstens 2 verwacht",
     "core.interlock_duplicate": "vergrendeling {lock!r} twee keer opgegeven",
+    "core.view_direction": "weergave {view}: de richting {direction!r} wordt nog niet getekend, de weergave wordt van boven naar beneden getekend",
     "core.control_scope": "dit document beschrijft stuurstroomkringen ({nodes}): uniwire tekent de energieverdeling (eendraads- en meerdraadsschema's), geen stuurstroomschema's; spoelen, contacten, drukknoppen en stroompaden worden hier alleen samengevat, niet als stuurstroomschema getekend",
     "plc.duplicate_slots": "dubbele slots: {slots}",
     "plc.unsorted_slots": "modules niet op slot gesorteerd",

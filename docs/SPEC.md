@@ -202,7 +202,7 @@ Further fields: `cable`, `normally_open`, `status` (`temporary`...).
 
 ### Metadata and views
 `meta.drawing_number`, `meta.scale`, `meta.contributors[]`; `installation.ik1_kA`, `uln_V`, `du_max_pct`.
-`views[].direction` accepts `up`, `right`, `left` (direction away from the source; the reference renderer draws downwards).
+`views[].direction` accepts `up`, `right`, `left` (direction away from the source; the reference renderer draws downwards, `up` mirrored, and reports `right` and `left` with the `core.view-direction` finding).
 Additional circuit schedule rows: `circuit`, `ib_A`, `cos_phi`, `cable_type`, `cable_ref`, `install`, `frame_A`,
 `count`, `un_V`.
 
