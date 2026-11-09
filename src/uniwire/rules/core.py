@@ -99,6 +99,30 @@ def phases_from_feeder(doc: Document, idx: Index):
             yield Finding("warning", "core.phases-feeder", _t("core.phases_feeder", live=live), nid)
 
 
+def _system_at(doc: Document, idx: Index, nid: str):
+    """System (``1P+N``, ``3P``...) of the network a node is on: the nearest one declared on it or above it, not
+    across a converter that makes its own (``None`` when not known there)."""
+    n = idx.nodes[nid]
+    for a in [n, *idx.ancestors(nid)]:
+        if getattr(a, "system", None):
+            return a.system
+        if a is not n and a.type in VOLTAGE_CONVERTERS:  # type: ignore[attr-defined]
+            return None
+    return doc.installation.system
+
+
+@rule("core")
+def neutral_on_network(doc: Document, idx: Index):
+    """A device with a neutral pole (``1P+N``, ``3P+N``) needs a neutral: not on a network without one (``3P``,
+    ``2P``)."""
+    for nid, n in idx.nodes.items():
+        poles = getattr(n, "poles", None)
+        system = _system_at(doc, idx, nid) if poles in ("1P+N", "3P+N") else None
+        if system in ("3P", "2P"):
+            yield Finding("warning", "core.neutral-missing", _t("core.neutral_missing", poles=poles, system=system),
+                          nid)
+
+
 # Control circuits entered in the power tree: switching devices fed by a control power supply that switch nothing
 # (their coils drawn as power devices), coils, push buttons, signal lamps and sensors entered as loads (IEC 81346 letter
 # codes K, S, H, B), the same entered as controllers on a control power supply, and lists of PLC inputs and outputs.
