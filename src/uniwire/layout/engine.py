@@ -2953,6 +2953,9 @@ def _leader_label(obs: Obstacles, pts: list[tuple[float, float]], txt: str, size
         t = (min(max(p[0], box[0]), box[2]), min(max(p[1], box[1]), box[3]))
         return abs(p[0] - t[0]) + abs(p[1] - t[1]), p, t
     _, (mx, my), (tx, ty) = min((nearest(s) for s in zip(pts, pts[1:])), key=lambda c: c[0])
+    lead = (min(mx, tx), min(my, ty), max(mx, tx), max(my, ty))
+    if any(_hit(lead, o, -0.05) for o in obs.boxes):  # a leader through a symbol or a text: on its link instead
+        return False
     g.add(Line((mx, my), (tx, ty), Style(width=THIN)))
     g.add(Text((x, y + 0.85 * size), txt, size))
     obs.add_box(box)

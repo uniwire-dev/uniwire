@@ -163,6 +163,18 @@ def _groups(item: object) -> Iterator[Group]:
             yield from _groups(i)
 
 
+def _leaders(item: object, link: Optional[str] = None) -> Iterator[tuple[str, Line]]:
+    """The leaders joining link labels to their link (straight solid lines of a link's own group)."""
+    if isinstance(item, Group):
+        if has_cls(item, "uw-hit") or link is not None and item.cls and not has_cls(item, "uw-link"):
+            return  # (a device carried by the link, a reference: their own strokes)
+        link = item.attrs.get("data-uw-link", link)
+        for i in item.items:
+            yield from _leaders(i, link)
+    elif link is not None and isinstance(item, Line) and not item.style.dash:
+        yield link, item
+
+
 def _hover_paths(item: object, link: Optional[str] = None) -> Iterator[tuple[str, Polyline]]:
     """The first invisible hover copy of each link: its route in one piece."""
     if isinstance(item, Group):
@@ -260,13 +272,14 @@ def audit(root: Group, detours: bool = False) -> list[Finding]:
             ends.setdefault(g.attrs["data-uw-link"], set()).update(
                 {g.attrs.get("data-uw-from", ""), g.attrs.get("data-uw-to", "")})
     bodies = [(nid, _union(boxes)) for nid, boxes, _g in symbols]
-    for la, pl in _dashed_links(root):  # a link through a device it does not reach reads as wired to it
+    strokes = [(la, pl.points) for la, pl in _dashed_links(root)] + [(la, [ln.a, ln.b]) for la, ln in _leaders(root)]
+    for la, pts in strokes:  # a link (or the leader of its label) through a device it does not reach
         own = ends.get(la, set())
         for nid, (x0, y0, x1, y1) in bodies:
             core = (x0 + 0.3, y0 + 0.3, x1 - 0.3, y1 - 0.3)
             if nid not in own and core[0] < core[2] and core[1] < core[3] \
-                    and any(_crosses(core, s) for s in zip(pl.points, pl.points[1:])):
-                out.append(Finding("link_through_symbol", f"link {la} through the symbol of {nid}", pl.points[0]))
+                    and any(_crosses(core, s) for s in zip(pts, pts[1:])):
+                out.append(Finding("link_through_symbol", f"link {la} through the symbol of {nid}", pts[0]))
                 break
     conductors = _conductor_segments(root)
     signal = {g.attrs["data-uw-link"] for g in _groups(root) if has_cls(g, "uw-link")
