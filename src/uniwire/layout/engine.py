@@ -417,7 +417,16 @@ def _needs(ln: LNode, view: View, lang: str) -> None:
             lines = _ann_lines(n, view, lang)
             if lines:
                 # room for the text reduced to ANN_MIN at most: a long text is reduced, never cut
-                widest = max(text_width(t, ANN_MIN) for t in lines)
+                widths = [text_width(t, ANN_MIN) for t in lines]
+                if (n.children and n.node.label and len(lines) < 5 and not any(len(d.children) >= 2 for d in n.walk())
+                        and n.node.label not in annotation(n.node, lang, show_label=False)):
+                    # the label of a device feeding one circuit (kept because nothing below says it) may take two
+                    # lines: it does not widen the column as much as its load's text
+                    label = without_ref(n.node.label, n.node.ref)
+                    widths = [max(text_width(u, ANN_MIN) for u in _wrap_words(text_units(t), 2,
+                                                                               lambda u: text_width(u, ANN_MIN)))
+                              if t == label and len(text_units(t)) > 1 else w for t, w in zip(lines, widths)]
+                widest = max(widths)
                 n.need = view.pitch_mm / 2 + n.sym.right + 2.0 + widest
 
 
@@ -443,7 +452,8 @@ def _ann_lines(ln: LNode, view: View, lang: str) -> list[str]:
     if ln.kind != "node" or not view.annotations or node is None or ln.bottom or ln.is_board:
         return []
     feeds_bus = any(len(d.children) >= 2 for d in ln.walk())
-    lines = annotation(node, lang, show_label=feeds_bus)
+    in_table = _in_column(ln) and "label" in (view.cartouche or [])  # the table shows a label for its column
+    lines = annotation(node, lang, show_label=feeds_bus or not label_drawn_below(ln, in_table))
     pn = part_number(node)
     tag = pn if view.tag_field == "part_number" and pn else node.ref
     if node.label and node.label in lines:  # the label: not repeating the tag above it, nor the lines below it
@@ -1565,6 +1575,24 @@ def _draw_line_marks(roots: list[LNode], everything: list[LNode], doc: Document,
         _put_mark(g, obs, ln.x, y0, y1, (y0 + y1) / 2 if pref is None else pref, mark, ln.id, phase)
         drawn[id(node)] = (mark, _mark_text(mark, phase))
     return drawn
+
+
+def label_drawn_below(ln: Any, table_fallback: bool = False) -> bool:
+    """Whether what the label of ``ln`` (a device feeding one circuit) says is drawn below it: every word of it is in
+    the labels of its circuit ("Table saw" under a load "Table saw 2.2 kW"), or, with ``table_fallback``, the circuit
+    table shows it, as it does when nothing below has a label. Numbers, units and words of one or two letters do not
+    count: the ratings are drawn by the symbols and the table ("Oven 12 kW 3P" is said by "Bakery oven"). Otherwise
+    the device keeps its label beside its symbol: what the user wrote there ("temporary", a room) is not lost."""
+    def words(s: str) -> set[str]:
+        return {w for w in re.findall(r"\w+", s.casefold()) if len(w) > 2 and not any(c.isdigit() for c in w)}
+
+    own = words(without_ref(ln.node.label or "", ln.node.ref)) if ln.node is not None else set()
+    below, d = [], ln
+    while len(d.children) == 1:
+        d = d.children[0]
+        if d.node is not None and d.node.label:
+            below.append(d.node.label)
+    return not own or own <= words(" ".join(below)) or (table_fallback and not below)
 
 
 def _in_column(n: LNode) -> bool:

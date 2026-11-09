@@ -234,3 +234,37 @@ def test_svg_states_the_language_of_the_document():
     assert root({"lang": "en_GB"}).getAttribute("xml:lang") == "en-GB"  # a valid tag, whatever was written
     assert root({"lang": " fr "}).getAttribute("lang") == "fr"
     assert root({"lang": "Français"}).getAttribute("xml:lang") == "en"  # not a tag: the language drawn in
+
+def test_device_label_kept_when_its_load_has_another_label():
+    from uniwire.render import render_views
+    from uniwire.render.svg import page_to_svg
+
+    doc = {"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230}, "sources": [{"type": "grid", "children": [
+        {"type": "board", "ref": "TD", "children": [
+            {"type": "breaker", "ref": "-Q1", "label": "Hut, temporary", "in_A": 16, "children": [
+                {"type": "socket", "label": "Sockets"}]},
+            {"type": "breaker", "ref": "-Q2", "label": "Heating", "in_A": 20, "children": [{"type": "water_heater"}]},
+            {"type": "breaker", "ref": "-Q3", "label": "Lights", "in_A": 10, "children": [
+                {"type": "lighting", "label": "Lights"}]},
+            {"type": "breaker", "ref": "-Q4", "label": "Pump", "in_A": 10, "children": [
+                {"type": "motor", "label": "Pump 2 kW"}]}]}]}],
+        "views": [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]}
+    sld, ml = (re.findall(r">([^<>]+)</text>", page_to_svg(p)) for p in render_views(load(doc)))
+    assert sld.count("Hut, temporary") == 1 and sld.count("Heating") == 1 and sld.count("Lights") == 1  # table
+    assert ml.count("Hut, temporary") == 1 and ml.count("Heating") == 1 and ml.count("Lights") == 1
+    assert "Pump" not in ml  # said by the label of its load: not repeated
+
+
+def test_device_label_said_by_its_load_is_not_repeated_whatever_its_case_spacing_or_tag():
+    from uniwire.render import render_views
+    from uniwire.render.svg import page_to_svg
+
+    doc = {"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230}, "sources": [{"type": "grid", "children": [
+        {"type": "board", "ref": "TD", "children": [
+            {"type": "breaker", "ref": "-Q1", "label": "-Q1 Garden  lights", "in_A": 10, "children": [
+                {"type": "lighting", "label": "garden lights, path"}]},
+            {"type": "breaker", "ref": "-Q2", "label": "Workshop", "in_A": 16, "children": [
+                {"type": "socket", "label": "Sockets"}]}]}]}],
+        "views": [{"id": "ml", "kind": "multi-line"}]}
+    texts = " ".join(re.findall(r">([^<>]+)</text>", page_to_svg(render_views(load(doc))[0])))
+    assert "Garden" not in texts and "Workshop" in texts
