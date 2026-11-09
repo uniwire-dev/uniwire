@@ -174,3 +174,42 @@ def test_a_link_between_two_plcs_leaves_the_channel_of_its_start():
     module = [r for r, _l, _o in _walk(_node(page.root, "PLC2")) if isinstance(r, Rect)][-1]
     plain = sorted((r for r, _l, _o in _walk(_node(page.root, "PLC")) if isinstance(r, Rect)), key=lambda r: r.x)[3]
     assert abs(module.w - plain.w) < 1e-6  # as narrow as a module no link leaves (slot 3)
+
+
+def test_a_dashed_link_is_interrupted_where_it_crosses_a_conductor():
+    """A control link crossing a feeder is not connected to it: the link stops on each side, the conductor stays
+    whole (single-line and multi-line views)."""
+    doc = panel(6, 2)
+    doc["views"] = [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]
+    for page in render_views(load(doc)):
+        crossings = [f for f in audit(page.root) if f.kind == "link_across_conductor"]
+        assert crossings == [], "\n".join(map(str, crossings))
+
+
+def test_gap_link_crossings_cuts_the_link_not_the_conductor():
+    from uniwire.render.scene import Polyline, Style
+    from uniwire.render.semantics import edge_group, gap_link_crossings
+
+    link = Group([Polyline([(0.0, 10.0), (20.0, 10.0), (20.0, 30.0)], Style(dash=(1.0, 1.0)))], cls="uw-link")
+    wire = edge_group("c", "p", [Line((10.0, 0.0), (10.0, 20.0)), Line((0.0, 25.0), (30.0, 25.0))])
+    end = edge_group("d", "p", [Line((19.0, 30.0), (30.0, 30.0))])  # the link stops on it: no gap there
+    root = Group([wire, end, link])
+    gap_link_crossings(root)
+    parts = [[(round(x, 6), round(y, 6)) for x, y in p.points] for p in link.items]
+    assert parts == [[(0.0, 10.0), (9.2, 10.0)], [(10.8, 10.0), (20.0, 10.0), (20.0, 24.2)], [(20.0, 25.8), (20.0, 30.0)]]
+    assert wire.items[0].a == (10.0, 0.0) and wire.items[0].b == (10.0, 20.0)
+    gap_link_crossings(root)  # done once: nothing more to cut
+    assert [[(round(x, 6), round(y, 6)) for x, y in p.points] for p in link.items] == parts
+
+
+def test_off_sheet_arrows_keep_their_texts_clear():
+    """Links to devices on another sheet, many of them beside a PLC and beside each contactor: each sheet reference
+    and label beside its arrow, none on an arrow, a conductor or a symbol, no arrow on the side of a frame."""
+    doc = panel(14, 0)
+    doc["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    pages = render_views(load(doc))
+    assert len(pages) == 2
+    for page in pages:
+        bad = [f for f in audit(page.root) if f.kind in ("text_crossed", "text_on_conductor", "text_on_symbol",
+                                                         "text_overlap")]
+        assert bad == [], "\n".join(map(str, bad))

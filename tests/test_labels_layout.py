@@ -218,7 +218,8 @@ def test_plc_channel_links_fan_out():
     page = render_pages(doc)[0]
     texts = _texts(page.root)
     assert {"1.1", "1.2", "1.3"} <= set(texts)
-    routes = [i.points for i in _items(page.root) if isinstance(i, Polyline) and i.style.dash and len(i.points) >= 3]
+    from tests.drawing_audit import _hover_paths  # each route in one piece (drawn interrupted where it crosses)
+    routes = [p.points for _l, p in _hover_paths(page.root) if len(p.points) >= 3]
     starts = {round(p[0][0], 2) for p in routes}
     channels = {round(p[1][1], 2) for p in routes}
     assert len(starts) == 3 and len(channels) == 3  # one lane and one channel per port

@@ -8,6 +8,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* A dashed link (control, measure, trip, data) is interrupted where it crosses a tree conductor or a busbar, the
+  conductor drawn whole: the crossing no longer reads as a connection. Not where the link ends on what it reaches,
+  and not across a bundle of conductors close together (multi-line phases), where a gap per conductor would cut the
+  link into dots.
+* Links to a device on another sheet: the sheet reference is placed first, beside its arrow rather than on it, and
+  the arrow is kept off the side of a frame (the stub is made longer); the link's label goes where room is left.
+  Several such stubs beside one device no longer write their texts over one another's arrows.
 * Single-line drawings with a PLC: every link leaving a PLC module gets its own channel below it. A module many links
   leave is drawn wider, one wire about every 2.6 mm, and the loads go down far enough for as many channels as links
   run side by side (they were spaced a fraction of a millimetre apart, and past eight links they ran on one
