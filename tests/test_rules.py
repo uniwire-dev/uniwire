@@ -91,6 +91,17 @@ def test_sockets_on_1_5_mm2_and_heating_power():
     assert len(heat) == 1 and "5 kW" in heat[0].message
 
 
+def test_heating_power_counts_every_item():
+    """p_kW is per item: three 1.25 kW heaters on 16 A are 3.75 kW, as one 3.75 kW heater would be."""
+    def heat(children, in_a=16):
+        d = doc([{"type": "rcd", "idn_mA": 30, "rcd_type": "A", "children": [
+            {"type": "breaker", "in_A": in_a, "cable": {"section_mm2": 2.5}, "children": children}]},
+            {"type": "rcd", "idn_mA": 30, "rcd_type": "A"}])
+        return [f.message for f in check(d) if f.rule == "nfc15100.heating"]
+    assert heat([{"type": "heating", "p_kW": 3.75}]) and "3.75 kW" in heat([{"type": "heating", "p_kW": 1.25, "count": 3}])[0]
+    assert heat([{"type": "heating", "p_kW": 1.1, "count": 3}]) == []  # 3.3 kW on 16 A: within the limit
+
+
 def test_dedicated_circuits_and_ev():
     d = doc([{"type": "rcd", "idn_mA": 30, "rcd_type": "A", "children": [
         {"type": "breaker", "in_A": 20, "cable": {"section_mm2": 2.5}, "children": [

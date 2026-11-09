@@ -244,6 +244,11 @@ def _points(n) -> int:
     return (getattr(n, "points", None) or 0) * (getattr(n, "count", None) or 1)
 
 
+def _kw(n) -> float:
+    """Power of a load, all its items (``p_kW`` is per item, ``count`` items)."""
+    return (getattr(n, "p_kW", None) or 0) * (getattr(n, "count", None) or 1)
+
+
 @rule("nfc15100")
 def points_per_circuit(doc: Document, idx: Index):
     """Points of the lighting and socket loads added up per circuit (the loads under one protective device)."""
@@ -287,11 +292,11 @@ def heating_power(doc: Document, idx: Index):
                 continue
             seen.add(p.id)  # type: ignore[arg-type]
             limit = MAX_HEATING_KW[in_a]
-            total = sum(getattr(l, "p_kW", 0) or 0 for l in _loads_below(p) if l.type == "heating")  # type: ignore[attr-defined]
+            total = round(sum(_kw(l) for l in _loads_below(p) if l.type == "heating"), 3)  # type: ignore[attr-defined]
             if total > limit:
                 yield HEATING.finding("warning", _t("nfc15100.heating", total=total, in_a=in_a, limit=limit), nid)
-        elif in_a is None and n.p_kW > max(MAX_HEATING_KW.values()):  # type: ignore[attr-defined]
-            yield HEATING.finding("warning", _t("nfc15100.heating_unprotected", p=n.p_kW, limit=max(MAX_HEATING_KW.values())), nid)  # type: ignore[attr-defined]
+        elif in_a is None and _kw(n) > max(MAX_HEATING_KW.values()):
+            yield HEATING.finding("warning", _t("nfc15100.heating_unprotected", p=round(_kw(n), 3), limit=max(MAX_HEATING_KW.values())), nid)
 
 
 @rule("nfc15100")
