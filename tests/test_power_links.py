@@ -219,3 +219,16 @@ def test_standby_supply_to_a_changeover_goes_round_the_feeders_it_would_cross():
 
     findings = [f for pg in render_views(load(STANDBY_ACROSS)) for f in audit(pg.root)]
     assert not [f for f in findings if f.kind in ("text_crossed", "link_on_conductor")], findings
+
+
+def test_board_of_a_supply_on_a_transfer_switch_is_framed():
+    def board(bid, qid, kids):
+        return {"type": "grid", "children": [{"type": "board", "id": bid, "ref": bid, "children": [
+            {"type": "breaker", "id": qid, "in_A": 32, "children": kids}]}]}
+    doc = load({"installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400}, "sources": [
+        board("A", "QA", [{"type": "transfer_switch", "id": "TS", "children": [{"type": "motor", "p_kW": 7.5}]}]),
+        board("B", "QB", [])], "links": [{"kind": "transfer", "from": "QB", "to": "TS"}]})
+    frames = [i for i in _items(render_pages(doc)[0].root) if isinstance(i, Rect) and i.style.dash and i.w > 20]
+    assert len(frames) == 2  # the standby board drawn beside the changeover is framed too
+    (a0, b0), (a1, b1) = sorted((f.x, f.x + f.w) for f in frames)
+    assert b0 < a1  # side by side, not overlapping

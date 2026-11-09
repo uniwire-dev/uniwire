@@ -857,6 +857,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         if id(r) not in anchored:
             continue
         target, _ = anchored[id(r)]
+        _needs(r, view, lang)  # the name of a board in it keeps its room
         _measure(r, pitch)
         _place_x(r, 0.0, pitch)
         for n in r.walk():
@@ -871,7 +872,8 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         boxes += [_frame_box(n) for m in main + placed for n in m.walk() if n.is_board]
         obstacles = [b for b in boxes if b[3] > top - 1 and b[1] < sy - 2 and b[2] > target.x - 3]
         right = max([b[2] for b in obstacles] + [sx])
-        new_x = max(sx, right + 3.0 + r.sym.left)
+        own = _boxes(r) + [_frame_box(n) for n in r.walk() if n.is_board]  # its board frame too, left of it
+        new_x = max(sx, right + 3.0 + max(r.sym.left, last.x - min(b[0] for b in own)))
         _translate(r, new_x - last.x, top)
         placed.append(r)
 
@@ -937,7 +939,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
     g = Group(cls="diagram")
     for r in roots:
         _draw_tree(r, g, y_load, view, folio_of)
-    for r in main:
+    for r in main + placed:  # placed: the supplies on a transfer switch, their boards framed too
         for n in r.walk():
             if n.is_board:
                 _draw_board_frame(n, g)
