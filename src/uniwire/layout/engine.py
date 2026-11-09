@@ -55,6 +55,7 @@ from ..render.semantics import (
     busbar_group,
     edge_group,
     finish_link_group,
+    gap_link_crossings,
     link_group,
     node_group,
     ref_group,
@@ -1124,6 +1125,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                 txt = Text((n.x + 0.8, bottom_end + 3.0), n.label or n.node.label or "", 2.0, "end", "middle", 90)
                 g.add(ref_group(n.target_folio, n.target, [txt]) if n.kind == "stub" else txt)
 
+    gap_link_crossings(g)
     if view.direction == "up":
         b0 = bbox(g) or (0, 0, 1, 1)
         g = _mirror_up(g, b0[1] + b0[3])  # type: ignore[assignment]
@@ -3062,28 +3064,53 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         return [(e.x, e.y), base], tip, [(base[0] - 0.8 * abs(dy), base[1] - 0.8 * abs(dx)), tip,
                                          (base[0] + 0.8 * abs(dy), base[1] + 0.8 * abs(dx))]
 
+    def head_box(n: float) -> tuple[float, float, float, float]:
+        _, tip, head = geometry(n)
+        xs, ys = [p[0] for p in head + [tip]], [p[1] for p in head + [tip]]
+        return min(xs), min(ys), max(xs), max(ys)
+
+    def on_frame(n: float) -> bool:
+        """The arrow of a stub of length ``n`` lies on the side of a frame (it would read as part of the frame)."""
+        x0, y0, x1, y1 = head_box(n)
+        return any(x0 - 0.4 < fx < x1 + 0.4 and fy0 < y1 and y0 < fy1 or y0 - 0.4 < fy < y1 + 0.4 and fx0 < x1 and x0 < fx1
+                   for fx0, fy0, fx1, fy1 in obs.frames for fx, fy in ((fx0, fy0), (fx1, fy1)))
+
     def room(n: float) -> bool:
-        """The sheet reference finds a free place beside a stub of length ``n``, which crosses no symbol nor text."""
+        """The sheet reference finds a free place beside a stub of length ``n``, which crosses no symbol nor text and
+        whose arrow is not on a frame."""
         line, tip, _ = geometry(n)
         seg = (min(line[0][0], tip[0]) - 0.3, min(line[0][1], tip[1]) - 0.3,
                max(line[0][0], tip[0]) + 0.3, max(line[0][1], tip[1]) + 0.3)
-        if n > 6.0 and any(_hit(seg, o, 0.0) for o in obs.boxes):
+        if n > 6.0 and any(_hit(seg, o, 0.0) for o in obs.boxes) or on_frame(n):
             return False
-        return place_label(obs, [line[0], tip], text_width(txts[-1], 1.6), 1.6, record=False, optional=True) is not None
+        obs.boxes.append(head_box(n))  # (beside the arrow, not on it)
+        try:
+            return place_label(obs, [line[0], tip], text_width(txts[-1], 1.6), 1.6, record=False,
+                               optional=True) is not None
+        finally:
+            obs.boxes.pop()
 
     # the usual short stub; longer when its sheet reference finds no free place beside it (a crowded device side)
-    pts, tip, head = geometry(next((n for n in (6.0, 12.0, 18.0) if room(n)), 6.0))
+    lengths = (6.0, 12.0, 18.0)
+    n = next((n for n in lengths if room(n)), next((n for n in lengths if not on_frame(n)), 6.0))
+    pts, tip, head = geometry(n)
     g.add(Polyline(pts, _link_style(link.kind, link.normally_open)))
+    hb = head_box(n)
+    obs.add_box(hb)  # its texts beside the arrow, not on it (when there is a free place)
     rg = Group([Polyline(head, Style(width=THIN, fill="#ffffff"), closed=True)]) if same_sheet else \
         ref_group(f, other, [Polyline(head, Style(width=THIN, fill="#ffffff"), closed=True)])
     if e.side in ("down", "up"):
         obs.add_vline(e.x, min(e.y, tip[1]), max(e.y, tip[1]))
     else:
         obs.add_hline(pts[1][1], pts[0][0], pts[1][0])
-    for k, txt in enumerate(txts):
+    for k, txt in reversed(list(enumerate(txts))):  # the sheet reference first: it must be written, at the best place
         w = text_width(txt, 1.6)
         optional = k < len(txts) - 1  # the link's label, also written at the stub on the other sheet: where it is free
-        spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False, optional=optional)
+        spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False, optional=True)
+        if spot is None and not optional:  # no free place: on its arrow rather than on a conductor or a symbol
+            obs.boxes.remove(hb)
+            spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False)
+            obs.boxes.append(hb)
         if spot is None:
             continue
         x, y, anchor = spot

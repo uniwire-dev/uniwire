@@ -65,6 +65,7 @@ from ..render.semantics import (
     cond_group,
     edge_group,
     finish_link_group,
+    gap_link_crossings,
     link_group,
     node_group,
     ref_group,
@@ -2544,6 +2545,7 @@ def _layout(doc: Document, view: View, spec: SheetSpec, index: Index, info: dict
             if holder is not None and holder is not n and holder.id in marks and n.id not in marks:
                 marks[n.id] = marks.pop(holder.id)
         _draw_wire_marks(g, marks, tops)
+    gap_link_crossings(g)
     box = bbox(g) or (0.0, 0.0, 10.0, 10.0)
     g = transform(g, -box[0], -box[1])  # type: ignore[assignment]
     return SheetLayout(spec, g, box[2] - box[0], box[3] - box[1], [], [])  # type: ignore[arg-type]

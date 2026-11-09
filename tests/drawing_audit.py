@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from uniwire.render.scene import Circle, Group, Line, Polyline, Rect, Text, text_width
+from uniwire.render.semantics import _conductor_segments, gapped_crossings, has_cls
 
 Box = tuple[float, float, float, float]
 Seg = tuple[tuple[float, float], tuple[float, float]]
@@ -18,7 +19,7 @@ Seg = tuple[tuple[float, float], tuple[float, float]]
 @dataclass
 class Finding:
     kind: str  # "text_overlap", "text_on_symbol", "text_crossed", "text_on_conductor", "small_text", "shared_run",
-    # "link_on_conductor", "link_along_frame", "truncated", "detour"
+    # "link_on_conductor", "link_along_frame", "link_across_conductor", "truncated", "detour"
     what: str
     where: tuple[float, float]
 
@@ -143,6 +144,29 @@ def _run(p: Seg, q: Seg, gap: float) -> float:
     return 0.0
 
 
+def _dashed_links(item: object, link: Optional[str] = None) -> Iterator[tuple[str, Polyline]]:
+    """Dashed strokes of the links as drawn (their invisible hover copies left out)."""
+    if isinstance(item, Group):
+        if has_cls(item, "uw-hit"):
+            return
+        link = item.attrs.get("data-uw-link", link)
+        for i in item.items:
+            yield from _dashed_links(i, link)
+    elif link is not None and isinstance(item, Polyline) and item.style.dash and not item.closed:
+        yield link, item
+
+
+def _hover_paths(item: object, link: Optional[str] = None) -> Iterator[tuple[str, Polyline]]:
+    """The first invisible hover copy of each link: its route in one piece."""
+    if isinstance(item, Group):
+        link = item.attrs.get("data-uw-link", link)
+        for i in item.items:
+            if isinstance(i, Group) and has_cls(i, "uw-hit") and link is not None:
+                yield from ((link, p) for p in i.items[:1] if isinstance(p, Polyline))
+            else:
+                yield from _hover_paths(i, link)
+
+
 def audit(root: Group, detours: bool = False) -> list[Finding]:
     """Findings on the sheet ``root``; ``detours``: also links going far round (a hint to look at, not a fault:
     the short way may cross what it must not)."""
@@ -209,8 +233,9 @@ def audit(root: Group, detours: bool = False) -> list[Finding]:
             run = max((_run(p, q, 0.3) for p in links[la] for q in links[lb]), default=0.0)
             if run > 3.0:
                 out.append(Finding("shared_run", f"links {la} and {lb} share {run:.0f} mm", links[la][0][0]))
+    hover = {la: pl.points for la, pl in _hover_paths(root)}  # a link's whole route (drawn in pieces at crossings)
     for la in ids:
-        pts = paths.get(la, [])
+        pts = hover.get(la) or paths.get(la, [])
         if detours and len(pts) > 1:
             length = sum(abs(p[0] - q[0]) + abs(p[1] - q[1]) for p, q in zip(pts, pts[1:]))
             direct = abs(pts[0][0] - pts[-1][0]) + abs(pts[0][1] - pts[-1][1])
@@ -222,4 +247,8 @@ def audit(root: Group, detours: bool = False) -> list[Finding]:
         run = max((_run(p, q, 2.0) for p in links[la] for q in frames), default=0.0)
         if run > 10.0:  # a dashed link beside a dashed frame reads as one more frame line
             out.append(Finding("link_along_frame", f"link {la} runs {run:.0f} mm along a frame", links[la][0][0]))
+    conductors = _conductor_segments(root)
+    for la, pl in _dashed_links(root):  # a dashed link drawn through a conductor reads as connected to it
+        if gapped_crossings(pl.points, conductors):
+            out.append(Finding("link_across_conductor", f"link {la} drawn through a conductor", pl.points[0]))
     return out
