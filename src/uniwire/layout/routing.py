@@ -108,11 +108,13 @@ class Obstacles:
 
 
 def place_box(obs: Obstacles, w: float, h: float, pref: Point, step: float = 1.25, reach: float = 120.0,
-              pad: float = 1.0, dx_weight: float = 1.0, dy_weight: float = 2.0) -> Point:
+              pad: float = 1.0, dx_weight: float = 1.0, dy_weight: float = 2.0,
+              within: Optional[Box] = None) -> Optional[Point]:
     """Top-left corner of the free ``w`` x ``h`` box closest to ``pref``.
 
     Positions are tried by increasing (weighted) distance; when nothing is free within ``reach``, the box
-    goes to the right of every obstacle, at the preferred height.
+    goes to the right of every obstacle, at the preferred height. ``within``: only inside that box, None when no
+    place there is free.
     """
     px, py = pref
     sub = obs.window((px - reach - w, py - reach / 2 - h, px + reach + w, py + reach / 2 + h))
@@ -125,8 +127,12 @@ def place_box(obs: Obstacles, w: float, h: float, pref: Point, step: float = 1.2
     cands.sort()
     for _, dx, dy in cands:
         b = (px + dx, py + dy, px + dx + w, py + dy + h)
+        if within is not None and not (within[0] <= b[0] and b[2] <= within[2] and within[1] <= b[1] and b[3] <= within[3]):
+            continue
         if sub.box_free(b, pad):
             return px + dx, py + dy
+    if within is not None:
+        return None
     right = max([b[2] for b in obs.boxes] + [px])
     return right + 4.0, py
 

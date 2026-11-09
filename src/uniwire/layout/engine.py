@@ -1030,9 +1030,10 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
     for kind, line in lanes:
         (obs.hlines if kind == "h" else obs.vwires).append(line)
     # (and off the channels under the PLC modules, and off the column of the off-sheet stubs beside a device)
-    band_boxes = _channel_band(doc, everything, channels, wired) + _stub_columns(doc, everything, lang)
+    bands = _channel_band(doc, everything, channels, wired)
+    band_boxes = list(bands.values()) + _stub_columns(doc, everything, lang)
     obs.boxes.extend(band_boxes)
-    annex = _place_devices(doc, roots, everything, view, lang, obs, pitch, below={pid: channels for pid in wired})
+    annex = _place_devices(doc, roots, everything, view, lang, obs, pitch, below={p: b[3] for p, b in bands.items()})
     for kind, line in lanes:
         (obs.hlines if kind == "h" else obs.vwires).remove(line)
     for b in band_boxes:
@@ -1300,17 +1301,24 @@ def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], v
             lw = max((text_width(l.label, 1.6) for l in doc.links if l.label and dev.id in (l.from_, l.to)),
                      default=0.0)
             lane = lw + 2.0 if lw else 0.0
-            pref_y = partner.y
+            pref_y, top = partner.y, None
             ce = _channel_end(link, lambda nid: placed[nid].sym if nid in placed else None)
             if ce is not None and (link.from_, link.to)[ce[0]] == partner.node.id and partner.node.id in below:
                 # read or driven by a PLC channel: below the band of the channels, just right of the module it
                 # leaves (its link goes down from the module and turns into the device's side)
-                port_x = partner.x + partner.sym.extra.get("ports", {}).get(ce[1], 0.0)
-                pref_x, pref_y = port_x + 3.0 - lane, below[partner.node.id] + DEVICE_PAD_MM
+                # beyond the span of its ports, the drops under them left free
+                pref_x, pref_y = partner.x + partner.sym.right + 3.0, below[partner.node.id] + DEVICE_PAD_MM
+                top = pref_y  # (never above: its link would come down through the busbar and the modules)
+            # inside the frame of its partner's board (beside it, it would widen the sheet), else the nearest place
+            frame = next((_frame_box(b) for b in reversed(everything) if b.is_board and partner in _owned(b)), None)
             free = Obstacles(obs.boxes, obs.vwires + axes, obs.hlines, obs.buses)
             for right_side in (False, True):  # the room on the side facing its partner: left, unless placed left of it
                 v = (u[0], u[1], u[2] + lane, u[3]) if right_side else (u[0] - lane, u[1], u[2], u[3])
-                x0, y0 = place_box(free, v[2] - v[0], v[3] - v[1], (pref_x, pref_y), pad=DEVICE_PAD_MM)
+                inner = (frame[0] + 1.0, max(frame[1] + 1.0, top or frame[1]), frame[2] - 1.0, frame[3] - 1.0) \
+                    if frame else None
+                spot = place_box(free, v[2] - v[0], v[3] - v[1], (pref_x, pref_y), pad=DEVICE_PAD_MM, within=inner) \
+                    if inner else None
+                x0, y0 = spot or place_box(free, v[2] - v[0], v[3] - v[1], (pref_x, pref_y), pad=DEVICE_PAD_MM)  # type: ignore[misc]
                 ln.x, ln.y = x0 - v[0], y0 - v[1]
                 if not lane or right_side or ln.x > partner.x:
                     break
@@ -2154,13 +2162,13 @@ def _stub_columns(doc: Document, nodes: list[LNode], lang: str) -> list[Box]:
     return out
 
 
-def _channel_band(doc: Document, nodes: list[LNode], bottom: float, wired: set[str]) -> list[Box]:
+def _channel_band(doc: Document, nodes: list[LNode], bottom: float, wired: set[str]) -> dict[str, Box]:
     """The area the channels of each PLC take (see _port_channels_bottom): from under its modules down to the bottom
     of the band, across to the devices they reach. An auxiliary device placed there would be crossed by them."""
     if not bottom:
-        return []
+        return {}
     pos = {n.node.id: n for n in nodes if n.node is not None and n.node.id}
-    out: list[Box] = []
+    out: dict[str, Box] = {}
     for pid in wired:
         n = pos.get(pid)
         if n is None:
@@ -2170,7 +2178,11 @@ def _channel_band(doc: Document, nodes: list[LNode], bottom: float, wired: set[s
             ce = _channel_end(l, lambda nid: pos[nid].sym if nid in pos else None)
             if ce is not None and (l.from_, l.to)[ce[0]] == pid and (o := pos.get((l.to, l.from_)[ce[0]])) is not None:
                 xs.append(o.x)
-        out.append((min(xs), n.y + n.sym.extra.get("port_y", n.sym.height), max(xs), bottom))
+        x0, y0, x1 = min(xs), n.y + n.sym.extra.get("port_y", n.sym.height), max(xs)
+        # the channels pass under the devices hanging into the band (a tall controller beside the PLC): below them
+        low = max([bottom] + [m.y + m.sym.height for m in nodes if m.kind == "node" and not m.bottom and m is not n
+                              and x0 < m.x < x1 and y0 < m.y + m.sym.height and m.y < bottom])
+        out[pid] = (x0, y0, x1, low)
     return out
 
 
