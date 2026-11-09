@@ -4,6 +4,7 @@ import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Any, Optional
 
 from .. import registry
@@ -115,6 +116,7 @@ class LNode:
     lead: float = 0.0  # extra length of the input conductor, for several links landing on it
     pad_bottom: float = 0.0  # room at the bottom of a board frame for the control links of its devices
     frame_reach: Optional[float] = None  # right side of a board frame enclosing the taps of feeds (_feed_taps)
+    frame_left: Optional[float] = None  # left side of a board frame enclosing the text of its continued busbar
     ann_off: tuple[float, float] = (0.0, 0.0)  # the view's label_offset for this node: where its text really is
     in_safety_board: bool = False  # inside a board that is itself a safety service: its feeders are not marked
     bus_y: Optional[float] = None
@@ -319,11 +321,30 @@ def _is_dc(node: NodeBase) -> bool:
         n = n.children[0]
 
 
+def _up_to_board(node: NodeBase, index: Index) -> list[NodeBase]:
+    """``node`` and its ancestors up to its board, stopping at equipment beyond a cable from that board (see
+    :func:`beyond_board`): what that equipment feeds is outside the board's frame."""
+    chain = [node] + index.ancestors(node.id or "")
+    end = next((i for i, a in enumerate(chain) if a.type == "board"), len(chain) - 1)  # type: ignore[attr-defined]
+    down = chain[:end + 1][::-1]  # from the board down to the node
+    head = True
+    for k, (p, c) in enumerate(zip(down, down[1:])):
+        head = head and len(p.children) == 1
+        if beyond_board(SimpleNamespace(node=c), SimpleNamespace(node=p), head):
+            return down[k + 1:][::-1]
+    return chain[:end + 1]
+
+
 def _bus_name(node: NodeBase, index: Index) -> str:
-    """Name of the busbar a node feeds: its board's (or busbar's), not the device at its head (a meter, a breaker)."""
-    owner = next((a for a in [node] + index.ancestors(node.id or "")
-                  if a.type in ("board", "busbar")), node)  # type: ignore[attr-defined]
-    return owner.ref or owner.label or node.ref or node.label or node.id or ""
+    """Name of the busbar a node feeds: its board's (or busbar's), not the device at its head (a meter, a breaker);
+    a row of the board (a group RCD among others) adds its own: "TD, -ID2"."""
+    chain = _up_to_board(node, index)
+    owner = next((a for a in chain if a.type in ("board", "busbar")), node)  # type: ignore[attr-defined]
+    name = owner.ref or owner.label or node.ref or node.label or node.id or ""
+    path = chain[:chain.index(owner)]  # from the node up to the owner, excluded
+    if owner is node or all(len(a.children) == 1 for a in [owner] + path[:0:-1]):
+        return name  # the board's own busbar: the devices above it are its incomer
+    return f"{name}, {node.ref or node.label or node.id}"
 
 
 def _build_sheet_roots(spec: SheetSpec, index: Index) -> list[LNode]:
@@ -334,6 +355,9 @@ def _build_sheet_roots(spec: SheetSpec, index: Index) -> list[LNode]:
         bus_sym = Symbol("bus_in", [], 0.0, 0.0, 0.0)
         root = LNode(None, "bus_in", bus_sym, [_build(c, spec, False) for c in kids],
                      label=_bus_name(parent, index), target=nid, bus_out=e < len(parent.children))
+        board = _up_to_board(parent, index)[-1]
+        if board.type == "board":  # type: ignore[attr-defined]  # the busbar is in a board: its frame here too
+            return [LNode(board, "node", Symbol("board", [], 0.0, 0.0, 0.0), [root])]
         return [root]
     return [_build(r, spec, True) for r in spec.roots if r.id not in spec.moved]
 
@@ -895,6 +919,16 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                 b.frame_reach = max([feed_taps.reach[n.id] for n in _owned(b) if n.id in feed_taps.reach],
                                     default=None)
 
+    for b in everything:  # continued busbar in a board: its text beyond the busbar's end when the name of the
+        # board takes the place above it, inside the frame
+        if b.is_board and b.node is not None and b.children and b.children[0].kind == "bus_in":
+            c = b.children[0]
+            w = text_width(_t("render.continued_from", lang, label=c.label, folio=99), 2.0)
+            name = ref_label(b.node.ref, b.node.label)
+            _, _, x1, _ = _frame_box(b)
+            if name and x1 - 1.0 - text_width(name, 2.4) < c.bus_x0 + w + 1.0:
+                b.frame_left = c.bus_x0 - 2.0 - w - 2.5
+
     # what is already drawn: auxiliary devices and link routes must avoid it
     obs = _obstacles(everything, main, y_load)
     for i, e in feed_taps.land.items():  # the taps, their drop and the busbar extended to them
@@ -1042,6 +1076,8 @@ def _board_texts(b: LNode) -> list[tuple[tuple[float, float], str, float, str]]:
     assert node is not None
     out = []
     name = ref_label(node.ref, node.label)
+    if name and b.children and b.children[0].kind == "bus_in":  # continued busbar: its text is on the left
+        return [((x1 - 1.0, y0 + 3.6), name, 2.4, "end")]
     if name:
         out.append(((b.x + 1.5 if b.x - x0 < 30 else x0 + 1.0, y0 + 3.6), name, 2.4, "start"))
     extra = [t for t in annotation(node) if t != node.label]
@@ -1130,7 +1166,8 @@ def _bus_end_text(obs: Obstacles, txt: str, x: float, y: float, anchor: str) -> 
 def sheet_node_ids(doc: Document, spec: SheetSpec, index: Index) -> set[str]:
     """Ids of the nodes (tree nodes and auxiliary devices) drawn on the sheet ``spec``."""
     ids = {n.node.id for r in _build_sheet_roots(spec, index) for n in r.walk()
-           if n.kind == "node" and n.node is not None and n.node.id}
+           if n.kind == "node" and n.node is not None and n.node.id
+           and not (n.children and n.children[0].kind == "bus_in")}  # a continued board: only its frame, the board is on its first sheet
     ids |= {d for d, h in _device_homes(doc).items() if h in ids}
     return ids
 
@@ -1592,6 +1629,8 @@ def _frame_box(b: LNode) -> tuple[float, float, float, float]:
             x1 = max(x1, ab[2] + 1.0)
     if b.frame_reach is not None:  # taps of feeds on its busbar, beyond its end (see _feed_taps)
         x1 = max(x1, b.frame_reach + 1.0)
+    if b.frame_left is not None:
+        x0 = min(x0, b.frame_left)
     return (x0, b.frame_top, x1, _board_bottom(b) + 2.0)
 
 
