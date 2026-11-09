@@ -19,7 +19,7 @@ Seg = tuple[tuple[float, float], tuple[float, float]]
 @dataclass
 class Finding:
     kind: str  # "text_overlap", "text_on_symbol", "text_crossed", "text_on_conductor", "small_text", "shared_run",
-    # "link_on_conductor", "link_along_frame", "link_across_conductor", "truncated", "detour"
+    # "link_on_conductor", "link_along_frame", "link_across_conductor", "link_through_symbol", "truncated", "detour"
     what: str
     where: tuple[float, float]
 
@@ -156,6 +156,13 @@ def _dashed_links(item: object, link: Optional[str] = None) -> Iterator[tuple[st
         yield link, item
 
 
+def _groups(item: object) -> Iterator[Group]:
+    if isinstance(item, Group):
+        yield item
+        for i in item.items:
+            yield from _groups(i)
+
+
 def _hover_paths(item: object, link: Optional[str] = None) -> Iterator[tuple[str, Polyline]]:
     """The first invisible hover copy of each link: its route in one piece."""
     if isinstance(item, Group):
@@ -247,6 +254,20 @@ def audit(root: Group, detours: bool = False) -> list[Finding]:
         run = max((_run(p, q, 2.0) for p in links[la] for q in frames), default=0.0)
         if run > 10.0:  # a dashed link beside a dashed frame reads as one more frame line
             out.append(Finding("link_along_frame", f"link {la} runs {run:.0f} mm along a frame", links[la][0][0]))
+    ends: dict[str, set[str]] = {}
+    for g in _groups(root):
+        if has_cls(g, "uw-link") and "data-uw-link" in g.attrs:
+            ends.setdefault(g.attrs["data-uw-link"], set()).update(
+                {g.attrs.get("data-uw-from", ""), g.attrs.get("data-uw-to", "")})
+    bodies = [(nid, _union(boxes)) for nid, boxes, _g in symbols]
+    for la, pl in _dashed_links(root):  # a link through a device it does not reach reads as wired to it
+        own = ends.get(la, set())
+        for nid, (x0, y0, x1, y1) in bodies:
+            core = (x0 + 0.3, y0 + 0.3, x1 - 0.3, y1 - 0.3)
+            if nid not in own and core[0] < core[2] and core[1] < core[3] \
+                    and any(_crosses(core, s) for s in zip(pl.points, pl.points[1:])):
+                out.append(Finding("link_through_symbol", f"link {la} through the symbol of {nid}", pl.points[0]))
+                break
     conductors = _conductor_segments(root)
     for la, pl in _dashed_links(root):  # a dashed link drawn through a conductor reads as connected to it
         if gapped_crossings(pl.points, conductors):
