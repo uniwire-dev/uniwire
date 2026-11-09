@@ -91,7 +91,10 @@ Every node has the following common fields (all optional except `type`):
 * A node with **several children** implicitly carries a **busbar**. The `busbar` type makes it
   possible to declare it explicitly in order to give it characteristics (In, dimensions, Ik).
 * A `board` (distribution board, cabinet, enclosure) is a **container**: it has no electrical function
-  of its own; it groups its descendants down to the next board. It is drawn as a dashed frame.
+  of its own; it groups its descendants down to the next board. It is drawn as a dashed frame. An `inverter`, `ups`,
+  `transfer_switch`, `busbar` (other than the board's own, at its head) or `transformer` with a primary above
+  1000 V (`u1_V`) that has a `cable`, or is fed by a device that has one, is at the far end of that cable: it is
+  drawn below the frame, with what it feeds.
 * Loads (category `load`), `pv_array` and `battery` are **leaves**.
 * A protective device without children represents an outgoing circuit whose load is not described (drawn as an arrow).
 
