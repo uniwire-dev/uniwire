@@ -77,9 +77,9 @@ uniwire.render_svg(doc, "out/house-ml", stem="house-ml", view=view)
 ```
 
 The language of the drawing (title block, table headings, type labels) follows `meta.lang` of the
-document: `"en"` (default), `"fr"`, `"de"`, `"es"`, `"pt"`, `"it"`, `"nl"`, `"pl"`, `"tr"`, `"ru"`, `"zh"`
-(Simplified Chinese) or `"ja"` (Japanese). Another language falls back to English for the texts uniwire writes;
-the texts of the document are drawn as written.
+document: `"en"` (default), `"fr"`, `"de"`, `"es"`, `"pt"`, `"it"`, `"nl"`, `"pl"`, `"tr"`, `"hr"`, `"sr"`, `"bs"`
+(Croatian, Serbian and Bosnian in Latin script), `"ru"`, `"zh"` (Simplified Chinese) or `"ja"` (Japanese).
+Another language falls back to English for the texts uniwire writes; the texts of the document are drawn as written.
 
 Colours: a view with `color` set (`conductors`, `phase`, `source`, `status`, `voltage`, SPEC §7) recolours
 the strokes and adds a legend on each sheet, in SVG and PDF alike:
@@ -199,8 +199,9 @@ uniwire marks mcc.uniwire.json --view marks --write              # freeze the ge
 ```
 
 CLI output, validation errors and rule findings follow the `UNIWIRE_LANG` environment variable
-(`en` by default). French covers everything; German, Spanish, Portuguese, Italian, Dutch, Polish, Turkish, Russian
-and Chinese cover the rule findings, the CLI and validation messages staying in English:
+(`en` by default). French covers everything; German, Spanish, Portuguese, Italian, Dutch, Polish, Turkish,
+Croatian, Serbian, Bosnian, Russian and Chinese cover the rule findings, the CLI and validation messages staying in
+English:
 
 ```bash
 UNIWIRE_LANG=fr uniwire check house.uniwire.json
