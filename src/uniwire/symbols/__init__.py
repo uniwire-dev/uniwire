@@ -9,8 +9,11 @@ footprint and, for the transfer switch, a side input terminal.
 from __future__ import annotations
 
 import math
-from collections.abc import Callable
+import threading
+from collections.abc import Callable, Mapping
+from contextvars import ContextVar
 from dataclasses import dataclass, field
+from importlib.metadata import entry_points
 from typing import Any, Optional
 
 from ..render.scene import (
@@ -743,8 +746,98 @@ SYMBOLS: dict[str, Callable[[Any], Symbol]] = {
 }
 
 
+# --------------------------------------------------------------- symbol sets
+#: Entry point group of the packages that bring a symbol set: the entry point's name is the set's name, its object a
+#: mapping {symbol name: factory} (or a function returning one), as given to :func:`register_symbol_set`.
+ENTRY_POINT_GROUP = "uniwire.symbol_sets"
+#: Symbol set the document being drawn uses (set by the renderer from the document's ``symbols``).
+ACTIVE_SET: ContextVar[str] = ContextVar("uniwire_symbol_set", default="iec")
+_SETS: dict[str, dict[str, Callable[..., Symbol]]] = {}
+#: What went wrong with a set: {set name: {what (a symbol name or the package entry point): error}}. The drawing
+#: uses the IEC symbol instead; the rule ``core.symbol-set-error`` reports it.
+FAILURES: dict[str, dict[str, str]] = {}
+_loaded = False
+_LOCK = threading.Lock()
+
+
+def register_symbol_set(name: str, symbols: Mapping[str, Callable[..., Symbol]]) -> None:
+    """Register the symbol set ``name``, or add symbols to it. ``symbols`` maps symbol names (keys of
+    :data:`SYMBOLS`, the node types and ``offpage``) to factories taking the arguments of the built-in function of the
+    same name (the node first, ``None`` on the symbol sheet; accept ``**kwargs`` for the variants: ``motor(node,
+    live, dc)``, ``generator(node, system)``...) and returning a :class:`Symbol` drawn in the same frame (input
+    terminal at the origin, output at ``(0, height)``). Symbols a set does not give are drawn as in ``iec``."""
+    if name == "iec":
+        raise ValueError("'iec' is the built-in symbol set: register the symbols under another name")
+    if not isinstance(symbols, Mapping):
+        raise TypeError(f"symbol set {name!r}: a mapping {{symbol name: factory}} is expected")
+    unknown = sorted(set(symbols) - set(SYMBOLS))
+    if unknown:
+        raise ValueError(f"unknown symbol(s) {', '.join(unknown)}; the symbols are: {', '.join(SYMBOLS)}")
+    not_callable = sorted(k for k, f in symbols.items() if not callable(f))
+    if not_callable:
+        raise TypeError(f"symbol set {name!r}: not a function for {', '.join(not_callable)}")
+    _SETS.setdefault(name, {}).update(symbols)
+    FAILURES.pop(name, None)
+    from ..render import _PAGES  # drawings made before may hold the old symbols
+
+    _PAGES.clear()
+
+
+def _load_entry_points() -> None:
+    """Register the sets of the installed packages, once. A package that fails is recorded in :data:`FAILURES` and
+    the others still load."""
+    global _loaded
+    with _LOCK:
+        if _loaded:
+            return
+        for ep in entry_points(group=ENTRY_POINT_GROUP):
+            try:
+                obj = ep.load()
+                register_symbol_set(ep.name, obj() if callable(obj) else obj)
+            except Exception as e:
+                FAILURES.setdefault(ep.name, {})[ep.value] = f"{type(e).__name__}: {e}"
+        _loaded = True
+
+
+def symbol_sets() -> list[str]:
+    """Names of the symbol sets that can be used: ``iec`` and the registered ones (packages included)."""
+    _load_entry_points()
+    return ["iec", *sorted(_SETS)]
+
+
+def known_set(name: Optional[str]) -> str:
+    """``name`` when such a set is registered, else ``iec`` (the drawing falls back to IEC symbols)."""
+    if not name or name == "iec":
+        return "iec"
+    if name not in _SETS:
+        _load_entry_points()
+    return name if name in _SETS else "iec"
+
+
+def symbol(name: str, *args: Any, **kwargs: Any) -> Symbol:
+    """Symbol ``name`` (a key of :data:`SYMBOLS`) from the active set, the IEC one when the set does not give it or
+    its factory fails (recorded in :data:`FAILURES`). ``extra["kind"]`` keeps ``name`` (see :func:`kind`)."""
+    set_name = ACTIVE_SET.get()
+    own = _SETS.get(set_name, {}).get(name)
+    if own is not None:
+        try:
+            sym = own(*args, **kwargs)
+            if not isinstance(sym, Symbol):
+                raise TypeError(f"returned {type(sym).__name__}, not a Symbol")
+            sym.extra["kind"] = name
+            return sym
+        except Exception as e:
+            FAILURES.setdefault(set_name, {})[name] = f"{type(e).__name__}: {e}"
+    return SYMBOLS[name](*args, **kwargs)
+
+
+def kind(sym: Symbol) -> str:
+    """What a symbol stands for (``controller``, ``earth``...), whatever the set names it."""
+    return sym.extra.get("kind", sym.name)
+
+
 def symbol_for(node: Any, system: Optional[str] = None) -> Symbol:
     """Symbol of a node; ``system`` (supply system around a source) refines rotating-machine symbols."""
     if system is not None and node.type == "generator":
-        return generator(node, system)
-    return SYMBOLS[node.type](node)
+        return symbol("generator", node, system)
+    return symbol(node.type, node)

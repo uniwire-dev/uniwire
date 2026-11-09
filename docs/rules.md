@@ -50,6 +50,8 @@ An unknown profile name produces a `profile` warning.
 | Rule | Check | Level |
 |---|---|---|
 | `core.ref-unique` | A reference designation is unique within a board (it may repeat across boards) | warning |
+| `core.symbol-set-unknown` | The symbol set named in `symbols` is installed (registered by a package); otherwise the drawing uses the IEC symbols | warning |
+| `core.symbol-set-error` | The symbol set loads and each of its symbols draws; otherwise the IEC symbol is drawn instead | warning |
 | `core.folio-duplicate` | Two views do not start at the same sheet number (`first_folio`); the later one is numbered after the sheets before it | warning |
 | `core.rating-cascade` | A breaker, RCBO or fuse does not have a higher rating than the protective device directly upstream | warning |
 | `core.transfer-target` | A `transfer` link ends on a `transfer_switch` | error |
