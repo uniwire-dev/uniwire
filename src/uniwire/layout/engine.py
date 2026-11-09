@@ -3024,6 +3024,8 @@ def _column_info(ln: LNode, index: Index, lang: str) -> dict[str, Any]:
     for n in path:
         if info["cable"] is None and n.cable is not None:
             info["cable"] = n.cable
+    # without a protection of its own, the rating of the device switching the feeder (contactor, impulse relay...)
+    info["rated"] = next((n for n in path[1:] if n.type in SWITCHING and getattr(n, "in_A", None)), None)  # type: ignore[attr-defined]
     for n in chain:
         if n.type in ("rcd", "rcbo", "main_breaker") and getattr(n, "idn_mA", None):  # type: ignore[attr-defined]
             info["rcd"] = n
@@ -3055,8 +3057,13 @@ def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: 
     pitch = view.pitch_mm
     titles = CARTOUCHE_TITLES.get(lang, CARTOUCHE_TITLES["en"])
     infos = [_column_info(c, index, lang) for c in columns]
+    fields = view.cartouche or []
+    big = any((getattr(i["leaf"], "p_kW", None) or getattr(i["leaf"], "p_max_kW", None) or 0) >= 1 for i in infos)
     for i in infos:
-        i["rcd_type_column"] = "rcd_type" in (view.cartouche or [])
+        i["rcd_type_column"] = "rcd_type" in fields
+        i["idn_column"] = "idn_mA" in fields  # the residual current in its own row, not also in the protection's
+        i["power_kw"] = big  # powers of one row in kW when one of them is: '0.6 kW' beside '3 kW', not '600 W'
+
     # the same tag in two boards of one table: prefixed with the board's ("=PDU-A-Q1", "TD2 -Q1")
     def board_of(i: dict[str, Any]) -> Optional[NodeBase]:
         leaf = i.get("leaf")
