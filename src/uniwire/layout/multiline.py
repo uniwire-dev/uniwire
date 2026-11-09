@@ -87,6 +87,7 @@ from .engine import (
     _wrap_words,
     board_parts,
     drawing_area,
+    feeding_sheet,
     interlock_mark,
     sheet_node_ids,
 )
@@ -2807,7 +2808,7 @@ def multiline_layouts(doc: Document, view: View, index: Index | None = None) -> 
         incoming_ref: tuple[Optional[int], Optional[str]] = (None, None)
         if i > 1 and spec.roots and not spec.continuation:
             rid = spec.roots[0].id
-            src = next((j for j, s in enumerate(specs, 1) if rid in s.detached and j != i), None)
+            src = feeding_sheet(specs, i, rid, index, sheet_of)
             incoming_ref = (src, index.parent.get(rid or ""))
             feeder = next((a for a in index.ancestors(rid or "") if a.ref), None)
             what = _t("render.incoming_from", lang, ref=feeder.ref) if feeder is not None else _t("render.incoming", lang)
