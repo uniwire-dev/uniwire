@@ -949,7 +949,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
     marks = Group(cls="conductors")
     _draw_pen_splits(main, doc, marks, obs)
     if view.conductor_marks:
-        drawn = _draw_line_marks(main, everything, doc, marks, obs, incoming)
+        drawn = _draw_line_marks(main, everything, doc, marks, obs, incoming, index)
         parent = {id(c): n for n in everything for c in n.children}
         _draw_conductor_marks(columns, index, doc, marks, obs, y_load, drawn, parent)
 
@@ -1256,11 +1256,20 @@ def _feeder_chain(ln: LNode, index: Index) -> list[NodeBase]:
 
 
 def _supply_system(ln: LNode, index: Index, doc: Document) -> Optional[str]:
+    """System of the line feeding ``ln``: the nearest one stated at or above it, else the installation's. Below a
+    converter fed by two wires (a transformer cannot state its output): two wires, not the installation's."""
     if ln.node is None or not ln.node.id:
         return doc.installation.system
-    for n in [ln.node] + index.ancestors(ln.node.id):
+    up = [ln.node] + index.ancestors(ln.node.id)
+    for k, n in enumerate(up):
         if getattr(n, "system", None):
             return n.system  # type: ignore[attr-defined]
+        if k and n.type in CONVERTER_TYPES:  # type: ignore[attr-defined]
+            fed = next((a for a in up[k + 1:] if getattr(a, "poles", None) or getattr(a, "phase", None)), None)
+            two = fed is not None and (getattr(fed, "poles", None) in ("1P", "1P+N", "2P")
+                                       or getattr(fed, "phase", None) in ("L1", "L2", "L3", "L1L2", "L2L3", "L1L3"))
+            if two:
+                return "2P"
     return doc.installation.system
 
 
@@ -1357,12 +1366,28 @@ def _line_marks(doc: Document) -> tuple[dict[int, Optional[Mark]], dict[int, Opt
     return m_in, m_out
 
 
+CONVERTER_TYPES = ("transformer", "power_supply", "inverter", "dc_converter")  # what they give differs from their input
+
+
+def _phase_above(node: NodeBase, index: Index) -> Optional[str]:
+    """Phase a single-phase line is connected to: that of ``node`` or of the nearest node above it that states
+    one (a group RCD on L2), not beyond a converter: what a converter gives is not on its input phase."""
+    for n in [node] + (index.ancestors(node.id) if node.id else []):
+        if n is not node and n.type in CONVERTER_TYPES:  # type: ignore[attr-defined]
+            return None
+        if getattr(n, "phase", None):
+            return n.phase  # type: ignore[attr-defined]
+    return None
+
+
 def _mark_text(mark: Mark, phase: Optional[str] = None) -> str:
     n, neutral = mark
     parts = [str(n)] if n > 3 else []
-    ph = phase if phase and phase != "L1L2L3" else ""
+    ph = phase if phase and phase != "L1L2L3" and n + neutral == 2 else ""  # a phase names a two-wire line only
     if neutral:
         parts.append(f"{ph}+N")
+    elif ph and n == 2 and ph in ("L1", "L2", "L3"):
+        parts.append(f"{ph} N")  # two conductors on one phase: the phase and the neutral
     elif ph:
         parts.append(ph)
     return " ".join(parts)
@@ -1414,12 +1439,12 @@ def _put_mark(g: Group, obs: Obstacles, x: float, y0: float, y1: float, pref: fl
 
 
 def _draw_line_marks(roots: list[LNode], everything: list[LNode], doc: Document, g: Group, obs: Obstacles,
-                     incoming: Optional[str]) -> dict[int, Mark]:
+                     incoming: Optional[str], index: Index) -> dict[int, tuple[Mark, str]]:
     """Marks on the line leaving each source / transformer and each switching device whose conductors differ
     from the line above it (outgoing cables are marked by :func:`_draw_conductor_marks`). Returns the marks
-    drawn, keyed by ``id(node)``."""
+    drawn and their texts, keyed by ``id(node)``."""
     m_in, m_out = _line_marks(doc)
-    drawn: dict[int, Mark] = {}
+    drawn: dict[int, tuple[Mark, str]] = {}
     sources = {id(n) for n in doc.sources}
     for ln in everything:
         node = ln.node
@@ -1453,8 +1478,9 @@ def _draw_line_marks(roots: list[LNode], everything: list[LNode], doc: Document,
             continue
         if y1 - y0 < 1.5:
             continue
-        _put_mark(g, obs, ln.x, y0, y1, (y0 + y1) / 2 if pref is None else pref, mark, ln.id)
-        drawn[id(node)] = mark
+        phase = _phase_above(node, index) if ln.type in SWITCHING and not _dc_line(node, index) else None
+        _put_mark(g, obs, ln.x, y0, y1, (y0 + y1) / 2 if pref is None else pref, mark, ln.id, phase)
+        drawn[id(node)] = (mark, _mark_text(mark, phase))
     return drawn
 
 
@@ -1476,7 +1502,7 @@ def _cable_caption(c: Any) -> str:
 
 
 def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: Group, obs: Obstacles,
-                          y_load: float, drawn: dict[int, Mark] | None = None,
+                          y_load: float, drawn: dict[int, tuple[Mark, str]] | None = None,
                           parent: dict[int, LNode] | None = None) -> None:
     """Conductor-count mark on each outgoing cable (see :func:`_put_mark`), unless the same mark was already
     drawn higher up in the column."""
@@ -1488,15 +1514,18 @@ def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: 
         chain = _feeder_chain(ln, index)
         if not chain:
             continue
+        # the conductors of what a converter gives: not those of its input (the poles, the cable above it)
+        chain = chain[:next((k for k, c in enumerate(chain) if k and c.type in CONVERTER_TYPES), len(chain))]
         mark = feeder_mark(chain, "DC" if _dc_line(chain[0], index) else _supply_system(ln, index, doc))
-        phase = next((getattr(c, "phase", None) for c in chain if getattr(c, "phase", None)), None)
+        phase = None if _dc_line(chain[0], index) else _phase_above(chain[0], index)
         if ln.open_feeder and ln.node is not None and ln.type in ("power_supply", "dc_converter"):
             mark, phase = (2, False), None  # what leaves a power supply: its two output poles (L+ L-), not its input
         if not mark:
             continue
         above = next((drawn[id(c)] for c in chain if id(c) in drawn), None)
-        if above == mark and not (phase and phase != "L1L2L3"):
-            continue
+        if above is not None and above[0] == mark and (above[1] == _mark_text(mark, phase)
+                                                       or not (phase and phase != "L1L2L3")):
+            continue  # the same mark, the same text higher up in the column
         p = parent.get(id(ln))
         y0 = ln.out_y if ln.open_feeder else (p.bus_y if p.bus_y is not None else p.out_y) if p else y_load - 9.0
         _put_mark(g, obs, ln.x, y0, y_load - 0.3, y_load - 2.8, mark, ln.id, phase)
