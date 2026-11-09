@@ -38,6 +38,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   a document got the Latin texts.
 * SVG: each sheet states the language of the document (`lang` and `xml:lang`, from `meta.lang`), so a browser
   draws the Japanese kanji in their Japanese forms rather than the Chinese ones (the PDF already did).
+* Web editor: the rule findings are in the language of the document (`meta.lang`) when uniwire has it, as its
+  drawing is; otherwise in the language of the interface. Before, they were in French or English only.
 * Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
   inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
   from the board was drawn on its AC side, and the inverter was drawn "=" over "~".
