@@ -8,6 +8,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
+  inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
+  from the board was drawn on its AC side, and the inverter was drawn "=" over "~".
 * `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
   controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
   after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",
