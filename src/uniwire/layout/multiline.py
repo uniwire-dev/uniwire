@@ -70,8 +70,8 @@ from ..render.semantics import (
     ref_group,
 )
 from ..resolve import Index, build_index, iter_nodes
-from ..symbols import ABBREVIATIONS, M, Symbol, symbol_for
-from ..symbols import grid as grid_symbol
+from ..symbols import ABBREVIATIONS, M, Symbol, symbol, symbol_for
+from ..symbols import kind as symbol_kind
 from ..units import fmt
 from .engine import (
     DC_PORT_TYPES,
@@ -1344,7 +1344,7 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
                                              closed=True), Line((x, y), (x, y + h))))
             return g
         if t == "grid":
-            gs = grid_symbol(node)
+            gs = symbol("grid", node)
             g.add(Group([transform(i, (x0 + x1) / 2, y) for i in gs.items]))
             g.add(Rect(x0, y + 10.0, x1 - x0, 2.0, Style(fill="#ffffff")))
             top = y + 12.0
@@ -2334,7 +2334,7 @@ def _pad_boards(doc: Document, roots: list[MLNode]) -> None:
     for r in roots:
         for b in r.walk():
             if b.kind == "node" and not b.bottom and b.node is not None and b.node.id \
-                    and symbol_for(b.node).name == "controller":
+                    and symbol_kind(symbol_for(b.node)) == "controller":
                 # a controller many links reach: one point each on its side, a lane apart (one more for a link to
                 # another sheet, whose stub carries the name of the other end), as in the single-line diagram
                 ids = _signal_links(doc, b.node.id)
@@ -2440,7 +2440,7 @@ def _draw_annex(doc: Document, roots: list[MLNode], g: Group, view: View, spec: 
     for ln in annex:  # an earth electrode level with the PE its link leaves from: no jog in a short link
         ends = [lk for lk in doc.links if lk.kind == "earth" and ln.node is not None and ln.node.id in (lk.from_, lk.to)]
         other = by_id.get(ends[0].to if ends[0].from_ == ln.node.id else ends[0].from_) if len(ends) == 1 else None
-        pe = other.sym.extra.get("pe_end") if other is not None and ln.sym.name in ("earth", "earth_bar") else None
+        pe = other.sym.extra.get("pe_end") if other is not None and symbol_kind(ln.sym) in ("earth", "earth_bar") else None
         if pe is not None and 0 < abs(pe[1] - ln.y) <= 2.5:
             old = [ln.sym_box(), ln.ann_box()]
             ln.y = pe[1]
@@ -2460,7 +2460,7 @@ def _draw_annex(doc: Document, roots: list[MLNode], g: Group, view: View, spec: 
             obs.add_box(ln.ann_box())
     for ln in annex:  # without the leads of their symbol, which would read as conductors of a feeder
         ln.sym.extra.update(end_gap=0.0, free_below=True)  # links touch the symbol, may leave below it
-        earth = ln.sym.name in ("earth", "earth_bar")  # (an electrode keeps its conductor: the link ends on it)
+        earth = symbol_kind(ln.sym) in ("earth", "earth_bar")  # (an electrode keeps its conductor: the link ends on it)
         items = [i for i in ln.sym.items if earth or not (isinstance(i, Line) and i.a[0] == i.b[0] == 0.0
                                                  and (min(i.a[1], i.b[1]) <= 0.0 or max(i.a[1], i.b[1]) >= ln.sym.height))]
         vis = bbox(Group(items))

@@ -411,7 +411,7 @@ def card(lang: str = "en", level: Level = "compact") -> str:
     add(f"## {T['skeleton']}")
     add(T["desc_doc"])
     for k, f in Document.model_fields.items():
-        if k == "ext":
+        if k in ("ext", "symbols"):  # symbol sets come from packages installed beside the library: not for assistants
             continue
         name = _alias(k, f)
         if name == "meta":

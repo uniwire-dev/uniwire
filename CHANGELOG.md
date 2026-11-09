@@ -23,6 +23,14 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   the point of the link nearest the label (it ran slanting from the middle of the longest stretch and read as one
   more link). The label of a link read by a PLC channel (a contactor's feedback to an input) goes near the device,
   like the label of a link driven by a PLC channel (it went among the wires under the PLC).
+* Format 1.2: a document names the symbol set it is drawn with in `symbols` (`iec` by default, the built-in set).
+  A set is registered in Python (`uniwire.symbols.register_symbol_set`) or by a package (entry point group
+  `uniwire.symbol_sets`), and gives only the symbols it changes; the others are drawn as in `iec`. A set that is not
+  installed draws the IEC symbols, with the warning `core.symbol-set-unknown`. `uniwire symbols --set NAME` draws
+  every symbol of a set; example in `examples/code/symbol_set.py`. A 1.1 document is a valid 1.2 document and is
+  drawn as before. A package that fails to load, or a symbol that fails to draw, gives the IEC symbol and the
+  warning `core.symbol-set-error`. In multi-line views, switching and protective devices are drawn pole by pole and
+  do not take the set's symbols.
 * Single-line conductor marks: the line leaving the supply of the installation carries the system declared on that
   line, else the installation's (before, a single-phase or DC board further down made it a two-conductor line); a
   standby or lower-voltage source still takes the system declared below it. The secondary of a transformer
