@@ -37,10 +37,10 @@
                "children": [{"type": "water_heater", "label": "Water heater 80 L", "volume_L": 80, "p_kW": 2, "priority": "non_essential"}]},
               {"type": "breaker", "ref": "-F12", "use": "B16", "priority": "non_essential",
                "cable": {"cores": "3G", "section_mm2": 2.5, "material": "Cu", "install": "C", "insulation": "PVC"},
-               "children": [{"type": "heating", "label": "Panel heaters living room", "p_kW": 3, "count": 2, "priority": "non_essential"}]},
+               "children": [{"type": "heating", "label": "Panel heaters living room", "p_kW": 1.5, "count": 2, "priority": "non_essential"}]},
               {"type": "breaker", "ref": "-F13", "use": "B16", "priority": "non_essential",
                "cable": {"cores": "3G", "section_mm2": 2.5, "material": "Cu", "install": "C", "insulation": "PVC"},
-               "children": [{"type": "heating", "label": "Panel heaters bedrooms", "p_kW": 2.5, "count": 3, "priority": "non_essential"}]}
+               "children": [{"type": "heating", "label": "Panel heaters bedrooms", "p_kW": 0.833, "count": 3, "priority": "non_essential"}]}
             ]},
             {"type": "transfer_switch", "id": "TS1", "ref": "-Q1", "label": "Changeover I-0-II", "in_A": 40, "poles": "2P",
              "mode": "manual", "interlock": "mechanical", "children": [

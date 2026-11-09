@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from collections import defaultdict
 
@@ -121,6 +122,113 @@ def neutral_on_network(doc: Document, idx: Index):
         if system in ("3P", "2P"):
             yield Finding("warning", "core.neutral-missing", _t("core.neutral_missing", poles=poles, system=system),
                           nid)
+
+
+OVERCURRENT = ("breaker", "rcbo", "fuse", "main_breaker")
+LOAD_MARGIN = 1.1  # above the rating by more than this: not a rounding of the power (3.7 kW on 16 A)
+
+
+def _loads_below(n) -> list | None:
+    """Loads below ``n`` up to the next overcurrent protection (``None`` when there is one below it)."""
+    from ..registry import is_load
+
+    found = []
+    for c in n.children:
+        if c.type in OVERCURRENT:
+            return None
+        sub = _loads_below(c)
+        if sub is None:
+            return None
+        found += ([c] if is_load(c.type) else []) + sub
+    return found
+
+
+def _circuit_voltage(doc: Document, idx: Index, n, chain: list, prot) -> float | None:
+    """Voltage that gives the current of load ``n`` from its power (phase-to-phase times sqrt(3) when three-phase),
+    on the network of its protection ``prot``; ``None`` when it is not clear. The voltage of the load wins; else the
+    nearest one declared above (board, source, transformer secondary, installation). Where a circuit may be
+    single-phase or between two phases, the higher voltage (the lower current): a false alarm is worse than none."""
+    from ..labels import conductor_count
+
+    path = [*chain, prot, *idx.ancestors(prot.id or "")]
+    system = net_un = None
+    dc, at_installation = False, True
+    for a in path:
+        system = system or getattr(a, "system", None)
+        if a.type in ("battery", "pv_array") or getattr(a, "dc", None) or getattr(a, "kind", None) == "dc_box":
+            dc = True
+        if a.type in ("board", "busbar") or a is path[-1]:
+            net_un = net_un or getattr(a, "un_V", None)
+        if a is not n and a.type in VOLTAGE_CONVERTERS:  # its output makes the network below it
+            at_installation = False
+            net_un = net_un or (getattr(a, "u2_V", None) if a.type == "transformer" else None)
+            dc = dc or a.type != "transformer"  # an inverter, a power supply...: the network below is not known here
+            break
+    else:
+        system = system or doc.installation.system
+        net_un = net_un or doc.installation.un_V
+    load_un = getattr(n, "un_V", None)
+    if dc or system == "DC":
+        return load_un  # DC: only the voltage the load gives
+    devices = [*chain[1:], prot]  # the poles of a load (a socket's "3P+N+T") are not those of a device
+    poles = next((getattr(a, "poles", None) for a in devices if getattr(a, "poles", None)), None)
+    if getattr(n, "phases", None) == 3 or poles in ("3P", "3P+N", "4P") or str(getattr(n, "poles", "")).startswith("3P"):
+        three = True
+    elif system in ("3P", "3P+N"):
+        three = (conductor_count([*chain, prot], system) or 0) >= 3
+    else:
+        three = False  # split-phase three wires are not three phases
+    if load_un:
+        return math.sqrt(3) * load_un if three else load_un
+    if not net_un:
+        return None
+    if three:
+        return math.sqrt(3) * net_un
+    phase = next((getattr(a, "phase", None) for a in devices if getattr(a, "phase", None)), None)
+    to_neutral = (poles in ("1P", "1P+N") and system in ("3P+N", "split-phase")
+                  or (poles == "1P+N" or phase in ("L1", "L2", "L3")) and system is None)  # below a transformer
+    if to_neutral:
+        uln = doc.installation.uln_V if at_installation and net_un == doc.installation.un_V else None
+        if uln:
+            return uln
+        if system in ("3P+N", None) and net_un >= 300:  # 400/230 V
+            return net_un / math.sqrt(3)
+        if system == "split-phase" and net_un >= 200:  # 240/120 V, 200/100 V
+            return net_un / 2
+    return net_un  # single-phase network, two phases, or not clear: the higher voltage
+
+
+@rule("core")
+def load_current(doc: Document, idx: Index):
+    """The current of a load is not above the rating of the protection that feeds it alone. Powers are per item:
+    ``count`` items of a load add up; a protection with ``count`` stands for that many circuits, each feeding the
+    load below it."""
+    from ..registry import is_load
+
+    for nid, n in idx.nodes.items():
+        if not is_load(n.type) or not getattr(n, "p_kW", None):  # type: ignore[attr-defined]
+            continue
+        chain, prot = [n], None
+        for a in idx.ancestors(nid):
+            if a.type in VOLTAGE_CONVERTERS or a.type == "motor_starter" or getattr(a, "method", None) == "vfd":  # type: ignore[attr-defined]
+                break
+            if a.type in OVERCURRENT and getattr(a, "in_A", None):  # type: ignore[attr-defined]
+                prot = a
+                break
+            chain.append(a)
+        if prot is None or _loads_below(prot) != [n]:  # several loads: their diversity is not known here
+            continue
+        u = _circuit_voltage(doc, idx, n, chain, prot)
+        if not u:
+            continue
+        items, circuits = getattr(n, "count", None) or 1, getattr(prot, "count", None) or 1
+        current = n.p_kW * 1000 * items / (u * (getattr(n, "cos_phi", None) or 1))  # type: ignore[attr-defined]
+        if current > LOAD_MARGIN * prot.in_A:  # type: ignore[attr-defined]
+            key = ("core.load_current_count" if items > 1 else "core.load_current_circuits" if circuits > 1
+                   else "core.load_current")
+            yield Finding("warning", "core.load-current",
+                          _t(key, p=float(n.p_kW), count=items if items > 1 else circuits,  # type: ignore[attr-defined]
+                             i=float(round(current)), prot=prot.ref or prot.id, in_a=float(prot.in_A)), nid)  # type: ignore[attr-defined]
 
 
 # Control circuits entered in the power tree: switching devices fed by a control power supply that switch nothing

@@ -53,6 +53,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * New finding `core.neutral-missing` (warning): a device with a neutral pole (`1P+N`, `3P+N`) on a network without
   neutral (`system` `3P` or `2P`). Either the neutral is distributed and the system has one, or a circuit between
   two phases is `2P`.
+* New finding `core.load-current` (warning): the current of a load is more than 10% above the rating of the
+  protection that feeds it alone. Powers are per item: 12 lamps of 0.1 kW (`count` 12) under one breaker draw
+  1.2 kW, and a breaker with `count` 24 stands for 24 circuits each feeding the load below it. The message says so
+  when `count` is the cause. Six examples gave the total power of `count` items: they give it per item now.
 * `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
   controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
   after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",

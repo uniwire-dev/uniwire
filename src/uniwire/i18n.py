@@ -75,6 +75,9 @@ EN: dict[str, str] = {
     "core.interlock_duplicate": "interlock {lock!r} declared twice",
     "core.view_direction": "view {view}: direction {direction!r} is not drawn yet, the view is drawn top-down",
     "core.neutral_missing": "device {poles} on a network without neutral (system {system}): declare a system with a neutral if the neutral is distributed, otherwise a circuit between two phases is 2P",
+    "core.load_current": "about {i:g} A for {p:g} kW, above the rating of {prot} ({in_a:g} A)",
+    "core.load_current_count": "about {i:g} A for {count} x {p:g} kW, above the rating of {prot} ({in_a:g} A); the power of an item with 'count' is per item",
+    "core.load_current_circuits": "about {i:g} A for {p:g} kW, above the rating of {prot} ({in_a:g} A); with 'count' {count}, {prot} stands for {count} circuits, each feeding this load (powers are per item)",
     "core.control_scope": "this document describes control circuits ({nodes}): uniwire draws power distribution "
                           "(single-line and multi-line diagrams), not control schematics; coils, contacts, push "
                           "buttons and current paths are only summarized here, not drawn as a control schematic",
@@ -403,6 +406,9 @@ FR: dict[str, str] = {
     "core.interlock_duplicate": "verrouillage {lock!r} déclaré deux fois",
     "core.view_direction": "vue {view} : la direction {direction!r} n'est pas encore dessinée, la vue est dessinée de haut en bas",
     "core.neutral_missing": "appareil {poles} sur un réseau sans neutre (système {system}) : déclarer un système avec neutre si le neutre est distribué, sinon un circuit entre deux phases est en 2P",
+    "core.load_current": "environ {i:g} A pour {p:g} kW, au-dessus du calibre de {prot} ({in_a:g} A)",
+    "core.load_current_count": "environ {i:g} A pour {count} x {p:g} kW, au-dessus du calibre de {prot} ({in_a:g} A) ; la puissance d'un élément avec 'count' est par élément",
+    "core.load_current_circuits": "environ {i:g} A pour {p:g} kW, au-dessus du calibre de {prot} ({in_a:g} A) ; avec 'count' {count}, {prot} représente {count} circuits qui alimentent chacun ce récepteur (les puissances sont par élément)",
     "core.control_scope": "ce document décrit des circuits de commande ({nodes}) : uniwire dessine la distribution "
                           "(schémas unifilaire et multifilaire), pas les schémas de commande ; bobines, contacts, "
                           "boutons et chemins de courant n'y figurent qu'en résumé, pas en schéma développé",
@@ -821,6 +827,9 @@ RU: dict[str, str] = {
     "core.interlock_duplicate": "блокировка {lock!r} объявлена дважды",
     "core.view_direction": "вид {view}: направление {direction!r} пока не рисуется, вид нарисован сверху вниз",
     "core.neutral_missing": "аппарат {poles} в сети без нейтрали (система {system}): укажите систему с нейтралью, если нейтраль распределена, иначе для цепи между двумя фазами укажите 2P",
+    "core.load_current": "около {i:g} А при {p:g} кВт, больше номинального тока {prot} ({in_a:g} А)",
+    "core.load_current_count": "около {i:g} А при {count} x {p:g} кВт, больше номинального тока {prot} ({in_a:g} А); мощность элемента с 'count' указывается на один элемент",
+    "core.load_current_circuits": "около {i:g} А при {p:g} кВт, больше номинального тока {prot} ({in_a:g} А); с 'count' {count} {prot} обозначает {count} линий, каждая из которых питает этот приёмник (мощности указываются на один элемент)",
     "core.control_scope": "этот документ описывает цепи управления ({nodes}): uniwire рисует распределение энергии "
                           "(однолинейные и многолинейные схемы), а не схемы управления; катушки, контакты, кнопки и "
                           "ветви цепей здесь только перечислены, а не нарисованы как принципиальная схема управления",
@@ -1064,6 +1073,9 @@ ZH: dict[str, str] = {
     "core.interlock_duplicate": "联锁 {lock!r} 重复声明",
     "core.view_direction": "视图 {view}：尚不支持方向 {direction!r}，该视图按从上到下绘制",
     "core.neutral_missing": "{poles} 器件位于无中性线的电网（系统 {system}）：若配出中性线，请声明带中性线的系统，否则两相之间的回路应为 2P",
+    "core.load_current": "{p:g} kW 约 {i:g} A，超过 {prot} 的额定电流（{in_a:g} A）",
+    "core.load_current_count": "{count} x {p:g} kW 约 {i:g} A，超过 {prot} 的额定电流（{in_a:g} A）；带 'count' 的元件，功率按单件计",
+    "core.load_current_circuits": "{p:g} kW 约 {i:g} A，超过 {prot} 的额定电流（{in_a:g} A）；'count' 为 {count} 时，{prot} 代表 {count} 个回路，每个回路都供电给该负载（功率按单件计）",
     "core.control_scope": "本文档描述了控制回路（{nodes}）：uniwire 绘制配电（单线图和多线图），而非控制原理图；线圈、触点、按钮"
                           "和电流路径在此仅作概括，不绘制为控制原理图",
     "plc.duplicate_slots": "重复的槽位：{slots}",
@@ -1296,6 +1308,9 @@ ES: dict[str, str] = {
     "core.interlock_duplicate": "enclavamiento {lock!r} declarado dos veces",
     "core.view_direction": "vista {view}: la dirección {direction!r} aún no se dibuja, la vista se dibuja de arriba abajo",
     "core.neutral_missing": "aparato {poles} en una red sin neutro (sistema {system}): declarar un sistema con neutro si el neutro está distribuido; si no, un circuito entre dos fases es 2P",
+    "core.load_current": "unos {i:g} A para {p:g} kW, por encima del calibre de {prot} ({in_a:g} A)",
+    "core.load_current_count": "unos {i:g} A para {count} x {p:g} kW, por encima del calibre de {prot} ({in_a:g} A); la potencia de un elemento con 'count' es por unidad",
+    "core.load_current_circuits": "unos {i:g} A para {p:g} kW, por encima del calibre de {prot} ({in_a:g} A); con 'count' {count}, {prot} representa {count} circuitos que alimentan cada uno esta carga (las potencias son por unidad)",
     "core.control_scope": "este documento describe circuitos de mando ({nodes}): uniwire dibuja la distribución de "
                           "potencia (esquemas unifilar y multifilar), no esquemas de mando; bobinas, contactos, pulsadores "
                           "y caminos de corriente solo se resumen aquí, no se dibujan como esquema de mando",
@@ -1555,6 +1570,9 @@ DE: dict[str, str] = {
     "core.interlock_duplicate": "Verriegelung {lock!r} doppelt deklariert",
     "core.view_direction": "Ansicht {view}: die Richtung {direction!r} wird noch nicht gezeichnet, die Ansicht wird von oben nach unten gezeichnet",
     "core.neutral_missing": "Gerät {poles} in einem Netz ohne Neutralleiter (System {system}): ein System mit Neutralleiter angeben, wenn der Neutralleiter mitgeführt wird, sonst ist ein Stromkreis zwischen zwei Außenleitern 2P",
+    "core.load_current": "etwa {i:g} A bei {p:g} kW, über dem Bemessungsstrom von {prot} ({in_a:g} A)",
+    "core.load_current_count": "etwa {i:g} A bei {count} x {p:g} kW, über dem Bemessungsstrom von {prot} ({in_a:g} A); die Leistung eines Elements mit 'count' gilt je Stück",
+    "core.load_current_circuits": "etwa {i:g} A bei {p:g} kW, über dem Bemessungsstrom von {prot} ({in_a:g} A); mit 'count' {count} steht {prot} für {count} Stromkreise, die jeweils diesen Verbraucher speisen (Leistungen gelten je Stück)",
     "core.control_scope": "dieses Dokument beschreibt Steuerstromkreise ({nodes}): uniwire zeichnet die Energieverteilung "
                           "(Übersichtsschaltplan und allpoliger Stromlaufplan), keine Steuerstromlaufpläne; Spulen, "
                           "Kontakte, Taster und Strompfade werden hier nur zusammengefasst, nicht als Stromlaufplan "
@@ -1817,6 +1835,9 @@ PT: dict[str, str] = {
     "core.interlock_duplicate": "intertravamento {lock!r} declarado duas vezes",
     "core.view_direction": "vista {view}: a direção {direction!r} ainda não é desenhada, a vista é desenhada de cima para baixo",
     "core.neutral_missing": "aparelho {poles} em uma rede sem neutro (sistema {system}): declarar um sistema com neutro se o neutro for distribuído; caso contrário, um circuito entre duas fases é 2P",
+    "core.load_current": "cerca de {i:g} A para {p:g} kW, acima da corrente nominal de {prot} ({in_a:g} A)",
+    "core.load_current_count": "cerca de {i:g} A para {count} x {p:g} kW, acima da corrente nominal de {prot} ({in_a:g} A); a potência de um elemento com 'count' é por unidade",
+    "core.load_current_circuits": "cerca de {i:g} A para {p:g} kW, acima da corrente nominal de {prot} ({in_a:g} A); com 'count' {count}, {prot} representa {count} circuitos que alimentam cada um esta carga (as potências são por unidade)",
     "core.control_scope": "este documento descreve circuitos de comando ({nodes}): o uniwire desenha a distribuição de "
                           "energia (diagramas unifilar e multifilar), não diagramas de comando; bobinas, contatos, "
                           "botoeiras e caminhos de corrente são só resumidos aqui, não desenhados como diagrama de comando",
@@ -2388,6 +2409,9 @@ NL: dict[str, str] = {
     "core.interlock_duplicate": "vergrendeling {lock!r} twee keer opgegeven",
     "core.view_direction": "weergave {view}: de richting {direction!r} wordt nog niet getekend, de weergave wordt van boven naar beneden getekend",
     "core.neutral_missing": "apparaat {poles} op een net zonder nul (systeem {system}): geef een systeem met nul op als de nul wordt meegevoerd, anders is een groep tussen twee fasen 2P",
+    "core.load_current": "ongeveer {i:g} A bij {p:g} kW, boven de nominale stroom van {prot} ({in_a:g} A)",
+    "core.load_current_count": "ongeveer {i:g} A bij {count} x {p:g} kW, boven de nominale stroom van {prot} ({in_a:g} A); het vermogen van een element met 'count' geldt per stuk",
+    "core.load_current_circuits": "ongeveer {i:g} A bij {p:g} kW, boven de nominale stroom van {prot} ({in_a:g} A); met 'count' {count} staat {prot} voor {count} groepen die elk deze belasting voeden (vermogens gelden per stuk)",
     "core.control_scope": "dit document beschrijft stuurstroomkringen ({nodes}): uniwire tekent de energieverdeling (eendraads- en meerdraadsschema's), geen stuurstroomschema's; spoelen, contacten, drukknoppen en stroompaden worden hier alleen samengevat, niet als stuurstroomschema getekend",
     "plc.duplicate_slots": "dubbele slots: {slots}",
     "plc.unsorted_slots": "modules niet op slot gesorteerd",
