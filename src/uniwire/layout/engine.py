@@ -1029,7 +1029,8 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
             lanes += [("h", (y, min(e.x, s.x), max(e.x, s.x))), ("v", (s.x, min(s.y, y), max(s.y, y)))]
     for kind, line in lanes:
         (obs.hlines if kind == "h" else obs.vwires).append(line)
-    band_boxes = _channel_band(doc, everything, channels, wired)  # (and off the channels under the PLC modules)
+    # (and off the channels under the PLC modules, and off the column of the off-sheet stubs beside a device)
+    band_boxes = _channel_band(doc, everything, channels, wired) + _stub_columns(doc, everything, lang)
     obs.boxes.extend(band_boxes)
     annex = _place_devices(doc, roots, everything, view, lang, obs, pitch, below={pid: channels for pid in wired})
     for kind, line in lanes:
@@ -2128,6 +2129,29 @@ def _port_channels_bottom(doc: Document, nodes: list[LNode]) -> tuple[float, set
 
 
 PORT_LANE = 1.5  # spacing of the channels reserved under PLC modules
+
+
+def _stub_columns(doc: Document, nodes: list[LNode], lang: str) -> list[Box]:
+    """The column the off-sheet stubs of each node take beside it (see _draw_offpage_link: one under the other, on
+    its left side), for the auxiliary devices to keep off it."""
+    pos = {n.node.id: n for n in nodes if n.node is not None and n.node.id and n.kind == "node"}
+    homes = _device_homes(doc)
+    here = set(pos) | {d for d, h in homes.items() if h in pos}
+    named = {n.id: n for n, _, _ in iter_nodes(doc) if n.id}
+    stubs: dict[str, list[float]] = {}
+    for l in doc.links:
+        for nid, other in ((l.from_, l.to), (l.to, l.from_)):
+            if nid in pos and other not in here and l.kind not in POWER_LINKS + ("transfer",):
+                o = named.get(other)
+                ref = (o.ref or o.label or other) if o is not None else other
+                w = max(text_width(ref + _t("render.to_folio", lang, folio=99), 1.6),
+                        text_width(l.label, 1.6) if l.label else 0.0)
+                stubs.setdefault(nid, []).append(w)
+    out: list[Box] = []
+    for nid, ws in stubs.items():
+        e = _end(pos[nid], "control")
+        out.append((e.x - 9.0 - max(ws), e.y - 2.4, e.x, e.y + 5.0 * (len(ws) - 1) + 2.4))
+    return out
 
 
 def _channel_band(doc: Document, nodes: list[LNode], bottom: float, wired: set[str]) -> list[Box]:
