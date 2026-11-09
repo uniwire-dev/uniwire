@@ -25,6 +25,7 @@ class Style:
     dash: Optional[tuple[float, ...]] = None
     color: str = "#000000"
     fill: Optional[str] = None
+    dash_offset: float = 0.0  # where the dash pattern starts (a piece of a dashed line keeps the pattern of the whole)
 
 
 @dataclass
@@ -204,7 +205,8 @@ def transform(item: Item, dx: float = 0.0, dy: float = 0.0, rot: int = 0, scale:
         return (x + dx, y + dy)
 
     def ts(s: Style) -> Style:
-        return Style(s.width, tuple(d * scale for d in s.dash) if s.dash else None, s.color, s.fill)
+        return Style(s.width, tuple(d * scale for d in s.dash) if s.dash else None, s.color, s.fill,
+                     s.dash_offset * scale)
 
     if isinstance(item, Line):
         return Line(tp(item.a), tp(item.b), ts(item.style))

@@ -186,20 +186,51 @@ def test_a_dashed_link_is_interrupted_where_it_crosses_a_conductor():
         assert crossings == [], "\n".join(map(str, crossings))
 
 
+def _gapped(kind: str, *conductors: Group) -> list[list[tuple[float, float]]]:
+    from uniwire.render.scene import Polyline, Style
+    from uniwire.render.semantics import gap_link_crossings
+
+    link = Group([Polyline([(0.0, 10.0), (20.0, 10.0), (20.0, 30.0)], Style(dash=(1.0, 0.5)))], cls="uw-link",
+                 attrs={"data-uw-kind": kind})
+    gap_link_crossings(Group([*conductors, link]))
+    return [[(round(x, 6), round(y, 6)) for x, y in p.points] for p in link.items]
+
+
 def test_gap_link_crossings_cuts_the_link_not_the_conductor():
     from uniwire.render.scene import Polyline, Style
     from uniwire.render.semantics import edge_group, gap_link_crossings
 
-    link = Group([Polyline([(0.0, 10.0), (20.0, 10.0), (20.0, 30.0)], Style(dash=(1.0, 1.0)))], cls="uw-link")
     wire = edge_group("c", "p", [Line((10.0, 0.0), (10.0, 20.0)), Line((0.0, 25.0), (30.0, 25.0))])
     end = edge_group("d", "p", [Line((19.0, 30.0), (30.0, 30.0))])  # the link stops on it: no gap there
+    link = Group([Polyline([(0.0, 10.0), (20.0, 10.0), (20.0, 30.0)], Style(dash=(1.0, 0.5)))], cls="uw-link",
+                 attrs={"data-uw-kind": "control"})
     root = Group([wire, end, link])
     gap_link_crossings(root)
     parts = [[(round(x, 6), round(y, 6)) for x, y in p.points] for p in link.items]
     assert parts == [[(0.0, 10.0), (9.2, 10.0)], [(10.8, 10.0), (20.0, 10.0), (20.0, 24.2)], [(20.0, 25.8), (20.0, 30.0)]]
+    # each piece keeps the dash pattern of the whole line (no short dash beside a gap)
+    assert [round(p.style.dash_offset, 6) for p in link.items] == [0.0, round(10.8 % 1.5, 6), round(35.8 % 1.5, 6)]
     assert wire.items[0].a == (10.0, 0.0) and wire.items[0].b == (10.0, 20.0)
     gap_link_crossings(root)  # done once: nothing more to cut
     assert [[(round(x, 6), round(y, 6)) for x, y in p.points] for p in link.items] == parts
+
+
+def test_gaps_only_in_signal_links_and_at_every_kind_of_conductor():
+    from uniwire.render.scene import Polyline, Style
+    from uniwire.render.semantics import cond_group, edge_group
+
+    trunk = [Line((10.0, 0.0), (10.0, 20.0))]
+    one = [[(0.0, 10.0), (9.2, 10.0)], [(10.8, 10.0), (20.0, 10.0), (20.0, 30.0)]]
+    assert _gapped("control", edge_group("c", "p", trunk)) == one
+    # the same trunk drawn by two edges is one crossing, not a bundle of two conductors
+    assert _gapped("control", edge_group("c", "p", trunk), edge_group("e", "p", list(trunk))) == one
+    # a multi-line conductor drawn in a device's group, a solid power link
+    assert _gapped("trip", Group([cond_group("PE", *trunk)], "K1", "ml-sym uw-node")) == one
+    infeed = Group([Polyline([(10.0, 0.0), (10.0, 20.0)])], cls="uw-link", attrs={"data-uw-kind": "infeed"})
+    assert _gapped("measure", infeed) == one
+    # earth, data and power links stay whole (a gap would read as a break)
+    for kind in ("earth", "data", "infeed"):
+        assert _gapped(kind, edge_group("c", "p", trunk)) == [[(0.0, 10.0), (20.0, 10.0), (20.0, 30.0)]]
 
 
 def test_off_sheet_arrows_keep_their_texts_clear():

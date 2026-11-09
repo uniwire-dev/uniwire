@@ -135,7 +135,7 @@ def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None, 
         r, g, b = (int(s.color[i:i + 2], 16) / 255 for i in (1, 3, 5))
         c.setStrokeColorRGB(r, g, b)
         c.setLineWidth(s.width)
-        c.setDash([d for d in s.dash] if s.dash else [])
+        c.setDash([d for d in s.dash] if s.dash else [], s.dash_offset if s.dash else 0)
         if s.fill:
             fr, fg, fb = (int(s.fill[i:i + 2], 16) / 255 for i in (1, 3, 5))
             c.setFillColorRGB(fr, fg, fb)

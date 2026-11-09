@@ -13,10 +13,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   that band (the channel wires ran through its box and over its texts) nor in the column of the off-sheet stubs
   beside a device. The drawing audit used by the tests reports
   a link drawn through the symbol of a device it does not reach.
-* A dashed link (control, measure, trip, data) is interrupted where it crosses a tree conductor or a busbar, the
-  conductor drawn whole: the crossing no longer reads as a connection. Not where the link ends on what it reaches,
-  and not across a bundle of conductors close together (multi-line phases), where a gap per conductor would cut the
-  link into dots.
+* A dashed signal link (control, interlock, trip, measure, key) is interrupted where it crosses a conductor (tree
+  conductor, busbar, multi-line conductor, solid power link), the conductor drawn whole: the crossing no longer reads
+  as a connection. Not where the link ends on what it reaches, and not across a bundle of conductors close together
+  (multi-line phases), where a gap per conductor would cut the link into dots. Earth, data and power links stay whole.
+  Each piece keeps the dash pattern of the whole line (SVG `stroke-dashoffset`, PDF dash phase).
 * Links to a device on another sheet: the sheet reference is placed first, beside its arrow rather than on it, and
   the arrow is kept off the side of a frame (the stub is made longer); the link's label goes where room is left.
   Several such stubs beside one device no longer write their texts over one another's arrows.
