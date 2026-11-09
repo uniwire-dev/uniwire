@@ -172,6 +172,12 @@ def _sub_path(pts: list[Point], s0: float, s1: float) -> list[Point]:
     return out
 
 
+def _phase(v: float, period: float) -> float:
+    """A dash offset rounded to a thousandth of a millimetre (0 for a whole period)."""
+    v = round(v, 3)
+    return 0.0 if v <= 0.0 or v >= round(period, 3) else v
+
+
 def gap_link_crossings(root: Group, gap: float = CROSSING_GAP) -> None:
     """Interrupt every dashed signal link (``SIGNAL_KINDS``) where it crosses a conductor, so that the crossing does
     not read as a connection (the conductor stays whole). Not near a link's ends: they stop on what they reach. Each
@@ -206,6 +212,6 @@ def _gap_links(g: Group, conductors: list[tuple[Point, Point]], gap: float, kind
         for a, b in zip(starts, ends):
             if b - a > 1e-6:
                 st = Style(it.style.width, it.style.dash, it.style.color, it.style.fill,
-                           (it.style.dash_offset + a) % period if period else 0.0)
+                           _phase((it.style.dash_offset + a) % period, period) if period else 0.0)
                 items.append(Polyline(_sub_path(it.points, a, b), st))
     g.items = items

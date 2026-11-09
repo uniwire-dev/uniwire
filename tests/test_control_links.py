@@ -333,3 +333,26 @@ def test_a_link_label_is_written_at_both_stubs_of_a_link_between_sheets():
             assert texts[a][link["label"]] and texts[b][link["label"]], link
             checked += 1
     assert checked >= 10
+
+
+def test_the_pdf_of_interrupted_links_has_no_number_in_exponent_notation(tmp_path):
+    """The pieces of an interrupted dashed link carry a dash phase: written as a plain number in the PDF (a reader
+    does not parse 1e-07 and loses the rest of the page)."""
+    import base64
+    import re
+    import zlib
+
+    from uniwire.render import render_pdf
+
+    doc = panel(10, 3)
+    doc["views"] = [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]
+    path = render_pdf(load(doc), tmp_path / "panel.pdf", all_views=True)
+    data = path.read_bytes()
+    streams = []
+    for m in re.finditer(rb"/Filter \[ /ASCII85Decode /FlateDecode \][^>]*>>\s*stream\r?\n", data):
+        raw = data[m.end():data.index(b"~>", m.end())]
+        streams.append(zlib.decompress(base64.a85decode(raw)))  # the page contents
+    dashed = [s for s in streams if re.search(rb"\] [\d.]+ d\b", s)]
+    assert dashed
+    for s in dashed:
+        assert not re.search(rb"(?<![A-Za-z/])\d*\.?\d+[eE][-+]?\d+", s)
