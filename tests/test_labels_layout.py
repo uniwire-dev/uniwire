@@ -880,3 +880,33 @@ def test_no_count_row_without_identical_circuits():
     for n in (doc.sources[0].children[0].children[0], doc.sources[0].children[0].children[1].children[0]):
         n.count = None
     assert "Qty" not in _texts(render_pages(doc)[0].root)
+
+
+def test_table_rows_one_unit_one_place_and_ratings_without_protection():
+    def table(cartouche):
+        doc = load({"installation": {"system": "1P+N", "un_V": 230}, "views": [{"id": "v", "cartouche": cartouche}],
+                    "sources": [{"type": "grid", "children": [{"type": "board", "children": [
+                        {"type": "rcbo", "ref": "-Q1", "in_A": 16, "curve": "C", "idn_mA": 30,
+                         "children": [{"type": "lighting", "p_kW": 0.6}]},
+                        {"type": "breaker", "ref": "-Q2", "in_A": 20, "curve": "C", "children": [{"type": "socket", "p_kW": 3}]},
+                        {"type": "contactor", "ref": "-KM1", "in_A": 25, "children": [{"type": "water_heater", "p_kW": 2}]}]}]}]})
+        root = render_pages(doc)[0].root
+        return next(_texts(g) for g in _items_groups(root) if g.cls == "cartouche")
+    t = table(["label", "ref", "protection", "idn_mA", "in_A", "p_kW"])
+    assert "C16" in t and "C16 30 mA" not in t and "30 mA" in t  # the residual current in its own row only
+    assert "0.6 kW" in t and "600 W" not in t  # one unit in the power row
+    assert t.count("25 A") == 1  # the contactor's rating: the column has no protection
+    assert "C16 30 mA" in table(["label", "ref", "protection", "p_kW"])  # no RCD row: kept with the protection
+
+
+def test_table_rating_not_taken_from_a_board_and_small_kw_rounded():
+    doc = load({"installation": {"system": "3P+N", "un_V": 400},
+                "views": [{"id": "v", "cartouche": ["label", "ref", "protection", "in_A", "p_kW"]}],
+                "sources": [{"type": "grid", "children": [{"type": "breaker", "ref": "-Q1", "in_A": 32, "children": [
+                    {"type": "busbar", "children": [
+                        {"type": "board", "ref": "EN1", "in_A": 63, "children": [{"type": "heating", "label": "Heater", "p_kW": 2}]},
+                        {"type": "transformer", "ref": "-T2", "u1_V": 400, "u2_V": 24, "children": [
+                            {"type": "lighting", "p_kW": 0.8333}]}]}]}]}]})
+    t = next(_texts(g) for g in _items_groups(render_pages(doc)[0].root) if g.cls == "cartouche")
+    assert "63 A" not in t  # the busbar rating of a board is not the rating of a feeder
+    assert "0.83 kW" in t and "2 kW" in t
