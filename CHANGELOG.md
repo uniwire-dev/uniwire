@@ -34,7 +34,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Drawing sets: a new warning, `core.folio-overlap`, says when a view is numbered after the views before it
   because its sheets would take numbers already given to them (a `first_folio` inside their range, or a view of
   several sheets running into the first sheet of the next). Before, only two views starting at the same number were
-  reported (`core.folio-duplicate`) and the other cases were renumbered silently.
+  reported (`core.folio-duplicate`) and the other cases were renumbered silently. The number of sheets of a view is
+  known only once it is drawn, so `check` does not report it: the PDF of every view does, on its page "About this
+  document", and `uniwire render` prints it. API: `render_views(doc, views, counts)` gives each view with its
+  number of sheets, `drawing_set_findings(counts)` the findings, `render_pdf(..., findings=[])` both.
 * Single-line conductor marks: the line leaving the supply of the installation carries the system declared on that
   line, else the installation's (before, a single-phase or DC board further down made it a two-conductor line); a
   standby or lower-voltage source still takes the system declared below it. The secondary of a transformer
