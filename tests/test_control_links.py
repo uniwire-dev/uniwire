@@ -264,18 +264,20 @@ def test_devices_read_by_plc_channels_stay_out_of_the_channel_band():
         assert dev[1] > plc[3]  # under the PLC (its channels leave the modules downwards)
 
 
-def test_devices_keep_off_the_stubs_to_other_sheets():
+@pytest.mark.parametrize("count", [3, 5])
+def test_devices_keep_off_the_stubs_to_other_sheets(count):
     """A PLC whose links reach devices on another sheet: its stubs one under the other beside it; the field devices
-    read by its channels are placed clear of that column and its texts."""
+    read by its channels are placed clear of that column and its texts, and the channels clear of the safety relay
+    hanging into their band."""
     doc = panel(14, 0)
     doc["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
-    names = ["Level sensor controller with relay output", "Operator box", "Limit switch box"]
+    names = ["Level sensor controller with relay output", "Operator box", "Limit switch box", "Pressure switch",
+             "Door contact"][:count]
     doc["devices"] = [{"type": "controller", "id": f"D{k}", "ref": f"-B{k}", "label": name, "symbol_text": "X"}
                       for k, name in enumerate(names)]
-    doc["links"] += [{"kind": "measure", "from": f"D{k}", "to": "PLC", "to_port": f"1.{k + 15}"} for k in range(3)]
+    doc["links"] += [{"kind": "measure", "from": f"D{k}", "to": "PLC", "to_port": f"1.{k + 15}"} for k in range(count)]
     for page in render_views(load(doc)):
-        bad = [f for f in audit(page.root) if f.kind in ("text_on_symbol", "text_overlap")
-               or f.kind == "link_through_symbol" and "symbol of D" in f.what
+        bad = [f for f in audit(page.root) if f.kind in ("text_on_symbol", "text_overlap", "link_through_symbol")
                or f.kind == "text_crossed" and any(s in f.what for s in ["sheet"] + names)]
         assert bad == [], "\n".join(map(str, bad))
 

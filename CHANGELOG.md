@@ -11,7 +11,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Single-line drawings with a PLC: an auxiliary device read or driven by a PLC channel (a sensor, an operator box)
   is placed under the band of the channels, by the module it is wired to, and no auxiliary device is placed inside
   that band (the channel wires ran through its box and over its texts) nor in the column of the off-sheet stubs
-  beside a device. The drawing audit used by the tests reports
+  beside a device. The band goes down under a device hanging into it (a tall safety relay beside the PLC: the
+  channels ran through it). A device is placed inside the frame of its partner's board when there is room (it
+  widened the sheet), never above the band for one wired to a channel. The drawing audit used by the tests reports
   a link drawn through the symbol of a device it does not reach.
 * A dashed signal link (control, interlock, trip, measure, key) is interrupted where it crosses a conductor (tree
   conductor, busbar, multi-line conductor, solid power link), the conductor drawn whole: the crossing no longer reads
