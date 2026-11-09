@@ -2913,12 +2913,10 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 break
             if placed:
                 continue
-            if not obs.label_channel:  # single-line: in the nearest free space, a leader to its link
-                if _leader_label(obs, seq, txt, size, group_of(i)):
-                    continue
-        # multi-line: a link label with no free place along its route is left out (the single-line has it)
-        at = place_label(obs, seq, text_width(txt, size), size, from_end=far_end,
-                         optional=obs.label_channel and color == "#000000")
+            if _leader_label(obs, seq, txt, size, group_of(i)):  # in the nearest free space, a leader to its link
+                continue
+        # never left out: where it fits best along its route
+        at = place_label(obs, seq, text_width(txt, size), size, from_end=far_end)
         if at is not None:
             group_of(i).add(Text((at[0], at[1]), txt, size, at[2], color=color))
     for i in sorted(groups):
@@ -3174,17 +3172,33 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         obs.add_vline(e.x, min(e.y, tip[1]), max(e.y, tip[1]))
     else:
         obs.add_hline(pts[1][1], pts[0][0], pts[1][0])
-    written: dict[int, Text] = {}
+    written: dict[int, list[Text]] = {}
     for k, txt in reversed(list(enumerate(txts))):  # the sheet reference first: it must be written, at the best place
         w = text_width(txt, 1.6)
-        optional = k < len(txts) - 1  # the link's label, also written at the stub on the other sheet: where it is free
         spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False, optional=True)
-        if spot is None and not optional:  # no free place: on its arrow rather than on a conductor or a symbol
+        if spot is None:  # no free place beside it: on its arrow rather than on a conductor or a symbol
             obs.boxes.remove(hb)
-            spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False)
+            spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False, optional=True)
             obs.boxes.append(hb)
+        if spot is None and k < len(txts) - 1:  # the link's label is never left out: on two or three lines, else
+            # in the nearest free space with a leader to its stub, else where it fits best
+            units = text_units(txt)
+            for n in (2, 3):
+                lines = _wrap_words(units, n, lambda u: text_width(u, 1.6)) if len(units) >= n else []
+                if not lines:
+                    continue
+                lw, lh = max(text_width(u, 1.6) for u in lines), 1.6 + 1.92 * (len(lines) - 1)
+                at = place_label(obs, [pts[0], tip], lw, lh, from_end=True, record=False, optional=True)
+                if at is not None:
+                    x, y, anchor = at
+                    obs.add_box(text_box(x, y, lw, lh, anchor))
+                    written[k] = [Text((x, y - 0.8 * lh + 1.28 + 1.92 * j), u, 1.6, anchor)
+                                  for j, u in enumerate(lines)]
+                    break
+            if k in written or _leader_label(obs, [pts[0], tip], txt, 1.6, rg):
+                continue
         if spot is None:
-            continue
+            spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False)
         x, y, anchor = spot
         b = text_box(x, y, w, 1.6, anchor)
         if e.side == "left" and anchor == "end" and x > tip[0] - 0.6 and b[1] < e.y + 0.8 and e.y - 0.8 < b[3]:
@@ -3192,8 +3206,9 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
             if obs.box_free(moved, 0.1, wire_pad=0.0):
                 x, b = tip[0] - 0.6, moved
         obs.add_box(b)
-        written[k] = Text((x, y), txt, 1.6, anchor)
-    rg.add(*(written[k] for k in sorted(written)))  # the sheet reference last: render.number_sheets prints it
+        written[k] = [Text((x, y), txt, 1.6, anchor)]
+    rg.add(*(t for k in sorted(written) for t in written[k]))  # the sheet reference last: render.number_sheets
+    # prints it
     g.add(rg)
 
 

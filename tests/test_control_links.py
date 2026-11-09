@@ -312,3 +312,24 @@ def test_sheet_references_point_to_a_sheet_of_their_own_view_holding_the_other_e
                     assert target and _node(there.root, target) is not None, (t.text, target)
                     checked += 1
     assert checked >= 20
+
+
+def test_a_link_label_is_written_at_both_stubs_of_a_link_between_sheets():
+    """Links with long labels between a PLC and contactors on another sheet, beside crowded devices: each label is
+    written at the stub on both sheets (beside the sheet reference), never left out for want of room."""
+    from collections import Counter
+
+    doc = panel(14, 0)
+    doc["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    for link in doc["links"]:
+        link["label"] = "Run order line " + link["label"] if "label" in link else "Safety stop"
+    pages = render_views(load(doc))
+    texts = [Counter(t.text for t, _l, _o in _walk(p.root) if isinstance(t, Text)) for p in pages]
+    checked = 0
+    for link in doc["links"]:
+        a = next(i for i, p in enumerate(pages) if _node(p.root, link["from"]) is not None)
+        b = next(i for i, p in enumerate(pages) if _node(p.root, link["to"]) is not None)
+        if a != b:
+            assert texts[a][link["label"]] and texts[b][link["label"]], link
+            checked += 1
+    assert checked >= 10
