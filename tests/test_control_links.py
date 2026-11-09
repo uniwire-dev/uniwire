@@ -247,3 +247,35 @@ def test_devices_keep_off_the_stubs_to_other_sheets():
                or f.kind == "link_through_symbol" and "symbol of D" in f.what
                or f.kind == "text_crossed" and any(s in f.what for s in ["sheet"] + names)]
         assert bad == [], "\n".join(map(str, bad))
+
+
+def test_sheet_references_point_to_a_sheet_of_their_own_view_holding_the_other_end():
+    """A multi-line view and a single-line view split over sheets: the devices are drawn in both views, each
+    "→ sheet n" of a view names the printed number of a sheet of that same view where the other end is drawn."""
+    import re
+
+    doc = panel(14, 0)
+    doc["views"] = [{"id": "ml", "kind": "multi-line"}, {"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    pages = render_views(load(doc))
+    kinds = [p.root.items and next((g.cls for g in p.root.items if isinstance(g, Group) and g.cls in
+                                    ("diagram", "multiline")), None) for p in pages]
+    numbers = [int(p.attrs["data-uw-folio"]) for p in pages]
+
+    def refs(item):
+        if isinstance(item, Group):
+            if item.cls == "uw-ref":
+                yield item
+            for i in item.items:
+                yield from refs(i)
+
+    checked = 0
+    for page, kind in zip(pages, kinds):
+        for r in refs(page.root):
+            target = r.attrs.get("data-uw-target-id")
+            for t in [i for i in r.items if isinstance(i, Text)]:
+                for n in map(int, re.findall(r"→ sheet (\d+)", t.text)):
+                    there = pages[numbers.index(n)]
+                    assert kinds[numbers.index(n)] == kind, (t.text, kind)
+                    assert target and _node(there.root, target) is not None, (t.text, target)
+                    checked += 1
+    assert checked >= 20
