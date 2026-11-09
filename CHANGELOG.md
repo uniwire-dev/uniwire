@@ -21,6 +21,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   two phases.
 * Title block: the voltage gives the phase-to-neutral and the phase-to-phase voltages when both are stated
   (`uln_V`) and the system has a neutral: "3P+N 230/400 V", "split-phase 100/200 V".
+* Drawings: a spare way with no device (`spare` without `in_A` or `poles`) is a free space, drawn dashed (multi-line: grey
+  dashed, like an equipped spare way) and without a conductor mark. Before, it was drawn as a conductor leaving the
+  busbar with no protection.
 * `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
   controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
   after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",
