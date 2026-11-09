@@ -285,10 +285,11 @@ def motor_starter(node: Any = None) -> Symbol:
     return Symbol("motor_starter", items, h, w / 2 + 0.2, w / 2 + 0.2)
 
 
-def controller(node: Any = None, body: float = 3 * M) -> Symbol:
-    """A box; ``body``: its height, larger for a controller many links reach (one point each on its sides)."""
+def controller(node: Any = None, body: float = 3 * M, inner: float = 0.0) -> Symbol:
+    """A box; ``body``: its height, larger for a controller many links reach (one point each on its sides);
+    ``inner``: room inside each side for the terminal numbers of those links."""
     label = getattr(node, "symbol_text", None) or "CTRL"
-    return _box("controller", label, body + 2 * M, max(6.0, 1.1 * len(label) + 2))
+    return _box("controller", label, body + 2 * M, max(6.0, 1.1 * len(label) + 2 + 2 * inner))
 
 
 def transfer_switch(node: Any = None) -> Symbol:
@@ -670,18 +671,25 @@ def earth_bar(node: Any = None) -> Symbol:
 
 # ------------------------------------------------------------ PLCs, power supplies
 PLC_SLOT_W = 3.4
+PORT_STEP = 2.6  # spacing of the wired channels of a module: room for each channel number beside its wire
+PORT_EDGE = 1.8  # ... and between the outer wires and the sides of the module: their numbers inside its width
 
 
-def plc(node: Any = None) -> Symbol:
-    """PLC (automate): head + strip of modules (one rectangle per slot), ports addressed by slot."""
+def plc(node: Any = None, wired: Optional[dict[int, int]] = None) -> Symbol:
+    """PLC (automate): head + strip of modules (one rectangle per slot), ports addressed by slot. ``wired``: the
+    number of links leaving each slot; a module with many is drawn wider, one wire every ``PORT_STEP``."""
     modules = list(getattr(node, "modules", None) or [])
     h = 4.0 * M
     label = getattr(node, "family", None) or _abbr("plc")
     if len(label) > 10:  # 'Automation Series 7' -> 'Automation': the head shows the family, the annotation the rest
         label = label.split()[0][:12]
     head_w = max(7.0, text_width(label, 1.5) * 1.1 + 1.2)  # wide enough for the family name (bold)
-    n = len(modules)
-    w = head_w + n * PLC_SLOT_W
+    built_in = (wired or {}).get(0, 1)  # links leaving the built-in I/O (slot 0): under the head
+    if built_in > 1:
+        head_w = max(head_w, 2 * PORT_EDGE + (built_in - 1) * PORT_STEP)
+    widths = [max(PLC_SLOT_W, 2 * PORT_EDGE + (c - 1) * PORT_STEP) if c > 1 else PLC_SLOT_W
+              for m in modules for c in [(wired or {}).get(m.slot, 1)]]
+    w = head_w + sum(widths)
     x0 = -head_w / 2  # the supply axis arrives at the centre of the head
     y0 = 0.8 * M
     body = h - 1.6 * M
@@ -689,22 +697,25 @@ def plc(node: Any = None) -> Symbol:
     items: list[Item] = [_lead(0, y0), Rect(x0, y0, head_w, body, Style(fill="#ffffff")),
                          _text((0, y0 + body / 2 - 0.9), label, 1.5, True), _text((0, y0 + body / 2 + 1.1), head, 1.2)]
     ports: dict[int, float] = {0: 0.0}
-    for i, m in enumerate(modules):
-        xs = x0 + head_w + i * PLC_SLOT_W
+    slot_w: dict[int, float] = {0: head_w}
+    xs = x0 + head_w
+    for m, sw in zip(modules, widths):
         fill = {"di": "#e3f2fd", "ai": "#e3f2fd", "do": "#fff3e0", "relay_out": "#fff3e0", "ao": "#fff3e0",
                 "power_feed": "#ffebee", "power_supply": "#ffebee", "end": "#eeeeee", "comm": "#e8f5e9"}.get(m.kind, "#ffffff")
-        items.append(Rect(xs, y0, PLC_SLOT_W, body, Style(width=THIN, fill=fill)))
+        items.append(Rect(xs, y0, sw, body, Style(width=THIN, fill=fill)))
         tag = {"di": "DI", "do": "DO", "ai": "AI", "ao": "AO", "relay_out": "RO", "power_feed": "PW", "power_supply": "PS",
                "end": "END", "comm": "COM", "counter": "CNT", "temperature": "T°", "power_measurement": "kW",
                "safety": "SF", "motor": "M", "mixed_io": "IO", "cpu": "CPU", "coupler": "BC"}.get(m.kind, "?")
-        items.append(Text((xs + PLC_SLOT_W / 2, y0 + body / 2 + 0.4), tag, 1.1, "middle", "middle", 90))
-        items.append(Text((xs + PLC_SLOT_W / 2, y0 - 0.4), str(m.slot), 1.0, "middle"))
-        ports[m.slot] = xs + PLC_SLOT_W / 2
+        items.append(Text((xs + sw / 2, y0 + body / 2 + 0.4), tag, 1.1, "middle", "middle", 90))
+        items.append(Text((xs + sw / 2, y0 - 0.4), str(m.slot), 1.0, "middle"))
+        ports[m.slot] = xs + sw / 2
+        slot_w[m.slot] = sw
+        xs += sw
     has_out = bool(getattr(node, "children", None))
     if has_out:
         items.append(_lead(y0 + body, h))
     return Symbol("plc", items, h if has_out else y0 + body, head_w / 2 + 0.2, w - head_w / 2 + 0.2,
-                  has_output=has_out, extra={"ports": ports, "port_y": y0 + body})
+                  has_output=has_out, extra={"ports": ports, "port_y": y0 + body, "slot_w": slot_w})
 
 
 def power_supply(node: Any = None) -> Symbol:
