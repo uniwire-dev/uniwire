@@ -22,6 +22,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   Each piece keeps the dash pattern of the whole line (SVG `stroke-dashoffset`, PDF dash phase).
 * Links to a device on another sheet: the sheet reference is placed first, beside its arrow rather than on it, and
   the arrow is kept off the side of a frame (the stub is made longer); the link's label goes where room is left.
+  A link label is never left out for want of room (at an off-sheet stub, or along a link of the multi-line view): on
+  two or three lines, else in the nearest free space with a leader, else where it fits best.
   Several such stubs beside one device no longer write their texts over one another's arrows.
 * Single-line drawings with a PLC: every link leaving a PLC module gets its own channel below it. A module many links
   leave is drawn wider, one wire about every 2.6 mm, and the loads go down far enough for as many channels as links
