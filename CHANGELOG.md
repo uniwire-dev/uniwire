@@ -61,6 +61,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   number. The later view, and any view whose sheets would take numbers already given, is numbered after the highest
   sheet before it, and the new warning `core.folio-duplicate` says so. Before, every reference "-> sheet n" to such
   a number was ambiguous.
+* Drawings in Croatian, Serbian and Bosnian (`meta.lang` "hr", "sr", "bs", Latin script): title block, notes,
+  legends, table headings ("Oznaka", "Strujni krug" / "Strujno kolo"), type names, the short texts in symbols and the
+  rule findings, with the terms of each country's practice (ijekavian in Croatian and Bosnian, ekavian in Serbian).
+  Numbers take a decimal comma. Validation and command line messages stay in English.
 * Rule messages in Italian, Polish and Turkish (`UNIWIRE_LANG` "it", "pl", "tr"), as in the other drawing
   languages. The catalog test also compares the format of each placeholder (`{ref!r}`, `{in_a:g}`) with English.
 * Drawings in Japanese (`meta.lang` "ja", "ja-JP"): title block, notes, legends, table headings ("記号", "こう長"),
