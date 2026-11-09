@@ -13,6 +13,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   standby or lower-voltage source still takes the system declared below it. The secondary of a transformer
   carries the system declared on its line, else its vector group (`coupling` "Dyn11": four conductors), instead of
   the installation's.
+* Drawings on several sheets: a `tie` link between two devices or boards (not busbars) whose ends are on two sheets
+  is drawn at both ends, with a stub naming the other end and its sheet. Before, it was not drawn at all.
 * Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
   inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
   from the board was drawn on its AC side, and the inverter was drawn "=" over "~".
