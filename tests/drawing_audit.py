@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from uniwire.render.scene import Circle, Group, Line, Polyline, Rect, Text, text_width
-from uniwire.render.semantics import _conductor_segments, gapped_crossings, has_cls
+from uniwire.render.semantics import SIGNAL_KINDS, _conductor_segments, gapped_crossings, has_cls
 
 Box = tuple[float, float, float, float]
 Seg = tuple[tuple[float, float], tuple[float, float]]
@@ -269,7 +269,9 @@ def audit(root: Group, detours: bool = False) -> list[Finding]:
                 out.append(Finding("link_through_symbol", f"link {la} through the symbol of {nid}", pl.points[0]))
                 break
     conductors = _conductor_segments(root)
-    for la, pl in _dashed_links(root):  # a dashed link drawn through a conductor reads as connected to it
-        if gapped_crossings(pl.points, conductors):
+    signal = {g.attrs["data-uw-link"] for g in _groups(root) if has_cls(g, "uw-link")
+              and g.attrs.get("data-uw-kind") in SIGNAL_KINDS and "data-uw-link" in g.attrs}
+    for la, pl in _dashed_links(root):  # a dashed signal link drawn through a conductor reads as connected to it
+        if la in signal and gapped_crossings(pl.points, conductors):
             out.append(Finding("link_across_conductor", f"link {la} drawn through a conductor", pl.points[0]))
     return out

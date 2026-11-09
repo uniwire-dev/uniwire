@@ -98,12 +98,22 @@ MIN_PIECE = 3.0  # mm: crossings closer than this (plus the gaps) cross a bundle
 # conductor would cut the link into dots and one gap across the bundle would hide it
 
 
+SIGNAL_KINDS = ("control", "interlock", "trip", "measure", "key")  # links interrupted at a crossing (not a power,
+# earth or data link: a gap in those could read as a break of the conductor or of the bus)
+CONDUCTING_KINDS = ("infeed", "bypass", "parallel", "transfer", "tie")  # a solid link of these kinds is a conductor
+
+
 def _conductor_segments(item: Item, inside: bool = False) -> list[tuple[Point, Point]]:
-    """Straight runs of the tree conductors and busbars drawn in ``item``."""
+    """Straight runs of the conductors drawn in ``item``: tree conductors, busbars, the conductors of the multi-line
+    view (also those drawn inside a device's group) and the solid power links."""
     if isinstance(item, Group):
-        inside = inside or has_cls(item, "uw-edge") or has_cls(item, "uw-busbar")
+        power_link = has_cls(item, "uw-link") and item.attrs.get("data-uw-kind") in CONDUCTING_KINDS
+        if has_cls(item, "uw-hit") or has_cls(item, "uw-link") and not power_link:
+            return []
+        inside = inside or power_link or has_cls(item, "uw-edge") or has_cls(item, "uw-busbar") \
+            or "data-uw-cond" in item.attrs
         return [s for i in item.items for s in _conductor_segments(i, inside)]
-    if not inside:
+    if not inside or getattr(item, "style", None) is not None and item.style.dash:
         return []
     if isinstance(item, Line):
         return [(item.a, item.b)]
@@ -138,7 +148,10 @@ def gapped_crossings(pts: list[Point], conductors: list[tuple[Point, Point]], ga
     """Where the link ``pts`` is interrupted (distances along it): its single crossings of a conductor, not near its
     ends (they stop on what they reach), not in a bundle (see ``MIN_PIECE``)."""
     total = sum(abs(b[0] - a[0]) + abs(b[1] - a[1]) for a, b in zip(pts, pts[1:]))
-    cs = _crossings(pts, conductors, 0.3)
+    cs: list[float] = []
+    for c in _crossings(pts, conductors, 0.3):  # (several conductors drawn on one another cross it once)
+        if not cs or c - cs[-1] > 1e-3:
+            cs.append(c)
     return [c for i, c in enumerate(cs) if gap + 0.5 <= c <= total - gap - 0.5
             and all(abs(c - d) >= 2 * gap + MIN_PIECE for j, d in enumerate(cs) if j != i)]
 
@@ -160,23 +173,26 @@ def _sub_path(pts: list[Point], s0: float, s1: float) -> list[Point]:
 
 
 def gap_link_crossings(root: Group, gap: float = CROSSING_GAP) -> None:
-    """Interrupt every dashed link where it crosses a tree conductor or a busbar, so the crossing does not read as a
-    connection (the conductor stays whole). Not near a link's ends: they stop on what they reach."""
+    """Interrupt every dashed signal link (``SIGNAL_KINDS``) where it crosses a conductor, so that the crossing does
+    not read as a connection (the conductor stays whole). Not near a link's ends: they stop on what they reach. Each
+    piece keeps the dash pattern of the whole line."""
     conductors = _conductor_segments(root)
     if conductors:
         _gap_links(root, conductors, gap)
 
 
-def _gap_links(g: Group, conductors: list[tuple[Point, Point]], gap: float, in_link: bool = False) -> None:
-    in_link = in_link or has_cls(g, "uw-link")
+def _gap_links(g: Group, conductors: list[tuple[Point, Point]], gap: float, kind: Optional[str] = None) -> None:
+    if has_cls(g, "uw-link"):
+        kind = g.attrs.get("data-uw-kind")
     items: list[Item] = []
     for it in g.items:
         if isinstance(it, Group):
             if not has_cls(it, "uw-hit"):
-                _gap_links(it, conductors, gap, in_link and not it.cls)
+                _gap_links(it, conductors, gap, kind if not it.cls or has_cls(it, "uw-link") else None)
             items.append(it)
             continue
-        if not (in_link and isinstance(it, Polyline) and not it.closed and it.style.dash and len(it.points) > 1):
+        if not (kind in SIGNAL_KINDS and isinstance(it, Polyline) and not it.closed and it.style.dash
+                and len(it.points) > 1):
             items.append(it)
             continue
         total = sum(abs(b[0] - a[0]) + abs(b[1] - a[1]) for a, b in zip(it.points, it.points[1:]))
@@ -186,5 +202,10 @@ def _gap_links(g: Group, conductors: list[tuple[Point, Point]], gap: float, in_l
             continue
         starts = [0.0] + [b for _a, b in cuts]
         ends = [a for a, _b in cuts] + [total]
-        items += [Polyline(_sub_path(it.points, a, b), it.style) for a, b in zip(starts, ends) if b - a > 1e-6]
+        period = sum(it.style.dash)
+        for a, b in zip(starts, ends):
+            if b - a > 1e-6:
+                st = Style(it.style.width, it.style.dash, it.style.color, it.style.fill,
+                           (it.style.dash_offset + a) % period if period else 0.0)
+                items.append(Polyline(_sub_path(it.points, a, b), st))
     g.items = items

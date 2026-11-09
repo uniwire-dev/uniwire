@@ -318,7 +318,7 @@ class Colorizer:
         self.used[key] = None
         fill = color if s.fill == BLACK else s.fill
         dash = s.dash or self.dash(key)
-        new = Style(s.width, dash, color, fill)
+        new = Style(s.width, dash, color, fill, s.dash_offset)
         return type(it)(**{**it.__dict__, "style": new})
 
     def _cell(self, col: Group) -> None:
