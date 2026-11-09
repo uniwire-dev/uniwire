@@ -684,3 +684,16 @@ def test_load_current_poles_of_a_socket_and_below_a_transformer():
     below = {"type": "transformer", "u1_V": 20000, "u2_V": 400, "children": [
         {"type": "breaker", "in_A": 16, "poles": "1P+N", "children": [heater]}]}
     assert found([below]) == ["L"]  # phase to neutral below a 400 V secondary
+
+
+def test_views_starting_at_the_same_sheet_number():
+    doc = {"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230},
+           "sources": [{"type": "grid", "children": [{"type": "breaker", "in_A": 16, "children": [{"type": "socket"}]}]}],
+           "views": [{"id": "ml", "kind": "multi-line", "first_folio": 10}, {"id": "sld", "first_folio": 10},
+                     {"id": "more", "first_folio": 12}]}
+    found = [f for f in check(load(doc)) if f.rule == "core.folio-duplicate"]
+    assert len(found) == 1 and "'sld'" in found[0].message and "'ml'" in found[0].message
+    doc["views"] = [{"id": "ml", "kind": "multi-line"}, {"id": "sld", "first_folio": 1}]  # the first starts at 1
+    assert [f.rule for f in check(load(doc)) if f.rule == "core.folio-duplicate"] == ["core.folio-duplicate"]
+    doc["views"] = [{"id": "ml", "kind": "multi-line"}, {"id": "sld"}]  # the second follows the first
+    assert not [f for f in check(load(doc)) if f.rule == "core.folio-duplicate"]
