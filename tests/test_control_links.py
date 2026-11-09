@@ -317,20 +317,20 @@ def test_sheet_references_point_to_a_sheet_of_their_own_view_holding_the_other_e
 def test_a_link_label_is_written_at_both_stubs_of_a_link_between_sheets():
     """Links with long labels between a PLC and contactors on another sheet, beside crowded devices: each label is
     written at the stub on both sheets (beside the sheet reference), never left out for want of room."""
-    from collections import Counter
-
     doc = panel(14, 0)
     doc["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
     for link in doc["links"]:
         link["label"] = "Run order line " + link["label"] if "label" in link else "Safety stop"
     pages = render_views(load(doc))
-    texts = [Counter(t.text for t, _l, _o in _walk(p.root) if isinstance(t, Text)) for p in pages]
+    # (a label may be written on two or three lines, one after the other)
+    texts = [" | ".join(t.text for t, _l, _o in _walk(p.root) if isinstance(t, Text)).replace(" | ", " ") + " "
+             for p in pages]
     checked = 0
     for link in doc["links"]:
         a = next(i for i, p in enumerate(pages) if _node(p.root, link["from"]) is not None)
         b = next(i for i, p in enumerate(pages) if _node(p.root, link["to"]) is not None)
         if a != b:
-            assert texts[a][link["label"]] and texts[b][link["label"]], link
+            assert link["label"] + " " in texts[a] and link["label"] + " " in texts[b], link
             checked += 1
     assert checked >= 10
 
@@ -356,3 +356,22 @@ def test_the_pdf_of_interrupted_links_has_no_number_in_exponent_notation(tmp_pat
     assert dashed
     for s in dashed:
         assert not re.search(rb"(?<![A-Za-z/])\d*\.?\d+[eE][-+]?\d+", s)
+
+
+def test_a_label_leader_never_crosses_a_symbol():
+    """A label with no room along its link is joined to it by a leader only when the leader crosses no symbol and no
+    text; otherwise it is written on its link."""
+    from uniwire.layout.engine import _leader_label
+    from uniwire.layout.routing import Obstacles
+
+    obs = Obstacles()
+    obs.add_box((0.0, 2.0, 30.0, 6.0))  # a device right under the link: the only free space is below it
+    for b in ((-80.0, -40.0, 80.0, -0.3), (-80.0, 0.3, -0.5, 40.0), (30.5, 0.3, 80.0, 40.0)):
+        obs.add_box(b)
+    g = Group()
+    placed = _leader_label(obs, [(0.0, 0.0), (30.0, 0.0)], "A long label", 1.6, g)
+    leaders = [i for i in g.items if isinstance(i, Line)]
+    for ln in leaders:
+        x0, y0, x1, y1 = min(ln.a[0], ln.b[0]), min(ln.a[1], ln.b[1]), max(ln.a[0], ln.b[0]), max(ln.a[1], ln.b[1])
+        assert not (x0 < 30.0 and 0.0 < x1 and y0 < 6.0 and 2.0 < y1), ln
+    assert placed == bool(leaders)
