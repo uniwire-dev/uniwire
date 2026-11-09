@@ -66,6 +66,7 @@ from ..symbols import kind as symbol_kind
 from ..units import fmt
 from .routing import (
     LANE,
+    Box,
     End,
     Obstacles,
     _hit,
@@ -1028,9 +1029,13 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
             lanes += [("h", (y, min(e.x, s.x), max(e.x, s.x))), ("v", (s.x, min(s.y, y), max(s.y, y)))]
     for kind, line in lanes:
         (obs.hlines if kind == "h" else obs.vwires).append(line)
-    annex = _place_devices(doc, roots, everything, view, lang, obs, pitch)
+    band_boxes = _channel_band(doc, everything, channels, wired)  # (and off the channels under the PLC modules)
+    obs.boxes.extend(band_boxes)
+    annex = _place_devices(doc, roots, everything, view, lang, obs, pitch, below={pid: channels for pid in wired})
     for kind, line in lanes:
         (obs.hlines if kind == "h" else obs.vwires).remove(line)
+    for b in band_boxes:
+        obs.boxes.remove(b)
     homes = _device_homes(doc)
     unlinked: list[NodeBase] = [d for d in doc.devices if homes.get(d.id or "") is None]
 
@@ -1253,9 +1258,12 @@ DEVICE_AXIS_MM = 30.0  # length of the reserved axis below a load
 
 
 def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], view: View, lang: str,
-                   obs: Obstacles, pitch: float, left_of: Callable[[LNode], bool] | None = None) -> list[LNode]:
+                   obs: Obstacles, pitch: float, left_of: Callable[[LNode], bool] | None = None,
+                   below: Optional[dict[str, float]] = None) -> list[LNode]:
     """Auxiliary devices whose home node is on this sheet, each in the free space nearest its partner
-    (``left_of(partner)``: on its left, the side its links can reach)."""
+    (``left_of(partner)``: on its left, the side its links can reach; ``below``: the bottom of the channel band of
+    each PLC, a device read or driven by one of its channels goes under it)."""
+    below = below or {}
     homes = _device_homes(doc)
     placed: dict[str, LNode] = {n.node.id: n for n in everything if n.kind == "node" and n.node is not None and n.node.id}
     todo = [d for d in doc.devices if d.id and homes.get(d.id) in placed]
@@ -1266,11 +1274,11 @@ def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], v
     while todo:
         progress = False
         for dev in list(todo):
-            partner = None
+            partner, link = None, None
             for l in doc.links:
                 other = l.to if l.from_ == dev.id else l.from_ if l.to == dev.id else None
                 if other in placed:
-                    partner = placed[other]
+                    partner, link = placed[other], l
                     break
             if partner is None:
                 continue
@@ -1291,10 +1299,17 @@ def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], v
             lw = max((text_width(l.label, 1.6) for l in doc.links if l.label and dev.id in (l.from_, l.to)),
                      default=0.0)
             lane = lw + 2.0 if lw else 0.0
+            pref_y = partner.y
+            ce = _channel_end(link, lambda nid: placed[nid].sym if nid in placed else None)
+            if ce is not None and (link.from_, link.to)[ce[0]] == partner.node.id and partner.node.id in below:
+                # read or driven by a PLC channel: below the band of the channels, just right of the module it
+                # leaves (its link goes down from the module and turns into the device's side)
+                port_x = partner.x + partner.sym.extra.get("ports", {}).get(ce[1], 0.0)
+                pref_x, pref_y = port_x + 3.0 - lane, below[partner.node.id] + DEVICE_PAD_MM
             free = Obstacles(obs.boxes, obs.vwires + axes, obs.hlines, obs.buses)
             for right_side in (False, True):  # the room on the side facing its partner: left, unless placed left of it
                 v = (u[0], u[1], u[2] + lane, u[3]) if right_side else (u[0] - lane, u[1], u[2], u[3])
-                x0, y0 = place_box(free, v[2] - v[0], v[3] - v[1], (pref_x, partner.y), pad=DEVICE_PAD_MM)
+                x0, y0 = place_box(free, v[2] - v[0], v[3] - v[1], (pref_x, pref_y), pad=DEVICE_PAD_MM)
                 ln.x, ln.y = x0 - v[0], y0 - v[1]
                 if not lane or right_side or ln.x > partner.x:
                     break
@@ -2113,6 +2128,26 @@ def _port_channels_bottom(doc: Document, nodes: list[LNode]) -> tuple[float, set
 
 
 PORT_LANE = 1.5  # spacing of the channels reserved under PLC modules
+
+
+def _channel_band(doc: Document, nodes: list[LNode], bottom: float, wired: set[str]) -> list[Box]:
+    """The area the channels of each PLC take (see _port_channels_bottom): from under its modules down to the bottom
+    of the band, across to the devices they reach. An auxiliary device placed there would be crossed by them."""
+    if not bottom:
+        return []
+    pos = {n.node.id: n for n in nodes if n.node is not None and n.node.id}
+    out: list[Box] = []
+    for pid in wired:
+        n = pos.get(pid)
+        if n is None:
+            continue
+        xs = [n.x - n.sym.left, n.x + n.sym.right]
+        for l in doc.links:
+            ce = _channel_end(l, lambda nid: pos[nid].sym if nid in pos else None)
+            if ce is not None and (l.from_, l.to)[ce[0]] == pid and (o := pos.get((l.to, l.from_)[ce[0]])) is not None:
+                xs.append(o.x)
+        out.append((min(xs), n.y + n.sym.extra.get("port_y", n.sym.height), max(xs), bottom))
+    return out
 
 
 def _port_point(n: LNode, slot: int, j: int, count: int, obs: Obstacles) -> tuple[float, float]:

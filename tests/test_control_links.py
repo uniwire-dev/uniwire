@@ -213,3 +213,21 @@ def test_off_sheet_arrows_keep_their_texts_clear():
         bad = [f for f in audit(page.root) if f.kind in ("text_crossed", "text_on_conductor", "text_on_symbol",
                                                          "text_overlap")]
         assert bad == [], "\n".join(map(str, bad))
+
+
+def test_devices_read_by_plc_channels_stay_out_of_the_channel_band():
+    """Field devices read by PLC inputs (sensors, an operator box) hang off the board: placed under the band of the
+    channels, by the module they are wired to, not inside the band where the channel wires would run through their
+    boxes and texts."""
+    doc = panel(6, 0)
+    names = ["Level sensor controller with relay output", "Operator box", "Limit switch box"]
+    doc["devices"] = [{"type": "controller", "id": f"D{k}", "ref": f"-B{k}", "label": name, "symbol_text": "X"}
+                      for k, name in enumerate(names)]
+    doc["links"] += [{"kind": "measure", "from": f"D{k}", "to": "PLC", "to_port": f"3.{k + 1}"} for k in range(3)]
+    page = render_views(load(doc))[0]
+    bad = [f for f in audit(page.root) if f.kind in ("link_through_symbol", "text_crossed", "text_on_symbol")]
+    assert bad == [], "\n".join(map(str, bad))
+    plc = _box(_node(page.root, "PLC"))
+    for k in range(3):
+        dev = _box(_node(page.root, f"D{k}"))
+        assert dev[1] > plc[3]  # under the PLC (its channels leave the modules downwards)

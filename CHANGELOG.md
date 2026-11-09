@@ -8,6 +8,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line drawings with a PLC: an auxiliary device read or driven by a PLC channel (a sensor, an operator box)
+  is placed under the band of the channels, by the module it is wired to, and no auxiliary device is placed inside
+  that band (the channel wires ran through its box and over its texts). The drawing audit used by the tests reports
+  a link drawn through the symbol of a device it does not reach.
 * A dashed link (control, measure, trip, data) is interrupted where it crosses a tree conductor or a busbar, the
   conductor drawn whole: the crossing no longer reads as a connection. Not where the link ends on what it reaches,
   and not across a bundle of conductors close together (multi-line phases), where a gap per conductor would cut the
