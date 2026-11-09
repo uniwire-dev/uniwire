@@ -20,7 +20,7 @@ def _texts(item) -> list[str]:
 
 def test_catalogs_have_same_keys():
     assert set(EN) == set(FR)
-    assert set(CATALOGS) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr", "nl", "hr", "sr", "bs", "ja"}
+    assert set(CATALOGS) == {"en", "fr", "ru", "zh", "es", "de", "pt", "it", "pl", "tr", "nl", "hr", "sr", "sr-Cyrl", "bs", "ja"}
     drawing = {k for k in EN if k.split(".")[0] in ("tb", "notes", "legend", "ann", "cell", "about")}
     rules = {k for k in EN if k.split(".")[0] in ("core", "rules", "nfc15100", "vde0100", "iec60364", "enedis", "plc")}
     for cat in (RU, ZH, ES, DE, PT, IT, PL, TR, NL, HR, SR, BS, JA):  # the drawing texts in every language
@@ -132,6 +132,31 @@ def test_croatian_serbian_bosnian_drawing_texts():
     assert t("tb.default_sheet_title", lang="hr") == "Jednopolna shema"
     assert t("tb.default_sheet_title", lang="sr") == t("tb.default_sheet_title", lang="bs") == "Jednopolna šema"
 
+
+
+def test_serbian_in_cyrillic():
+    from uniwire.i18n import cyrillic
+
+    assert normalize_lang("sr-Cyrl") == normalize_lang("sr-Cyrl-RS") == "sr-Cyrl"
+    assert normalize_lang("sr") == normalize_lang("sr-Latn-RS") == normalize_lang("sr-RS") == "sr"
+    # letter for letter, digraphs included; kept: placeholders, quoted fields, identifiers, international
+    # abbreviations, single capitals, symbols, units
+    assert cyrillic("Uzemljivač i punjač, džep") == "Уземљивач и пуњач, џеп"
+    assert cyrillic("Iz {iz:g} A, kabl 2,5 mm² od 25 m, 'count' FID (IEC)") == "Iz {iz:g} A, кабл 2,5 mm² од 25 m, 'count' ФИД (IEC)"
+    assert cyrillic("VN / SN (> 1 kV AC), VT/NT, tip A, NF EN, PEN") == "ВН / СН (> 1 kV AC), ВТ/НТ, тип A, NF EN, PEN"
+    assert cyrillic("transfer_switch, installation.premises, D-duct") == "transfer_switch, installation.premises, D-duct"
+    assert cyrillic("otpornost tla {rho:g} K·m/W, s njim") == "отпорност тла {rho:g} K·m/W, с њим"
+    from uniwire.llm.card import type_label
+    from uniwire.symbols import ABBREVIATIONS
+
+    assert ABBREVIATIONS["sr-Cyrl"]["dishwasher"] == "МС" and ABBREVIATIONS["sr-Cyrl"]["ups"] == "UPS"
+    assert type_label("rcd", "sr-Cyrl").endswith("(ФИД)")
+    view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable", "circuit"]}
+    texts = [s for p in render_pages(load({**DOC, "meta": {"lang": "sr-Cyrl"}, "views": [view]})) for s in _texts(p.root)]
+    assert {"Напомене", "Ознака", "Кабл (mm²)", "Струјно коло", "Лист"} <= set(texts)
+    assert "1,5" in " ".join(texts)  # decimal comma
+    message = t("core.rating_cascade", lang="sr-Cyrl", in_a=32.0, up="-Q1", up_in_a=16.0)
+    assert message.startswith("називна струја 32 A") and "-Q1 (16 A)" in message  # the reference as written
 
 def test_type_labels_in_every_language():
     from uniwire import registry
