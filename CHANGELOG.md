@@ -57,6 +57,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   protection that feeds it alone. Powers are per item: 12 lamps of 0.1 kW (`count` 12) under one breaker draw
   1.2 kW, and a breaker with `count` 24 stands for 24 circuits each feeding the load below it. The message says so
   when `count` is the cause. Six examples gave the total power of `count` items: they give it per item now.
+* Drawing sets: two views starting at the same sheet number (`first_folio`) no longer give two sheets with one
+  number. The later view, and any view whose sheets would take numbers already given, is numbered after the highest
+  sheet before it, and the new warning `core.folio-duplicate` says so. Before, every reference "-> sheet n" to such
+  a number was ambiguous.
 * `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
   controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
   after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",
