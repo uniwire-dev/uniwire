@@ -268,3 +268,43 @@ def test_device_label_said_by_its_load_is_not_repeated_whatever_its_case_spacing
         "views": [{"id": "ml", "kind": "multi-line"}]}
     texts = " ".join(re.findall(r">([^<>]+)</text>", page_to_svg(render_views(load(doc))[0])))
     assert "Garden" not in texts and "Workshop" in texts
+
+
+def _label_texts(ways):
+    from uniwire.render import render_views
+    from uniwire.render.svg import page_to_svg
+
+    doc = {"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230}, "sources": [{"type": "grid", "children": [
+        {"type": "board", "ref": "TD", "children": ways}]}],
+        "views": [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]}
+    return [re.findall(r">([^<>]+)</text>", page_to_svg(p)) for p in render_views(load(doc))]
+
+
+def test_short_words_and_acronyms_of_a_device_label_count():
+    def way(ref, label, load_label):
+        return {"type": "breaker", "ref": ref, "label": label, "in_A": 16, "children": [
+            {"type": "socket", "label": load_label}]}
+
+    sld, ml = _label_texts([way("-Q1", "照明", "Sockets"), way("-Q2", "PV", "Sockets"), way("-Q3", "WC", "Sockets"),
+                            way("-Q4", "Oven 12 kW 3P", "Bakery oven")])
+    for t in (sld, ml):
+        assert "照明" in t and "PV" in t and "WC" in t  # a word of two letters or two kanji says something
+        assert "Oven 12 kW 3P" not in t  # said by its load, the ratings aside
+
+
+def test_device_label_matched_whatever_its_spacing_in_scripts_without_spaces_or_its_unicode_form():
+    import unicodedata
+
+    sld, ml = _label_texts([
+        {"type": "breaker", "ref": "-Q1", "label": "厨房照明", "in_A": 10, "children": [
+            {"type": "lighting", "label": "厨房 照明"}]},
+        {"type": "breaker", "ref": "-Q2", "label": unicodedata.normalize("NFD", "Éclairage cave"), "in_A": 10,
+         "children": [{"type": "lighting", "label": "éclairage cave"}]}])
+    for t in (sld, ml):
+        assert "厨房照明" not in t and not any("clairage cave" in x and x[0] != "é" for x in t)
+
+
+def test_device_label_over_a_spare_way_is_drawn_in_every_view():
+    sld, ml = _label_texts([{"type": "breaker", "ref": "-Q1", "label": "Future kitchen", "in_A": 16, "children": [
+        {"type": "spare"}]}, {"type": "breaker", "ref": "-Q2", "in_A": 16, "children": [{"type": "socket"}]}])
+    assert "Future kitchen" in sld and "Future kitchen" in ml  # the table shows "Spare" for the way
