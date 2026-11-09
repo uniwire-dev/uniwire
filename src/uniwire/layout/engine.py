@@ -3162,6 +3162,7 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         obs.add_vline(e.x, min(e.y, tip[1]), max(e.y, tip[1]))
     else:
         obs.add_hline(pts[1][1], pts[0][0], pts[1][0])
+    written: dict[int, Text] = {}
     for k, txt in reversed(list(enumerate(txts))):  # the sheet reference first: it must be written, at the best place
         w = text_width(txt, 1.6)
         optional = k < len(txts) - 1  # the link's label, also written at the stub on the other sheet: where it is free
@@ -3179,7 +3180,8 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
             if obs.box_free(moved, 0.1, wire_pad=0.0):
                 x, b = tip[0] - 0.6, moved
         obs.add_box(b)
-        rg.add(Text((x, y), txt, 1.6, anchor))
+        written[k] = Text((x, y), txt, 1.6, anchor)
+    rg.add(*(written[k] for k in sorted(written)))  # the sheet reference last: render.number_sheets prints it
     g.add(rg)
 
 
