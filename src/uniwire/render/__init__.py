@@ -96,13 +96,16 @@ def _view_pages(doc: Document, view: View) -> list[Page]:
     return pages
 
 
-def render_views(doc: Document, views: Optional[Iterable[View]] = None) -> list[Page]:
+def render_views(doc: Document, views: Optional[Iterable[View]] = None,
+                 counts: Optional[list[tuple[View, int]]] = None) -> list[Page]:
     """Sheets of several views, one view after the other (default: every view of the document, or the default view
     when it declares none): a drawing set such as the multi-line power diagram then the single-line diagram with the
-    auxiliary devices and links. The cross-sheet references of each view keep pointing at its own sheets."""
+    auxiliary devices and links. The cross-sheet references of each view keep pointing at its own sheets.
+
+    ``counts``: a list that receives each view with its number of sheets, for :func:`drawing_set_findings`."""
     views = list(views) if views is not None else (list(doc.views) or [default_view(doc)])
     out: list[Page] = []
-    counts: list[tuple[View, int]] = []
+    counts = [] if counts is None else counts
     for v in views:
         pages = _view_pages(doc, v)
         if out:
@@ -149,17 +152,24 @@ def _view_numbers(views: list[tuple[View, int]]) -> tuple[list[list[int]], list[
     return per_view, moved
 
 
-def renumbered_views(doc: Document) -> list[tuple[int, int, int, int]]:
-    """Views of ``doc`` whose sheets would take numbers already given to the views before them, so are numbered
-    after them (``core.folio-overlap``): (view, wanted first sheet, earlier view, printed first sheet), views by
-    their position in ``doc.views``. It needs the number of sheets of each view, so lays them out (kept for the
-    drawing that usually follows); only done when a view after the first gives its own ``first_folio``, the one
-    case where numbers can clash."""
-    views = list(doc.views)
-    if not any("first_folio" in v.model_fields_set for v in views[1:]):
-        return []
-    counts = [(v, len(_view_pages(doc, v))) for v in views]
-    return _view_numbers(counts)[1]
+def drawing_set_findings(views: list[tuple[View, int]], lang: Optional[str] = None) -> list:
+    """Findings that only a drawing set shows, as its sheets are numbered (views in order, with their number of
+    sheets): ``core.folio-overlap``, a view whose sheets would take numbers already given to the views before it
+    (a ``first_folio`` inside their range, or a view running into the next one's), numbered after them instead.
+    The number of sheets is known only once the views are drawn, so :func:`uniwire.check` does not report it. Two
+    views starting at the same number are left to ``core.folio-duplicate`` (a check rule). Messages in ``lang``,
+    else the language of the checks (environment)."""
+    from ..rules import Finding
+
+    out = []
+    for i, wanted, o, printed in _view_numbers(views)[1]:
+        v = views[i][0]
+        starts = [w.first_folio for j, (w, _) in enumerate(views[:i]) if "first_folio" in w.model_fields_set or not j]
+        if "first_folio" in v.model_fields_set and wanted in starts:
+            continue  # same first sheet as an earlier view: core.folio-duplicate
+        text = _t("core.folio_overlap", lang, view=v.id, folio=wanted, other=views[o][0].id, printed=printed)
+        out.append(Finding("warning", "core.folio-overlap", text))
+    return out
 
 
 def number_sheets(pages: list[Page], views: list[tuple[View, int]]) -> None:
@@ -322,25 +332,31 @@ def render_svg(doc: Document, out_dir: str | Path, stem: str = "sld", view: Opti
 
 
 def render_pdf(doc: Document, path: str | Path, view: Optional[View] = None, all_views: bool = False,
-               about: Optional[Any] = None) -> Path:
+               about: Optional[Any] = None, findings: Optional[list] = None) -> Path:
     """Render the sheets of ``view`` into one PDF at ``path`` (one page per sheet, bookmarks and clickable
     cross-sheet references); with ``all_views``, the sheets of every view of the document (:func:`render_views`).
     ``about`` (:class:`~uniwire.render.about.About`): add the page "About this document" after the sheets.
+    ``findings``: a list that receives the findings of the drawing set (:func:`drawing_set_findings`), in the
+    language of the checks; the page "About this document" has them in the language of the document.
     Needs the ``pdf`` extra (reportlab). Returns the path."""
     from .pdf import write_pdf
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    pages = render_views(doc) if all_views else render_pages(doc, view)
+    counts: list[tuple[View, int]] = []
+    pages = render_views(doc, counts=counts) if all_views else render_pages(doc, view)
+    if findings is not None:
+        findings += drawing_set_findings(counts)
     if about is not None:
-        pages = with_about(doc, pages, about)
+        pages = with_about(doc, pages, about, drawing_set_findings(counts, doc.meta.lang))
     write_pdf(pages, path, normalize_lang(doc.meta.lang), doc.meta.title)
     return path
 
 
-def with_about(doc: Document, pages: list[Page], about: Any) -> list[Page]:
-    """``pages`` followed by the page "About this document", at the size of the first sheet."""
+def with_about(doc: Document, pages: list[Page], about: Any, findings: Iterable = ()) -> list[Page]:
+    """``pages`` followed by the page "About this document", at the size of the first sheet. ``findings``: those of
+    the drawing set (:func:`drawing_set_findings`), reported with the checks."""
     from .about import about_page
 
     w, h = (pages[0].width, pages[0].height) if pages else PAPER["A4"]
-    return [*pages, about_page(doc, w, h, [p.title for p in pages], about)]
+    return [*pages, about_page(doc, w, h, [p.title for p in pages], about, list(findings))]

@@ -160,7 +160,11 @@ def main(argv: list[str] | None = None) -> int:
             from .render.about import About
 
             about = About(a.doc_id) if a.about or a.doc_id else None
-            print(render_pdf(doc, a.out or f"out/{stem}.pdf", None if every else view, all_views=every, about=about))
+            found: list = []
+            print(render_pdf(doc, a.out or f"out/{stem}.pdf", None if every else view, all_views=every, about=about,
+                             findings=found))
+            for x in found:  # what only the drawing set shows (the checks cannot see it)
+                print(f"  {x}", file=sys.stderr)
         return 0
     if a.cmd == "schema":
         from .schema import schema_text

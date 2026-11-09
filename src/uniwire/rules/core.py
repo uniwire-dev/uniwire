@@ -380,23 +380,3 @@ def folio_duplicate(doc: Document, idx: Index):
                                                                folio=v.first_folio))
         else:
             first[v.first_folio] = v.id
-
-
-@rule("core")
-def folio_overlap(doc: Document, idx: Index):
-    """A view whose sheets would take numbers already given to the views before it (it starts inside their range,
-    or runs into it): it is numbered after them, so its sheets do not carry the numbers asked for. Two views
-    starting at the same number are ``core.folio-duplicate``."""
-    from ..render import renumbered_views
-    try:
-        moved = renumbered_views(doc)
-    except Exception:  # a document that cannot be drawn: its own findings say why
-        return
-    views = list(doc.views)
-    for i, wanted, o, printed in moved:
-        v = views[i]
-        if "first_folio" in v.model_fields_set and any(
-                w.first_folio == wanted for j, w in enumerate(views[:i]) if "first_folio" in w.model_fields_set or not j):
-            continue  # same first sheet as an earlier view: core.folio-duplicate says it
-        yield Finding("warning", "core.folio-overlap", _t("core.folio_overlap", view=v.id, folio=wanted,
-                                                          other=views[o].id, printed=printed))

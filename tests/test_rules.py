@@ -710,16 +710,19 @@ def test_views_starting_at_the_same_sheet_number():
     assert not [f for f in check(load(doc)) if f.rule == "core.folio-duplicate"]
 
 
-def test_views_whose_sheets_overlap_the_ones_before():
-    from uniwire.render import render_views
+def test_views_whose_sheets_overlap_the_ones_before(tmp_path):
+    from uniwire.render import drawing_set_findings, render_pdf, render_views
+    from uniwire.render.about import About, about_page
     board = {"type": "breaker", "in_A": 40, "children": [{"type": "board", "id": "B", "own_sheet": True, "children": [
         {"type": "breaker", "in_A": 16, "children": [{"type": "socket"}]}]}]}
     doc = {"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230},
            "sources": [{"type": "grid", "children": [board]}]}
 
     def found(views):
-        return [(f.rule, f.message) for f in check(load({**doc, "views": views}))
-                if f.rule in ("core.folio-overlap", "core.folio-duplicate")]
+        d = load({**doc, "views": views})
+        counts: list = []
+        render_views(d, counts=counts)
+        return [(f.rule, f.message) for f in drawing_set_findings(counts)]
 
     assert len(render_views(load(doc))) == 2  # the board on its own sheet: a view has two sheets
     (rule, msg), = found([{"id": "a", "first_folio": 10}, {"id": "b", "first_folio": 11}])  # 11: the 2nd of 'a'
@@ -729,7 +732,30 @@ def test_views_whose_sheets_overlap_the_ones_before():
     # runs into the one before: 'b' asks for 9 and 10 while 'a' has 10 and 11
     assert [r for r, _ in found([{"id": "a", "first_folio": 10}, {"id": "b", "first_folio": 9}])] == [
         "core.folio-overlap"]
-    # same first sheet: core.folio-duplicate only, not both
-    assert [r for r, _ in found([{"id": "a", "first_folio": 10}, {"id": "b", "first_folio": 10}])] == [
+    # same first sheet: core.folio-duplicate (a check rule) only
+    clash = [{"id": "a", "first_folio": 10}, {"id": "b", "first_folio": 10}]
+    assert found(clash) == []
+    assert [f.rule for f in check(load({**doc, "views": clash})) if f.rule.startswith("core.folio")] == [
         "core.folio-duplicate"]
-    assert found([{"id": "a"}, {"id": "b"}]) == []  # no first_folio after the first: nothing laid out, no clash
+    # check does not draw anything for it; the PDF of every view reports it, in the language of the document
+    views = [{"id": "a", "first_folio": 10}, {"id": "b", "first_folio": 11}]
+    overlap = load({**doc, "meta": {"lang": "fr"}, "views": views})
+    assert not [f for f in check(overlap) if f.rule == "core.folio-overlap"]
+    out: list = []
+    render_pdf(overlap, tmp_path / "set.pdf", all_views=True, findings=out)
+    assert [f.rule for f in out] == ["core.folio-overlap"]
+    counts: list = []
+    render_views(overlap, counts=counts)
+    fr = drawing_set_findings(counts, overlap.meta.lang)
+    page = about_page(overlap, 297, 210, ["a", "b"], About(), fr)
+    texts = " ".join(t.text for t in _texts(page.root))
+    assert "folio 12" in texts
+
+
+def _texts(item):
+    from uniwire.render.scene import Group, Text
+    if isinstance(item, Text):
+        yield item
+    elif isinstance(item, Group):
+        for c in item.items:
+            yield from _texts(c)
