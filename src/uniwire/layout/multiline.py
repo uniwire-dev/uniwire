@@ -167,11 +167,34 @@ class _Assigner:
             self.split = {id(b) for b in _first_boards(doc)}
         else:
             self.split = set()
-        # North American split-phase (120/240 V): a "2P" breaker switches L1 and L2, a 3-wire cable is L1 L2 G
-        self.split_phase = doc.installation.system == "split-phase" or any(
-            getattr(n, "system", None) == "split-phase" for n in nodes)
+        # the supply each node is on (system, phase-to-phase and phase-to-neutral voltages): split-phase rules (a "2P"
+        # breaker switches L1 and L2, a 3-wire cable is L1 L2 G) apply below a split-phase supply only
+        self._supply: dict[int, tuple[Optional[str], Optional[float], Optional[float]]] = {}
+        inst = doc.installation
+        for src in doc.sources:
+            self._supplies(src, (inst.system, inst.un_V, inst.uln_V))
         for src in doc.sources:
             self._walk(src, None, False)
+
+    def _supplies(self, node: Any, ctx: tuple[Optional[str], Optional[float], Optional[float]]) -> None:
+        system, ull, uln = ctx
+        if node.type == "transformer":  # a new supply: its secondary voltage, its system declared below it
+            system, ull, uln = _declared_below(node), getattr(node, "u2_V", None), None
+        declared = getattr(node, "system", None)
+        if declared and declared != system:
+            system, uln = declared, None
+        if node.type in ("board", "busbar", "grid", "generator"):  # a supply stating its voltage
+            if getattr(node, "un_V", None):
+                ull, uln = node.un_V, getattr(node, "uln_V", None)
+        if system == "split-phase" and ull and not uln:
+            uln = ull / 2
+        self._supply[id(node)] = (system, ull, uln)
+        for c in node.children:
+            self._supplies(c, (system, ull, uln))
+
+    def _split_phase(self, node: Any) -> bool:
+        """Whether ``node`` is on a split-phase supply (the nearest system declared above it)."""
+        return self._supply.get(id(node), (None, None, None))[0] == "split-phase"
 
     # -- explicit description of a node: (phase names, number of phases, neutral)
     def spec(self, node: Any, type_default: bool = True) -> tuple[Optional[list[str]], Optional[int], Optional[bool]]:
@@ -190,8 +213,8 @@ class _Assigner:
             k, n = SOCKET_POLES[poles]
             ks.append(k)
             ns.append(n)
-        elif poles == "2P" and self.split_phase:
-            ks.append(2)
+        elif poles == "2P" and self._split_phase(node):  # both legs: a phase-to-phase circuit unless something below
+            ks.append(2)                           # uses the neutral (taken after the device's own cable)
             ns.append(None)
         elif poles in POLES:
             k, n = POLES[poles]
@@ -207,7 +230,7 @@ class _Assigner:
                 separate_pe = cable.pe_section_mm2 is not None and cable.pe_section_mm2 != cable.section_mm2
                 guessed = m[2] not in "Gg" and total % 2 == 1 and not cable.pen and not separate_pe
                 live = total - 1 if (m[2] in "Gg" or guessed) else total
-                k, n = ({2: (2, False), 3: (2, True)} if self.split_phase else
+                k, n = ({2: (2, False), 3: (2, True)} if self._split_phase(node) else
                         {2: (1, True), 3: (3, False), 4: (3, True)}).get(live, (None, None))
                 if guessed:  # only a guess: what the node states (a motor's phases, a board's system) comes first
                     guess = (k, n)
@@ -216,7 +239,7 @@ class _Assigner:
                     ns.append(n)
         if t == "motor":
             phases = getattr(node, "phases", None)
-            if phases == 1 and self.split_phase:  # 240 V on L1 L2 (no neutral), or 120 V on a phase and N
+            if phases == 1 and self._split_phase(node):  # 240 V on L1 L2 (no neutral), or 120 V on a phase and N
                 ks.append(None)
                 ns.append(False)
             else:
@@ -230,12 +253,42 @@ class _Assigner:
         if guess is not None:
             ks.append(guess[0])
             ns.append(guess[1])
+        if self._split_phase(node):
+            if poles == "2P":
+                ns.append(any(self._uses_neutral(c) for c in node.children))
+            leg = self._leg_voltage(node)
+            if leg is not None:
+                ks.append(1 if leg else 2)
+                ns.append(leg)
         if t in SINGLE_PHASE_LOADS and type_default:
             ks.append(1)
             ns.append(True)
         k = next((x for x in ks if x is not None), None)
         neutral = next((x for x in ns if x is not None), None)
         return names, k, neutral
+
+    def _leg_voltage(self, node: Any) -> Optional[bool]:
+        """Split-phase: a load whose voltage is the phase-to-neutral one (``True``: 100 V or 120 V, one leg and the
+        neutral) or the phase-to-phase one (``False``: 200 V or 240 V, both legs); ``None``: not stated."""
+        un = getattr(node, "un_V", None) if not node.children else None
+        _, ull, uln = self._supply.get(id(node), (None, None, None))  # the voltages of its own supply
+        if not un or not ull or not uln:
+            return None
+        if abs(un - uln) <= 0.15 * uln:
+            return True
+        if abs(un - ull) <= 0.15 * ull:
+            return False
+        return None
+
+    def _uses_neutral(self, node: Any) -> bool:
+        """Split-phase: whether something at or below ``node`` states that it uses the neutral (a device or load on
+        one leg, a load at the phase-to-neutral voltage, a socket-outlet or lighting circuit)."""
+        names, k, neutral = self.spec(node, type_default=False)
+        if neutral is not None:
+            return neutral
+        if k == 1 or (names and len(names) == 1) or node.type in ("socket", "lighting"):
+            return True
+        return any(self._uses_neutral(c) for c in node.children)
 
     def needs_n(self, node: Any) -> bool:
         key = id(node)
@@ -428,6 +481,18 @@ class _Assigner:
                 self._walk(c, list(DC), False, node)
             else:
                 self._walk(c, out, pending, node)
+
+
+def _declared_below(node: Any) -> Optional[str]:
+    """The system of the supply a transformer makes: the first one declared below it (before another transformer)."""
+    stack = list(node.children)
+    while stack:
+        n = stack.pop(0)
+        if getattr(n, "system", None):
+            return n.system
+        if n.type != "transformer":
+            stack.extend(n.children)
+    return None
 
 
 def _vfd_to_three_phase(node: Any, inp: list[str]) -> bool:
