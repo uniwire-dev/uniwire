@@ -619,6 +619,7 @@ class MLNode:
     x_left: float = 0.0
     y: float = 0.0
     frame_top: float = 0.0
+    free_way: bool = False  # a spare way with no device on the busbars: drawn grey dashed (_free_way)
     rail_y0: Optional[float] = None
     # power links outside the tree (see _plan_links)
     lead: float = 0.0  # room left of the column for the conductors of a link landing on it
@@ -1301,7 +1302,7 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
                     g.add(*_toroid(rl, y, y + DEV_H + 2.3))
         through()
         if t == "spare":
-            g = Group([_restyle(i, Style(width=THIN, dash=(1.0, 0.7), color="#777777")) for i in g.items], g.id, g.cls, dict(g.attrs))
+            g = Group([_restyle(i, SPARE) for i in g.items], g.id, g.cls, dict(g.attrs))
         return g
 
     if t == "transformer":
@@ -1601,6 +1602,21 @@ def _restyle(item: Any, style: Style) -> Any:
     return item
 
 
+SPARE = Style(width=THIN, dash=(1.0, 0.7), color="#777777")  # a spare way: its device, or a free space and its conductors
+
+
+def _free_way(ln: MLNode, parent: MLNode) -> bool:
+    """A spare way with no device (no rating, no poles) straight on the busbars or in a board: a free space, not
+    conductors leaving the busbars (below a device, it is that device's spare way)."""
+    return (bool(parent.rails) or parent.is_board) and ln.type == "spare" and \
+        not (getattr(ln.node, "in_A", None) or getattr(ln.node, "poles", None))
+
+
+def _spare_edge(eg: Group, ch: MLNode) -> None:
+    eg.items[:] = [_restyle(i, SPARE) for i in eg.items]
+    ch.free_way = True  # its box too (see _draw)
+
+
 def _draw_transition(ln: MLNode, ch: MLNode, g: Group) -> None:
     """Conductors from ``ln`` (no rails) down to its single child, with PEN splits and new conductors."""
     eg = edge_group(ch.id, ln.target if ln.kind == "bus_in" else ln.id)
@@ -1633,6 +1649,8 @@ def _draw_transition(ln: MLNode, ch: MLNode, g: Group) -> None:
         if n > 1:
             g.add(_dot(xs, yj))
     g.add(*labels)
+    if _free_way(ch, ln):
+        _spare_edge(g, ch)
 
 
 def _draw_dc_side(ln: MLNode, g: Group) -> None:
@@ -1679,6 +1697,8 @@ def _draw_rails(ln: MLNode, g: Group, sheet_left: float, folio_of: Callable[[str
                 continue
             taps[s].append(x)
             eg.add(cond_group(c, Line((x, ry[s]), (x, top if not ch.is_board else ch.y))))
+        if _free_way(ch, ln):
+            _spare_edge(eg, ch)
     for c, xs_ in ln.extra_taps.items():  # power links outside the tree tapped on the rails
         if c in taps:
             taps[c] += xs_
@@ -1735,6 +1755,8 @@ def _draw(ln: MLNode, g: Group, lang: str, view: View, sheet_left: float, folio_
         if ln.node is not None and getattr(ln.node, "external", False):
             sg = _restyle(sg, Style(width=THIN, dash=(1.2, 0.8), color="#555555"))
             sg.cls = (sg.cls or "") + " external"
+        elif ln.free_way:
+            sg = _restyle(sg, SPARE)
         if ln.kind == "stub":  # board drawn on its own sheet: reference to that sheet
             sg.id = None
             add_cls(sg, "uw-ref").attrs.update(ref_group(folio_of(ln.target or ""), ln.target).attrs)
