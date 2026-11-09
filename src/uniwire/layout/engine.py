@@ -525,27 +525,54 @@ def _shift(ln: LNode, dy: float) -> None:
             n.bus_y += dy
 
 
-def _owned(board: LNode) -> Iterator[LNode]:
-    """Nodes belonging to the board (excluding sub-boards and loads)."""
-    stack = list(board.children)
-    yield board
+# equipment that is not a way of the board feeding it when a cable joins them: drawn below the board frame
+REMOTE_EQUIPMENT = {"inverter", "transformer", "ups", "transfer_switch", "busbar"}
+# beside a board's incoming chain, with nothing below them, they do not make it a branch: accessories,
+# measurement, control
+BESIDE_TYPES = SIDE_TYPES | DC_ACCESSORIES | {"instrument_transformer", "controller", "plc"}
+
+
+def beyond_board(ln: Any, parent: Any, head: bool) -> bool:
+    """Whether the layout node ``ln`` (child of ``parent``) is equipment at the far end of a cable from its board:
+    an inverter, a UPS, a transformer fed at high voltage... with a cable of its own or after a device with one (the
+    cable of the board itself is its incoming one). What it feeds is outside the board too. ``head``: ``ln`` is the
+    board's only child, or the only child of that one, and so on: a busbar there is the board's own."""
+    n, p = ln.node, parent.node
+    if n is None or p is None or n.type not in REMOTE_EQUIPMENT or (head and n.type == "busbar"):
+        return False
+    if n.type == "transformer" and not (getattr(n, "u1_V", None) or 0) > 1000:
+        return False  # a control or isolating transformer is a device of the board
+    return bool(getattr(n, "cable", None)) or (p.type != "board" and bool(getattr(p, "cable", None)))
+
+
+def board_parts(board: Any) -> Iterator[tuple[Any, bool]]:
+    """The nodes under ``board`` down to its sub-boards, loads and equipment beyond a cable: (node, inside), the
+    sub-boards and that equipment with ``inside`` False (not descended into)."""
+    def heads(n: Any, head: bool) -> list[tuple[Any, Any, bool]]:
+        # the head goes on through the only way of n; an accessory beside it with nothing below it (a surge
+        # protector, a meter, an insulation monitor, an earth bar, a controller...) does not end it
+        ways = [c for c in n.children if c.children or c.type not in BESIDE_TYPES]
+        return [(c, n, head and ways == [c]) for c in n.children]
+
+    stack = heads(board, True)
     while stack:
-        n = stack.pop()
-        if n.is_board or n.bottom:
+        n, p, head = stack.pop()
+        if n.is_board or beyond_board(n, p, head):
+            yield n, False
             continue
-        yield n
-        stack.extend(n.children)
+        yield n, True
+        stack.extend(heads(n, head))
+
+
+def _owned(board: LNode) -> Iterator[LNode]:
+    """Nodes belonging to the board (excluding sub-boards, loads and equipment beyond a cable)."""
+    yield board
+    yield from (n for n, inside in board_parts(board) if inside and not n.bottom)
 
 
 def _sub_boards(board: LNode) -> list[LNode]:
-    out, stack = [], list(board.children)
-    while stack:
-        n = stack.pop()
-        if n.is_board:
-            out.append(n)
-            continue
-        stack.extend(n.children)
-    return out
+    """Sub-boards, and equipment beyond a cable, under the board: drawn below its frame."""
+    return [n for n, inside in board_parts(board) if not inside]
 
 
 def _board_bottom(board: LNode) -> float:
@@ -559,10 +586,15 @@ def _separate_boards(ln: LNode) -> None:
             if not subs:
                 continue
             # below the frame, and side by side on one line (their frames, names and first devices aligned)
-            top = max([_board_bottom(n) + 4.0] + [sb.frame_top for sb in subs])
+            top = max([_board_bottom(n) + 4.0] + [_top(sb) for sb in subs])
             for sb in subs:
-                if top > sb.frame_top:
-                    _shift(sb, top - sb.frame_top)
+                if top > _top(sb):
+                    _shift(sb, top - _top(sb))
+
+
+def _top(ln: LNode) -> float:
+    """Top of a sub-board frame, or of equipment below a board with room above it (clear of the frame)."""
+    return ln.frame_top if ln.is_board else ln.y - 8.0
 
 
 def _translate(ln: LNode, dx: float, dy: float) -> None:
