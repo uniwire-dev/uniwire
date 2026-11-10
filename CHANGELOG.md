@@ -25,6 +25,14 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   A link label is never left out for want of room (at an off-sheet stub, or along a link of the multi-line view): on
   two or three lines, else in the nearest free space with a leader, else where it fits best.
   Several such stubs beside one device no longer write their texts over one another's arrows.
+* Drawings: the label of a breaker, fuse or RCD feeding one circuit is drawn beside it when nothing else says it.
+  Before, it was dropped when the load below had a label of its own (single-line: the table shows the load's), and
+  in multi-line drawings whenever the device fed one circuit: what the user wrote there ("temporary", the room) was
+  lost. It is still left out when the circuit table shows it, or when every word of it is in the labels below
+  (case, Unicode forms, numbers, ratings and a leading copy of the device's tag do not count: "Oven 12 kW 3P" over
+  a load "Bakery oven"; words of scripts without spaces are looked for inside the text). The column makes room for
+  it on two lines rather than one. The label of the device feeding a spare way ("Future kitchen") is now drawn in
+  multi-line drawings too, and beside the device in single-line ones (the table shows "Spare" for the way).
 * Single-line drawings with a PLC: every link leaving a PLC module gets its own channel below it. A module many links
   leave is drawn wider, one wire about every 2.6 mm, and the loads go down far enough for as many channels as links
   run side by side (they were spaced a fraction of a millimetre apart, and past eight links they ran on one
@@ -48,6 +56,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   drawn as before. A package that fails to load, or a symbol that fails to draw, gives the IEC symbol and the
   warning `core.symbol-set-error`. In multi-line views, switching and protective devices are drawn pole by pole and
   do not take the set's symbols.
+* Drawing sets: a new warning, `core.folio-overlap`, says when a view is numbered after the views before it
+  because its sheets would take numbers already given to them (a `first_folio` inside their range, or a view of
+  several sheets running into the first sheet of the next). Before, only two views starting at the same number were
+  reported (`core.folio-duplicate`) and the other cases were renumbered silently. The number of sheets of a view is
+  known only once it is drawn, so `check` does not report it: the PDF of every view does, on its page "About this
+  document", and `uniwire render` prints it. API: `render_views(doc, views, counts)` gives each view with its
+  number of sheets, `drawing_set_findings(counts)` the findings, `render_pdf(..., findings=[])` both.
 * Single-line conductor marks: the line leaving the supply of the installation carries the system declared on that
   line, else the installation's (before, a single-phase or DC board further down made it a two-conductor line); a
   standby or lower-voltage source still takes the system declared below it. The secondary of a transformer

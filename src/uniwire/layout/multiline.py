@@ -90,6 +90,7 @@ from .engine import (
     drawing_area,
     feeding_sheet,
     interlock_mark,
+    label_drawn_below,
     sheet_node_ids,
 )
 from .routing import FRAME_CROSS, Box, Obstacles, boxes_union
@@ -969,7 +970,7 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
                 continue
             node = ln.node
             feeds_bus = any(len(d.children) >= 2 for d in ln.walk())
-            lines = [x for x in annotation(node, lang, show_label=feeds_bus) if x]
+            lines = [x for x in annotation(node, lang, show_label=feeds_bus or not label_drawn_below(ln)) if x]
             pn = part_number(node)
             tag = pn if view.tag_field == "part_number" and pn else node.ref
             if node.label and node.label in lines:  # the label: not repeating the tag above it, nor the lines below it
