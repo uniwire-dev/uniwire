@@ -407,7 +407,7 @@ def pdf_file(document: Any, kind: Optional[str] = None, color: Optional[str] = N
     views; ``color`` / ``conductor_colors`` override their colour mode. Not an assistant tool: the hosted server
     serves it at ``GET /pdf/<id>`` (the ``pdf_url`` links, ``?kind=multi-line&color=phase``). ``about``
     (``{"doc_id", "site"}``): the page "About this document" after the sheets (left out with ``?about=0``)."""
-    from ..render import default_view, render_views, with_about
+    from ..render import default_view, drawing_set_findings, render_views, with_about
     from ..render.about import About
 
     for name, value in (("kind", kind), ("color", color), ("conductor_colors", conductor_colors)):
@@ -419,11 +419,13 @@ def pdf_file(document: Any, kind: Optional[str] = None, color: Optional[str] = N
     except UniwireError as e:
         raise ToolError("invalid document:\n" + "\n".join(f"- {i}" for i in _issues(raw, e))) from None
     views = [v for v in doc.views if kind is None or v.kind == kind] or [default_view(doc, None, kind)]
-    pages = render_views(doc, [_with_colors(v, color, conductor_colors) for v in views])
+    counts: list = []
+    pages = render_views(doc, [_with_colors(v, color, conductor_colors) for v in views], counts)
     if PUBLIC and len(pages) > MAX_SHEETS:
         raise ToolError(f"too many sheets for this server: {len(pages)} (at most {MAX_SHEETS})")
     if about is not None:
-        pages = with_about(doc, pages, About(about.get("doc_id"), about.get("site") or About.site))
+        pages = with_about(doc, pages, About(about.get("doc_id"), about.get("site") or About.site),
+                           drawing_set_findings(counts, doc.meta.lang))
     data = _pdf_bytes(doc, pages)
     if PUBLIC and len(data) > MAX_OUTPUT_BYTES:
         raise ToolError(f"output too large for this server (at most {MAX_OUTPUT_BYTES} bytes per rendering)")

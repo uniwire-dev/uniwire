@@ -161,8 +161,11 @@ def _qr(g: Group, text: str, x: float, y: float, size: float, url: str) -> bool:
     return True
 
 
-def about_page(doc: Document, width: float, height: float, sheets: list[str], about: About) -> Page:
-    """The page, ``width`` x ``height`` mm (the size of the first sheet); ``sheets``: the titles of the sheets."""
+def about_page(doc: Document, width: float, height: float, sheets: list[str], about: About,
+               drawing: Optional[list] = None) -> Page:
+    """The page, ``width`` x ``height`` mm (the size of the first sheet); ``sheets``: the titles of the sheets;
+    ``drawing``: the findings of the drawing set (render.drawing_set_findings), counted with the checks and
+    written out (the reader cannot run them again from the document alone)."""
     from ..rules import check
 
     lang = normalize_lang(doc.meta.lang)
@@ -202,7 +205,7 @@ def about_page(doc: Document, width: float, height: float, sheets: list[str], ab
         return w.para(x + 26.0 * k, y, colw - 26.0 * k, value, 3.0, links=links) + 0.6 * k
 
     # 1. checks
-    findings = check(doc)
+    findings = check(doc) + list(drawing or [])
     count = {lvl: sum(1 for f in findings if f.level == lvl) for lvl in ("error", "warning", "info")}
     y = heading(xs[0], y_top, L("checks"))
     names = {"nfc15100": "NF C 15-100", "iec60364": "IEC 60364", "enedis": "Enedis", "vde0100": "DIN VDE 0100"}
@@ -211,6 +214,8 @@ def about_page(doc: Document, width: float, height: float, sheets: list[str], ab
     result = L("result_none") if not any(count.values()) else L("result_counts", errors=count["error"],
                                                                   warnings=count["warning"], infos=count["info"])
     y = row(xs[0], y, L("result"), result)
+    for f in drawing or []:
+        y = w.para(xs[0] + 26.0 * k, y, colw - 26.0 * k, f.message, 2.6, GREY) + 0.6 * k
     from .frame import _generator
     y = row(xs[0], y, L("by"), _generator())
     y += 2.0 * k
