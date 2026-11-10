@@ -8,6 +8,14 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings: the label of a breaker, fuse or RCD feeding one circuit is drawn beside it when nothing else says it.
+  Before, it was dropped when the load below had a label of its own (single-line: the table shows the load's), and
+  in multi-line drawings whenever the device fed one circuit: what the user wrote there ("temporary", the room) was
+  lost. It is still left out when the circuit table shows it, or when every word of it is in the labels below
+  (case, Unicode forms, numbers, ratings and a leading copy of the device's tag do not count: "Oven 12 kW 3P" over
+  a load "Bakery oven"; words of scripts without spaces are looked for inside the text). The column makes room for
+  it on two lines rather than one. The label of the device feeding a spare way ("Future kitchen") is now drawn in
+  multi-line drawings too, and beside the device in single-line ones (the table shows "Spare" for the way).
 * Single-line drawings with a PLC: every link leaving a PLC module gets its own channel below it. A module many links
   leave is drawn wider, one wire about every 2.6 mm, and the loads go down far enough for as many channels as links
   run side by side (they were spaced a fraction of a millimetre apart, and past eight links they ran on one
