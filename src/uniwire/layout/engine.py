@@ -419,7 +419,16 @@ def _needs(ln: LNode, view: View, lang: str) -> None:
             lines = _ann_lines(n, view, lang)
             if lines:
                 # room for the text reduced to ANN_MIN at most: a long text is reduced, never cut
-                widest = max(text_width(t, ANN_MIN) for t in lines)
+                widths = [text_width(t, ANN_MIN) for t in lines]
+                if (n.children and n.node.label and len(lines) < 5 and not any(len(d.children) >= 2 for d in n.walk())
+                        and n.node.label not in annotation(n.node, lang, show_label=False)):
+                    # the label of a device feeding one circuit (kept because nothing below says it) may take two
+                    # lines: it does not widen the column as much as its load's text
+                    label = _label_text(n.node, view)
+                    widths = [max(text_width(u, ANN_MIN) for u in _wrap_words(text_units(t), 2,
+                                                                               lambda u: text_width(u, ANN_MIN)))
+                              if t == label and len(text_units(t)) > 1 else w for t, w in zip(lines, widths)]
+                widest = max(widths)
                 n.need = view.pitch_mm / 2 + n.sym.right + 2.0 + widest
 
 
@@ -439,17 +448,27 @@ def _place_x(ln: LNode, x_left: float, pitch: float = 20.0) -> None:
         ln.bus_x1 = out[-1].x + (6.0 if ln.bus_out else 0.0)
 
 
+def _tag(node: Any, view: View) -> Optional[str]:
+    pn = part_number(node)
+    return pn if view.tag_field == "part_number" and pn else node.ref
+
+
+def _label_text(node: Any, view: View) -> str:
+    """The label as drawn beside the symbol: without a leading copy of the tag drawn above it."""
+    return without_ref(node.label, node.ref) if _tag(node, view) == node.ref else node.label
+
+
 def _ann_lines(ln: LNode, view: View, lang: str) -> list[str]:
     """Annotation of a node: its tag, then its characteristics (5 lines at most)."""
     node = ln.node
     if ln.kind != "node" or not view.annotations or node is None or ln.bottom or ln.is_board:
         return []
     feeds_bus = any(len(d.children) >= 2 for d in ln.walk())
-    lines = annotation(node, lang, show_label=feeds_bus)
-    pn = part_number(node)
-    tag = pn if view.tag_field == "part_number" and pn else node.ref
+    in_table = _in_column(ln) and "label" in (view.cartouche or []) and _table_shows_label(ln, lang)
+    lines = annotation(node, lang, show_label=feeds_bus or not label_drawn_below(ln, in_table))
+    tag = _tag(node, view)
     if node.label and node.label in lines:  # the label: not repeating the tag above it, nor the lines below it
-        label = without_ref(node.label, node.ref) if tag == node.ref else node.label
+        label = _label_text(node, view)
         lines = [label if t == node.label else t for t in lines]
         lines = [t for t in lines if t and (t == label or t.casefold() not in label.casefold())]  # 'Type 2' in 'type 2'
     if tag:
@@ -1591,6 +1610,52 @@ def _draw_line_marks(roots: list[LNode], everything: list[LNode], doc: Document,
         _put_mark(g, obs, ln.x, y0, y1, (y0 + y1) / 2 if pref is None else pref, mark, ln.id, phase)
         drawn[id(node)] = (mark, _mark_text(mark, phase))
     return drawn
+
+
+def _significant(text: str) -> set[str]:
+    """The words of ``text`` that say something: case, accents written apart and width forms do not count
+    (Unicode NFKC), nor numbers and ratings ("16", "3P", "2.5mm2", the unit after a number: "400 V")."""
+    out: set[str] = set()
+    after_number = False
+    for w in re.findall(r"[^\W_]+", unicodedata.normalize("NFKC", text).casefold()):
+        rating = w[0].isdigit() or (after_number and w.isalpha() and len(w) <= 3)
+        after_number = w[0].isdigit()
+        if not rating:
+            out.add(w)
+    return out
+
+
+def _wide(word: str) -> bool:
+    """A word of a script written without spaces (Chinese, Japanese...): it is looked for inside the text."""
+    return any(unicodedata.east_asian_width(c) in "WF" for c in word)
+
+
+def label_drawn_below(ln: Any, shown_by_table: bool = False) -> bool:
+    """Whether what the label of ``ln`` (a device feeding one circuit) says is drawn below it: every word of it is in
+    the labels of its circuit ("Table saw" under a load "Table saw 2.2 kW"; words of scripts without spaces are
+    looked for inside them), or the circuit table shows it (``shown_by_table``). Numbers and ratings do not count:
+    the symbols and the table draw them ("Oven 12 kW 3P" is said by "Bakery oven"). Otherwise the device keeps its
+    label beside its symbol: what the user wrote there ("temporary", a room) is not lost."""
+    if ln.node is None or shown_by_table:
+        return True
+    own = _significant(without_ref(ln.node.label or "", ln.node.ref))
+    below, d = [], ln
+    while len(d.children) == 1:
+        d = d.children[0]
+        if d.node is not None and d.node.label:
+            below.append(d.node.label)
+    words = _significant(" ".join(below))
+    joined = "".join(re.findall(r"[^\W_]+", unicodedata.normalize("NFKC", " ".join(below)).casefold()))
+    return all(w in words or (_wide(w) and w in joined) for w in own)
+
+
+def _table_shows_label(ln: LNode, lang: str) -> bool:
+    """Whether the circuit table shows the label of ``ln`` (a device of a column) for its column."""
+    path, d = [ln.node], ln
+    while len(d.children) == 1:
+        d = d.children[0]
+        path.insert(0, d.node)
+    return d.node is not None and _column_label(d, [n for n in path if n is not None], lang) == ln.node.label
 
 
 def _in_column(n: LNode) -> bool:
@@ -3267,6 +3332,14 @@ def _column_info(ln: LNode, index: Index, lang: str) -> dict[str, Any]:
             incomer = bool(parents) and registry.category(parents[0].type) == "source"  # type: ignore[attr-defined]
             info["rcd_upstream"] = not any(n is p for p in path) and (outside or incomer)
             break
+    info["label"] = _column_label(ln, path, lang)
+    return info
+
+
+def _column_label(ln: LNode, path: list[Any], lang: str) -> str:
+    """The label the circuit table shows for the column of ``ln`` (``path``: its nodes from the load up)."""
+    leaf = ln.node
+    assert leaf is not None
     label = leaf.label
     if not label:
         for n in path:
@@ -3279,8 +3352,7 @@ def _column_info(ln: LNode, index: Index, lang: str) -> dict[str, Any]:
         label = ln.label or label
     if leaf.type == "spare" and not leaf.label:  # type: ignore[attr-defined]
         label = registry.label("spare", lang)
-    info["label"] = label
-    return info
+    return label
 
 
 def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: str, y0: float) -> None:
