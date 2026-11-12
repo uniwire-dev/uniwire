@@ -6,6 +6,7 @@ internal link to the sheet it names."""
 
 from __future__ import annotations
 
+import unicodedata
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -31,6 +32,16 @@ _MISSING = {**{chr(0x2080 + i): str(i) for i in range(10)}, **{c: d for c, d in 
             **{c: "○" for c in "⏱⏲⌚⌛⏰🕐🕑🕒🕓🕔🕕🕖🕗🕘🕙🕚🕛"}}
 
 
+def _ascii_arrow(ch: str) -> str | None:
+    """A left, right or two-way arrow in ASCII ('->', '<-', '<->', '=>' for a double one), None for any other
+    character: written so where the font has no glyph for it, rather than left out or drawn as a box."""
+    name = unicodedata.name(ch, "")
+    left, right = "LEFT" in name, "RIGHT" in name
+    if "ARROW" not in name or not (left or right):
+        return None
+    return ("<" if left else "") + ("=" if "DOUBLE" in name else "-") + (">" if right else "")
+
+
 def _drawable(text: str, glyphs: frozenset[int]) -> str:
     """``text`` with the characters the font lacks (CJK aside, drawn with a CID font) replaced or left out."""
     out = []
@@ -41,6 +52,8 @@ def _drawable(text: str, glyphs: frozenset[int]) -> str:
             out.append(_MISSING[ch])
         elif ch in _FALLBACK:
             out.append(_FALLBACK[ch])
+        elif arrow := _ascii_arrow(ch):
+            out.append(arrow)
     return "".join(out)
 # Chinese, Japanese and Korean text: the Adobe CID fonts known to every PDF reader, referenced and not embedded
 # (no font file needed, on any system)
@@ -63,6 +76,9 @@ def _fonts() -> tuple[str, str, bool, frozenset[int] | None]:
             except Exception:  # pragma: no cover - unreadable font
                 continue
     return "Helvetica", "Helvetica-Bold", False, None
+
+
+_CP1252 = frozenset(bytes(range(32, 256)).decode("cp1252", "ignore"))  # what Helvetica has
 
 
 def _cjk(ch: str) -> bool:
@@ -204,8 +220,8 @@ def write_pdf(pages: Iterable[Page], path: str | Path, lang: str | None = None, 
         elif isinstance(it, Text):
             text = xml_safe(it.text)  # control characters and lone surrogates cannot be encoded
             if not unicode_ok:
-                for k, v in _FALLBACK.items():
-                    text = text.replace(k, v)
+                text = "".join(_FALLBACK.get(ch) or (_ascii_arrow(ch) if ch not in _CP1252 else None) or ch
+                               for ch in text)
             elif glyphs is not None:
                 text = _drawable(text, glyphs)
             r, g, b = (int(it.color[i:i + 2], 16) / 255 for i in (1, 3, 5))

@@ -676,6 +676,21 @@ def test_reversing_and_star_delta_starters_drawn_with_their_contactors():
     assert {"W2", "U2", "V2"} <= set(_texts(sets[1]))
 
 
+def test_star_delta_terminal_names_inside_the_board_frame():
+    """The motor terminal names written under a star-delta starter take room in its board: never on the frame."""
+    from tests.drawing_audit import _walk, text_box
+    from uniwire.render.scene import Rect
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "ref": "B1", "system": "3P", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 32, "poles": "3P", "children": [
+            {"type": "motor_starter", "ref": "-K1", "method": "star_delta", "children": [{"type": "motor", "phases": 3}]}]}]}]}],
+        "views": [{"kind": "multi-line"}]})
+    items = [i for i, _l, _o in _walk(render_pages(doc)[0].root)]
+    frame = next(i for i in items if isinstance(i, Rect) and i.style.dash)
+    tags = [text_box(i) for i in items if isinstance(i, Text) and i.text in ("W2", "U2", "V2")]
+    assert len(tags) == 3
+    assert all(frame.y < b[1] and b[3] + 1.5 < frame.y + frame.h for b in tags)
+
+
 def _us_board(**inst):
     return load({"installation": {"system": "split-phase", **inst}, "sources": [
         {"type": "grid", "children": [{"type": "board", "id": "P", "children": [
