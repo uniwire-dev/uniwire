@@ -636,6 +636,7 @@ class MLNode:
     pad_bottom: float = 0.0  # room at the bottom of a board frame for the signal links of its devices
     link_gap: float = 0.0  # room between the poles and the text, for the control links of the operating line
     below: float = 0.0  # room under a final device for the landings of a power link (inside its board frame)
+    under: float = 0.0  # room under the contacts for what the device writes there (the W2 U2 V2 of a star-delta)
     body: float = 0.0  # a boxed device many links reach: its box drawn this much taller (see _pad_boards)
     text_room: float = 0.0  # ... and the room on its left for the texts of its links
 
@@ -718,7 +719,7 @@ class MLNode:
         return r + 0.8 + self.link_gap
 
     def block_h(self) -> float:
-        return max(self.h, len(self.ann) * ANN_LINE * self.ann_size / ANN_SIZE + 0.6 if self.ann else 0.0)
+        return max(self.h + self.under, len(self.ann) * ANN_LINE * self.ann_size / ANN_SIZE + 0.6 if self.ann else 0.0)
 
     def rails_bottom(self) -> float:
         assert self.rail_y0 is not None
@@ -840,6 +841,7 @@ def _starter_contacts(node: Any) -> bool:
 
 
 STARTER_GAP = 4.0  # between two contactors of a starter
+STAR_TAGS = 3.4  # baseline of the motor terminal names (W2 U2 V2) under a star-delta starter's contacts
 
 
 def _starter_sets(node: Any) -> int:
@@ -883,7 +885,7 @@ def _starter_extra(node: Any, xs: list[float], y: float, h: float, last: float =
     names = ["W2", "U2", "V2"][:n]
     for i, (xd, xy) in enumerate(zip(first, star)):  # W2 U2 V2 under the delta contactor, to the star contactor
         jy = bottom + 0.6 + i * 0.5
-        items += [Line((xd, bottom), (xd, y + h + 1.5)), Text((xd, y + h + 3.4), names[i], 1.3, "middle"),
+        items += [Line((xd, bottom), (xd, y + h + 1.5)), Text((xd, y + h + STAR_TAGS), names[i], 1.3, "middle"),
                   Line((xd, jy), (xy, jy)), dot(xd, jy), Line((xy, bottom), (xy, jy))]
         items += _contact(xy, yt, "arc", ht)
     items += _link(star, yt)
@@ -2506,6 +2508,7 @@ def _layout(doc: Document, view: View, spec: SheetSpec, index: Index, info: dict
     for r in roots:
         for n in r.walk():
             n.h = _height(n)
+            n.under = STAR_TAGS + 0.4 if n.type == "motor_starter" and _starter_sets(n.node) == 2 else 0.0
     links = _plan_links(doc, roots, lang)
     _pad_boards(doc, roots)
     x = 0.0

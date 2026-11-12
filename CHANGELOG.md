@@ -25,6 +25,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   A link label is never left out for want of room (at an off-sheet stub, or along a link of the multi-line view): on
   two or three lines, else in the nearest free space with a leader, else where it fits best.
   Several such stubs beside one device no longer write their texts over one another's arrows.
+* Multi-line drawings: the motor terminal names (W2 U2 V2) written under a star-delta starter take room in its column.
+  They were written on the bottom line of the board frame when the starter was the last device of the board.
 * Drawings: the label of a breaker, fuse or RCD feeding one circuit is drawn beside it when nothing else says it.
   Before, it was dropped when the load below had a label of its own (single-line: the table shows the load's), and
   in multi-line drawings whenever the device fed one circuit: what the user wrote there ("temporary", the room) was
