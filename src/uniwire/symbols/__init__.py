@@ -164,7 +164,11 @@ def thermal_relay(node: Any = None) -> Symbol:
     return Symbol("thermal_relay", items, 5 * M, 1.8, 1.8)
 
 
+TEXT_MARGIN = 0.6  # between a text written in a box and each side of the box
+
+
 def _box(name: str, label: str, h: float = 5 * M, w: float = 6.0, size: float = 1.8) -> Symbol:
+    w = max(w, text_width(label, size) + 2 * TEXT_MARGIN)  # wide enough for its text
     items = [_lead(0, 1.0 * M), Rect(-w / 2, 1.0 * M, w, h - 2 * M), _text((0, 1.0 * M + (h - 2 * M) / 2), label, size),
              _lead(h - 1.0 * M, h)]
     return Symbol(name, items, h, w / 2 + 0.2, w / 2 + 0.2)
@@ -173,9 +177,11 @@ def _box(name: str, label: str, h: float = 5 * M, w: float = 6.0, size: float = 
 def impulse_relay(node: Any = None) -> Symbol:
     s = contactor()
     s.name = "impulse_relay"
-    s.items += [Rect(-6.2, 1.6 * M, 2.6, 2.0), _text((-4.9, 1.6 * M + 1.0), _abbr("impulse_relay"), 1.3),
+    label = _abbr("impulse_relay")
+    w = max(2.6, text_width(label, 1.3) + 2 * TEXT_MARGIN)  # its coil, wide enough for its text
+    s.items += [Rect(-3.6 - w, 1.6 * M, w, 2.0), _text((-3.6 - w / 2, 1.6 * M + 1.0), label, 1.3),
                 Line((-3.6, 1.6 * M + 1.0), (-1.0, 1.6 * M + 1.0), DASH)]
-    s.left = 6.4
+    s.left = 3.8 + w
     return s
 
 
@@ -292,7 +298,8 @@ def controller(node: Any = None, body: float = 3 * M, inner: float = 0.0) -> Sym
     """A box; ``body``: its height, larger for a controller many links reach (one point each on its sides);
     ``inner``: room inside each side for the terminal numbers of those links."""
     label = getattr(node, "symbol_text", None) or "CTRL"
-    return _box("controller", label, body + 2 * M, max(6.0, 1.1 * len(label) + 2 + 2 * inner))
+    return _box("controller", label, body + 2 * M,
+                max(6.0, max(1.1 * len(label) + 2, text_width(label, 1.8) + 2 * TEXT_MARGIN) + 2 * inner))
 
 
 def transfer_switch(node: Any = None) -> Symbol:
@@ -485,7 +492,7 @@ def busway(node: Any = None) -> Symbol:
 
 # ---------------------------------------------------------------- loads
 def _load_box(name: str, label: str, w: float = 5.6, h: float = 4.4) -> Symbol:
-    w = max(w, text_width(label, 1.6) + 1.2)  # wide enough for its text
+    w = max(w, text_width(label, 1.6) + 2 * TEXT_MARGIN)  # wide enough for its text
     y0 = 0.8 * M
     items = [_lead(0, y0), Rect(-w / 2, y0, w, h), _text((0, y0 + h / 2), label, 1.6)]
     return Symbol(name, items, y0 + h, w / 2, w / 2, has_output=False)

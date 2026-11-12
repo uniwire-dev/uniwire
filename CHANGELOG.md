@@ -8,6 +8,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line symbols: a box widens for the text written in it. The coil of an impulse relay was 2.6 mm wide
+  whatever its abbreviation ("脉冲" and "STS" ran onto its sides), and a controller's box was sized by its number of
+  characters, so a short text in Chinese or Japanese, or of wide capitals, ran past it.
 * Single-line drawings with a PLC: an auxiliary device read or driven by a PLC channel (a sensor, an operator box)
   is placed under the band of the channels, by the module it is wired to, and no auxiliary device is placed inside
   that band (the channel wires ran through its box and over its texts) nor in the column of the off-sheet stubs
