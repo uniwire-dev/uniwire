@@ -8,6 +8,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line drawings with a PLC: an auxiliary device read or driven by a PLC channel (a sensor, an operator box)
+  is placed under the band of the channels, by the module it is wired to, and no auxiliary device is placed inside
+  that band (the channel wires ran through its box and over its texts) nor in the column of the off-sheet stubs
+  beside a device. The band goes down under a device hanging into it (a tall safety relay beside the PLC: the
+  channels ran through it). A device is placed inside the frame of its partner's board when there is room (it
+  widened the sheet), never above the band for one wired to a channel. The drawing audit used by the tests reports
+  a link drawn through the symbol of a device it does not reach.
 * Single-line drawings: an auxiliary device with links to devices on another sheet (a safety relay stopping
   contactors drawn further on) keeps the texts of its off-sheet stubs clear: when something is already where
   they go, the device is placed with room for them, and the next devices keep off them (they were written over the
@@ -20,13 +27,6 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   relay beside the PLC), all of them: the band reserved under it was one channel high, the other channels ran
   below the band, where the field devices are placed (the links then went round the whole board). A board drawn
   under a frame grown that way moves down with it.
-* Single-line drawings with a PLC: an auxiliary device read or driven by a PLC channel (a sensor, an operator box)
-  is placed under the band of the channels, by the module it is wired to, and no auxiliary device is placed inside
-  that band (the channel wires ran through its box and over its texts) nor in the column of the off-sheet stubs
-  beside a device. The band goes down under a device hanging into it (a tall safety relay beside the PLC: the
-  channels ran through it). A device is placed inside the frame of its partner's board when there is room (it
-  widened the sheet), never above the band for one wired to a channel. The drawing audit used by the tests reports
-  a link drawn through the symbol of a device it does not reach.
 * A dashed signal link (control, interlock, trip, measure, key) is interrupted where it crosses a conductor (tree
   conductor, busbar, multi-line conductor, solid power link), the conductor drawn whole: the crossing no longer reads
   as a connection. Not where the link ends on what it reaches, and not across a bundle of conductors close together
