@@ -39,12 +39,16 @@ def _deep(n):
 
 
 def _fast(fn, *args, limit=0.05):
-    t = time.perf_counter()
-    try:
-        fn(*args)
-    except ValueError:
-        pass
-    return time.perf_counter() - t < limit
+    """Whether fn(*args) takes less than `limit` seconds of CPU at best of three runs. CPU time of this process, not
+    elapsed time, so that a busy machine does not fail the test; a super-linear parser takes seconds, not 50 ms."""
+    def once():
+        t = time.process_time()
+        try:
+            fn(*args)
+        except ValueError:
+            pass
+        return time.process_time() - t
+    return min(once() for _ in range(3)) < limit
 
 
 # ------------------------------------------------------------------ H1: linear parsers
