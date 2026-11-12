@@ -8,6 +8,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* PDF: an arrow the font has no glyph for ("⇄", "⇒") is written in ASCII ("<->", "=>") instead of being left out
+  of the text; without a Unicode font, where a box was drawn, too.
 * Single-line symbols: a box widens for the text written in it. The coil of an impulse relay was 2.6 mm wide
   whatever its abbreviation ("脉冲" and "STS" ran onto its sides), and a controller's box was sized by its number of
   characters, so a short text in Chinese or Japanese, or of wide capitals, ran past it.
