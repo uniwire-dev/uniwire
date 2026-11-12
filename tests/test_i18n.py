@@ -233,3 +233,31 @@ def test_label_that_is_a_rating_once_the_tag_is_gone_is_drawn_once():
                      "children": [{"type": "socket"}]}]}]}]})
     texts = [s for p in render_pages(doc) for s in _texts(p.root)]
     assert texts.count("16 A") == 1
+
+
+def test_texts_written_in_a_symbol_box_fit_it_in_every_language():
+    """A box widens for the text written in it (an abbreviation in any language, a short text of the user's in any
+    script): the text never runs onto or past its sides."""
+    from types import SimpleNamespace as N
+
+    from uniwire.i18n import RENDER_LANG
+    from uniwire.render.scene import Rect, text_width
+    from uniwire.symbols import ABBREVIATIONS, symbol
+
+    nodes = [("impulse_relay", N()), ("insulation_monitor", N()), ("ups", N()), ("ev_charger", N()),
+             ("shutter", N()), ("cooking", N(kind="oven")), ("plc", N(family="Compact")),
+             *[("motor_starter", N(method=m)) for m in ("dol", "star_delta", "reversing", "soft_starter")],
+             *[("appliance", N(kind=k)) for k in ("washing_machine", "dishwasher", "dryer", "freezer", "fridge")],
+             *[(t, N(symbol_text=s)) for t in ("controller", "load") for s in ("CTRL", "MWMWMW", "负荷管理器", "ЩИТ")]]
+    for lang in ABBREVIATIONS:
+        token = RENDER_LANG.set(lang)
+        try:
+            for name, node in nodes:
+                sym = symbol(name, node)
+                boxes = [i for i in sym.items if isinstance(i, Rect)]
+                for txt in (i for i in sym.items if isinstance(i, Text) and i.anchor == "middle"):
+                    box = next((b for b in boxes if b.x < txt.p[0] < b.x + b.w and b.y < txt.p[1] < b.y + b.h), None)
+                    if box is not None:
+                        assert text_width(txt.text, txt.size) + 0.8 <= box.w, (lang, name, txt.text, box.w)
+        finally:
+            RENDER_LANG.reset(token)

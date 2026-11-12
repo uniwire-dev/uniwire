@@ -8,6 +8,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* PDF: an arrow the font has no glyph for ("⇄", "⇒") is written in ASCII ("<->", "=>") instead of being left out
+  of the text; without a Unicode font, where a box was drawn, too.
+* Single-line symbols: a box widens for the text written in it. The coil of an impulse relay was 2.6 mm wide
+  whatever its abbreviation ("脉冲" and "STS" ran onto its sides), and a controller's box was sized by its number of
+  characters, so a short text in Chinese or Japanese, or of wide capitals, ran past it.
 * Single-line drawings with a PLC: an auxiliary device read or driven by a PLC channel (a sensor, an operator box)
   is placed under the band of the channels, by the module it is wired to, and no auxiliary device is placed inside
   that band (the channel wires ran through its box and over its texts) nor in the column of the off-sheet stubs
@@ -25,6 +30,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   A link label is never left out for want of room (at an off-sheet stub, or along a link of the multi-line view): on
   two or three lines, else in the nearest free space with a leader, else where it fits best.
   Several such stubs beside one device no longer write their texts over one another's arrows.
+* Multi-line drawings: the motor terminal names (W2 U2 V2) written under a star-delta starter take room in its column.
+  They were written on the bottom line of the board frame when the starter was the last device of the board.
 * Drawings: the label of a breaker, fuse or RCD feeding one circuit is drawn beside it when nothing else says it.
   Before, it was dropped when the load below had a label of its own (single-line: the table shows the load's), and
   in multi-line drawings whenever the device fed one circuit: what the user wrote there ("temporary", the room) was
