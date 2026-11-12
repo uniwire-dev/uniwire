@@ -45,6 +45,8 @@ def _style(s: Style, fill_default: str = "none") -> str:
     out = f'stroke={quoteattr(s.color)} stroke-width="{_n(s.width)}" fill={quoteattr(s.fill or fill_default)}'
     if s.dash:
         out += f' stroke-dasharray="{" ".join(_n(d) for d in s.dash)}"'
+        if s.dash_offset:
+            out += f' stroke-dashoffset="{_n(s.dash_offset)}"'
     return out
 
 

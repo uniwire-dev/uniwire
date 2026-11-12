@@ -174,3 +174,204 @@ def test_a_link_between_two_plcs_leaves_the_channel_of_its_start():
     module = [r for r, _l, _o in _walk(_node(page.root, "PLC2")) if isinstance(r, Rect)][-1]
     plain = sorted((r for r, _l, _o in _walk(_node(page.root, "PLC")) if isinstance(r, Rect)), key=lambda r: r.x)[3]
     assert abs(module.w - plain.w) < 1e-6  # as narrow as a module no link leaves (slot 3)
+
+
+def test_a_dashed_link_is_interrupted_where_it_crosses_a_conductor():
+    """A control link crossing a feeder is not connected to it: the link stops on each side, the conductor stays
+    whole (single-line and multi-line views)."""
+    doc = panel(6, 2)
+    doc["views"] = [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]
+    for page in render_views(load(doc)):
+        crossings = [f for f in audit(page.root) if f.kind == "link_across_conductor"]
+        assert crossings == [], "\n".join(map(str, crossings))
+
+
+def _gapped(kind: str, *conductors: Group) -> list[list[tuple[float, float]]]:
+    from uniwire.render.scene import Polyline, Style
+    from uniwire.render.semantics import gap_link_crossings
+
+    link = Group([Polyline([(0.0, 10.0), (20.0, 10.0), (20.0, 30.0)], Style(dash=(1.0, 0.5)))], cls="uw-link",
+                 attrs={"data-uw-kind": kind})
+    gap_link_crossings(Group([*conductors, link]))
+    return [[(round(x, 6), round(y, 6)) for x, y in p.points] for p in link.items]
+
+
+def test_gap_link_crossings_cuts_the_link_not_the_conductor():
+    from uniwire.render.scene import Polyline, Style
+    from uniwire.render.semantics import edge_group, gap_link_crossings
+
+    wire = edge_group("c", "p", [Line((10.0, 0.0), (10.0, 20.0)), Line((0.0, 25.0), (30.0, 25.0))])
+    end = edge_group("d", "p", [Line((19.0, 30.0), (30.0, 30.0))])  # the link stops on it: no gap there
+    link = Group([Polyline([(0.0, 10.0), (20.0, 10.0), (20.0, 30.0)], Style(dash=(1.0, 0.5)))], cls="uw-link",
+                 attrs={"data-uw-kind": "control"})
+    root = Group([wire, end, link])
+    gap_link_crossings(root)
+    parts = [[(round(x, 6), round(y, 6)) for x, y in p.points] for p in link.items]
+    assert parts == [[(0.0, 10.0), (9.2, 10.0)], [(10.8, 10.0), (20.0, 10.0), (20.0, 24.2)], [(20.0, 25.8), (20.0, 30.0)]]
+    # each piece keeps the dash pattern of the whole line (no short dash beside a gap)
+    assert [round(p.style.dash_offset, 6) for p in link.items] == [0.0, round(10.8 % 1.5, 6), round(35.8 % 1.5, 6)]
+    assert wire.items[0].a == (10.0, 0.0) and wire.items[0].b == (10.0, 20.0)
+    gap_link_crossings(root)  # done once: nothing more to cut
+    assert [[(round(x, 6), round(y, 6)) for x, y in p.points] for p in link.items] == parts
+
+
+def test_gaps_only_in_signal_links_and_at_every_kind_of_conductor():
+    from uniwire.render.scene import Polyline
+    from uniwire.render.semantics import cond_group, edge_group
+
+    trunk = [Line((10.0, 0.0), (10.0, 20.0))]
+    one = [[(0.0, 10.0), (9.2, 10.0)], [(10.8, 10.0), (20.0, 10.0), (20.0, 30.0)]]
+    assert _gapped("control", edge_group("c", "p", trunk)) == one
+    # the same trunk drawn by two edges is one crossing, not a bundle of two conductors
+    assert _gapped("control", edge_group("c", "p", trunk), edge_group("e", "p", list(trunk))) == one
+    # a multi-line conductor drawn in a device's group, a solid power link
+    assert _gapped("trip", Group([cond_group("PE", *trunk)], "K1", "ml-sym uw-node")) == one
+    infeed = Group([Polyline([(10.0, 0.0), (10.0, 20.0)])], cls="uw-link", attrs={"data-uw-kind": "infeed"})
+    assert _gapped("measure", infeed) == one
+    # earth, data and power links stay whole (a gap would read as a break)
+    for kind in ("earth", "data", "infeed"):
+        assert _gapped(kind, edge_group("c", "p", trunk)) == [[(0.0, 10.0), (20.0, 10.0), (20.0, 30.0)]]
+
+
+def test_off_sheet_arrows_keep_their_texts_clear():
+    """Links to devices on another sheet, many of them beside a PLC and beside each contactor: each sheet reference
+    and label beside its arrow, none on an arrow, a conductor or a symbol, no arrow on the side of a frame."""
+    doc = panel(14, 0)
+    doc["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    pages = render_views(load(doc))
+    assert len(pages) == 2
+    for page in pages:
+        bad = [f for f in audit(page.root) if f.kind in ("text_crossed", "text_on_conductor", "text_on_symbol",
+                                                         "text_overlap")]
+        assert bad == [], "\n".join(map(str, bad))
+
+
+def test_devices_read_by_plc_channels_stay_out_of_the_channel_band():
+    """Field devices read by PLC inputs (sensors, an operator box) hang off the board: placed under the band of the
+    channels, by the module they are wired to, not inside the band where the channel wires would run through their
+    boxes and texts."""
+    doc = panel(6, 0)
+    names = ["Level sensor controller with relay output", "Operator box", "Limit switch box"]
+    doc["devices"] = [{"type": "controller", "id": f"D{k}", "ref": f"-B{k}", "label": name, "symbol_text": "X"}
+                      for k, name in enumerate(names)]
+    doc["links"] += [{"kind": "measure", "from": f"D{k}", "to": "PLC", "to_port": f"3.{k + 1}"} for k in range(3)]
+    page = render_views(load(doc))[0]
+    bad = [f for f in audit(page.root) if f.kind in ("link_through_symbol", "text_crossed", "text_on_symbol")]
+    assert bad == [], "\n".join(map(str, bad))
+    plc = _box(_node(page.root, "PLC"))
+    for k in range(3):
+        dev = _box(_node(page.root, f"D{k}"))
+        assert dev[1] > plc[3]  # under the PLC (its channels leave the modules downwards)
+
+
+@pytest.mark.parametrize("count", [3, 5])
+def test_devices_keep_off_the_stubs_to_other_sheets(count):
+    """A PLC whose links reach devices on another sheet: its stubs one under the other beside it; the field devices
+    read by its channels are placed clear of that column and its texts, and the channels clear of the safety relay
+    hanging into their band."""
+    doc = panel(14, 0)
+    doc["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    names = ["Level sensor controller with relay output", "Operator box", "Limit switch box", "Pressure switch",
+             "Door contact"][:count]
+    doc["devices"] = [{"type": "controller", "id": f"D{k}", "ref": f"-B{k}", "label": name, "symbol_text": "X"}
+                      for k, name in enumerate(names)]
+    doc["links"] += [{"kind": "measure", "from": f"D{k}", "to": "PLC", "to_port": f"1.{k + 15}"} for k in range(count)]
+    for page in render_views(load(doc)):
+        bad = [f for f in audit(page.root) if f.kind in ("text_on_symbol", "text_overlap", "link_through_symbol")
+               or f.kind == "text_crossed" and any(s in f.what for s in ["sheet"] + names)]
+        assert bad == [], "\n".join(map(str, bad))
+
+
+def test_sheet_references_point_to_a_sheet_of_their_own_view_holding_the_other_end():
+    """A multi-line view and a single-line view split over sheets: the devices are drawn in both views, each
+    "→ sheet n" of a view names the printed number of a sheet of that same view where the other end is drawn."""
+    import re
+
+    doc = panel(14, 0)
+    doc["views"] = [{"id": "ml", "kind": "multi-line"}, {"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    pages = render_views(load(doc))
+    kinds = [p.root.items and next((g.cls for g in p.root.items if isinstance(g, Group) and g.cls in
+                                    ("diagram", "multiline")), None) for p in pages]
+    numbers = [int(p.attrs["data-uw-folio"]) for p in pages]
+
+    def refs(item):
+        if isinstance(item, Group):
+            if item.cls == "uw-ref":
+                yield item
+            for i in item.items:
+                yield from refs(i)
+
+    checked = 0
+    for page, kind in zip(pages, kinds):
+        for r in refs(page.root):
+            target = r.attrs.get("data-uw-target-id")
+            for t in [i for i in r.items if isinstance(i, Text)]:
+                for n in map(int, re.findall(r"→ sheet (\d+)", t.text)):
+                    there = pages[numbers.index(n)]
+                    assert kinds[numbers.index(n)] == kind, (t.text, kind)
+                    assert target and _node(there.root, target) is not None, (t.text, target)
+                    checked += 1
+    assert checked >= 20
+
+
+def test_a_link_label_is_written_at_both_stubs_of_a_link_between_sheets():
+    """Links with long labels between a PLC and contactors on another sheet, beside crowded devices: each label is
+    written at the stub on both sheets (beside the sheet reference), never left out for want of room."""
+    doc = panel(14, 0)
+    doc["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    for link in doc["links"]:
+        link["label"] = "Run order line " + link["label"] if "label" in link else "Safety stop"
+    pages = render_views(load(doc))
+    # (a label may be written on two or three lines, one after the other)
+    texts = [" | ".join(t.text for t, _l, _o in _walk(p.root) if isinstance(t, Text)).replace(" | ", " ") + " "
+             for p in pages]
+    checked = 0
+    for link in doc["links"]:
+        a = next(i for i, p in enumerate(pages) if _node(p.root, link["from"]) is not None)
+        b = next(i for i, p in enumerate(pages) if _node(p.root, link["to"]) is not None)
+        if a != b:
+            assert link["label"] + " " in texts[a] and link["label"] + " " in texts[b], link
+            checked += 1
+    assert checked >= 10
+
+
+def test_the_pdf_of_interrupted_links_has_no_number_in_exponent_notation(tmp_path):
+    """The pieces of an interrupted dashed link carry a dash phase: written as a plain number in the PDF (a reader
+    does not parse 1e-07 and loses the rest of the page)."""
+    import base64
+    import re
+    import zlib
+
+    from uniwire.render import render_pdf
+
+    doc = panel(10, 3)
+    doc["views"] = [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]
+    path = render_pdf(load(doc), tmp_path / "panel.pdf", all_views=True)
+    data = path.read_bytes()
+    streams = []
+    for m in re.finditer(rb"/Filter \[ /ASCII85Decode /FlateDecode \][^>]*>>\s*stream\r?\n", data):
+        raw = data[m.end():data.index(b"~>", m.end())]
+        streams.append(zlib.decompress(base64.a85decode(raw)))  # the page contents
+    dashed = [s for s in streams if re.search(rb"\] [\d.]+ d\b", s)]
+    assert dashed
+    for s in dashed:
+        assert not re.search(rb"(?<![A-Za-z/])\d*\.?\d+[eE][-+]?\d+", s)
+
+
+def test_a_label_leader_never_crosses_a_symbol():
+    """A label with no room along its link is joined to it by a leader only when the leader crosses no symbol and no
+    text; otherwise it is written on its link."""
+    from uniwire.layout.engine import _leader_label
+    from uniwire.layout.routing import Obstacles
+
+    obs = Obstacles()
+    obs.add_box((0.0, 2.0, 30.0, 6.0))  # a device right under the link: the only free space is below it
+    for b in ((-80.0, -40.0, 80.0, -0.3), (-80.0, 0.3, -0.5, 40.0), (30.5, 0.3, 80.0, 40.0)):
+        obs.add_box(b)
+    g = Group()
+    placed = _leader_label(obs, [(0.0, 0.0), (30.0, 0.0)], "A long label", 1.6, g)
+    leaders = [i for i in g.items if isinstance(i, Line)]
+    for ln in leaders:
+        x0, y0, x1, y1 = min(ln.a[0], ln.b[0]), min(ln.a[1], ln.b[1]), max(ln.a[0], ln.b[0]), max(ln.a[1], ln.b[1])
+        assert not (x0 < 30.0 and 0.0 < x1 and y0 < 6.0 and 2.0 < y1), ln
+    assert placed == bool(leaders)
