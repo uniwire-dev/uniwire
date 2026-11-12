@@ -203,6 +203,16 @@ def test_pdf_cjk_text(tmp_path, monkeypatch):
     assert b"STSong-Light" in (tmp_path / "t.pdf").read_bytes()
 
 
+def test_pdf_arrows_without_a_glyph_written_in_ascii():
+    pytest.importorskip("reportlab")
+    from uniwire.render import pdf
+
+    glyphs = frozenset(map(ord, "AB C<->=→"))  # a font with the right arrow only
+    assert pdf._drawable("A → B ⇄ C ⇒ A ← B", glyphs) == "A → B <-> C => A <- B"
+    assert pdf._drawable("A ↑ B", glyphs) == "A  B"  # not a left or right arrow: left out, never a box
+    assert [pdf._ascii_arrow(c) for c in "↔⟶⬅⇐x"] == ["<->", "->", "<-", "<=", None]
+
+
 @pytest.mark.parametrize("kind", ["single-line", "multi-line"])
 def test_nested_own_sheet_board_refers_to_the_sheet_of_its_feeder(kind):
     board = {"type": "board", "own_sheet": True}
