@@ -375,3 +375,61 @@ def test_a_label_leader_never_crosses_a_symbol():
         x0, y0, x1, y1 = min(ln.a[0], ln.b[0]), min(ln.a[1], ln.b[1]), max(ln.a[0], ln.b[0]), max(ln.a[1], ln.b[1])
         assert not (x0 < 30.0 and 0.0 < x1 and y0 < 6.0 and 2.0 < y1), ln
     assert placed == bool(leaders)
+
+
+def test_off_sheet_stubs_of_a_board_stay_inside_its_frame():
+    """A PLC whose links reach ways drawn on the next sheet: the column of its off-sheet stubs goes down beside it,
+    lower than the devices of the board; the frame goes down round the whole column (the stubs hung out of its
+    bottom, between the loads)."""
+    d = panel(14, 2)
+    d["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    page = render_views(load(d))[0]
+    plc = _box(_node(page.root, "PLC"))
+    frame = next(r for r, _l, _o in _walk(page.root) if isinstance(r, Rect) and r.style.dash
+                 and r.x < plc[0] and plc[2] < r.x + r.w and r.y < plc[1] < r.y + r.h)
+    refs = [t for t, _l, _o in _walk(page.root) if isinstance(t, Text) and "sheet" in t.text and t.p[0] < plc[0]]
+    assert len(refs) > 20
+    for t in refs:
+        assert t.p[1] + t.size < frame.y + frame.h, t
+
+
+def test_a_board_under_a_frame_grown_round_stubs_stays_below_it():
+    """The frame of a board grows down round the off-sheet stubs of its PLC: a sub-board drawn under it is moved
+    down with it (the frame ran across the sub-board and its texts)."""
+    d = panel(14, 2)
+    d["sources"][0]["children"][0]["id"] = "CP1"
+    d["sources"][0]["children"][0]["children"][0]["children"].insert(1, {
+        "type": "breaker", "ref": "-QS", "in_A": 16, "curve": "C", "poles": "1P+N", "children": [
+            {"type": "board", "id": "LB1", "ref": "LB1", "label": "Lighting box", "children": [
+                {"type": "breaker", "ref": "-QL1", "in_A": 10, "curve": "C", "poles": "1P+N",
+                 "children": [{"type": "lighting", "label": "Lamps"}]}]}]})
+    d["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    page = render_views(load(d))[0]
+    main, sub = (next(i for i in _node(page.root, b).items if isinstance(i, Rect)) for b in ("CP1", "LB1"))
+    assert main.y + main.h < sub.y, (main, sub)
+
+
+def test_an_auxiliary_device_keeps_room_for_its_off_sheet_stubs():
+    """A safety relay off the tree stopping contactors drawn on the next sheet, placed among field devices read by
+    the PLC: the column of its stubs is kept free when it is placed, each sheet reference and label written beside
+    its own arrow, one column (they were written over the next device's text, or on the far side of the stub)."""
+    d = panel(14, 0, feedback=False)
+    supply = d["sources"][0]["children"][0]["children"][0]["children"][0]["children"][0]
+    supply["children"] = [c for c in supply["children"] if c["id"] != "SR"]
+    d["devices"] = [{"type": "protection_relay", "id": "SR", "ref": "-A2", "label": "Safety relay, door and stop"}]
+    d["devices"] += [{"type": "controller", "id": f"S{i}", "ref": f"-B{i}", "label": f"Level switch tank {i}"}
+                     for i in range(1, 7)]
+    d["links"] = [l for l in d["links"] if l.get("from") != "SR"]
+    d["links"] += [{"kind": "control", "from": f"S{i}", "to": "PLC", "to_port": f"1.{i}", "label": f"Level {i}"}
+                   for i in range(1, 7)]
+    d["links"] += [{"kind": "control", "from": "SR", "to": "PLC", "to_port": "1.15", "label": "Chain OK"}]
+    d["links"] += [{"kind": "trip", "from": "SR", "to": f"K{i}", "label": "safe stop"} for i in range(11, 15)]
+    d["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    page = render_views(load(d))[0]
+    bad = [f for f in audit(page.root) if f.kind in ("text_overlap", "text_on_symbol", "text_crossed")]
+    assert bad == [], "\n".join(map(str, bad))
+    texts = [t for t, _l, _o in _walk(page.root) if isinstance(t, Text)]
+    labels = [t for t in texts if t.text == "safe stop"]
+    refs = [t for t in texts if "sheet" in t.text and any(0 < s.p[1] - t.p[1] < 3 * t.size for s in labels)]
+    assert len(labels) == len(refs) == 4
+    assert all(t.anchor == "end" and abs(t.p[0] - labels[0].p[0]) < 1e-6 for t in labels + refs), labels + refs

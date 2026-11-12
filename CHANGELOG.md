@@ -20,6 +20,18 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   channels ran through it). A device is placed inside the frame of its partner's board when there is room (it
   widened the sheet), never above the band for one wired to a channel. The drawing audit used by the tests reports
   a link drawn through the symbol of a device it does not reach.
+* Single-line drawings: an auxiliary device with links to devices on another sheet (a safety relay stopping
+  contactors drawn further on) keeps the texts of its off-sheet stubs clear: when something is already where
+  they go, the device is placed with room for them, and the next devices keep off them (they were written over the
+  text of a neighbour, or on the far side of their stub). Where they are already clear the device stays where it
+  was, the sheet as wide. A device read or driven by a PLC channel with no room inside its board's frame is still
+  placed under the band of the channels (it went above the PLC, its link through the modules).
+* Single-line drawings: the frame of a board goes down round the off-sheet stubs of its devices (a PLC whose links
+  reach ways drawn on the next sheet: one stub under the other beside it, they hung out of the bottom of the frame,
+  between the loads). The channels under a PLC module pass under a device hanging into their band (a tall safety
+  relay beside the PLC), all of them: the band reserved under it was one channel high, the other channels ran
+  below the band, where the field devices are placed (the links then went round the whole board). A board drawn
+  under a frame grown that way moves down with it.
 * A dashed signal link (control, interlock, trip, measure, key) is interrupted where it crosses a conductor (tree
   conductor, busbar, multi-line conductor, solid power link), the conductor drawn whole: the crossing no longer reads
   as a connection. Not where the link ends on what it reaches, and not across a bundle of conductors close together
