@@ -988,6 +988,15 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         own = [n for n in _owned(b)]
         if b.is_board and any(n.node is not None and n.node.id in wired for n in own):
             b.pad_bottom = max(b.pad_bottom, channels - max(n.content_bottom() for n in own))
+    stubs = _stub_columns(doc, everything, lang)
+    for b in everything if stubs else ():  # a board: its frame down round the off-sheet stubs of its devices (they
+        # hung out of its bottom, between the loads)
+        cols = [stubs[n.node.id] for n in _owned(b) if b.is_board and n.node is not None and n.node.id in stubs]
+        if cols and max(c[3] for c in cols) > _board_bottom(b):
+            b.pad_bottom += max(c[3] for c in cols) - _board_bottom(b)
+            for r in main:  # the boards drawn under it below its frame again (they were across it)
+                if any(n is b for n in r.walk()):
+                    _separate_boards(r)
     non_bottom = [n for n in everything if not n.bottom]
     y_load = max([n.content_bottom() + 7.5 for n in non_bottom]
                  + [_board_bottom(n) + 2.0 + 5.5 for n in everything if n.is_board and n.pad_bottom]
@@ -1050,7 +1059,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         (obs.hlines if kind == "h" else obs.vwires).append(line)
     # (and off the channels under the PLC modules, and off the column of the off-sheet stubs beside a device)
     bands = _channel_band(doc, everything, channels, wired)
-    band_boxes = list(bands.values()) + _stub_columns(doc, everything, lang)
+    band_boxes = list(bands.values()) + list(_stub_columns(doc, everything, lang).values())
     obs.boxes.extend(band_boxes)
     annex = _place_devices(doc, roots, everything, view, lang, obs, pitch, below={p: b[3] for p, b in bands.items()})
     for kind, line in lanes:
@@ -2185,6 +2194,7 @@ def _port_channels_bottom(doc: Document, nodes: list[LNode]) -> tuple[float, set
     module and its channel numbers (0: no link leaves a PLC module), and the PLCs links leave."""
     pos = {n.node.id: n for n in nodes if n.node is not None and n.node.id}
     low, spans, wired = 0.0, [], set()
+    reach: dict[str, list[LNode]] = {}  # the nodes each PLC's channels reach
     for l in doc.links:
         if l.kind in SWITCHED_LINKS or l.from_ not in pos or l.to not in pos:
             continue
@@ -2193,38 +2203,54 @@ def _port_channels_bottom(doc: Document, nodes: list[LNode]) -> tuple[float, set
         if ce is not None:
             n, port = pos[(l.from_, l.to)[ce[0]]], str((l.from_port, l.to_port)[ce[0]])
             wired.add((l.from_, l.to)[ce[0]])
+            reach.setdefault((l.from_, l.to)[ce[0]], [n]).append(pos[(l.to, l.from_)[ce[0]]])
             low = max(low, n.y + n.sym.extra.get("port_y", n.sym.height) + 0.5 + text_width(port, PORT_SIZE))
             lane = PORT_LANE
         spans.append((min(pos[l.from_].x, pos[l.to].x), max(pos[l.from_].x, pos[l.to].x), lane))
     if not low:
         return 0.0, wired
-    return low + 1.0 + max(sum(w for a, b, w in spans if a <= x <= b) for x, _, _ in spans), wired
+    lanes = 1.0 + max(sum(w for a, b, w in spans if a <= x <= b) for x, _, _ in spans)
+    bottom = low + lanes
+    for ends in reach.values():  # a device hanging into the band (a tall controller beside the PLC): the channels
+        # pass under it, all of them
+        x0, x1 = min(m.x for m in ends), max(m.x for m in ends)
+        bottom = max([bottom] + [m.y + m.sym.height + lanes for m in nodes if m.kind == "node" and not m.bottom
+                                 and m not in ends and x0 < m.x < x1 and low < m.y + m.sym.height and m.y < bottom])
+    return bottom, wired
 
 
 PORT_LANE = 1.5  # spacing of the channels reserved under PLC modules
 
 
-def _stub_columns(doc: Document, nodes: list[LNode], lang: str) -> list[Box]:
-    """The column the off-sheet stubs of each node take beside it (see _draw_offpage_link: one under the other, on
-    its left side), for the auxiliary devices to keep off it."""
-    pos = {n.node.id: n for n in nodes if n.node is not None and n.node.id and n.kind == "node"}
-    homes = _device_homes(doc)
-    here = set(pos) | {d for d, h in homes.items() if h in pos}
+def _stub_widths(doc: Document, nodes: list[LNode], lang: str) -> dict[str, list[float]]:
+    """The width of the texts of each off-sheet stub (see _draw_offpage_link) of the nodes on the sheet and of the
+    auxiliary devices placed with them, by node id."""
+    pos = {n.node.id for n in nodes if n.node is not None and n.node.id and n.kind == "node"}
+    here = pos | {d for d, h in _device_homes(doc).items() if h in pos}
     named = {n.id: n for n, _, _ in iter_nodes(doc) if n.id}
     stubs: dict[str, list[float]] = {}
     for l in doc.links:
         for nid, other in ((l.from_, l.to), (l.to, l.from_)):
-            if nid in pos and other not in here and l.kind not in POWER_LINKS + ("transfer",):
+            if nid in here and other not in here and l.kind not in POWER_LINKS + ("transfer",):
                 o = named.get(other)
                 ref = (o.ref or o.label or other) if o is not None else other
                 w = max(text_width(ref + _t("render.to_folio", lang, folio=99), 1.6),
                         text_width(l.label, 1.6) if l.label else 0.0)
                 stubs.setdefault(nid, []).append(w)
-    out: list[Box] = []
-    for nid, ws in stubs.items():
-        e = _end(pos[nid], "control")
-        out.append((e.x - 9.0 - max(ws), e.y - 2.4, e.x, e.y + 5.0 * (len(ws) - 1) + 2.4))
-    return out
+    return stubs
+
+
+def _stub_column(n: LNode, widths: list[float]) -> Box:
+    """The column the off-sheet stubs of a node take beside it: one under the other, on its left side."""
+    e = _end(n, "control")
+    return (e.x - 9.0 - max(widths), e.y - 2.4, e.x, e.y + 5.0 * (len(widths) - 1) + 2.4)
+
+
+def _stub_columns(doc: Document, nodes: list[LNode], lang: str) -> dict[str, Box]:
+    """The column of the off-sheet stubs of each node on the sheet, by node id: the auxiliary devices keep off it,
+    the frame of its board goes round it."""
+    pos = {n.node.id: n for n in nodes if n.node is not None and n.node.id and n.kind == "node"}
+    return {nid: _stub_column(pos[nid], ws) for nid, ws in _stub_widths(doc, nodes, lang).items() if nid in pos}
 
 
 def _channel_band(doc: Document, nodes: list[LNode], bottom: float, wired: set[str]) -> dict[str, Box]:

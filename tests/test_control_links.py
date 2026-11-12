@@ -375,3 +375,35 @@ def test_a_label_leader_never_crosses_a_symbol():
         x0, y0, x1, y1 = min(ln.a[0], ln.b[0]), min(ln.a[1], ln.b[1]), max(ln.a[0], ln.b[0]), max(ln.a[1], ln.b[1])
         assert not (x0 < 30.0 and 0.0 < x1 and y0 < 6.0 and 2.0 < y1), ln
     assert placed == bool(leaders)
+
+
+def test_off_sheet_stubs_of_a_board_stay_inside_its_frame():
+    """A PLC whose links reach ways drawn on the next sheet: the column of its off-sheet stubs goes down beside it,
+    lower than the devices of the board; the frame goes down round the whole column (the stubs hung out of its
+    bottom, between the loads)."""
+    d = panel(14, 2)
+    d["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    page = render_views(load(d))[0]
+    plc = _box(_node(page.root, "PLC"))
+    frame = next(r for r, _l, _o in _walk(page.root) if isinstance(r, Rect) and r.style.dash
+                 and r.x < plc[0] and plc[2] < r.x + r.w and r.y < plc[1] < r.y + r.h)
+    refs = [t for t, _l, _o in _walk(page.root) if isinstance(t, Text) and "sheet" in t.text and t.p[0] < plc[0]]
+    assert len(refs) > 20
+    for t in refs:
+        assert t.p[1] + t.size < frame.y + frame.h, t
+
+
+def test_a_board_under_a_frame_grown_round_stubs_stays_below_it():
+    """The frame of a board grows down round the off-sheet stubs of its PLC: a sub-board drawn under it is moved
+    down with it (the frame ran across the sub-board and its texts)."""
+    d = panel(14, 2)
+    d["sources"][0]["children"][0]["id"] = "CP1"
+    d["sources"][0]["children"][0]["children"][0]["children"].insert(1, {
+        "type": "breaker", "ref": "-QS", "in_A": 16, "curve": "C", "poles": "1P+N", "children": [
+            {"type": "board", "id": "LB1", "ref": "LB1", "label": "Lighting box", "children": [
+                {"type": "breaker", "ref": "-QL1", "in_A": 10, "curve": "C", "poles": "1P+N",
+                 "children": [{"type": "lighting", "label": "Lamps"}]}]}]})
+    d["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    page = render_views(load(d))[0]
+    main, sub = (next(i for i in _node(page.root, b).items if isinstance(i, Rect)) for b in ("CP1", "LB1"))
+    assert main.y + main.h < sub.y, (main, sub)

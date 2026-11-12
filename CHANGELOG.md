@@ -8,6 +8,12 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line drawings: the frame of a board goes down round the off-sheet stubs of its devices (a PLC whose links
+  reach ways drawn on the next sheet: one stub under the other beside it, they hung out of the bottom of the frame,
+  between the loads). The channels under a PLC module pass under a device hanging into their band (a tall safety
+  relay beside the PLC), all of them: the band reserved under it was one channel high, the other channels ran
+  below the band, where the field devices are placed (the links then went round the whole board). A board drawn
+  under a frame grown that way moves down with it.
 * Single-line drawings with a PLC: an auxiliary device read or driven by a PLC channel (a sensor, an operator box)
   is placed under the band of the channels, by the module it is wired to, and no auxiliary device is placed inside
   that band (the channel wires ran through its box and over its texts) nor in the column of the off-sheet stubs
