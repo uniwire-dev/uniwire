@@ -55,6 +55,7 @@ from ..render.semantics import (
     busbar_group,
     edge_group,
     finish_link_group,
+    gap_link_crossings,
     link_group,
     node_group,
     ref_group,
@@ -65,6 +66,7 @@ from ..symbols import kind as symbol_kind
 from ..units import fmt
 from .routing import (
     LANE,
+    Box,
     End,
     Obstacles,
     _hit,
@@ -1046,9 +1048,15 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
             lanes += [("h", (y, min(e.x, s.x), max(e.x, s.x))), ("v", (s.x, min(s.y, y), max(s.y, y)))]
     for kind, line in lanes:
         (obs.hlines if kind == "h" else obs.vwires).append(line)
-    annex = _place_devices(doc, roots, everything, view, lang, obs, pitch)
+    # (and off the channels under the PLC modules, and off the column of the off-sheet stubs beside a device)
+    bands = _channel_band(doc, everything, channels, wired)
+    band_boxes = list(bands.values()) + _stub_columns(doc, everything, lang)
+    obs.boxes.extend(band_boxes)
+    annex = _place_devices(doc, roots, everything, view, lang, obs, pitch, below={p: b[3] for p, b in bands.items()})
     for kind, line in lanes:
         (obs.hlines if kind == "h" else obs.vwires).remove(line)
+    for b in band_boxes:
+        obs.boxes.remove(b)
     homes = _device_homes(doc)
     unlinked: list[NodeBase] = [d for d in doc.devices if homes.get(d.id or "") is None]
 
@@ -1143,6 +1151,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                 txt = Text((n.x + 0.8, bottom_end + 3.0), n.label or n.node.label or "", 2.0, "end", "middle", 90)
                 g.add(ref_group(n.target_folio, n.target, [txt]) if n.kind == "stub" else txt)
 
+    gap_link_crossings(g)
     if view.direction == "up":
         b0 = bbox(g) or (0, 0, 1, 1)
         g = _mirror_up(g, b0[1] + b0[3])  # type: ignore[assignment]
@@ -1270,9 +1279,12 @@ DEVICE_AXIS_MM = 30.0  # length of the reserved axis below a load
 
 
 def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], view: View, lang: str,
-                   obs: Obstacles, pitch: float, left_of: Callable[[LNode], bool] | None = None) -> list[LNode]:
+                   obs: Obstacles, pitch: float, left_of: Callable[[LNode], bool] | None = None,
+                   below: Optional[dict[str, float]] = None) -> list[LNode]:
     """Auxiliary devices whose home node is on this sheet, each in the free space nearest its partner
-    (``left_of(partner)``: on its left, the side its links can reach)."""
+    (``left_of(partner)``: on its left, the side its links can reach; ``below``: the bottom of the channel band of
+    each PLC, a device read or driven by one of its channels goes under it)."""
+    below = below or {}
     homes = _device_homes(doc)
     placed: dict[str, LNode] = {n.node.id: n for n in everything if n.kind == "node" and n.node is not None and n.node.id}
     todo = [d for d in doc.devices if d.id and homes.get(d.id) in placed]
@@ -1283,11 +1295,11 @@ def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], v
     while todo:
         progress = False
         for dev in list(todo):
-            partner = None
+            partner, link = None, None
             for l in doc.links:
                 other = l.to if l.from_ == dev.id else l.from_ if l.to == dev.id else None
                 if other in placed:
-                    partner = placed[other]
+                    partner, link = placed[other], l
                     break
             if partner is None:
                 continue
@@ -1308,10 +1320,24 @@ def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], v
             lw = max((text_width(l.label, 1.6) for l in doc.links if l.label and dev.id in (l.from_, l.to)),
                      default=0.0)
             lane = lw + 2.0 if lw else 0.0
+            pref_y, top = partner.y, None
+            ce = _channel_end(link, lambda nid: placed[nid].sym if nid in placed else None)
+            if ce is not None and (link.from_, link.to)[ce[0]] == partner.node.id and partner.node.id in below:
+                # read or driven by a PLC channel: below the band of the channels, just right of the module it
+                # leaves (its link goes down from the module and turns into the device's side)
+                # beyond the span of its ports, the drops under them left free
+                pref_x, pref_y = partner.x + partner.sym.right + 3.0, below[partner.node.id] + DEVICE_PAD_MM
+                top = pref_y  # (never above: its link would come down through the busbar and the modules)
+            # inside the frame of its partner's board (beside it, it would widen the sheet), else the nearest place
+            frame = next((_frame_box(b) for b in reversed(everything) if b.is_board and partner in _owned(b)), None)
             free = Obstacles(obs.boxes, obs.vwires + axes, obs.hlines, obs.buses)
             for right_side in (False, True):  # the room on the side facing its partner: left, unless placed left of it
                 v = (u[0], u[1], u[2] + lane, u[3]) if right_side else (u[0] - lane, u[1], u[2], u[3])
-                x0, y0 = place_box(free, v[2] - v[0], v[3] - v[1], (pref_x, partner.y), pad=DEVICE_PAD_MM)
+                inner = (frame[0] + 1.0, max(frame[1] + 1.0, top or frame[1]), frame[2] - 1.0, frame[3] - 1.0) \
+                    if frame else None
+                spot = place_box(free, v[2] - v[0], v[3] - v[1], (pref_x, pref_y), pad=DEVICE_PAD_MM, within=inner) \
+                    if inner else None
+                x0, y0 = spot or place_box(free, v[2] - v[0], v[3] - v[1], (pref_x, pref_y), pad=DEVICE_PAD_MM)  # type: ignore[misc]
                 ln.x, ln.y = x0 - v[0], y0 - v[1]
                 if not lane or right_side or ln.x > partner.x:
                     break
@@ -2178,6 +2204,53 @@ def _port_channels_bottom(doc: Document, nodes: list[LNode]) -> tuple[float, set
 PORT_LANE = 1.5  # spacing of the channels reserved under PLC modules
 
 
+def _stub_columns(doc: Document, nodes: list[LNode], lang: str) -> list[Box]:
+    """The column the off-sheet stubs of each node take beside it (see _draw_offpage_link: one under the other, on
+    its left side), for the auxiliary devices to keep off it."""
+    pos = {n.node.id: n for n in nodes if n.node is not None and n.node.id and n.kind == "node"}
+    homes = _device_homes(doc)
+    here = set(pos) | {d for d, h in homes.items() if h in pos}
+    named = {n.id: n for n, _, _ in iter_nodes(doc) if n.id}
+    stubs: dict[str, list[float]] = {}
+    for l in doc.links:
+        for nid, other in ((l.from_, l.to), (l.to, l.from_)):
+            if nid in pos and other not in here and l.kind not in POWER_LINKS + ("transfer",):
+                o = named.get(other)
+                ref = (o.ref or o.label or other) if o is not None else other
+                w = max(text_width(ref + _t("render.to_folio", lang, folio=99), 1.6),
+                        text_width(l.label, 1.6) if l.label else 0.0)
+                stubs.setdefault(nid, []).append(w)
+    out: list[Box] = []
+    for nid, ws in stubs.items():
+        e = _end(pos[nid], "control")
+        out.append((e.x - 9.0 - max(ws), e.y - 2.4, e.x, e.y + 5.0 * (len(ws) - 1) + 2.4))
+    return out
+
+
+def _channel_band(doc: Document, nodes: list[LNode], bottom: float, wired: set[str]) -> dict[str, Box]:
+    """The area the channels of each PLC take (see _port_channels_bottom): from under its modules down to the bottom
+    of the band, across to the devices they reach. An auxiliary device placed there would be crossed by them."""
+    if not bottom:
+        return {}
+    pos = {n.node.id: n for n in nodes if n.node is not None and n.node.id}
+    out: dict[str, Box] = {}
+    for pid in wired:
+        n = pos.get(pid)
+        if n is None:
+            continue
+        xs = [n.x - n.sym.left, n.x + n.sym.right]
+        for l in doc.links:
+            ce = _channel_end(l, lambda nid: pos[nid].sym if nid in pos else None)
+            if ce is not None and (l.from_, l.to)[ce[0]] == pid and (o := pos.get((l.to, l.from_)[ce[0]])) is not None:
+                xs.append(o.x)
+        x0, y0, x1 = min(xs), n.y + n.sym.extra.get("port_y", n.sym.height), max(xs)
+        # the channels pass under the devices hanging into the band (a tall controller beside the PLC): below them
+        low = max([bottom] + [m.y + m.sym.height for m in nodes if m.kind == "node" and not m.bottom and m is not n
+                              and x0 < m.x < x1 and y0 < m.y + m.sym.height and m.y < bottom])
+        out[pid] = (x0, y0, x1, low)
+    return out
+
+
 def _port_point(n: LNode, slot: int, j: int, count: int, obs: Obstacles) -> tuple[float, float]:
     """Where the ``j``-th of the ``count`` links leaving a PLC module leaves it: spread under the module, one wire
     every ``PORT_STEP`` when it has the width for it (multi-line: drawn reduced, closer)."""
@@ -2905,12 +2978,10 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 break
             if placed:
                 continue
-            if not obs.label_channel:  # single-line: in the nearest free space, a leader to its link
-                if _leader_label(obs, seq, txt, size, group_of(i)):
-                    continue
-        # multi-line: a link label with no free place along its route is left out (the single-line has it)
-        at = place_label(obs, seq, text_width(txt, size), size, from_end=far_end,
-                         optional=obs.label_channel and color == "#000000")
+            if _leader_label(obs, seq, txt, size, group_of(i)):  # in the nearest free space, a leader to its link
+                continue
+        # never left out: where it fits best along its route
+        at = place_label(obs, seq, text_width(txt, size), size, from_end=far_end)
         if at is not None:
             group_of(i).add(Text((at[0], at[1]), txt, size, at[2], color=color))
     for i in sorted(groups):
@@ -2947,6 +3018,9 @@ def _leader_label(obs: Obstacles, pts: list[tuple[float, float]], txt: str, size
         t = (min(max(p[0], box[0]), box[2]), min(max(p[1], box[1]), box[3]))
         return abs(p[0] - t[0]) + abs(p[1] - t[1]), p, t
     _, (mx, my), (tx, ty) = min((nearest(s) for s in zip(pts, pts[1:])), key=lambda c: c[0])
+    lead = (min(mx, tx), min(my, ty), max(mx, tx), max(my, ty))
+    if any(_hit(lead, o, -0.05) for o in obs.boxes):  # a leader through a symbol or a text: on its link instead
+        return False
     g.add(Line((mx, my), (tx, ty), Style(width=THIN)))
     g.add(Text((x, y + 0.85 * size), txt, size))
     obs.add_box(box)
@@ -3127,30 +3201,72 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         return [(e.x, e.y), base], tip, [(base[0] - 0.8 * abs(dy), base[1] - 0.8 * abs(dx)), tip,
                                          (base[0] + 0.8 * abs(dy), base[1] + 0.8 * abs(dx))]
 
+    def head_box(n: float) -> tuple[float, float, float, float]:
+        _, tip, head = geometry(n)
+        xs, ys = [p[0] for p in head + [tip]], [p[1] for p in head + [tip]]
+        return min(xs), min(ys), max(xs), max(ys)
+
+    def on_frame(n: float) -> bool:
+        """The arrow of a stub of length ``n`` lies on the side of a frame (it would read as part of the frame)."""
+        x0, y0, x1, y1 = head_box(n)
+        return any(x0 - 0.4 < fx < x1 + 0.4 and fy0 < y1 and y0 < fy1 or y0 - 0.4 < fy < y1 + 0.4 and fx0 < x1 and x0 < fx1
+                   for fx0, fy0, fx1, fy1 in obs.frames for fx, fy in ((fx0, fy0), (fx1, fy1)))
+
     def room(n: float) -> bool:
-        """The sheet reference finds a free place beside a stub of length ``n``, which crosses no symbol nor text."""
+        """The sheet reference finds a free place beside a stub of length ``n``, which crosses no symbol nor text and
+        whose arrow is not on a frame."""
         line, tip, _ = geometry(n)
         seg = (min(line[0][0], tip[0]) - 0.3, min(line[0][1], tip[1]) - 0.3,
                max(line[0][0], tip[0]) + 0.3, max(line[0][1], tip[1]) + 0.3)
-        if n > 6.0 and any(_hit(seg, o, 0.0) for o in obs.boxes):
+        if n > 6.0 and any(_hit(seg, o, 0.0) for o in obs.boxes) or on_frame(n):
             return False
-        return place_label(obs, [line[0], tip], text_width(txts[-1], 1.6), 1.6, record=False, optional=True) is not None
+        obs.boxes.append(head_box(n))  # (beside the arrow, not on it)
+        try:
+            return place_label(obs, [line[0], tip], text_width(txts[-1], 1.6), 1.6, record=False,
+                               optional=True) is not None
+        finally:
+            obs.boxes.pop()
 
     # the usual short stub; longer when its sheet reference finds no free place beside it (a crowded device side)
-    pts, tip, head = geometry(next((n for n in (6.0, 12.0, 18.0) if room(n)), 6.0))
+    lengths = (6.0, 12.0, 18.0)
+    n = next((n for n in lengths if room(n)), next((n for n in lengths if not on_frame(n)), 6.0))
+    pts, tip, head = geometry(n)
     g.add(Polyline(pts, _link_style(link.kind, link.normally_open)))
+    hb = head_box(n)
+    obs.add_box(hb)  # its texts beside the arrow, not on it (when there is a free place)
     rg = Group([Polyline(head, Style(width=THIN, fill="#ffffff"), closed=True)]) if same_sheet else \
         ref_group(f, other, [Polyline(head, Style(width=THIN, fill="#ffffff"), closed=True)])
     if e.side in ("down", "up"):
         obs.add_vline(e.x, min(e.y, tip[1]), max(e.y, tip[1]))
     else:
         obs.add_hline(pts[1][1], pts[0][0], pts[1][0])
-    for k, txt in enumerate(txts):
+    written: dict[int, list[Text]] = {}
+    for k, txt in reversed(list(enumerate(txts))):  # the sheet reference first: it must be written, at the best place
         w = text_width(txt, 1.6)
-        optional = k < len(txts) - 1  # the link's label, also written at the stub on the other sheet: where it is free
-        spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False, optional=optional)
+        spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False, optional=True)
+        if spot is None:  # no free place beside it: on its arrow rather than on a conductor or a symbol
+            obs.boxes.remove(hb)
+            spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False, optional=True)
+            obs.boxes.append(hb)
+        if spot is None and k < len(txts) - 1:  # the link's label is never left out: on two or three lines, else
+            # in the nearest free space with a leader to its stub, else where it fits best
+            units = text_units(txt)
+            for n in (2, 3):
+                lines = _wrap_words(units, n, lambda u: text_width(u, 1.6)) if len(units) >= n else []
+                if not lines:
+                    continue
+                lw, lh = max(text_width(u, 1.6) for u in lines), 1.6 + 1.92 * (len(lines) - 1)
+                at = place_label(obs, [pts[0], tip], lw, lh, from_end=True, record=False, optional=True)
+                if at is not None:
+                    x, y, anchor = at
+                    obs.add_box(text_box(x, y, lw, lh, anchor))
+                    written[k] = [Text((x, y - 0.8 * lh + 1.28 + 1.92 * j), u, 1.6, anchor)
+                                  for j, u in enumerate(lines)]
+                    break
+            if k in written or _leader_label(obs, [pts[0], tip], txt, 1.6, rg):
+                continue
         if spot is None:
-            continue
+            spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False)
         x, y, anchor = spot
         b = text_box(x, y, w, 1.6, anchor)
         if e.side == "left" and anchor == "end" and x > tip[0] - 0.6 and b[1] < e.y + 0.8 and e.y - 0.8 < b[3]:
@@ -3158,7 +3274,9 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
             if obs.box_free(moved, 0.1, wire_pad=0.0):
                 x, b = tip[0] - 0.6, moved
         obs.add_box(b)
-        rg.add(Text((x, y), txt, 1.6, anchor))
+        written[k] = [Text((x, y), txt, 1.6, anchor)]
+    rg.add(*(t for k in sorted(written) for t in written[k]))  # the sheet reference last: render.number_sheets
+    # prints it
     g.add(rg)
 
 
