@@ -11,6 +11,8 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Literal, Optional, Union
 
+from .glyph_widths import DEFAULT, WIDTHS
+
 Point = tuple[float, float]
 
 THIN = 0.25
@@ -136,20 +138,26 @@ class Page:
     attrs: dict[str, str] = field(default_factory=dict)  # metadata of the sheet (root ``<svg>`` attributes)
 
 
+_ADVANCE = {ch: w / 100 for w, chars in WIDTHS.items() for ch in chars}
+
+
+def _advance(ch: str) -> float:
+    """Width of ``ch`` in em: Liberation Sans (Arial); a CJK character one em, any other the width of a digit."""
+    w = _ADVANCE.get(ch)
+    if w is not None:
+        return w
+    return 1.0 if unicodedata.east_asian_width(ch) in "WF" else DEFAULT
+
+
 def text_width(text: str, size: float) -> float:
-    """Width estimate (Helvetica/Arial) for layout."""
-    narrow = sum(1 for ch in text if ch in "il.,:;'|! ()-/fjtrI")  # digits are all one width in Arial
-    wide = sum(1 for ch in text if ch in "mwMWQGOD@%→←↔")
-    full = sum(1 for ch in text if unicodedata.east_asian_width(ch) in "WF")  # CJK: one em each
-    upper = sum(1 for ch in text if ch.isupper() and ch not in "IJMWQGOD")  # capitals, Latin or Cyrillic
-    return size * (0.55 * (len(text) - narrow - wide - full - upper) + 0.3 * narrow + 0.8 * wide + 1.0 * full
-                   + 0.68 * upper)
+    """Width estimate (Arial, Liberation Sans) for layout."""
+    return size * sum(map(_advance, text))
 
 
 def cut_to_width(text: str, size: float, avail: float, keep: int = 3) -> str:
     """``text`` cut with an ellipsis to fit ``avail`` (never shorter than ``keep`` characters with the ellipsis):
     the longest fitting beginning, found by halving (the width grows with the length)."""
-    if len(text) <= keep or text_width(text, size) <= avail:
+    if len(text) <= keep or text_width(text, size) <= avail + 1e-6:  # a text reduced to fit exactly: not cut
         return text
     lo, hi = keep - 1, len(text) - 2  # characters kept: lo always allowed, hi the most
     while lo < hi:
