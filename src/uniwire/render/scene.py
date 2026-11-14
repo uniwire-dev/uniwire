@@ -155,18 +155,19 @@ def text_width(text: str, size: float) -> float:
 
 
 def cut_to_width(text: str, size: float, avail: float, keep: int = 3) -> str:
-    """``text`` cut with an ellipsis to fit ``avail`` (never shorter than ``keep`` characters with the ellipsis):
-    the longest fitting beginning, found by halving (the width grows with the length)."""
+    """``text`` cut with an ellipsis to fit ``avail`` (never shorter than ``keep`` characters with the ellipsis),
+    the rule of every text cut in a drawing: the longest fitting beginning, found by halving (the width grows with
+    the length), without the spaces before the ellipsis."""
     if len(text) <= keep or text_width(text, size) <= avail + 1e-6:  # a text reduced to fit exactly: not cut
         return text
     lo, hi = keep - 1, len(text) - 2  # characters kept: lo always allowed, hi the most
     while lo < hi:
         mid = (lo + hi + 1) // 2
-        if text_width(text[:mid] + "…", size) <= avail:
+        if text_width(text[:mid].rstrip() + "…", size) <= avail:
             lo = mid
         else:
             hi = mid - 1
-    return text[:lo] + "…"
+    return (text[:lo].rstrip() or text[:lo]) + "…"
 
 
 def text_units(text: str) -> list[str]:
