@@ -2990,7 +2990,9 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                                                                 -abs(s[0][0] - s[1][0]) - abs(s[0][1] - s[1][1])))
                 (p, q) = segs[0]
                 mx, my = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
-                lg.add(interlock_mark(mx, my, abs(p[1] - q[1]) < 1e-6))
+                mark = interlock_mark(mx, my, abs(p[1] - q[1]) < 1e-6)
+                lg.add(mark)
+                obs.add_box(bbox(mark))  # no label written over it
         if on_conductor:  # infeed landing on the input conductor: junction dot
             lg.add(Circle(pts[-1], 0.45, Style(width=THIN, fill="#000000")))
         seq = pts if port_label is None or port_label[0] == 0 else pts[::-1]  # oriented PLC -> other end

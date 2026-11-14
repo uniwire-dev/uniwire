@@ -8,6 +8,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings: the width of a text is measured with the advance width of each character in Arial (the widths of
+  Liberation Sans, the font of the PDF on a server: a table in `uniwire.render.glyph_widths`, written by
+  `tools/glyph_widths.py` from the font file). The estimate by classes of characters was narrower than the text
+  for wide capitals ("W" by 0.14 em: six of them were drawn 1.4 mm wider than measured), Cyrillic letters and
+  arrows; boxes, columns and texts placed by their width now fit what is drawn. A text reduced to fit its room
+  exactly (a title block value, a device annotation) is no longer cut by a rounding error, and a label of a
+  multi-line drawing keeps off the triangle of a mechanical interlock.
 * PDF: an arrow the font has no glyph for ("⇄", "⇒") is written in ASCII ("<->", "=>") instead of being left out
   of the text; without a Unicode font, where a box was drawn, too.
 * Single-line symbols: a box widens for the text written in it. The coil of an impulse relay was 2.6 mm wide

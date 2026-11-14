@@ -118,7 +118,7 @@ def _fit_lines(text: str, size: float, width: float, two_line_size: float) -> tu
         s2 = min(two_line_size, size, *(_fit(t, size, width) for t in pair))
         if s2 > s:
             return list(pair), s2
-    if text_width(text, s) > width:
+    if text_width(text, s) > width + 1e-6:  # not a text reduced to fit exactly (rounding)
         text = _cut(text, s, width) + "…"
     return [text], s
 
