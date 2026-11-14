@@ -433,3 +433,24 @@ def test_an_auxiliary_device_keeps_room_for_its_off_sheet_stubs():
     refs = [t for t in texts if "sheet" in t.text and any(0 < s.p[1] - t.p[1] < 3 * t.size for s in labels)]
     assert len(labels) == len(refs) == 4
     assert all(t.anchor == "end" and abs(t.p[0] - labels[0].p[0]) < 1e-6 for t in labels + refs), labels + refs
+
+
+def test_a_link_never_takes_a_channel_another_link_runs_on():
+    """Under the loads, every channel within reach crosses many feeders but one, taken by a link routed before: the
+    next link takes a channel of its own lower down rather than run on it (the two read as one solid line)."""
+    from uniwire.layout.routing import End, _shared, route
+
+    def obstacles() -> Obstacles:
+        obs = Obstacles()
+        for k in range(1, 40):  # feeders down to the loads, crossed by every channel above them
+            obs.add_vline(2.5 * k, -5.0, 19.6)
+        obs.add_hline(20.0, -5.0, 105.0)  # the channel of a link routed before
+        return obs
+
+    a, b = End(0.0, 0.0, "down"), End(100.0, 0.0, "down")
+    shared = route(obstacles(), a, b, 0.0, 20.0, record=False)
+    assert shared[1][1] == 20.0  # (the way it went before)
+    obs = obstacles()
+    pts = route(obs, a, b, 0.0, 20.0, record=False, deeper=True)
+    assert pts[0] == (0.0, 0.0) and pts[-1] == (100.0, 0.0)
+    assert pts[1][1] > 20.0 and not _shared(obs, pts, 1.2)
