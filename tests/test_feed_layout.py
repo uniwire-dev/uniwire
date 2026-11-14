@@ -207,3 +207,21 @@ def test_main_board_too_wide_stays_with_its_supply_and_continues_under_its_name(
     first = {n.node.id for n in lays[0].lnodes if n.node is not None and n.node.id}
     assert {"Q0", "MSB", "P1", "Q1"} <= first and len(lays) >= 2
     assert all(lay.spec.name.startswith("MSB") for lay in lays[1:])
+
+
+def test_of_boards_as_wide_the_last_goes_to_its_own_sheet():
+    """Two boards as wide: the one later in the document goes to a sheet of its own, the sheets keep its order."""
+    from types import SimpleNamespace
+
+    from uniwire.layout.engine import _board_to_detach
+    from uniwire.model import View
+
+    view = View(id="v")
+
+    def board(name, w):
+        return SimpleNamespace(width=w, node=SimpleNamespace(id=name))
+
+    lay = SimpleNamespace(width=2000.0)
+    assert _board_to_detach([board("A", 300.0), board("B", 300.0), board("C", 200.0)], lay, view).node.id == "B"
+    lay = SimpleNamespace(width=1200.0)  # either board makes the sheet fit: the narrowest, the last of them
+    assert _board_to_detach([board("A", 900.0), board("B", 900.0), board("C", 950.0)], lay, view).node.id == "B"

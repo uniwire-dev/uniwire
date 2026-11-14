@@ -8,6 +8,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line drawings: of two boards as wide that could go to a sheet of their own, the one later in the
+  document goes, so the sheets keep the order of the document (two identical boards could swap sheets on a small
+  change of their widths).
 * Drawings: every text cut to fit its place ends with an ellipsis and is cut by its width, by one rule. The
   family of a PLC was cut to twelve characters in its head and the function of a protection relay to six in its
   box, without an ellipsis; a title block value had its own cut. No space is left before the ellipsis.

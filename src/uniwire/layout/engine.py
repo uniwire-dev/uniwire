@@ -3636,16 +3636,21 @@ def _board_to_detach(boards: list[LNode], lay: SheetLayout, view: View, keep_who
     together rather than being cut way by way."""
     _, _, aw, _ = drawing_area(view)
     excess = lay.width - aw / view.min_scale
+    boards = boards[::-1]  # of boards as wide, the last one goes: the sheets keep the order of the document
+
+    def width(n: LNode) -> float:
+        return round(n.width, 3)
+
     part = [n for n in boards if n.width < 0.85 * lay.width]
     enough = [n for n in part if n.width - view.pitch_mm >= excess]
     if enough:
-        return min(enough, key=lambda n: n.width)
+        return min(enough, key=width)
     if part:
-        return max(part, key=lambda n: n.width)
+        return max(part, key=width)
     below = [n for n in boards if n.node is not None and n.node.id in nested]
     if below:
-        return max(below, key=lambda n: n.width)
-    return None if keep_whole or not boards else max(boards, key=lambda n: n.width)
+        return max(below, key=width)
+    return None if keep_whole or not boards else max(boards, key=width)
 
 
 def _walk_nodes(n: NodeBase) -> Iterator[NodeBase]:
