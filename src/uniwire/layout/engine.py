@@ -2969,7 +2969,9 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             lo = max(lo, max(a.y + a.sym.height, b.y + b.sym.height) + 1.5)
             hi = max(hi, lo + 0.01)
         if not obs.grid or not pts:
-            pts = route(obs, ends[0], ends[1], lo, hi, **{**opts, "record": False})
+            # a link whose channels may go under the loads: never on the channel of another link, one of its own
+            # lower down instead (the table goes down under it)
+            pts = route(obs, ends[0], ends[1], lo, hi, **{**opts, "record": False}, deeper=not ml and hi > y_load)
             if pts and not obs.grid and i not in bus_lane and not on_conductor:
                 # through a text or a symbol, or far round: with more corners when that is clearly better
                 pts = improve_route(obs, ends[0], ends[1], pts, opts["lane"], opts["solid"],
