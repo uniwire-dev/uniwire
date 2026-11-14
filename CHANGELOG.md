@@ -8,6 +8,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings: every text cut to fit its place ends with an ellipsis and is cut by its width, by one rule. The
+  family of a PLC was cut to twelve characters in its head and the function of a protection relay to six in its
+  box, without an ellipsis; a title block value had its own cut. No space is left before the ellipsis.
 * Drawings: the width of a text is measured with the advance width of each character in Arial (the widths of
   Liberation Sans, the font of the PDF on a server: a table in `uniwire.render.glyph_widths`, written by
   `tools/glyph_widths.py` from the font file). The estimate by classes of characters was narrower than the text
