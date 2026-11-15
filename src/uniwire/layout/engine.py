@@ -3248,7 +3248,7 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
     on = target_node.ref or target_node.label or other if target_node is not None else other
     txts = ([link.label] if link.label else []) + [on + (_t("render.to_folio", lang, folio=f) if f else "")]
     e = at or _end(n, link.kind)
-    key = n.id or ""
+    key = here = n.id or ""
     if at is None and e.side == "left":  # no room on the left for its texts (a neighbour there): by the right side
         need = max(text_width(t, 1.6) for t in txts) + 9.0
         r = _right_end(n)
@@ -3345,6 +3345,21 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
     rg.add(*(t for k in sorted(written) for t in written[k]))  # the sheet reference last: render.number_sheets
     # prints it
     g.add(rg)
+    port = link.from_port if link.from_ == here else link.to_port if link.to == here else None
+    if port:  # the channel or terminal it leaves by, as on a link drawn whole: on its stub, by its start (the links
+        # routed later pass beyond the start)
+        txt, w = str(port), text_width(str(port), PORT_SIZE)
+        sx, sy = pts[0]
+        if e.side in ("left", "right"):
+            x, anchor = (sx - 0.6, "end") if e.side == "left" else (sx + 0.6, "start")
+            spots = [(x, sy - 0.6, anchor), (x, sy + PORT_SIZE + 0.3, anchor)]
+        else:
+            y = sy + 0.6 + 0.8 * PORT_SIZE if e.side == "down" else sy - 0.6
+            spots = [(sx + 0.6, y, "start"), (sx - 0.6, y, "end")]
+        at = next((s for s in spots if obs.box_free(text_box(s[0], s[1], w, PORT_SIZE, s[2]), 0.1, wire_pad=0.0)),
+                  None) or place_label(obs, [pts[0], tip], w, PORT_SIZE, from_end=False, record=False)
+        obs.add_box(text_box(at[0], at[1], w, PORT_SIZE, at[2]))
+        g.add(Text((at[0], at[1]), txt, PORT_SIZE, at[2], color=PORT_COLOR))
 
 
 # ----------------------------------------------------------------- table

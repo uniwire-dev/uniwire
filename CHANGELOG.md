@@ -11,6 +11,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Single-line drawings: a link never takes the channel another link already runs on (the two dashed lines read as
   one solid conductor). Under the loads, where the channels are taken by the links and the devices placed there,
   it takes a channel of its own lower down, under what is drawn, and the table goes down under it.
+* A link to another sheet that leaves a PLC channel or a named terminal writes that channel or terminal by the
+  start of its stub, as a link drawn whole does (only the links drawn whole wrote it).
 * PDF: an arrow the font has no glyph for ("⇄", "⇒") is written in ASCII ("<->", "=>") instead of being left out
   of the text; without a Unicode font, where a box was drawn, too.
 * Single-line symbols: a box widens for the text written in it. The coil of an impulse relay was 2.6 mm wide
