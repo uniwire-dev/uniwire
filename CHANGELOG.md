@@ -8,6 +8,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Multi-line drawings: a busbar too long for one sheet shares its ways evenly among as many sheets as it needs
+  (27 ways: 9 on each of three sheets, no longer 13, 13 and 1).
 * Single-line drawings: the label of a device keeps at least 0.4 mm from the symbol of a device beside it in the
   next column, on more lines when needed (it ran up to the abbreviation written left of a UPS, or to the box of a
   converter).
