@@ -460,6 +460,19 @@ def _label_text(node: Any, view: View) -> str:
     return without_ref(node.label, node.ref) if _tag(node, view) == node.ref else node.label
 
 
+def _words(text: str) -> list[str]:
+    """The words of ``text`` as written between spaces, case aside, without the punctuation around them
+    ('(night' -> 'night'; 'C1-C2' and '1P+N' stay whole)."""
+    return [w for w in (re.sub(r"^[\W_]+|[\W_]+$", "", w) for w in text.casefold().split()) if w]
+
+
+def _says(label: str, line: str) -> bool:
+    """Whether ``label`` already says ``line``: it holds its words, one after the other ('Type 2' in 'SPD type 2';
+    not '16 A' in '116 A', 'C' in a word starting with C, nor 'C2' in 'C1-C2')."""
+    words, have = _words(line), _words(label)
+    return bool(words) and any(have[i:i + len(words)] == words for i in range(len(have) - len(words) + 1))
+
+
 def _ann_lines(ln: LNode, view: View, lang: str) -> list[str]:
     """Annotation of a node: its tag, then its characteristics (5 lines at most)."""
     node = ln.node
@@ -472,7 +485,7 @@ def _ann_lines(ln: LNode, view: View, lang: str) -> list[str]:
     if node.label and node.label in lines:  # the label: not repeating the tag above it, nor the lines below it
         label = _label_text(node, view)
         lines = [label if t == node.label else t for t in lines]
-        lines = [t for t in lines if t and (t == label or t.casefold() not in label.casefold())]  # 'Type 2' in 'type 2'
+        lines = [t for t in lines if t and (t == label or not _says(label, t))]
     if tag:
         lines.insert(0, tag)
     # the cable it feeds, when the circuit table does not show it (feeder of a sub-board, a transformer...), and
