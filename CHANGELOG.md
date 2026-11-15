@@ -11,8 +11,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Single-line drawings: a link never takes the channel another link already runs on (the two dashed lines read as
   one solid conductor). Under the loads, where the channels are taken by the links and the devices placed there,
   it takes a channel of its own lower down, under what is drawn, and the table goes down under it.
-* A link to another sheet that leaves a PLC channel or a named terminal writes that channel or terminal by the
-  start of its stub, as a link drawn whole does (only the links drawn whole wrote it).
+* Single-line drawings: a link to another sheet that leaves a PLC channel or a named terminal writes that channel or
+  terminal by the start of its stub, as a link drawn whole does (only the links drawn whole wrote it).
 * Single-line drawings: the texts of the off-sheet stubs of a device (one under the other on its left) are no longer
   written over the text of the device on its left: its column moves right by what they need. The room is taken
   only where the sheet keeps its scale with it (never a smaller drawing, never one more sheet).
