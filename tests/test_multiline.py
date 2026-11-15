@@ -470,3 +470,21 @@ def test_converters_drawn_in_the_direction_they_convert():
     page = render_pages(doc, default_view(doc, kind="multi-line"))[0]
     marks = {g.id: [t.text for t in g.items if isinstance(t, Text)] for g in _groups(page.root) if g.id in ("U1", "T2", "T3")}
     assert marks == {"U1": ["=", "~"], "T2": ["=", "="], "T3": ["~", "="]}
+
+
+def test_busbar_split_shares_its_ways_evenly_among_its_sheets():
+    """A busbar too long for one sheet: its ways shared out evenly among as many sheets as needed, not a last sheet
+    with a few ways left over."""
+    from uniwire.render.scene import Group, Text
+
+    def refs(item):
+        if isinstance(item, Group):
+            return sum((refs(i) for i in item.items), [])
+        return [item.text] if isinstance(item, Text) and item.text.startswith("-Q") else []
+
+    doc = load({"views": [{"id": "m", "kind": "multi-line", "paper": "A3"}], "sources": [{"type": "grid", "children": [
+        {"type": "board", "ref": "DB", "children": [
+            {"type": "breaker", "ref": f"-Q{k}", "in_A": 16, "poles": "3P", "label": "Workshop machine feeder",
+             "children": [{"type": "motor", "p_kW": 4}]} for k in range(1, 28)]}]}]})
+    counts = [len(refs(p.root)) for p in render_pages(doc, doc.views[0])]
+    assert len(counts) == 3 and sum(counts) == 27 and max(counts) - min(counts) <= 1  # not 13, 13 and 1
