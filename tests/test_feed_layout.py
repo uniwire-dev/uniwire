@@ -225,3 +225,19 @@ def test_of_boards_as_wide_the_last_goes_to_its_own_sheet():
     assert _board_to_detach([board("A", 300.0), board("B", 300.0), board("C", 200.0)], lay, view).node.id == "B"
     lay = SimpleNamespace(width=1200.0)  # either board makes the sheet fit: the narrowest, the last of them
     assert _board_to_detach([board("A", 900.0), board("B", 900.0), board("C", 950.0)], lay, view).node.id == "B"
+
+
+def test_label_stops_before_the_symbol_beside_it():
+    """A device label in one column keeps clear of the symbol of the device beside it in the next column (a UPS,
+    its abbreviation written on its left)."""
+    from uniwire.layout.engine import LABEL_GAP
+
+    def ups(k):
+        return _br(f"QU{k}", [{"type": "ups", "id": f"U{k}", "ref": f"-U{k}", "label": "Online double conversion 60 kVA",
+                               "children": [_br(f"QO{k}", [{"type": "socket"}])]}])
+    doc = _doc([{"type": "grid", "id": "G", "children": [{"type": "board", "id": "B", "ref": "MDB",
+                                                          "children": [ups(1), ups(2)]}]}], [])
+    lays, _ = _sheets(doc)
+    nodes = {n.node.id: n for n in lays[0].lnodes if n.node is not None}
+    ab, nb = nodes["U1"].ann_box(), nodes["U2"]
+    assert ab is not None and ab[2] <= nb.x - nb.sym.left - LABEL_GAP + 1e-6
