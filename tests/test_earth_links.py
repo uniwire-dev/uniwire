@@ -6,6 +6,7 @@ import pytest
 
 import uniwire
 from uniwire.model import View
+from uniwire.render import render_views
 from uniwire.render.scene import Group, Line, Polyline, Text, text_width
 
 SWITCHING = {"breaker", "rcd", "switch_disconnector", "fuse", "contactor"}
@@ -160,3 +161,36 @@ def test_several_earth_links_on_one_board_get_their_own_points():
 
 def test_multi_line_earth_link_lands_on_the_protective_conductor():
     _check(_doc([{"kind": "earth", "from": "E", "to": "DB"}]), View(id="ml", kind="multi-line"))
+
+
+def test_stacked_stub_leads_are_attached_to_their_device():
+    """Several earth links leaving one earth bar as interrupted lines: the stubs below its body start on a riser from
+    the stub above (with a junction dot), not in empty space."""
+    def board(i):
+        return {"type": "board", "id": f"DB{i}", "children": [{"type": "switch_disconnector", "in_A": 40, "children": [
+            {"type": "busbar", "children": [{"type": "breaker", "in_A": 16, "children": [
+                {"type": "motor", "id": f"M{i}_{k}", "p_kW": 1}]} for k in range(14)]}]}]}
+    doc = {"installation": {"earthing": "TT", "system": "3P+N", "un_V": 400},
+           "sources": [{"type": "grid", "children": [board(1), board(2)]}],
+           "devices": [{"type": "earth_bar", "id": "PEB"}],
+           "links": [{"kind": "earth", "from": "PEB", "to": "M1_0"},
+                     *({"kind": "earth", "from": "PEB", "to": f"M2_{k}"} for k in range(4))]}
+    stubs = 0
+    for page in render_views(uniwire.load(doc)):
+        sym = next((g for g in _walk(page.root) if g.id == "PEB" and "sym" in (g.cls or "")), None)
+        if sym is None:
+            continue
+        pts = [p for s in _segments(sym) for p in s]
+        box = (min(p[0] for p in pts) - 1.3, min(p[1] for p in pts) - 1.3, max(p[0] for p in pts) + 1.3,
+               max(p[1] for p in pts) + 1.3)
+        links = [g for g in _walk(page.root) if g.attrs.get("data-uw-from") == "PEB"]
+        risers = [s for g in links for it in g.items if isinstance(it, Line) for s in _segments(it)]
+        for g in links:
+            if not any("uw-ref" in (c.cls or "") for c in g.items if isinstance(c, Group)):
+                continue
+            for it in g.items:
+                if isinstance(it, Polyline) and not it.closed and len(it.points) == 2:
+                    p, stubs = it.points[0], stubs + 1
+                    assert box[0] <= p[0] <= box[2] and box[1] <= p[1] <= box[3] or any(
+                        _dist(p, s) < 0.01 for s in risers), p
+    assert stubs >= 3
