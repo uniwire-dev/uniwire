@@ -3354,6 +3354,26 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         obs.add_vline(e.x, min(e.y, tip[1]), max(e.y, tip[1]))
     else:
         obs.add_hline(pts[1][1], pts[0][0], pts[1][0])
+    port = link.from_port if link.from_ == here else link.to_port if link.to == here else None
+    if port and not obs.min_lane:  # single-line: the channel or terminal it leaves by, as on a link drawn whole, on
+        # its stub by its start where that place is free, else in front of its label (never on a symbol or a line)
+        ptxt, pw = str(port), text_width(str(port), PORT_SIZE)
+        sx, sy = pts[0]
+        if e.side in ("left", "right"):
+            x, anchor = (sx - 0.6, "end") if e.side == "left" else (sx + 0.6, "start")
+            spots = [(x, sy - 0.6, anchor), (x, sy + PORT_SIZE + 0.3, anchor)]
+        else:
+            y = sy + 0.6 + 0.8 * PORT_SIZE if e.side == "down" else sy - 0.6
+            spots = [(sx + 0.6, y, "start"), (sx - 0.6, y, "end")]
+        spot = next((p for p in spots if obs.box_free(text_box(p[0], p[1], pw, PORT_SIZE, p[2]), 0.1, wire_pad=0.0)),
+                    None) or place_label(obs, [pts[0], tip], pw, PORT_SIZE, from_end=False, record=False, optional=True)
+        if spot is not None:
+            obs.add_box(text_box(spot[0], spot[1], pw, PORT_SIZE, spot[2]))
+            g.add(Text((spot[0], spot[1]), ptxt, PORT_SIZE, spot[2], color=PORT_COLOR))
+        elif link.label:
+            txts[0] = f"{ptxt} {txts[0]}"
+        else:
+            txts.insert(0, ptxt)
     written: dict[int, list[Text]] = {}
     for k, txt in reversed(list(enumerate(txts))):  # the sheet reference first: it must be written, at the best place
         w = text_width(txt, 1.6)
@@ -3392,21 +3412,6 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
     rg.add(*(t for k in sorted(written) for t in written[k]))  # the sheet reference last: render.number_sheets
     # prints it
     g.add(rg)
-    port = link.from_port if link.from_ == here else link.to_port if link.to == here else None
-    if port and not obs.min_lane:  # single-line: the channel or terminal it leaves by, as on a link drawn whole, on
-        # its stub, by its start (the links routed later pass beyond the start); the multi-line view keeps its room
-        txt, w = str(port), text_width(str(port), PORT_SIZE)
-        sx, sy = pts[0]
-        if e.side in ("left", "right"):
-            x, anchor = (sx - 0.6, "end") if e.side == "left" else (sx + 0.6, "start")
-            spots = [(x, sy - 0.6, anchor), (x, sy + PORT_SIZE + 0.3, anchor)]
-        else:
-            y = sy + 0.6 + 0.8 * PORT_SIZE if e.side == "down" else sy - 0.6
-            spots = [(sx + 0.6, y, "start"), (sx - 0.6, y, "end")]
-        at = next((s for s in spots if obs.box_free(text_box(s[0], s[1], w, PORT_SIZE, s[2]), 0.1, wire_pad=0.0)),
-                  None) or place_label(obs, [pts[0], tip], w, PORT_SIZE, from_end=False, record=False)
-        obs.add_box(text_box(at[0], at[1], w, PORT_SIZE, at[2]))
-        g.add(Text((at[0], at[1]), txt, PORT_SIZE, at[2], color=PORT_COLOR))
 
 
 # ----------------------------------------------------------------- table
