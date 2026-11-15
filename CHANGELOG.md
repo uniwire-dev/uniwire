@@ -19,6 +19,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   reaches without crossing anything (it ran across the whole board to a terminal on the far side), and the other
   earth links of the board end on it when their route there is short and crosses nothing, its off-sheet stubs
   included.
+* Drawings: off-sheet stubs stacked on the side of a device beyond its body (many links from one earth bar, a
+  controller or a drive to other sheets) start on a riser from the stub above, with a junction dot where they
+  branch off; their leads ended in empty space, attached to nothing.
 
 * PDF: an arrow the font has no glyph for ("⇄", "⇒") is written in ASCII ("<->", "=>") instead of being left out
   of the text; without a Unicode font, where a box was drawn, too.

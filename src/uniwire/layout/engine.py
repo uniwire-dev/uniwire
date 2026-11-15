@@ -3396,6 +3396,10 @@ def _draw_link_device(link: Any, dev: NodeBase, pts: list[tuple[float, float]], 
         g.add(Text((x, y + (i + 0.8) * line), t, size, bold=(i == 0 and bool(dev.ref))))
 
 
+STUB_KINDS = ("earth", "control", "interlock", "trip", "measure", "data", "key")  # stubs that may share a riser
+# (thin links: a riser from a device to the stubs past its body, whatever their kinds; never a power link)
+
+
 def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[NodeBase], obs: Obstacles, g: Group,
                        lang: str, node_folio: Callable[[str], Optional[int]] | None,
                        taken: Optional[dict[str, float]] = None, at: Optional[End] = None,
@@ -3420,9 +3424,29 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
                 and obs.box_free((r.x, r.y - 2.0, r.x + need, r.y + 2.0), 0.3):
             e, key = r, key + ">"
     if taken is not None and at is None:  # its labels on both sides of a horizontal stub, beside a vertical one
-        d = taken.get(key, 0.0)
-        taken[key] = d + (max(text_width(t, 1.6) for t in txts) + 1.5 if e.side == "down" else 5.0)
-        e = End(e.x + d, e.y, e.side) if e.side == "down" else End(e.x, e.y + d, e.side)
+        d, prev, kind = taken.get(key, 0.0), taken.get(key + "<", 0.0), taken.get(key + "#")
+        taken[key], taken[key + "<"] = d + (max(text_width(t, 1.6) for t in txts) + 1.5 if e.side == "down" else 5.0), d
+        taken[key + "#"] = 1.0 if link.kind in STUB_KINDS else -1.0
+        down = e.side == "down"
+        p0 = (e.x + prev, e.y) if down else (e.x, e.y + prev)
+        e = End(e.x + d, e.y, e.side) if down else End(e.x, e.y + d, e.side)
+        if d > 0 and kind == taken[key + "#"] == 1.0 and (
+                e.x > n.x + n.sym.right if down else e.y > n.y + max(n.sym.height, 1.0) - 0.4):
+            # beyond the side of its device: on a riser from the stub above (beside it), a junction dot there; never
+            # from or for a power link (the riser would read as a conductor)
+            style = _link_style(link.kind, link.normally_open)
+            g.add(Line(p0, (e.x, e.y), style), Circle(p0, 0.45, Style(width=THIN, color=style.color, fill=style.color)))
+            if down:
+                obs.add_hline(e.y, p0[0], e.x)
+            else:
+                obs.add_vline(e.x, p0[1], e.y)
+        # the way of the riser to the next stub kept free of this stub's texts
+        if link.kind not in STUB_KINDS:
+            pass
+        elif down:
+            obs.add_hline(e.y, e.x, e.x + taken[key] - d)
+        else:
+            obs.add_vline(e.x, e.y, e.y + taken[key] - d)
     def geometry(n: float) -> tuple[list[tuple[float, float]], tuple[float, float], list[tuple[float, float]]]:
         """Stub of length ``n`` to the base of its arrow: its line, the arrow's tip and head."""
         dx, dy = {"down": (0, 1), "up": (0, -1), "right": (1, 0)}.get(e.side, (-1, 0))
