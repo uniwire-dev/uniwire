@@ -14,6 +14,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   of the devices and texts, its off-sheet stub included. To a busbar drawn alone it ends on an earth terminal beside
   the busbar's end; to a device whose left side carries conductors (an inverter/charger with its DC side and its
   feeds there) on the top of its body, beside its conductor, instead of on its DC terminal.
+* Single-line drawings: an earth bar, main earthing terminal or electrode drawn inside a board's frame is that board's
+  earth point. The earth link between them is a short straight lead from it to the nearest side of the frame it
+  reaches without crossing anything (it ran across the whole board to a terminal on the far side), and the other
+  earth links of the board end on it when their route there is short and crosses nothing, its off-sheet stubs
+  included.
 
 * PDF: an arrow the font has no glyph for ("⇄", "⇒") is written in ASCII ("<->", "=>") instead of being left out
   of the text; without a Unicode font, where a box was drawn, too.

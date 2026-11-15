@@ -12,7 +12,7 @@ SWITCHING = {"breaker", "rcd", "switch_disconnector", "fuse", "contactor"}
 POWER_LINKS = {"transfer", "tie", "bypass", "parallel", "infeed"}
 
 
-def _doc(links, devices=()):
+def _doc(links, devices=(), electrode=True):
     return {"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230},
             "sources": [{"type": "grid", "children": [
                 {"type": "board", "id": "DB", "ref": "DB1", "children": [
@@ -26,7 +26,7 @@ def _doc(links, devices=()):
                                     {"type": "inverter", "id": "INV", "p_kVA": 3}]}]},
                             {"type": "breaker", "id": "F4", "in_A": 20, "children": [
                                 {"type": "motor", "id": "M1", "p_kW": 1.5}]}]}]}]}]}],
-            "devices": [{"type": "earth", "id": "E", "label": "Earth electrode"}, *devices],
+            "devices": [*([{"type": "earth", "id": "E", "label": "Earth electrode"}] if electrode else []), *devices],
             "links": links}
 
 
@@ -102,14 +102,29 @@ def _check(doc, view=None):
     return earth
 
 
-def test_earth_link_to_a_board_lands_on_its_frame():
-    earth = _check(_doc([{"kind": "earth", "from": "E", "to": "DB", "label": "PE 16 mm2"}]))
-    page = uniwire.render_pages(uniwire.load(_doc([{"kind": "earth", "from": "E", "to": "DB"}])))[0]
-    frame = next(i for g in [page.root] for i in _walk(g) if getattr(i, "cls", None) and "board" in i.cls)
-    rect = frame.items[0]
-    ends = [p for g in earth for p in _ends(g)]
-    # on a side of it (or just inside when the other end is inside the frame too)
-    assert any(-0.01 < p[0] - rect.x < 5.0 or -0.01 < rect.x + rect.w - p[0] < 5.0 for p in ends)
+def _frame(doc):
+    page = uniwire.render_pages(uniwire.load(doc))[0]
+    return next(i for i in _walk(page.root) if i.cls and "board" in i.cls).items[0]
+
+
+def test_earth_link_to_a_board_lands_on_an_earth_terminal_of_its_frame():
+    doc = _doc([{"kind": "earth", "from": "M1", "to": "DB", "label": "PE 16 mm2"}], electrode=False)
+    rect, ends = _frame(doc), [p for g in _check(doc) for p in _ends(g)]
+    assert any(abs(p[0] - rect.x) < 0.01 or abs(rect.x + rect.w - p[0]) < 0.01 for p in ends)  # on a side of it
+
+
+def test_earth_device_inside_a_board_is_its_earth_point():
+    """An earth electrode drawn inside the board's frame: the link between them is a short straight lead from it to
+    the frame."""
+    doc = _doc([{"kind": "earth", "from": "E", "to": "DB"}])
+    rect, earth = _frame(doc), _check(doc)
+    (line,) = [it for g in earth for it in g.items if isinstance(it, Polyline) and not it.closed]
+    assert len(line.points) == 2
+    (ax, ay), (bx, by) = line.points
+    assert ax == bx or ay == by
+    on_frame = [abs(x - rect.x) < 0.01 or abs(x - rect.x - rect.w) < 0.01 or abs(y - rect.y) < 0.01
+                or abs(y - rect.y - rect.h) < 0.01 for x, y in line.points]
+    assert on_frame.count(True) == 1
 
 
 def _walk(g):
