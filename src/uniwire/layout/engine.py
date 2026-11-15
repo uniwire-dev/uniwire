@@ -588,6 +588,8 @@ def _shift(ln: LNode, dy: float) -> None:
             n.bus_y += dy
 
 
+LABEL_GAP = 0.4  # the least room between a device label and the symbol of a device beside it
+
 # equipment that is not a way of the board feeding it when a cable joins them: drawn below the board frame
 REMOTE_EQUIPMENT = {"inverter", "transformer", "ups", "transfer_switch", "busbar"}
 # beside a board's incoming chain, with nothing below them, they do not make it a branch: accessories,
@@ -898,6 +900,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
     xs = sorted({round(n.x - n.sym.left, 3) for r in main for n in r.walk()})
     for r in main:
         nxt = {id(a): b for n in r.walk() for a, b in zip(n.children, n.children[1:])}
+        limits: dict[int, tuple[Optional[float], Optional[float]]] = {}
         for n in r.walk():  # a label stops before the next symbol, as wide as it is (a converter)
             b = nxt.get(id(n))
             # the last device of a row with nothing drawn to its right (a controller at the end of a feeder):
@@ -905,9 +908,25 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
             right = next((x for x in xs if x > n.x + n.sym.right + 1.0), None)
             room = None if b is not None or n.children else \
                 min(OPEN_ROOM, (right - 1.0 if right is not None else 1e9) - (n.x + n.sym.right + 1.0))
-            _annotate(n, view, lang, right_limit=b.x - b.sym.left - 1.0 if b is not None else None, room=room)
+            limits[id(n)] = (b.x - b.sym.left - 1.0 if b is not None else None, room)
+            _annotate(n, view, lang, right_limit=limits[id(n)][0], room=room)
         _place_y(r, 0.0)
         _separate_boards(r)
+        # a label running into the symbol of a device beside it, in the next column (a UPS, its abbreviation on
+        # its left): it stops before that symbol too, and the tree is placed again
+        again = False
+        for n in r.walk():
+            ab = n.ann_box()
+            stops = [left - LABEL_GAP for m in r.walk() if m.sym.height > 0 and m.x > n.x
+                     for left in [m.x - m.sym.left] if ab and ab[0] < left - LABEL_GAP < ab[2]
+                     and m.y < ab[3] and ab[1] < m.y + m.sym.height]
+            if stops:
+                lim, room = limits[id(n)]
+                _annotate(n, view, lang, right_limit=min(stops + ([lim] if lim is not None else [])), room=room)
+                again = True
+        if again:
+            _place_y(r, 0.0)
+            _separate_boards(r)
 
     # ties (bus couplers): align the connected busbars
     for link in doc.links:

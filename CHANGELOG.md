@@ -8,6 +8,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line drawings: the label of a device keeps at least 0.4 mm from the symbol of a device beside it in the
+  next column, on more lines when needed (it ran up to the abbreviation written left of a UPS, or to the box of a
+  converter).
 * Single-line drawings: of two boards as wide that could go to a sheet of their own, the one later in the
   document goes, so the sheets keep the order of the document (two identical boards could swap sheets on a small
   change of their widths).
