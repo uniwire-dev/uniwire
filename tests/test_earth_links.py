@@ -7,7 +7,7 @@ import pytest
 import uniwire
 from uniwire.model import View
 from uniwire.render import render_views
-from uniwire.render.scene import Group, Line, Polyline, Text, text_width
+from uniwire.render.scene import Circle, Group, Line, Polyline, Text, text_width
 
 SWITCHING = {"breaker", "rcd", "switch_disconnector", "fuse", "contactor"}
 POWER_LINKS = {"transfer", "tie", "bypass", "parallel", "infeed"}
@@ -194,3 +194,30 @@ def test_stacked_stub_leads_are_attached_to_their_device():
                     assert box[0] <= p[0] <= box[2] and box[1] <= p[1] <= box[3] or any(
                         _dist(p, s) < 0.01 for s in risers), p
     assert stubs >= 3
+
+
+def test_stubs_of_other_kinds_keep_a_lead_each():
+    """Control links from one device to other sheets: past its body each stub has its own lead from the device, never
+    a junction dot joining two links (that would tie different signals together)."""
+    def board(i):
+        return {"type": "board", "id": f"DB{i}", "children": [{"type": "switch_disconnector", "in_A": 40, "children": [
+            {"type": "busbar", "children": [{"type": "breaker", "in_A": 16, "children": [
+                {"type": "contactor", "id": f"K{i}_{k}", "children": [{"type": "motor", "p_kW": 1}]}]}
+                for k in range(14)]}]}]}
+    doc = {"installation": {"earthing": "TT", "system": "3P+N", "un_V": 400},
+           "sources": [{"type": "grid", "children": [board(1), board(2)]}],
+           "devices": [{"type": "meter", "id": "CTL"}],
+           "links": [{"kind": "control", "from": "CTL", "to": "K1_0"},
+                     *({"kind": "control", "from": "CTL", "to": f"K2_{k}"} for k in range(5))]}
+    leads = 0
+    for page in render_views(uniwire.load(doc)):
+        groups = [g for g in _walk(page.root) if g.attrs.get("data-uw-from") == "CTL"]
+        for g in groups:
+            assert not any(isinstance(i, Circle) for i in g.items), "a junction dot on a control link"
+            mine = [s for i in g.items if isinstance(i, Polyline) and not i.closed for s in _segments(i)]
+            others = [s for o in groups if o is not g for i in o.items if isinstance(i, Polyline) and not i.closed
+                      for s in _segments(i)]
+            for a, b in mine:  # never touching another link's lead
+                assert all(_dist(a, s) > 0.3 and _dist(b, s) > 0.3 for s in others)
+            leads += sum(1 for i in g.items if isinstance(i, Polyline) and len(i.points) == 3)
+    assert leads >= 3  # stubs past the body, each on its own lead
