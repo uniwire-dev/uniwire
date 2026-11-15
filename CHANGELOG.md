@@ -12,6 +12,25 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
   out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a
   label with a word containing a C, a "C2" rating beside contacts named "C1-C2".
+* Single-line drawings: an earth link never ends on the power path. To a board it ended on the busbar end or on
+  the incoming conductor above the isolator (it read as a protective conductor tied to a phase, its label often on
+  the busbar); it now ends on an earth terminal drawn inside the board's frame, low on its side, one per link, clear
+  of the devices and texts, its off-sheet stub included. To a busbar drawn alone it ends on an earth terminal beside
+  the busbar's end; to a device whose left side carries conductors (an inverter/charger with its DC side and its
+  feeds there) on the top of its body, beside its conductor, instead of on its DC terminal.
+* Single-line drawings: an earth bar, main earthing terminal or electrode drawn inside a board's frame is that board's
+  earth point. The earth link between them is a short straight lead from it to the nearest side of the frame it
+  reaches without crossing anything (it ran across the whole board to a terminal on the far side), and the other
+  earth links of the board end on it when their route there is short and crosses nothing, its off-sheet stubs
+  included.
+* Drawings: off-sheet stubs stacked on the side of a device past its body (many links from one earth bar, a
+  controller or a drive to other sheets) are attached to it; their leads ended in empty space. Earth stubs (one
+  potential) start on a riser from the earth stub above, with a junction dot where they branch off; the stubs of
+  other thin links (control, data, trip...) each keep a lead of their own from the device, out of a point of its
+  side or of its bottom (clear of its conductor and of its PLC channel wires), never joined to another nor crossing
+  one, their arrows in one column. The two texts of a stub stay together on one side of its arrow, the sheet
+  reference on top.
+
 * PDF: an arrow the font has no glyph for ("⇄", "⇒") is written in ASCII ("<->", "=>") instead of being left out
   of the text; without a Unicode font, where a box was drawn, too.
 * Single-line symbols: a box widens for the text written in it. The coil of an impulse relay was 2.6 mm wide
