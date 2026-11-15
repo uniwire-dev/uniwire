@@ -2774,6 +2774,12 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 n = _find(roots, (doc.links[i].from_, doc.links[i].to)[k])
                 px, py = _port_point(n, slot, *lane_of.get(i, (0, 1)), obs)  # type: ignore[arg-type]
                 obs.add_vline(px, py, py + 3.0)
+    drops: dict[str, list[float]] = {}  # the x of the PLC channel wires leaving each device from below
+    for i, (k, slot) in channel.items():
+        nid = (doc.links[i].from_, doc.links[i].to)[k]
+        pn = _find(roots, nid)
+        if pn is not None:
+            drops.setdefault(nid, []).append(_port_point(pn, slot, *lane_of.get(i, (0, 1)), obs)[0])
     nodes = {n.id: n for n, _, _ in iter_nodes(doc)}
     fed_ok = _fed_ok(roots)
     y_max = y_load - 1.5
@@ -2909,7 +2915,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                     elif a is not None and not a.children:  # (below a device feeding on: its side)
                         at = End(a.x, a.out_y if a.sym.has_output else a.y + a.sym.height, "down")
                 _draw_offpage_link(link, n, other, nodes.get(other), obs, lg, lang, node_folio, offpage, at,
-                                   stubs=stub_count.get(n.id, 0))
+                                   stubs=stub_count.get(n.id, 0), drops=tuple(drops.get(n.id, ())))
             continue
         if far and i in far:
             at = bus_land.get(i) or (landing(i, b, _end(b, link.kind, fed=True))
@@ -2919,9 +2925,9 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 a, b = earth_point.get(a.id, a), earth_point.get(b.id, b)
                 at_a, at = earth_stub(a, lg), earth_stub(b, lg)
             _draw_offpage_link(link, a, link.to, nodes.get(link.to), obs, lg, lang, None, offpage, at_a,
-                               same_sheet=True, stubs=stub_count.get(a.id, 0))
+                               same_sheet=True, stubs=stub_count.get(a.id, 0), drops=tuple(drops.get(a.id, ())))
             _draw_offpage_link(link, b, link.from_, nodes.get(link.from_), obs, lg, lang, None, offpage, at,
-                               same_sheet=True, stubs=stub_count.get(b.id, 0))
+                               same_sheet=True, stubs=stub_count.get(b.id, 0), drops=tuple(drops.get(b.id, ())))
             continue
         style = _link_style(link.kind, link.normally_open)
         if link.kind == "transfer" and b.sym.side_input is not None:
@@ -3407,13 +3413,14 @@ STUB_LEAD = 1.5  # spacing of the leads from a device to its stubs past its side
 def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[NodeBase], obs: Obstacles, g: Group,
                        lang: str, node_folio: Callable[[str], Optional[int]] | None,
                        taken: Optional[dict[str, float]] = None, at: Optional[End] = None,
-                       same_sheet: bool = False, stubs: int = 0) -> None:
+                       same_sheet: bool = False, stubs: int = 0, drops: tuple[float, ...] = ()) -> None:
     """Link whose other end is drawn on another sheet: short stub ending on an off-page arrow + sheet reference.
     ``taken``: offset already used by the stubs drawn on each node; the next one is drawn beside them.
     ``at``: where the stub starts when the caller has chosen it (a feed landing on an input conductor).
     ``same_sheet``: interrupted line on this sheet, the stub names the other end only (and stays in ``g``, the
     group of the link, so that both ends are one link for the editor). ``stubs``: how many thin links (not power)
-    leave ``n`` as stubs, which sizes the lanes of the leads to the stubs past its side."""
+    leave ``n`` as stubs, which sizes the lanes of the leads to the stubs past its side; ``drops``: the x of the PLC
+    channel wires leaving its bottom, which those leads keep clear of."""
     f = node_folio(other) if node_folio is not None and not same_sheet else None
     if f is None and not same_sheet:
         return
@@ -3428,6 +3435,7 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         if r is not None and not obs.box_free((e.x - need, e.y + d - 2.0, e.x, e.y + d + 2.0), 0.3) \
                 and obs.box_free((r.x, r.y - 2.0, r.x + need, r.y + 2.0), 0.3):
             e, key = r, key + ">"
+    start = e.x  # where its arrow is measured from (a stub out of a lane: the side of its device, as the others)
     if taken is not None and at is None:  # its labels on both sides of a horizontal stub, beside a vertical one
         d, prev, before = taken.get(key, 0.0), taken.get(key + "<", 0.0), taken.get(key + "#")
         taken[key], taken[key + "<"] = d + (max(text_width(t, 1.6) for t in txts) + 1.5 if e.side == "down" else 5.0), d
@@ -3435,6 +3443,7 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         down = e.side == "down"
         p0 = (e.x + prev, e.y) if down else (e.x, e.y + prev)
         e = End(e.x + d, e.y, e.side) if down else End(e.x, e.y + d, e.side)
+        start = e.x
         # (the body: its box when the symbol has one, not the leads above and below it)
         bottom = n.y + max((r.y + r.h for r in n.sym.items if isinstance(r, Rect)), default=max(n.sym.height, 1.0))
         beyond = d > 0 and (e.x > n.x + n.sym.right if down else e.y > bottom - 0.4)
@@ -3459,17 +3468,17 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
             count, top = max(stubs - rows, 0), y0 + 5.0 * (rows - 1) + 1.0
             if key + "|on" not in taken:  # the points of the bottom between the side and the first wire leaving
                 lo, hi = n.x - n.sym.left, n.x + n.sym.right  # it (its conductor, a PLC channel)
-                busy = [x for x, v0, _ in obs.vwires if lo < x < hi and abs(v0 - bottom) < 1.5] + [
-                    n.x + px for px in n.sym.extra.get("ports", {}).values()] + [n.x]
+                busy = [x for x, v0, _ in obs.vwires if lo < x < hi and abs(v0 - bottom) < 1.5] + list(drops) + (
+                    [n.x] if n.children else [])
                 xs = []
                 xb = (lo if sgn > 0 else hi) + sgn * 0.8
                 while len(xs) < count and not any(abs(xb - x) < 1.0 or (x - xb) * sgn < 0 for x in busy):
                     xs.append(xb)
                     xb += sgn * STUB_LEAD
-                room = max(side_bottom - top, 0.0)
-                on_side = max(count - len(xs), min(count, int(room / STUB_LEAD) + 1))
+                room = max(side_bottom - top, 0.0)  # (the side takes what the bottom cannot, 1 mm apart at least)
+                on_side = min(max(count - len(xs), min(count, int(room / STUB_LEAD) + 1)), int(room / 1.0) + 1)
                 taken[key + "|on"] = float(on_side)
-                taken[key + "|st"] = max(min(STUB_LEAD, room / max(on_side - 1, 1)), 0.6)
+                taken[key + "|st"] = min(STUB_LEAD, room / max(on_side - 1, 1))
                 for k, x in enumerate(xs[:count - on_side]):
                     taken[f"{key}|b{k}"] = x
             on_side, step = int(taken[key + "|on"]), taken[key + "|st"]
@@ -3482,7 +3491,8 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
                 xb = taken[f"{key}|b{k - on_side}"]
                 return [(xb, bottom), (xb, row), (e.x, row)]
             m = round(d / 5.0) - rows
-            if beyond and 0 <= m < count:
+            count = min(count, on_side + sum(1 for k in range(count) if f"{key}|b{k}" in taken))  # (no room left:
+            if beyond and 0 <= m < count:  # the further stubs as before)
                 pts_ = lead(m)
                 g.add(Polyline(pts_, style))
                 for a_, b_ in zip(pts_, pts_[1:]):
@@ -3490,8 +3500,8 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
                         obs.add_vline(a_[0], a_[1], b_[1])
                     else:
                         obs.add_hline(a_[1], a_[0], b_[0])
-                if m < on_side:
-                    e = End(pts_[-1][0], e.y, e.side)
+                if m < on_side:  # the stub from its lane, its arrow where the others are
+                    e, start = End(pts_[-1][0], e.y, e.side), e.x
             for k in range(max(m + 1, 0), count):  # the leads still to come kept free of this stub's texts
                 for (xa, ya), (xc, yc) in zip(lead(k), lead(k)[1:]):
                     if xa == xc:
@@ -3505,8 +3515,8 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
     def geometry(n: float) -> tuple[list[tuple[float, float]], tuple[float, float], list[tuple[float, float]]]:
         """Stub of length ``n`` to the base of its arrow: its line, the arrow's tip and head."""
         dx, dy = {"down": (0, 1), "up": (0, -1), "right": (1, 0)}.get(e.side, (-1, 0))
-        base = (e.x + dx * n, e.y + dy * n)
-        tip = (e.x + dx * (n + 1.5), e.y + dy * (n + 1.5))
+        base = (start + dx * n, e.y + dy * n)
+        tip = (start + dx * (n + 1.5), e.y + dy * (n + 1.5))
         return [(e.x, e.y), base], tip, [(base[0] - 0.8 * abs(dy), base[1] - 0.8 * abs(dx)), tip,
                                          (base[0] + 0.8 * abs(dy), base[1] + 0.8 * abs(dx))]
 
@@ -3554,11 +3564,19 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         w = text_width(txt, 1.6)
         spot = None
         if k < len(txts) - 1 and len(txts) - 1 in written and e.side in ("left", "right"):
-            # the link's label with its sheet reference, on the same side of the arrow, one line further out
+            # the link's label with its sheet reference, on the same side of the arrow, the reference on top: below
+            # it, or in its place with the reference one line up when it is above the arrow
             (rt,) = written[len(txts) - 1]
-            ty = rt.p[1] - 1.92 if rt.p[1] < e.y else rt.p[1] + 1.92
-            if obs.box_free(text_box(rt.p[0], ty, w, 1.6, rt.anchor), 0.1):
-                spot = (rt.p[0], ty, rt.anchor)
+            rb = text_box(rt.p[0], rt.p[1], text_width(rt.text, 1.6), 1.6, rt.anchor)
+            if rt.p[1] > e.y:
+                if obs.box_free(text_box(rt.p[0], rt.p[1] + 1.92, w, 1.6, rt.anchor), 0.1):
+                    spot = (rt.p[0], rt.p[1] + 1.92, rt.anchor)
+            elif rb in obs.boxes:
+                obs.boxes.remove(rb)
+                up = text_box(rt.p[0], rt.p[1] - 1.92, text_width(rt.text, 1.6), 1.6, rt.anchor)
+                if obs.box_free(up, 0.1) and obs.box_free(text_box(rt.p[0], rt.p[1], w, 1.6, rt.anchor), 0.1):
+                    spot, rt.p, rb = (rt.p[0], rt.p[1], rt.anchor), (rt.p[0], rt.p[1] - 1.92), up
+                obs.add_box(rb)
         if spot is None:
             spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False, optional=True)
         if spot is None:  # no free place beside it: on its arrow rather than on a conductor or a symbol
