@@ -8,6 +8,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line drawings: an earth link never ends on the power path. To a board it ended on the busbar end or on
+  the incoming conductor above the isolator (it read as a protective conductor tied to a phase, its label often on
+  the busbar); it now ends on an earth terminal drawn inside the board's frame, low on its side, one per link, clear
+  of the devices and texts, its off-sheet stub included. To a busbar drawn alone it ends on an earth terminal beside
+  the busbar's end; to a device whose left side carries conductors (an inverter/charger with its DC side and its
+  feeds there) on the top of its body, beside its conductor, instead of on its DC terminal.
+
 * PDF: an arrow the font has no glyph for ("⇄", "⇒") is written in ASCII ("<->", "=>") instead of being left out
   of the text; without a Unicode font, where a box was drawn, too.
 * Single-line symbols: a box widens for the text written in it. The coil of an impulse relay was 2.6 mm wide
