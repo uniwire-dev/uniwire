@@ -8,6 +8,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line drawings: a characteristic of a device (a rating, a curve, a type of meter) is left out beside its
+  label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
+  out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a
+  label with a word containing a C, a "C2" rating beside contacts named "C1-C2".
 * PDF: an arrow the font has no glyph for ("⇄", "⇒") is written in ASCII ("<->", "=>") instead of being left out
   of the text; without a Unicode font, where a box was drawn, too.
 * Single-line symbols: a box widens for the text written in it. The coil of an impulse relay was 2.6 mm wide
