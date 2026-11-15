@@ -207,8 +207,6 @@ class SheetSpec:
     prev: Optional[SheetSpec] = field(default=None, repr=False)  # previous sheet of a continuation
     next: Optional[SheetSpec] = field(default=None, repr=False)  # next sheet of a continuation
     moved: set[str] = field(default_factory=set)  # roots drawn on the sheet of a detached board (standby sources)
-    stub_room: bool = True  # room left of the devices for the texts of their off-sheet stubs (see _stub_room), unless
-    # the sheet holds its devices only without it
 
 
 @dataclass
@@ -220,6 +218,7 @@ class SheetLayout:
     lnodes: list[LNode]
     columns: list[LNode]
     annex: list[LNode] = field(default_factory=list)  # auxiliary devices drawn beside the tree
+    stub_room: bool = False  # columns moved right for the texts of off-sheet stubs (see _stub_room)
 
 
 # ------------------------------------------------------------- construction
@@ -812,7 +811,22 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                  incoming_ref: tuple[Optional[int], Optional[str]] = (None, None)) -> SheetLayout:
     """Lay out one sheet. ``node_folio`` (node id -> sheet number) lets links to nodes drawn on other
     sheets end on an off-page reference; ``incoming_ref`` (sheet, node id) is where the incoming feed
-    of a detached board comes from."""
+    of a detached board comes from. The room for the texts of the off-sheet stubs (see _stub_room) is taken only
+    where the sheet keeps its scale with it (and so its devices: never one more sheet)."""
+    args = (doc, view, spec, index, folio_of, continuation_folios, incoming, node_folio, incoming_ref)
+    lay = _layout_sheet(*args)
+    if lay.stub_room:
+        bare = _layout_sheet(*args, stub_room=False)
+        if round(fit_scale(lay, view), 2) < round(fit_scale(bare, view), 2):
+            return bare
+    return lay
+
+
+def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None,
+                  folio_of: Callable[[str], Optional[int]] | None,
+                  continuation_folios: tuple[Optional[int], Optional[int]], incoming: Optional[str],
+                  node_folio: Callable[[str], Optional[int]] | None,
+                  incoming_ref: tuple[Optional[int], Optional[str]], stub_room: bool = True) -> SheetLayout:
     index = index or build_index(doc)
     lang = normalize_lang(doc.meta.lang)
     pitch = view.pitch_mm
@@ -892,6 +906,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                 p = sum(1 for l in doc.links if l.kind in POWER_LINKS and (l.from_ in own or l.to in own))
                 b.pad_bottom = SIGNAL_LANE * min(k, 8) + LANE * 2 * min(p, 4) + 1.5 if k or p else 0.0
     stub_widths = _stub_widths(doc, [], lang, here)
+    moved = False
     for _ in range(2):  # once more when the texts of off-sheet stubs land on the text of the column on their left
         x = 0.0
         for i, r in enumerate(main):
@@ -912,9 +927,10 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                 _annotate(n, view, lang, right_limit=b.x - b.sym.left - 1.0 if b is not None else None, room=room)
             _place_y(r, 0.0)
             _separate_boards(r)
-        roomy = _stub_room(main, stub_widths) if spec.stub_room else []
+        roomy = _stub_room(main, stub_widths) if stub_room else []
         if not roomy:
             break
+        moved = True
         for n, room in roomy:
             n.left_room = room
 
@@ -1176,7 +1192,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         g = _mirror_up(g, b0[1] + b0[3])  # type: ignore[assignment]
     box = bbox(g) or (0, 0, 1, 1)
     g = transform(g, -box[0], -box[1])  # type: ignore[assignment]
-    return SheetLayout(spec, g, box[2] - box[0], box[3] - box[1], everything, columns, annex)
+    return SheetLayout(spec, g, box[2] - box[0], box[3] - box[1], everything, columns, annex, moved)
 
 
 # ------------------------------------------------- obstacles / auxiliary devices
@@ -3629,11 +3645,6 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
             lay = layout_sheet(doc, view, spec, index)
             if view.folio_split == "none" or fit_scale(lay, view) >= view.min_scale:
                 break
-            spec.stub_room = False  # the sheet without the room for the texts of the off-sheet stubs, rather than
-            # one more sheet
-            if fit_scale(layout_sheet(doc, view, spec, index), view) >= view.min_scale:
-                break
-            spec.stub_room = True
             if allow_bus_split and not groups and spec.continuation is None:
                 # several installations side by side: each whole on a sheet, before taking boards out of them
                 groups = _split_trees(doc, spec, lay, view, index)
