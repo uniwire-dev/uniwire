@@ -207,6 +207,8 @@ class SheetSpec:
     prev: Optional[SheetSpec] = field(default=None, repr=False)  # previous sheet of a continuation
     next: Optional[SheetSpec] = field(default=None, repr=False)  # next sheet of a continuation
     moved: set[str] = field(default_factory=set)  # roots drawn on the sheet of a detached board (standby sources)
+    stub_room: bool = True  # room left of the devices for the texts of their off-sheet stubs (see _stub_room), unless
+    # the sheet holds its devices only without it
 
 
 @dataclass
@@ -869,12 +871,6 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         if a is not None and b is not None:
             ia, ib = sorted((main.index(_root_of(main, a)), main.index(_root_of(main, b))))
             wide_gap |= set(range(ia, ib))
-    x = 0.0
-    for i, r in enumerate(main):
-        _needs(r, view, lang)
-        _measure(r, pitch)
-        _place_x(r, x, pitch)
-        x += r.width + pitch * (ROOT_GAP_COLS + (1.0 if i in wide_gap else 0.0))
     for r in roots:  # the feeders of a safety board are safety circuits by themselves: not marked one by one
         for b in r.walk():
             if b.is_board and b.node is not None and getattr(b.node, "priority", None) == "safety":
@@ -895,19 +891,32 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                 k = sum(1 for l in doc.links if l.kind not in SWITCHED_LINKS and (l.from_ in own or l.to in own))
                 p = sum(1 for l in doc.links if l.kind in POWER_LINKS and (l.from_ in own or l.to in own))
                 b.pad_bottom = SIGNAL_LANE * min(k, 8) + LANE * 2 * min(p, 4) + 1.5 if k or p else 0.0
-    xs = sorted({round(n.x - n.sym.left, 3) for r in main for n in r.walk()})
-    for r in main:
-        nxt = {id(a): b for n in r.walk() for a, b in zip(n.children, n.children[1:])}
-        for n in r.walk():  # a label stops before the next symbol, as wide as it is (a converter)
-            b = nxt.get(id(n))
-            # the last device of a row with nothing drawn to its right (a controller at the end of a feeder):
-            # its label runs on rather than shrinks, up to the next column of the sheet
-            right = next((x for x in xs if x > n.x + n.sym.right + 1.0), None)
-            room = None if b is not None or n.children else \
-                min(OPEN_ROOM, (right - 1.0 if right is not None else 1e9) - (n.x + n.sym.right + 1.0))
-            _annotate(n, view, lang, right_limit=b.x - b.sym.left - 1.0 if b is not None else None, room=room)
-        _place_y(r, 0.0)
-        _separate_boards(r)
+    stub_widths = _stub_widths(doc, [], lang, here)
+    for _ in range(2):  # once more when the texts of off-sheet stubs land on the text of the column on their left
+        x = 0.0
+        for i, r in enumerate(main):
+            _needs(r, view, lang)
+            _measure(r, pitch)
+            _place_x(r, x, pitch)
+            x += r.width + pitch * (ROOT_GAP_COLS + (1.0 if i in wide_gap else 0.0))
+        xs = sorted({round(n.x - n.sym.left, 3) for r in main for n in r.walk()})
+        for r in main:
+            nxt = {id(a): b for n in r.walk() for a, b in zip(n.children, n.children[1:])}
+            for n in r.walk():  # a label stops before the next symbol, as wide as it is (a converter)
+                b = nxt.get(id(n))
+                # the last device of a row with nothing drawn to its right (a controller at the end of a feeder):
+                # its label runs on rather than shrinks, up to the next column of the sheet
+                right = next((x for x in xs if x > n.x + n.sym.right + 1.0), None)
+                room = None if b is not None or n.children else \
+                    min(OPEN_ROOM, (right - 1.0 if right is not None else 1e9) - (n.x + n.sym.right + 1.0))
+                _annotate(n, view, lang, right_limit=b.x - b.sym.left - 1.0 if b is not None else None, room=room)
+            _place_y(r, 0.0)
+            _separate_boards(r)
+        roomy = _stub_room(main, stub_widths) if spec.stub_room else []
+        if not roomy:
+            break
+        for n, room in roomy:
+            n.left_room = room
 
     # ties (bus couplers): align the connected busbars
     for link in doc.links:
@@ -2249,11 +2258,33 @@ def _clear(obs: Obstacles, boxes: list[Box]) -> bool:
                                                                and r[3] <= f[3]) for f in obs.frames) for r in boxes)
 
 
-def _stub_widths(doc: Document, nodes: list[LNode], lang: str) -> dict[str, list[tuple[float, float]]]:
+def _stub_room(main: list[LNode], widths: dict[str, list[tuple[float, float]]]) -> list[tuple[LNode, float]]:
+    """The nodes whose off-sheet stubs (one under the other on their left, see ``_draw_offpage_link``) would be
+    written over the text of a device on their left, and the room on their left that keeps them clear of it
+    (see ``LNode.left_room``)."""
+    out: list[tuple[LNode, float]] = []
+    nodes = [n for r in main for n in r.walk()]
+    parent = {id(c): n for n in nodes for c in n.children}
+    for n in nodes:
+        if n.kind != "node" or n.node is None or n.node.id not in widths or n.sym.height <= 0:
+            continue
+        u = boxes_union([b for ways in _stub_rows(n, widths[n.node.id]) for b in ways[0]])
+        hit = [a for m in nodes if m.x < n.x - 1e-6 and (a := m.ann_box()) and u and _hit(u, a, 0.5)]
+        if u and hit:
+            head = n  # the room asked at the top of its column: the devices above it move with it (see _measure)
+            while (p := parent.get(id(head))) is not None and len(p.children) == 1 and not p.is_board:
+                head = p
+            out.append((head, n.x - head.x_left + max(a[2] for a in hit) + 1.5 - u[0]))
+    return out
+
+
+def _stub_widths(doc: Document, nodes: list[LNode], lang: str,
+                 here: Optional[set[str]] = None) -> dict[str, list[tuple[float, float]]]:
     """The width of the texts of each off-sheet stub (see _draw_offpage_link) of the nodes on the sheet and of the
-    auxiliary devices placed with them, by node id: its sheet reference, its label (0: none)."""
+    auxiliary devices placed with them, by node id: its sheet reference, its label (0: none). ``here``: the nodes
+    drawn on the sheet, when ``nodes`` are not all of them."""
     pos = {n.node.id for n in nodes if n.node is not None and n.node.id and n.kind == "node"}
-    here = pos | {d for d, h in _device_homes(doc).items() if h in pos}
+    here = (pos | {d for d, h in _device_homes(doc).items() if h in pos}) if here is None else here
     named = {n.id: n for n, _, _ in iter_nodes(doc) if n.id}
     stubs: dict[str, list[tuple[float, float]]] = {}
     for l in doc.links:
@@ -3598,6 +3629,11 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
             lay = layout_sheet(doc, view, spec, index)
             if view.folio_split == "none" or fit_scale(lay, view) >= view.min_scale:
                 break
+            spec.stub_room = False  # the sheet without the room for the texts of the off-sheet stubs, rather than
+            # one more sheet
+            if fit_scale(layout_sheet(doc, view, spec, index), view) >= view.min_scale:
+                break
+            spec.stub_room = True
             if allow_bus_split and not groups and spec.continuation is None:
                 # several installations side by side: each whole on a sheet, before taking boards out of them
                 groups = _split_trees(doc, spec, lay, view, index)

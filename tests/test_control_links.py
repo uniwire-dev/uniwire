@@ -480,3 +480,20 @@ def _groups(item):
         yield item
         for i in item.items:
             yield from _groups(i)
+
+
+def test_off_sheet_stubs_of_a_feeder_keep_off_the_text_of_the_feeder_before():
+    """Contactors with a long text, each stopped by a safety relay and driven by a PLC drawn on a sheet of its own:
+    the stubs of their links (one under the other on the left of each contactor, their sheet
+    reference and label beside the arrow) keep clear of the text of the contactor on their left (they were
+    written over it: the column kept no room for them)."""
+    d = panel(5, 0)
+    ways = d["sources"][0]["children"][0]["children"][0]["children"]
+    ways[0] = {"type": "board", "ref": "CP2", "own_sheet": True, "children": [ways[0]]}  # the PLC on its own sheet
+    for f in ways[1:]:
+        f["children"][0]["label"] = "Reversing starter, conveyor"
+    pages = render_views(load(d))
+    assert len(pages) >= 2
+    for page in pages:
+        bad = [f for f in audit(page.root) if f.kind in ("text_overlap", "text_crossed")]
+        assert bad == [], "\n".join(map(str, bad))
