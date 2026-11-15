@@ -8,6 +8,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line drawings: a characteristic of a device (a rating, a curve, a type of meter) is left out beside its
+  label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
+  out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a
+  label with a word containing a C, a "C2" rating beside contacts named "C1-C2".
 * Single-line drawings: an earth link never ends on the power path. To a board it ended on the busbar end or on
   the incoming conductor above the isolator (it read as a protective conductor tied to a phase, its label often on
   the busbar); it now ends on an earth terminal drawn inside the board's frame, low on its side, one per link, clear
