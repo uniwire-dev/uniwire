@@ -3,12 +3,12 @@ naming its terminals, drives on a fieldbus. Invented machine panels."""
 
 import pytest
 
-from tests.drawing_audit import _walk, audit
+from tests.drawing_audit import _crosses, _overlap, _segments, _symbol_boxes, _walk, audit, text_box
 from uniwire import load
 from uniwire.layout.engine import _leader_label
 from uniwire.layout.routing import Obstacles
 from uniwire.render import render_views
-from uniwire.render.scene import Group, Line, Rect, Text
+from uniwire.render.scene import Group, Line, Polyline, Rect, Text
 
 
 def panel(motors: int, drives: int, feedback: bool = True, out_slot: int = 2) -> dict:
@@ -497,3 +497,36 @@ def test_off_sheet_stubs_of_a_feeder_keep_off_the_text_of_the_feeder_before():
     for page in pages:
         bad = [f for f in audit(page.root) if f.kind in ("text_overlap", "text_crossed")]
         assert bad == [], "\n".join(map(str, bad))
+
+
+def test_the_terminal_of_an_off_sheet_stub_is_never_written_on_a_symbol_or_a_line():
+    """Contactors whose links to a PLC and a safety relay drawn on a sheet of their own name long terminals at the
+    contactor: the starts of their stubs are crowded (one stub under the other, beside the contactor). Each terminal
+    name is written by its stub where the place is free, else in front of the stub's label, never on a symbol or a
+    line, and none is left out."""
+    d = panel(5, 0)
+    ways = d["sources"][0]["children"][0]["children"][0]["children"]
+    ways[0] = {"type": "board", "ref": "CP2", "own_sheet": True, "children": [ways[0]]}  # the PLC on its own sheet
+    for link in d["links"]:
+        if link.get("from") == "SR":
+            link["to_port"] = "stop input A1 (pair)"
+        if link["kind"] == "measure":
+            link["from_port"] = "aux contact 13-14 (NO)"
+    named = 0
+    for page in render_views(load(d)):
+        bodies = [b for _n, boxes, _g in _symbol_boxes(page.root) for b in boxes]
+        links = [g for g in _groups(page.root) if g.cls and "uw-link" in g.cls.split()]
+        strokes = [s for g in links for i in g.items if isinstance(i, (Line, Polyline)) for s in _segments(i)]
+        for g in links:
+            refs = [i for i in g.items if isinstance(i, Group) and i.cls == "uw-ref"]
+            if not refs or refs[0].attrs["data-uw-target-id"] not in ("SR", "PLC") \
+                    or g.attrs["data-uw-kind"] not in ("measure", "trip"):
+                continue  # (the stubs beside the contactors naming a terminal there)
+            texts = [t for t, _l, _o in _walk(g) if isinstance(t, Text)]
+            assert any("stop input" in t.text or "aux contact" in t.text for t in texts), [t.text for t in texts]
+            named += 1
+            for t in texts:
+                if t.color != "#000000":  # the terminal written apart, in the colour of the channel numbers
+                    assert not any(_overlap(text_box(t), b) > 0 for b in bodies), t
+                    assert not any(_crosses(text_box(t), s) for s in strokes), t
+    assert named >= 8
