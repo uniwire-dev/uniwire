@@ -67,6 +67,7 @@ from ..symbols import kind as symbol_kind
 from ..units import fmt
 from .routing import (
     LANE,
+    WIRE_CROSS,
     Box,
     End,
     Obstacles,
@@ -2235,6 +2236,40 @@ def _earth_ends(n: LNode, other: Optional[LNode], obs: Obstacles, taken: dict[tu
     return out or [(End(x0, y1 - 2.5, "left"), 1.0)]
 
 
+def _point(t: End | Terminal) -> End:
+    return t if isinstance(t, End) else t[0]
+
+
+def _earth_point_ends(d: LNode) -> list[End]:
+    """The ends of an earth link on an earth device (an earth bar, an electrode): its terminal on top, its left side."""
+    return [End(d.x, d.y, "up"), _end(d, "earth")]
+
+
+def _own_point_lead(b: LNode, d: LNode, obs: Obstacles) -> Optional[tuple[End, End]]:
+    """The link between a board and its own earth point (``d``, inside its frame): a straight lead from the earth
+    point to the nearest side of the frame it reaches without crossing anything (ends on the earth point, on the
+    frame), None if there is none."""
+    x0, y0, x1, y1 = _frame_box(b)
+    left, h = _end(d, "earth"), max(d.sym.height, 1.0)
+    right = End(d.x + d.sym.right + 0.8, left.y, "right")
+    leads = [(End(d.x, d.y, "up"), End(d.x, y0, "down")), (left, End(x0, left.y, "right")),
+             (right, End(x1, right.y, "left")), (End(d.x, d.y + h, "down"), End(d.x, y1, "up"))]
+    for e, f in sorted(leads, key=lambda p: abs(p[0].x - p[1].x) + abs(p[0].y - p[1].y)):
+        lo, hi = sorted((e.x, f.x)) if e.y == f.y else sorted((e.y, f.y))
+        box = (lo + 0.6, e.y - 0.1, hi - 0.6, e.y + 0.1) if e.y == f.y else (e.x - 0.1, lo + 0.6, e.x + 0.1, hi - 0.6)
+        if box[0] < box[2] and box[1] < box[3] and obs.box_free(box, 0.3, wire_pad=0.3):
+            return e, f
+    return None
+
+
+def _frame_points(b: LNode, d: LNode) -> list[End]:
+    """Where the link between a board and its own earth point meets the frame when no straight lead is clear: on each
+    side, facing the earth point."""
+    x0, y0, x1, y1 = _frame_box(b)
+    ym = d.y + d.sym.height / 2
+    return [End(x0, ym, "right"), End(x1, ym, "left"), End(d.x, y0, "down"), End(d.x, y1, "up")]
+
+
 def _use_earth(n: LNode, t: End | Terminal, g: Group, obs: Obstacles, taken: dict[tuple[str, float], list[float]]
                ) -> End:
     """The chosen end of an earth link: its terminal drawn and recorded."""
@@ -2797,6 +2832,16 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         if not (l.kind == "infeed" and e == l.to and e in fed_ok)}  # (a feed landing on the input conductor)
     spread = {} if obs.min_lane > 0 else _spread_ends(doc, roots, order)
 
+    # an earth device (earth bar, main earthing terminal, electrode) drawn inside a board's frame: the board's earth
+    # point, where its earth links end
+    earth_point: dict[str, LNode] = {}
+    for bd in (n for r in roots for n in r.walk() if n.is_board and obs.min_lane == 0):
+        x0, y0, x1, y1 = _frame_box(bd)
+        pt = next((d for r in roots for d in r.walk() if symbol_kind(d.sym) in ("earth", "earth_bar")
+                   and getattr(d.node, "kind", None) != "neutral_bar" and x0 < d.x < x1 and y0 < d.y < y1), None)
+        if pt is not None:
+            earth_point[bd.id] = pt
+
     def earth_stub(n: LNode, g: Group) -> Optional[End]:
         """The start of the off-sheet stub of an earth link on ``n`` (None: as any link)."""
         ts = _earth_ends(n, None, obs, earth_taken, n.id in live_left, SPREAD_OFF)
@@ -2827,8 +2872,12 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
     # feeds tapping a busbar last, the outermost tap first: the inner ones then pass above it (no crossing)
     # standby sources reaching side inputs before the other links, the shortest span first: the longer ones
     # then pass round the shorter ones instead of across the side input they would block
+    # a board and its own earth point first: the straight lead between them before any route goes there
+    own = {i for i in order if doc.links[i].kind == "earth" and any(
+        (p := earth_point.get(x)) is not None and p.id == y for x, y in ((doc.links[i].from_, doc.links[i].to),
+                                                                         (doc.links[i].to, doc.links[i].from_)))}
     rest = sorted((i for i in order if i not in first), key=lambda i: (
-        i not in side_runs, side_runs[i][2] - side_runs[i][1] if i in side_runs else 0.0,
+        i not in own, i not in side_runs, side_runs[i][2] - side_runs[i][1] if i in side_runs else 0.0,
         i in bus_land, not (far and i in far), -abs(
         bus_land[i].x - (_find(roots, doc.links[i].to) or roots[0]).x) if i in bus_land else 0.0))
     for i in first + rest:
@@ -2847,6 +2896,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 other = link.to if b is None else link.from_
                 at = spread.get((i, 0 if b is None else 1))  # a controller many links reach: its own point
                 if link.kind == "earth":
+                    n = earth_point.get(n.id, n)
                     at = earth_stub(n, lg)
                 if b is not None and link.kind == "infeed" and link.to in fed_ok:  # on its input conductor
                     at = landing(i, b, _end(b, link.kind, fed=True))
@@ -2855,13 +2905,14 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                         at = End(b.x + b.sym.side_input[0], b.y + b.sym.side_input[1], "up")
                     elif a is not None and not a.children:  # (below a device feeding on: its side)
                         at = End(a.x, a.out_y if a.sym.has_output else a.y + a.sym.height, "down")
-                _draw_offpage_link(link, a or b, other, nodes.get(other), obs, lg, lang, node_folio, offpage, at)
+                _draw_offpage_link(link, n, other, nodes.get(other), obs, lg, lang, node_folio, offpage, at)
             continue
         if far and i in far:
             at = bus_land.get(i) or (landing(i, b, _end(b, link.kind, fed=True))
                                      if link.kind == "infeed" and link.to in fed_ok else None)
             at_a = None
             if link.kind == "earth":
+                a, b = earth_point.get(a.id, a), earth_point.get(b.id, b)
                 at_a, at = earth_stub(a, lg), earth_stub(b, lg)
             _draw_offpage_link(link, a, link.to, nodes.get(link.to), obs, lg, lang, None, offpage, at_a,
                                same_sheet=True)
@@ -2916,6 +2967,18 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         earth: Optional[list[list]] = None  # single-line: the ends an earth link may take on each node
         if link.kind == "earth" and not ml:
             earth = [_earth_ends(n, o, obs, earth_taken, n.id in live_left) for n, o in ((a, b), (b, a))]
+            for k, (n, o) in enumerate(((a, b), (b, a))):
+                pt = earth_point.get(n.id)
+                if pt is o:  # a board and its own earth point: a short lead from it to the frame
+                    lead = _own_point_lead(n, pt, obs)
+                    earth[k], earth[1 - k] = ([lead[1]], [lead[0]]) if lead else (_frame_points(n, pt),
+                                                                                  _earth_point_ends(pt))
+                elif pt is not None:  # on the board's earth point when that route is short and crosses nothing
+                    e = _earth_point_ends(pt)
+                    c: list[float] = []
+                    route(obs, _point(earth[1 - k][0]) if earth[1 - k] else ends[1 - k], e[0], record=False, cost_out=c)
+                    if c and c[0] < WIRE_CROSS:
+                        earth[k] = e
             if not any(earth):  # (none: as any link, the left side of each)
                 earth = None
         if (link.kind == "measure" and obs.min_lane == 0 and b.sym.height == 0 and b.bus_y is not None
@@ -2969,8 +3032,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         if link.kind not in SWITCHED_LINKS and i not in tap_end and (
                 ml or earth or (link.kind != "earth" and port_label is None)):
             # a control, data or measure link leaves each device by the side that gives the clearest route
-            alts = [[t if isinstance(t, End) else t[0] for t in ts] or [e] for ts, e in zip(earth, ends)] \
-                if earth else []
+            alts = [[_point(t) for t in ts] or [e] for ts, e in zip(earth, ends)] if earth else []
             for k, (n, e) in enumerate(zip((a, b), ends) if not earth else ()):
                 if (i, k) in spread:  # a controller many links reach: its own point, on the side facing the other end
                     alts.append([spread[(i, k)]])
@@ -3081,7 +3143,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         if not pts:  # no free channel: leave this link out rather than fail the whole drawing
             continue
         for n, ts, p in zip((a, b), earth or (), (pts[0], pts[-1])):  # the terminals at the ends taken
-            t = next((t for t in ts if math.dist(p, ((e := t if isinstance(t, End) else t[0]).x, e.y)) < 1e-6), None)
+            t = next((t for t in ts if math.dist(p, (_point(t).x, _point(t).y)) < 1e-6), None)
             if t is not None:
                 _use_earth(n, t, lg, obs, earth_taken)
         if carries:
