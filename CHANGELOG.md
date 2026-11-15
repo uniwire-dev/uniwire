@@ -13,6 +13,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   it takes a channel of its own lower down, under what is drawn, and the table goes down under it.
 * A link to another sheet that leaves a PLC channel or a named terminal writes that channel or terminal by the
   start of its stub, as a link drawn whole does (only the links drawn whole wrote it).
+* Single-line drawings: the texts of the off-sheet stubs of a device (one under the other on its left) are no longer
+  written over the text of the device on its left: its column moves right by what they need. The room is taken
+  when the sheet still holds its devices with it (it may then be drawn a little smaller), never at the cost of one
+  more sheet.
 * PDF: an arrow the font has no glyph for ("⇄", "⇒") is written in ASCII ("<->", "=>") instead of being left out
   of the text; without a Unicode font, where a box was drawn, too.
 * Single-line symbols: a box widens for the text written in it. The coil of an impulse relay was 2.6 mm wide
