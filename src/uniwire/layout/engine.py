@@ -3393,8 +3393,8 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
     # prints it
     g.add(rg)
     port = link.from_port if link.from_ == here else link.to_port if link.to == here else None
-    if port:  # the channel or terminal it leaves by, as on a link drawn whole: on its stub, by its start (the links
-        # routed later pass beyond the start)
+    if port and not obs.min_lane:  # single-line: the channel or terminal it leaves by, as on a link drawn whole, on
+        # its stub, by its start (the links routed later pass beyond the start); the multi-line view keeps its room
         txt, w = str(port), text_width(str(port), PORT_SIZE)
         sx, sy = pts[0]
         if e.side in ("left", "right"):
