@@ -454,3 +454,29 @@ def test_a_link_never_takes_a_channel_another_link_runs_on():
     pts = route(obs, a, b, 0.0, 20.0, record=False, deeper=True)
     assert pts[0] == (0.0, 0.0) and pts[-1] == (100.0, 0.0)
     assert pts[1][1] > 20.0 and not _shared(obs, pts, 1.2)
+
+
+def test_every_off_sheet_stub_names_the_channel_it_leaves_by():
+    """A PLC and a safety relay whose links reach contactors drawn on the next sheet: each stub beside them writes the
+    PLC channel or the relay terminal it leaves by, as a link drawn whole does (only the links drawn whole did)."""
+    d = panel(14, 0)
+    d["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    doc = load(d)
+    page = render_views(doc)[0]
+    stubs = 0
+    for g in (g for g in _groups(page.root) if g.cls == "uw-link"):
+        if not any(isinstance(i, Group) and i.cls == "uw-ref" for i in g.items):
+            continue
+        link = next(l for l in doc.links if (l.from_, l.to) == (g.attrs["data-uw-from"], g.attrs["data-uw-to"]))
+        port = link.from_port if link.from_ in ("PLC", "SR") else link.to_port
+        texts = [i.text for i in g.items if isinstance(i, Text)]
+        assert str(port) in texts, (link.from_, link.to, texts)
+        stubs += 1
+    assert stubs >= 10
+
+
+def _groups(item):
+    if isinstance(item, Group):
+        yield item
+        for i in item.items:
+            yield from _groups(i)
