@@ -8,6 +8,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Multi-line drawings: a conductor is drawn starting at an earth symbol only when it is the protective conductor
+  (the PE at the main earthing terminal). When the first node of a document is not a source (a busbar, a board, a
+  DC converter, a power supply), its live conductors (L+ and L-, or the phases and the neutral) each hung from an
+  earth symbol, which read as earthed poles, and the names were drawn over each other; they now arrive on an open
+  lead from above, each with its name, as the incoming feed of a board drawn on its own sheet.
 * Single-line drawings: a characteristic of a device (a rating, a curve, a type of meter) is left out beside its
   label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
   out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a
