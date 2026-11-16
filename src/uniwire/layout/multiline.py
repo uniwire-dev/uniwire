@@ -1163,6 +1163,17 @@ def _lane_label(x: float, y: float, text: str, size: float = 1.4) -> Text:
     return Text((x + 0.35 + size * 0.75, y), text, size, "start", rotate=90, color="#333333")
 
 
+def _starts_here(c: str, x: float, y: float, pe_name: bool = True) -> list[Item]:
+    """A conductor with no upstream conductor, starting just above ``y``: the protective conductor at the main
+    earthing terminal (an earth symbol, and its name unless ``pe_name`` is false); any other conductor arrives from
+    outside the drawing (an open lead and its name, as an incoming feed): it is never shown earthed."""
+    ys = y - SPLIT_H + 1.0
+    if c != "PE":
+        return [cond_group(c, Line((x, ys - 3.0), (x, y))), _lane_label(x, ys, c)]
+    earth = cond_group(c, Line((x, ys), (x, y)), Line((x, ys), (x + 2.0, ys)), *_earth(x + 2.0, ys))
+    return [earth, Text((x - 0.5, ys + 2.6), c, 1.4, "end", color="#333333")] if pe_name else [earth]
+
+
 BLADE_A = math.radians(20)
 TOP, PIVOT = 3.75, 8.75
 BLADE_L = (PIVOT - TOP) * 1.08
@@ -1630,9 +1641,9 @@ def _draw_transition(ln: MLNode, ch: MLNode, g: Group) -> None:
         s = ch.src.get(c)
         xc = ch.xi(c)
         if s is None or s not in ln.off_out:
-            ys = y1 - SPLIT_H + 1.0
-            g.add(cond_group(c, Line((xc, ys), (xc, y1)), Line((xc, ys), (xc + 2.0, ys)), *_earth(xc + 2.0, ys)))
-            labels.append(Text((xc - 0.5, ys + 2.6), c, 1.4, "end", color="#333333"))
+            lead = _starts_here(c, xc, y1)
+            g.add(lead[0])
+            labels += lead[1:]
             continue
         xs = ln.xo(s)
         if abs(xs - xc) < 1e-6:
@@ -1735,10 +1746,7 @@ def _draw_rails(ln: MLNode, g: Group, sheet_left: float, folio_of: Callable[[str
         txt = _t("render.continued_from", lang, label=ln.label, folio=prev) if prev else ln.label
         g.add(ref_group(prev, ln.target, [Text((sheet_left, ln.rail_y0 - 1.8), txt, 1.8, "start")]))
     for ch, c in news:
-        x = ch.xi(c)
-        top = ch.y
-        ys = top - SPLIT_H + 1.0
-        edges[id(ch)].add(cond_group(c, Line((x, ys), (x, top)), Line((x, ys), (x + 2.0, ys)), *_earth(x + 2.0, ys)))
+        edges[id(ch)].add(*_starts_here(c, ch.xi(c), ch.y, pe_name=False))
 
 
 def _draw(ln: MLNode, g: Group, lang: str, view: View, sheet_left: float, folio_of: Callable[[str], Optional[int]],
@@ -1768,10 +1776,8 @@ def _draw(ln: MLNode, g: Group, lang: str, view: View, sheet_left: float, folio_
         rg = ref_group(*incoming_ref)
         for c in ln.inp:
             x = ln.xi(c)
-            if ln.src.get(c) is None:  # starts here (PE at the main earthing terminal of the board)
-                ys = ln.y - SPLIT_H + 1.0
-                g.add(cond_group(c, Line((x, ys), (x, ln.y)), Line((x, ys), (x + 2.0, ys)), *_earth(x + 2.0, ys)),
-                      Text((x - 0.5, ys + 2.6), c, 1.4, "end", color="#333333"))
+            if ln.src.get(c) is None and c == "PE":  # starts here: at the main earthing terminal of the board
+                g.add(*_starts_here(c, x, ln.y))
                 continue
             rg.add(cond_group(c, Line((x, top), (x, ln.y))), _lane_label(x, top + 3.0, c))
         if incoming:
