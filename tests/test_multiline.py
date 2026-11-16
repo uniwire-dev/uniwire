@@ -492,3 +492,22 @@ def test_live_conductors_of_an_unfed_root_are_never_earthed(root, system, earthi
     assert _earthed(page) == ({"PE"} if earthing else set())  # the PE alone, where it starts
     texts = _texts(page.root)
     assert all(c in texts for c in info["R"].inp)  # each incoming conductor named
+
+
+@pytest.mark.parametrize("feeder, supply", [
+    ({"type": "breaker", "id": "Q", "children": [{"type": "socket", "id": "X"}]}, ["L1", "N", "PE"]),
+    ({"type": "breaker", "id": "Q", "children": [{"type": "load", "id": "X"}]}, ["L1", "N", "PE"]),
+    ({"type": "breaker", "id": "Q", "phase": "L2", "children": [{"type": "lighting", "id": "X"}]},
+     ["L1", "L2", "L3", "N", "PE"]),
+    ({"type": "breaker", "id": "Q", "poles": "3P", "children": [{"type": "motor", "id": "X", "phases": 3}]},
+     ["L1", "L2", "L3", "PE"]),
+    ({"type": "breaker", "id": "Q", "poles": "4P", "children": [{"type": "load", "id": "X"}]},
+     ["L1", "L2", "L3", "N", "PE"]),
+])
+def test_undeclared_system_drawn_from_what_the_devices_state(feeder, supply):
+    # no system anywhere: never three phases nobody asked for; nothing stated is one phase and the neutral
+    doc = load({"sources": [{"type": "grid", "id": "G", "children": [{"type": "board", "id": "B", "children": [feeder]}]}]})
+    info = conductors(doc)
+    assert info["G"].out == supply and info["B"].out == supply
+    page = render_pages(doc, default_view(doc, kind="multi-line"))[0]
+    assert _poles(page, "Q")[0] == len([c for c in info["Q"].inp if c != "PE"])

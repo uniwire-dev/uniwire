@@ -371,9 +371,25 @@ class _Assigner:
             out.append("PE")
         return _sorted(out) or parent[:1]
 
-    def lv(self, system: Optional[str], earthing: Optional[str]) -> tuple[list[str], bool]:
-        """Conductors of a low-voltage supply, and whether the PE is still to be added (TT, IT)."""
-        system = system or "3P+N"
+    def _stated_system(self, node: Any) -> str:
+        """System of a supply declared nowhere: what the devices and loads it feeds state (three phases only when
+        one of them is on more than one phase or on L2 / L3; a neutral when one needs it), up to the next supply (a converter,
+        a transformer); nothing stated: one phase and the neutral."""
+        three, stack = False, list(node.children)
+        while stack and not three:
+            n = stack.pop()
+            names, k, _ = self.spec(n)
+            three = (k or 0) >= 2 or any(nm != "L1" for nm in names or [])
+            if n.type not in CONVERTERS | {"transformer"}:
+                stack.extend(n.children)
+        if three:
+            return "3P+N" if self.needs_n(node) else "3P"
+        return "1P+N"
+
+    def lv(self, system: Optional[str], earthing: Optional[str], node: Any = None) -> tuple[list[str], bool]:
+        """Conductors of a low-voltage supply, and whether the PE is still to be added (TT, IT). ``system``: the one
+        declared, else the one ``node`` (the supply) feeds (see ``_stated_system``)."""
+        system = system or (self._stated_system(node) if node is not None else "3P+N")
         if system == "DC":
             return list(DC), False
         k, n = SYSTEMS.get(system, (3, True))
@@ -439,7 +455,7 @@ class _Assigner:
         earthing = inst.earthing
         if t == "generator" and earthing == "TN-C-S":  # the PEN is the utility's: a genset has its N and PE
             earthing = "TN-S"
-        conds, pending = self.lv(getattr(node, "system", None) or inst.system, earthing)
+        conds, pending = self.lv(getattr(node, "system", None) or inst.system, earthing, node)
         return conds, conds, pending
 
     def _walk(self, node: Any, parent: Optional[list[str]], pending: bool, parent_node: Any = None) -> None:
@@ -455,7 +471,7 @@ class _Assigner:
                 out, pending = self._transformer_out(node, inp)
             elif t == "inverter" and any(c in DC for c in inp):  # fed in DC: the AC network starts at its output
                 inst = self.doc.installation
-                out, pending = self.lv(getattr(node, "system", None) or inst.system, inst.earthing)
+                out, pending = self.lv(getattr(node, "system", None) or inst.system, inst.earthing, node)
             elif t in CONVERTERS and not any(c in DC for c in inp) and not _dc_side(node):
                 out = list(DC)
             elif _vfd_to_three_phase(node, inp):  # a drive fed in single phase makes the motor's three phases
