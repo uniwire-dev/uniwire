@@ -8,6 +8,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Multi-line drawings: when no system is declared (neither in the installation nor on the supply), the conductors
+  come from what the devices and loads state, never from a default: three phases only when one of them is on more
+  than one phase (poles, cable cores, a three-phase motor, a board's system) or on L2 / L3, a neutral when one needs
+  it, and one phase and the neutral when nothing says more. Before, such a document was drawn with L1 L2 L3 N and
+  four-pole devices whatever it held. Documents that declare their system are drawn as before.
 * Multi-line drawings: a conductor is drawn starting at an earth symbol only when it is the protective conductor
   (the PE at the main earthing terminal). When the first node of a document is not a source (a busbar, a board, a
   DC converter, a power supply), its live conductors (L+ and L-, or the phases and the neutral) each hung from an
