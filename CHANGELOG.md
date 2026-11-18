@@ -8,6 +8,12 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line drawings: an earth bar or an earth electrode placed in the power tree is on the protective conductor
+  only, as in multi-line drawings. Under a busbar it is drawn beside it, with no conductor from the bars (a solid
+  line from the busbar to the earth bar read as the bars earthed); elsewhere the line reaching it, and the one from
+  an earth bar to its electrode, is an earth line. A neutral bar keeps its conductor.
+* Title block: the `core` profile is not a standard. With no standard stated and no other profile, the Standard
+  cell stays empty instead of reading "core".
 * Single-line drawings: a characteristic of a device (a rating, a curve, a type of meter) is left out beside its
   label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
   out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a
