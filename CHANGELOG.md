@@ -8,6 +8,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Web viewer: the drawing no longer jumps while the viewer starts. The loading card left in place grew into a
+  small note in a corner across the preview of the drawing, and the drawing toolbar gained a row when the document's
+  view and colour selects appeared; the sheet tabs now keep their own row (one row with the controls in a wide
+  pane) and the selects narrow to stay on the controls' row. The page carries its full title and a heading for
+  screen readers.
 * Single-line drawings: a characteristic of a device (a rating, a curve, a type of meter) is left out beside its
   label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
   out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a
