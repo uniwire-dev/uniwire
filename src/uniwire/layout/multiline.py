@@ -82,6 +82,7 @@ from .engine import (
     SheetLayout,
     SheetSpec,
     _bus_name,
+    _clear_frame_edges,
     _device_homes,
     _is_dc,
     _signal_links,
@@ -2549,6 +2550,10 @@ def _layout(doc: Document, view: View, spec: SheetSpec, index: Index, info: dict
             if holder is not None and holder is not n and holder.id in marks and n.id not in marks:
                 marks[n.id] = marks.pop(holder.id)
         _draw_wire_marks(g, marks, tops)
+    boards = [it for it in g.items if isinstance(it, Group) and it.cls and "board" in it.cls.split()]
+    symbols = [bx for it in g.items if isinstance(it, Group) and it.cls and it.cls.startswith("ml-sym")
+               and (bx := bbox(it)) is not None]
+    _clear_frame_edges(g, [r for b in boards for r in b.items if isinstance(r, Rect)], symbols)
     gap_link_crossings(g)
     box = bbox(g) or (0.0, 0.0, 10.0, 10.0)
     g = transform(g, -box[0], -box[1])  # type: ignore[assignment]

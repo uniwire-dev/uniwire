@@ -140,7 +140,7 @@ def test_targets_above_and_below_the_trunk():
 
 def test_a_target_on_another_sheet_keeps_its_off_sheet_stub():
     """The links to devices on another sheet keep their stubs; the ones on the meter's sheet share a trunk."""
-    pages = render_views(load(board(12, sub=6, paper="A4")))
+    pages = render_views(load(board(14, sub=8, paper="A4")))
     assert len(pages) > 1
     first = _links(pages[0].root)
     refs = [g for g in _groups(pages[0].root) if has_cls(g, "uw-ref")]

@@ -8,6 +8,17 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Frames and texts: a board, enclosure or view frame is no longer drawn through a text (a neighbour's label
+  running into it, the "Auxiliary devices" title, a bus coupler's text): its edge moves past the text, or the
+  coupler between two boards side by side gets the room its text needs. A board feeding sub-boards ends after its
+  own last way; before, its frame ran over the whole width of the sub-boards below it (large empty dashed boxes).
+  A device with links to other sheets keeps room on its left for its off-sheet stubs and their texts, which ran
+  into the label of the column before; a board's name is no longer written across its incoming conductor when
+  that room moves the conductor far from the frame's side. A title block value reduced to the exact width of its cell is written
+  whole (it was cut with an ellipsis by a rounding error), and one too long for one line goes on two lines. The
+  "Notes" title is left out when there is no note. In the PDF, every CJK character of a text is drawn with the CJK
+  font when some are (a mark the main font has was drawn in another type face inside a word). The drawing audit
+  of the tests finds frame edges drawn through a text.
 * Single-line drawings: three measure or data links or more between one device and others on its sheet (a
   multi-channel meter measuring every feeder, a meter reading every charger) are drawn as one trunk with a tee tap
   to each other end, a junction dot at each tee. Before, each link was routed on its own: a stair of dashed runs
