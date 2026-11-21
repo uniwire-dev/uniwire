@@ -8,6 +8,16 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Frames and texts: a board, enclosure or view frame is no longer drawn through a text (a neighbour's label
+  running into it, the "Auxiliary devices" title, a bus coupler's text): its edge moves past the text, or the
+  coupler between two boards side by side gets the room its text needs. A board feeding sub-boards ends after its
+  own last way; before, its frame ran over the whole width of the sub-boards below it (large empty dashed boxes).
+  A board's name is no longer written across its incoming conductor when room left for texts or links moves the
+  conductor far from the frame's side. A title block value reduced to the exact width of its cell is written
+  whole (it was cut with an ellipsis by a rounding error), and one too long for one line goes on two lines. The
+  "Notes" title is left out when there is no note. In the PDF, every CJK character of a text is drawn with the CJK
+  font when some are (a mark the main font has was drawn in another type face inside a word). The drawing audit
+  of the tests finds frame edges drawn through a text.
 * Drawing conventions. Conductor-count marks: one phase and the neutral is always one stroke and "+N" ("L1+N"),
   where a two-pole device wrote two strokes and "L1 N"; no "+N" on a line without a neutral (single-pole circuits of
   a three-wire supply had one); below a two-pole device the circuits take its two conductors (they took the

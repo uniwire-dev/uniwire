@@ -124,7 +124,8 @@ def _cjk_font(text: str, lang: str | None = None) -> str:
 
 
 def _runs(text: str, font: str, glyphs: frozenset[int] | None, lang: str | None = None) -> list[tuple[str, str]]:
-    """``text`` cut into (font, part) runs: the CJK characters that ``font`` does not have go to a CID font."""
+    """``text`` cut into (font, part) runs: the CJK characters that ``font`` does not have go to a CID font, and
+    then every CJK character of the text with them (the few that ``font`` has would mix two type faces in a word)."""
     def has(ch: str) -> bool:
         if glyphs is not None:
             return ord(ch) in glyphs
@@ -135,10 +136,11 @@ def _runs(text: str, font: str, glyphs: frozenset[int] | None, lang: str | None 
             return False
 
     cjk = None
+    need = any(_cjk(ch) and not has(ch) for ch in text)
     runs: list[tuple[str, str]] = []
     for ch in text:
         f = font
-        if _cjk(ch) and not has(ch):
+        if _cjk(ch) and need:
             f = cjk = cjk or _cjk_font(text, lang)
         if runs and runs[-1][0] == f:
             runs[-1] = (f, runs[-1][1] + ch)
