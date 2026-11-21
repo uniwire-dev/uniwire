@@ -230,8 +230,10 @@ function applyResult(res, text) {
     const sameShape = state.pages.length && state.page && res.pages.length && !state.refit;
     state.refit = false;
     state.pages = res.pages.map((p) => {
-      const m = /<svg\b[^>]*\bdata-uw-sheet="([^"]*)"/.exec(p.svg.slice(0, 2000));
-      return { ...p, sheetNo: m ? m[1] : null };
+      const head = p.svg.slice(0, 2000);
+      const m = /<svg\b[^>]*\bdata-uw-sheet="([^"]*)"/.exec(head);
+      const f = /<svg\b[^>]*\bdata-uw-folio="([^"]*)"/.exec(head);  // the number printed in its title block
+      return { ...p, sheetNo: m ? m[1] : null, folio: f ? f[1] : null };
     });
     if (state.initialSheet != null) {
       const k = sheetIndexOf(state.initialSheet);
@@ -281,7 +283,7 @@ function renderViewControls(res) {
     const b = document.createElement("button");
     b.type = "button";
     b.setAttribute("role", "tab");
-    b.textContent = state.pages.length > 1 ? `${i + 1}. ${p.title}` : p.title;
+    b.textContent = state.pages.length > 1 ? `${p.folio || i + 1}. ${p.title}` : p.title;
     b.title = p.title;
     b.addEventListener("click", () => showSheet(i));
     tabs.append(b);

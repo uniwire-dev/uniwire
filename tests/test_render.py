@@ -126,6 +126,65 @@ def test_drawing_set_prints_its_sheet_numbers_in_title_blocks_and_references():
     assert refs and all(3 < r < 3 + n for r in refs)  # the sheets of the view as printed, not their position
 
 
+def test_view_drawn_alone_keeps_its_numbers_in_the_drawing_set():
+    """A view of a drawing set drawn on its own (web editor, one view asked for) prints the numbers its sheets have
+    in the set: title blocks, references to its other sheets, continuations, the total after each number."""
+    from tests.dense_docs import long_way_doc
+    from uniwire.render import render_views
+    from uniwire.render.scene import Text
+    data = long_way_doc()
+    data["views"] = [{"id": "ml", "kind": "multi-line", "paper": "A3", "first_folio": 100},
+                     {"id": "sld", "paper": "A3"}]  # follows the multi-line view
+    doc = load(data)
+    whole = render_views(doc)
+
+    def printed(pages):
+        return [[t.text for t in _walk(p.root) if isinstance(t, Text)] for p in pages]
+
+    alone = [p for v in doc.views for p in render_pages(doc, v)]
+    assert [p.attrs["data-uw-folio"] for p in alone] == [p.attrs["data-uw-folio"] for p in whole]
+    assert printed(alone) == printed(whole)
+    sld = render_pages(doc, doc.views[1])
+    first = 100 + len(whole) - len(sld)
+    assert len(sld) >= 2 and sld[0].attrs["data-uw-folio"] == str(first)
+    refs = [int(m) for p in printed(sld) for t in p for m in re.findall(r"sheet (\d+)", t)]
+    assert refs and all(first <= r < first + len(sld) for r in refs)  # not the position in the view (1, 2...)
+    data["views"][1]["total_folios"] = 140
+    texts = printed(render_pages(load(data), load(data).views[1]))
+    assert f"{first} / 140" in texts[0]
+    # a view drawn in the other kind than declared is not a sheet of the set: numbered on its own
+    from uniwire.render import default_view
+    other = default_view(doc, "sld", "multi-line")
+    assert render_pages(doc, other)[0].attrs["data-uw-folio"] == "1"
+
+
+def test_printed_sheet_number_stays_in_its_table_cell():
+    """'-Q2 -> sheet 3' printed '-Q2 -> sheet 103' in the description cell of the feeder table does not run out of
+    the cell: it is drawn a little smaller."""
+    from tests.dense_docs import split_main_doc
+    from uniwire.render.scene import Group, Rect, Text, text_width
+
+    def cells(root, out):  # (text, its room) of the references drawn in a table cell
+        if isinstance(root, Group):
+            rect = next((r for r in root.items if isinstance(r, Rect)), None)
+            texts = [t for t in root.items if isinstance(t, Text)]
+            if root.cls == "uw-ref" and rect is not None and texts:
+                t = texts[-1]
+                out.append((t, rect.h - 2.0 if t.rotate else rect.w - 1.0))
+            for c in root.items:
+                cells(c, out)
+        return out
+
+    data = split_main_doc()
+    data["views"] = [{"id": "v", "paper": "A3"}]
+    plain = [c for p in render_pages(load(data)) for c in cells(p.root, [])]
+    data["views"][0]["first_folio"] = 100
+    printed = [c for p in render_pages(load(data)) for c in cells(p.root, [])]
+    assert len(plain) == len(printed) and any("sheet 10" in t.text for t, _ in printed)
+    assert all(text_width(t.text, t.size) <= room + 1e-6 for t, room in printed)
+    assert any(b.size < a.size for (a, _), (b, _) in zip(plain, printed))
+
+
 def test_free_spare_way_is_not_drawn_as_a_conductor():
     from uniwire.render.scene import Group, Line, Polyline
 

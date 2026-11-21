@@ -8,6 +8,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Sheet numbers of a drawing set: a view drawn on its own (the web editor, the `render` tool, an SVG export) used
+  to number its sheets from 1, or from its own `first_folio`, while the PDF of every view numbered them after the
+  views before it: the title blocks and the "→ sheet n", "from -Q1 (sheet n)" and "continued on sheet n"
+  references of one sheet differed between the two. A view declared in the document now prints the numbers it has
+  in the set, total included, and the sheet tabs of the web editor show them. A reference in the feeder table whose
+  printed number has more figures than the layout planned for ("sheet 3" printed "sheet 103") no longer runs out
+  of its cell: it is drawn a little smaller.
 * Use of the sheet: no sheet is drawn below scale 0.6 any more (`folio_split: auto`). A way wider than a sheet,
   such as a long distribution below a device rather than a board, used to be squeezed on one sheet at a third of
   its size (texts under 1 mm) while the busbar around it was cut into sheets holding two feeders; its branches go to sheets of their own, with off-page references at both ends, before the
