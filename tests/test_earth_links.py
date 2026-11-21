@@ -160,7 +160,7 @@ def test_several_earth_links_on_one_board_get_their_own_points():
 
 
 def test_multi_line_earth_link_lands_on_the_protective_conductor():
-    _check(_doc([{"kind": "earth", "from": "E", "to": "DB"}]), View(id="ml", kind="multi-line"))
+    _check(_doc([{"kind": "earth", "from": "E", "to": "DB"}]), View(id="ml", kind="multi-line", auxiliaries=True))
 
 
 def test_stacked_stub_leads_are_attached_to_their_device():

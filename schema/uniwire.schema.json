@@ -27082,6 +27082,12 @@
           "title": "Show Pe",
           "type": "boolean"
         },
+        "auxiliaries": {
+          "default": false,
+          "description": "Multi-line view: also draw the auxiliary devices (outside the power tree: controllers, terminal blocks, sensors, meters placed through links) and the control, interlock, trip, measure, data, key and earth links; false = the power tree and the power links (transfer, bypass, parallel, tie, infeed) only",
+          "title": "Auxiliaries",
+          "type": "boolean"
+        },
         "color": {
           "anyOf": [
             {

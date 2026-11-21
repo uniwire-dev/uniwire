@@ -69,8 +69,9 @@ _TEXT: dict[str, dict[str, str]] = {
         "views": "Views (optional; rendering preferences)",
         "views_note": "Single-line for a distribution overview. For a panel or cabinet to build or wire (machine, PLC or "
                       "pump control panel), declare two views: multi-line first (`kind: \"multi-line\"`, power "
-                      "conductors only), then single-line (also auxiliary devices and links); pdf_url holds every "
-                      "view. Colours: `color`, `conductor_colors`. Control schematics (coils, contacts, current paths) "
+                      "conductors and power links only; `auxiliaries: true` adds the auxiliary devices and their "
+                      "links), then single-line (also auxiliary devices and links); pdf_url holds every view. "
+                      "Colours: `color`, `conductor_colors`. Control schematics (coils, contacts, current paths) "
                       "are not drawn: say so first, offer the power side.",
         "profiles": "Rule profiles (`profiles`; `core` always applies)",
         "nfc_note": "French installations (NF C 15-100); set `installation.premises`: the rules of dwellings (part 7-771) "
@@ -144,7 +145,8 @@ _TEXT: dict[str, dict[str, str]] = {
         "views": "Vues (facultatives ; préférences de rendu)",
         "views_note": "Unifilaire pour une vue d'ensemble. Pour un tableau ou une armoire à fabriquer ou câbler "
                       "(machine, automate, pompes), déclarer deux vues : multifilaire d'abord (`kind: "
-                      "\"multi-line\"`, conducteurs de puissance), puis unifilaire (appareils annexes et liaisons) ; "
+                      "\"multi-line\"`, conducteurs et liaisons de puissance ; `auxiliaries: true` ajoute les "
+                      "appareils annexes et leurs liaisons), puis unifilaire (appareils annexes et liaisons) ; "
                       "pdf_url contient toutes les vues. Couleurs : `color`, `conductor_colors`. Pas de schéma de "
                       "commande (bobines, contacts) : le dire d'abord, proposer la partie puissance.",
         "profiles": "Profils de règles (`profiles` ; `core` s'applique toujours)",

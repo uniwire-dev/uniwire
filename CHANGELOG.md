@@ -8,6 +8,12 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Multi-line views draw the power diagram only, as the specification says (§7.1): a multi-line view used to draw
+  every controller, terminal block, sensor and meter placed through links, with their control, measure, data,
+  trip and earth links and their off-sheet stubs, often shrinking a sheet to a third of its size; it now draws
+  the power tree (every node in it, whatever its type) and the power links (transfer, bypass, parallel, tie,
+  infeed). The new view option `auxiliaries: true` draws the auxiliary devices and their links as before. Large
+  multi-line views are also drawn much faster.
 * Faster layout: the drawings of large documents, with many links, take about half the time they took (the
   slowest twice as fast or more), with the same drawings: link routes costed on the obstacles near them, the
   channels and stubs that cannot beat the best route found left out, the sheets of a view with no paper planned
