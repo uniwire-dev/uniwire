@@ -8,6 +8,15 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line drawings: a link never takes the channel another link already runs on (the two dashed lines read as
+  one solid conductor). Under the loads, where the channels are taken by the links and the devices placed there,
+  it takes a channel of its own lower down, under what is drawn, and the table goes down under it.
+* Single-line drawings: a link to another sheet that leaves a PLC channel or a named terminal writes that channel or
+  terminal by the start of its stub, as a link drawn whole does (only the links drawn whole wrote it); where that
+  place is taken, in front of the stub's label, never on a symbol or a line.
+* Single-line drawings: the texts of the off-sheet stubs of a device (one under the other on its left) are no longer
+  written over the text of the device on its left: its column moves right by what they need. The room is taken
+  only where the sheet keeps its scale with it (never a smaller drawing, never one more sheet).
 * Multi-line drawings: a busbar too long for one sheet shares its ways evenly among as many sheets as it needs
   (27 ways: 9 on each of three sheets, no longer 13, 13 and 1).
 * Single-line drawings: the label of a device keeps at least 0.4 mm from the symbol of a device beside it in the
