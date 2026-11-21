@@ -81,6 +81,12 @@ def part_number(node: Any) -> Optional[str]:
     return (prod.part_number if prod is not None and prod.part_number else None) or _g(node, "part_number")
 
 
+def _manufacturer(node: Any) -> Optional[str]:
+    """Manufacturer: ``product.manufacturer`` takes precedence over ``manufacturer``."""
+    prod = _g(node, "product")
+    return (prod.manufacturer if prod is not None and prod.manufacturer else None) or _g(node, "manufacturer")
+
+
 def _amps(text: Any) -> str:
     """A setting range with its unit, '9-13 A'; a range given as words ('to confirm') stays as written."""
     s = str(text or "")
@@ -496,6 +502,19 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
     if field == "frame_A":
         v = _g(prot, "frame_A")
         return fmt(v, " AF") if v else ""
+    if field == "status":
+        v = first("status")
+        return _t(f"legend.status.{v}", lang) if v else ""
+    if field in ("manufacturer", "part_number"):
+        # the product of the feeder's device (its protection, else its switching device), else of the final node
+        get = part_number if field == "part_number" else _manufacturer
+        return next((v for v in (get(n) for n in (prot, column.get("rated"), leaf) if n is not None) if v), "")
+    if field in ("icu_kA", "icw_kA"):
+        src = prot if prot is not None else column.get("rated")
+        v = _g(src, field)
+        return fmt(v, " kA") if v else ""
+    if field == "socket_type":
+        return _g(leaf, "socket_type") or ""
     if cable is not None:
         if field == "cable_type":
             return cable.designation or ""
@@ -514,6 +533,8 @@ CARTOUCHE_TITLES = {
         "points": "Points", "circuit": "Circuit", "ib_A": "Ib", "cos_phi": "cos φ", "count": "Nombre",
         "un_V": "Tension", "frame_A": "Boîtier", "cable_type": "Type de câble", "cable_ref": "Repère câble",
         "install": "Mode de pose",
+        "status": "État", "manufacturer": "Fabricant", "part_number": "Référence",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Type de prise",
     },
     "ru": {
         "label": "Наименование", "ref": "Обозначение", "protection": "Защита", "in_A": "Ном. ток", "curve": "Хар-ка",
@@ -522,6 +543,8 @@ CARTOUCHE_TITLES = {
         "points": "Точки", "circuit": "Группа", "ib_A": "Ib", "cos_phi": "cos φ", "count": "Кол-во",
         "un_V": "Напряжение", "frame_A": "Корпус", "cable_type": "Марка кабеля", "cable_ref": "Обозн. кабеля",
         "install": "Способ прокладки",
+        "status": "Состояние", "manufacturer": "Изготовитель", "part_number": "Артикул",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Тип розетки",
     },
     "zh": {
         "label": "名称", "ref": "编号", "protection": "保护", "in_A": "额定电流", "curve": "脱扣曲线", "icn_kA": "分断能力",
@@ -529,6 +552,8 @@ CARTOUCHE_TITLES = {
         "section_mm2": "截面", "length_m": "长度", "p_kW": "功率", "phase": "相别", "room": "房间", "points": "点数",
         "circuit": "回路", "ib_A": "Ib", "cos_phi": "功率因数", "count": "数量", "un_V": "电压", "frame_A": "壳架",
         "cable_type": "电缆型号", "cable_ref": "电缆编号", "install": "敷设方式",
+        "status": "状态", "manufacturer": "制造商", "part_number": "型号",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "插座类型",
     },
     "es": {
         "label": "Descripción", "ref": "Designación", "protection": "Protección", "in_A": "Calibre", "curve": "Curva",
@@ -537,6 +562,8 @@ CARTOUCHE_TITLES = {
         "p_kW": "Potencia", "phase": "Fase", "room": "Local", "points": "Puntos", "circuit": "Circuito", "ib_A": "Ib",
         "cos_phi": "cos φ", "count": "Cant.", "un_V": "Tensión", "frame_A": "Caja", "cable_type": "Tipo de cable",
         "cable_ref": "Ref. cable", "install": "Mét. instalación",
+        "status": "Estado", "manufacturer": "Fabricante", "part_number": "Referencia",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Tipo de toma",
     },
     "de": {
         "label": "Bezeichnung", "ref": "BMK", "protection": "Schutzorgan", "in_A": "Nennstrom", "curve": "Charakteristik",
@@ -545,6 +572,8 @@ CARTOUCHE_TITLES = {
         "p_kW": "Leistung", "phase": "Außenleiter", "room": "Raum", "points": "Auslässe", "circuit": "Stromkreis",
         "ib_A": "Ib", "cos_phi": "cos φ", "count": "Anz.", "un_V": "Spannung", "frame_A": "Baugröße",
         "cable_type": "Leitungstyp", "cable_ref": "Leitungs-BMK", "install": "Verlegeart",
+        "status": "Status", "manufacturer": "Hersteller", "part_number": "Bestellnummer",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Steckdosentyp",
     },
     "pt": {
         "label": "Descrição", "ref": "Ident.", "protection": "Proteção", "in_A": "Corr. nominal",
@@ -553,6 +582,8 @@ CARTOUCHE_TITLES = {
         "p_kW": "Potência", "phase": "Fase", "room": "Local", "points": "Pontos", "circuit": "Circuito", "ib_A": "Ib",
         "cos_phi": "cos φ", "count": "Qtd.", "un_V": "Tensão", "frame_A": "Carcaça", "cable_type": "Tipo de cabo",
         "cable_ref": "Ident. cabo", "install": "Mét. instalação",
+        "status": "Situação", "manufacturer": "Fabricante", "part_number": "Referência",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Tipo de tomada",
     },
     "it": {
         "label": "Descrizione", "ref": "Sigla", "protection": "Protezione", "in_A": "In",
@@ -561,6 +592,8 @@ CARTOUCHE_TITLES = {
         "p_kW": "Potenza", "phase": "Fase", "room": "Locale", "points": "Punti", "circuit": "Circuito", "ib_A": "Ib",
         "cos_phi": "cos φ", "count": "Q.tà", "un_V": "Tensione", "frame_A": "Taglia", "cable_type": "Tipo cavo",
         "cable_ref": "Sigla cavo", "install": "Posa",
+        "status": "Stato", "manufacturer": "Costruttore", "part_number": "Codice",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Tipo presa",
     },
     "pl": {
         "label": "Opis", "ref": "Oznaczenie", "protection": "Zabezpieczenie", "in_A": "In",
@@ -569,6 +602,8 @@ CARTOUCHE_TITLES = {
         "length_m": "Długość", "p_kW": "Moc", "phase": "Faza", "room": "Pomieszczenie", "points": "Punkty",
         "circuit": "Obwód", "ib_A": "Ib", "cos_phi": "cos φ", "count": "Liczba", "un_V": "Napięcie",
         "frame_A": "Obudowa", "cable_type": "Typ przewodu", "cable_ref": "Ozn. przewodu", "install": "Sposób ułożenia",
+        "status": "Status", "manufacturer": "Producent", "part_number": "Nr katalogowy",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Typ gniazda",
     },
     "tr": {
         "label": "Açıklama", "ref": "Etiket", "protection": "Koruma", "in_A": "Anma akımı", "curve": "Eğri",
@@ -577,6 +612,8 @@ CARTOUCHE_TITLES = {
         "p_kW": "Güç", "phase": "Faz", "room": "Mahal", "points": "Nokta", "circuit": "Devre", "ib_A": "Ib",
         "cos_phi": "cos φ", "count": "Adet", "un_V": "Gerilim", "frame_A": "Kasa", "cable_type": "Kablo tipi",
         "cable_ref": "Kablo etiketi", "install": "Döşeme şekli",
+        "status": "Durum", "manufacturer": "Üretici", "part_number": "Ürün kodu",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Priz tipi",
     },
     "ja": {
         "label": "名称", "ref": "記号", "protection": "保護", "in_A": "定格電流", "curve": "特性", "icn_kA": "遮断容量",
@@ -584,6 +621,8 @@ CARTOUCHE_TITLES = {
         "section_mm2": "断面積", "length_m": "こう長", "p_kW": "容量", "phase": "相", "room": "室名", "points": "箇所",
         "circuit": "回路", "ib_A": "Ib", "cos_phi": "力率", "count": "数量", "un_V": "電圧", "frame_A": "AF",
         "cable_type": "ケーブル種別", "cable_ref": "ケーブル番号", "install": "布設方法",
+        "status": "状態", "manufacturer": "メーカー", "part_number": "型番",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "コンセント種別",
     },
     "nl": {
         "label": "Omschrijving", "ref": "Codering", "protection": "Beveiliging", "in_A": "Nominaal",
@@ -592,6 +631,8 @@ CARTOUCHE_TITLES = {
         "length_m": "Lengte", "p_kW": "Vermogen", "phase": "Fase", "room": "Ruimte", "points": "Punten",
         "circuit": "Groep", "ib_A": "Ib", "cos_phi": "Arbeidsfactor", "count": "Aantal", "un_V": "Spanning",
         "frame_A": "Frame", "cable_type": "Kabeltype", "cable_ref": "Kabelcodering", "install": "Installatiemethode",
+        "status": "Status", "manufacturer": "Fabrikant", "part_number": "Artikelnummer",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Type contactdoos",
     },
     "hr": {
         "label": "Opis", "ref": "Oznaka", "protection": "Zaštita", "in_A": "In", "curve": "Karakt.",
@@ -600,6 +641,8 @@ CARTOUCHE_TITLES = {
         "room": "Prostorija", "points": "Točke", "circuit": "Strujni krug", "ib_A": "Ib", "cos_phi": "cos φ",
         "count": "Kom.", "un_V": "Napon", "frame_A": "Kućište", "cable_type": "Tip kabela",
         "cable_ref": "Oznaka kabela", "install": "Način polaganja",
+        "status": "Status", "manufacturer": "Proizvođač", "part_number": "Kataloški broj",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Tip utičnice",
     },
     "sr": {
         "label": "Opis", "ref": "Oznaka", "protection": "Zaštita", "in_A": "In", "curve": "Karakt.",
@@ -608,6 +651,8 @@ CARTOUCHE_TITLES = {
         "room": "Prostorija", "points": "Tačke", "circuit": "Strujno kolo", "ib_A": "Ib", "cos_phi": "cos φ",
         "count": "Kom.", "un_V": "Napon", "frame_A": "Kućište", "cable_type": "Tip kabla",
         "cable_ref": "Oznaka kabla", "install": "Način polaganja",
+        "status": "Status", "manufacturer": "Proizvođač", "part_number": "Kataloški broj",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Tip utičnice",
     },
     "bs": {
         "label": "Opis", "ref": "Oznaka", "protection": "Zaštita", "in_A": "In", "curve": "Karakt.",
@@ -616,6 +661,8 @@ CARTOUCHE_TITLES = {
         "room": "Prostorija", "points": "Tačke", "circuit": "Strujni krug", "ib_A": "Ib", "cos_phi": "cos φ",
         "count": "Kom.", "un_V": "Napon", "frame_A": "Kućište", "cable_type": "Tip kabla",
         "cable_ref": "Oznaka kabla", "install": "Način polaganja",
+        "status": "Status", "manufacturer": "Proizvođač", "part_number": "Kataloški broj",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Tip utičnice",
     },
     "en": {
         "label": "Description", "ref": "Tag", "protection": "Protection", "in_A": "Rating", "curve": "Curve",
@@ -624,6 +671,8 @@ CARTOUCHE_TITLES = {
         "points": "Points", "circuit": "Circuit", "ib_A": "Ib", "cos_phi": "Power factor", "count": "Qty",
         "un_V": "Voltage", "frame_A": "Frame", "cable_type": "Cable type", "cable_ref": "Cable tag",
         "install": "Raceway / method",
+        "status": "Status", "manufacturer": "Manufacturer", "part_number": "Part number",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Socket type",
     },
 }
 CARTOUCHE_TITLES["sr-Cyrl"] = {k: cyrillic(v) for k, v in CARTOUCHE_TITLES["sr"].items()}

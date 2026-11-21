@@ -30,6 +30,7 @@ from ..render.scene import (
     Style,
     Text,
     arc_points,
+    cut_to_width,
     text_width,
 )
 
@@ -58,6 +59,38 @@ class Symbol:
 # --------------------------------------------------------------- primitives
 def _lead(y0: float, y1: float) -> Line:
     return Line((0, y0), (0, y1))
+
+
+def without_leads(sym: Symbol, top: bool = False, bottom: bool = False) -> Symbol:
+    """``sym`` without its input lead (``top``: the conductor stub on its axis from its top) and/or its output lead
+    (``bottom``: the stub on its axis down to its output terminal), for a terminal nothing is connected to. A lead
+    running through the whole symbol (a fuse) is kept: it is the body of the symbol, and so are the leads of a
+    switching contact (a blade pivoting on the axis): they are its fixed contacts. Same geometry (height,
+    footprint), so the layout is unchanged."""
+    eps = 1e-6
+    if any(isinstance(i, Line) and (abs(i.a[0]) <= eps) != (abs(i.b[0]) <= eps) and abs(i.a[1] - i.b[1]) > eps
+           for i in sym.items):
+        return sym
+
+    def lead(i: Item) -> Optional[str]:
+        if not isinstance(i, Line) or abs(i.a[0]) > eps or abs(i.b[0]) > eps or i.style.dash:
+            return None
+        y0, y1 = sorted((i.a[1], i.b[1]))
+        if y1 - y0 > 2 * M:  # longer than a terminal: a part of the symbol (the shaft of a supply arrow)
+            return None
+        if y0 <= eps and y1 < sym.height - eps:
+            return "top"
+        if y0 > eps and y1 >= sym.height - eps:
+            return "bottom"
+        return None
+
+    drop = {"top"} if top else set()
+    if bottom:
+        drop.add("bottom")
+    items = [i for i in sym.items if lead(i) not in drop]
+    if len(items) == len(sym.items):
+        return sym
+    return Symbol(sym.name, items, sym.height, sym.left, sym.right, sym.has_output, sym.side_input, dict(sym.extra))
 
 
 def _contact(top: float = 1.5 * M, pivot: float = 3.5 * M, h: float = 5 * M) -> list[Item]:
@@ -598,8 +631,11 @@ def offpage(label: Any = "") -> Symbol:
 
 # ------------------------------------------------------------ instrument transformers, MV equipment, auxiliaries
 def instrument_transformer(node: Any = None) -> Symbol:
-    """CT: circle crossed by the conductor; VT: two circles."""
+    """CT: circle crossed by the conductor; VT: two circles; shunt: a resistor in the conductor."""
     kind = getattr(node, "kind", None)
+    if kind == "shunt":
+        return Symbol("instrument_transformer", [_lead(0, 0.6 * M), Rect(-0.8, 0.6 * M, 1.6, 1.8 * M),
+                                                 _lead(2.4 * M, 3 * M)], 3 * M, 0.8, 0.8)
     if kind == "vt":
         r = 1.2 * M
         items: list[Item] = [_lead(0, 0.6 * M), Circle((0, 0.6 * M + r), r), Circle((0, 0.6 * M + 2.4 * r), r),
@@ -612,9 +648,12 @@ def instrument_transformer(node: Any = None) -> Symbol:
     return Symbol("instrument_transformer", items, 3 * M, r, r)
 
 
+RELAY_TEXT_W = 7.4  # the widest function text in the box of a protection relay
+
+
 def protection_relay(node: Any = None) -> Symbol:
     fns = getattr(node, "functions", None) or []
-    label = (fns[0] if fns else "I>")[:6]
+    label = cut_to_width(fns[0] if fns else "I>", 1.8, RELAY_TEXT_W)
     return _box("protection_relay", label, 4 * M, max(6.0, 1.1 * len(label) + 2))
 
 
@@ -682,6 +721,7 @@ def earth_bar(node: Any = None) -> Symbol:
 # ------------------------------------------------------------ PLCs, power supplies
 PLC_SLOT_W = 3.4
 PORT_STEP = 2.6  # spacing of the wired channels of a module: room for each channel number beside its wire
+PLC_FAMILY_W = 11.0  # the widest family name in the head of a PLC (some twelve characters)
 PORT_EDGE = 1.8  # ... and between the outer wires and the sides of the module: their numbers inside its width
 
 
@@ -692,7 +732,8 @@ def plc(node: Any = None, wired: Optional[dict[int, int]] = None) -> Symbol:
     h = 4.0 * M
     label = getattr(node, "family", None) or _abbr("plc")
     if len(label) > 10:  # 'Automation Series 7' -> 'Automation': the head shows the family, the annotation the rest
-        label = label.split()[0][:12]
+        label = label.split()[0]
+    label = cut_to_width(label, 1.5 * 1.1, PLC_FAMILY_W)  # bold: about a tenth wider
     head_w = max(7.0, text_width(label, 1.5) * 1.1 + 1.2)  # wide enough for the family name (bold)
     built_in = (wired or {}).get(0, 1)  # links leaving the built-in I/O (slot 0): under the head
     if built_in > 1:
