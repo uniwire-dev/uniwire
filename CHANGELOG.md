@@ -18,6 +18,16 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   "Notes" title is left out when there is no note. In the PDF, every CJK character of a text is drawn with the CJK
   font when some are (a mark the main font has was drawn in another type face inside a word). The drawing audit
   of the tests finds frame edges drawn through a text.
+* Drawing conventions. Conductor-count marks: one phase and the neutral is always one stroke and "+N" ("L1+N"),
+  where a two-pole device wrote two strokes and "L1 N"; no "+N" on a line without a neutral (single-pole circuits of
+  a three-wire supply had one); below a two-pole device the circuits take its two conductors (they took the
+  installation's four). Transformers: the star point is earthed in TN-C, TN-C-S (on the PEN) and TT (by its own
+  electrode) multi-line drawings as it was in TN-S, never in IT; single-line drawings show an earth on a transformer
+  whose neutral is earthed. Outside the status colour mode a node of status `future`, and what inherits it, has
+  "(future)" added to its label (it was drawn as existing). The circuit table leaves out the column of a source with
+  nothing below it when that column would be empty. New info findings: no supply system declared, TN-C-S with no
+  board saying where the PEN is split (the drawings split it at the first board), and one listing the generic loads
+  and controllers without `symbol_text` (their boxes stay empty or generic).
 * Drawings: a generator whose line leads, through switches and protections only, to DC equipment (a DC/DC converter,
   a battery, a DC board) is a DC machine, an alternator with its rectifier: drawn "G =" with L+ L- in both views. In
   an AC installation it was drawn as an AC generator ("G 1~", L1 N) feeding the DC equipment.
