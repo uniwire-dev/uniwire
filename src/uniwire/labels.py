@@ -26,6 +26,23 @@ NORTH_AMERICAN: contextvars.ContextVar[bool] = contextvars.ContextVar("uniwire_n
 # kind of each declared interlock key ("trapped_key", "electrical"...), for the drawing being made
 INTERLOCK_KINDS: contextvars.ContextVar[Optional[dict[str, str]]] = contextvars.ContextVar("uniwire_interlock_kinds",
                                                                                           default=None)
+# name of each node of the drawing being made (its tag, else its label), by id: what an off-page reference that
+# targets a node by its id prints in place of that id
+NODE_NAMES: contextvars.ContextVar[Optional[dict[str, str]]] = contextvars.ContextVar("uniwire_node_names",
+                                                                                      default=None)
+
+
+def node_names(doc: Any) -> dict[str, str]:
+    """Tag (else label) of each node of ``doc`` that has one, by id."""
+    from .resolve import iter_nodes
+    return {n.id: n.ref or n.label for n, _, _ in iter_nodes(doc) if n.id and (n.ref or n.label)}
+
+
+def target_text(target: Optional[str]) -> str:
+    """What an off-page reference says it leads to: its ``target``, or when that is the id of a node of the
+    document, the tag (else the label) of that node, never its bare id."""
+    t = str(target or "")
+    return (NODE_NAMES.get() or {}).get(t, t)
 
 
 def north_american(doc: Any) -> bool:
@@ -64,9 +81,17 @@ def part_number(node: Any) -> Optional[str]:
     return (prod.part_number if prod is not None and prod.part_number else None) or _g(node, "part_number")
 
 
+def _manufacturer(node: Any) -> Optional[str]:
+    """Manufacturer: ``product.manufacturer`` takes precedence over ``manufacturer``."""
+    prod = _g(node, "product")
+    return (prod.manufacturer if prod is not None and prod.manufacturer else None) or _g(node, "manufacturer")
+
+
 def _amps(text: Any) -> str:
     """A setting range with its unit, '9-13 A'; a range given as words ('to confirm') stays as written."""
     s = str(text or "")
+    if re.fullmatch(r"\s*0+(?:[.,]0*)?\s*", s):  # a range of 0 is no range: nothing printed rather than '0 A'
+        return ""
     return f"{s} A" if re.search(r"\d", s) and not re.search(r"\d\s*A\b", s) else s
 
 
@@ -75,25 +100,22 @@ def protection_short(node: Any) -> str:
     t = node.type
     in_a = _g(node, "in_A")
     if t == "breaker":
-        return f"{node.curve or ''}{fmt(in_a)}" if node.curve else (fmt(in_a, " A") if in_a else "")
+        return f"{node.curve}{fmt(in_a) if in_a else ''}" if node.curve else (fmt(in_a, " A") if in_a else "")
     if t == "rcbo":  # 'C16 30 mA', or '20 A 5 mA' without a curve
-        rating = f"{node.curve}{fmt(in_a)}" if node.curve else (fmt(in_a, " A") if in_a else "")
+        rating = f"{node.curve}{fmt(in_a) if in_a else ''}" if node.curve else (fmt(in_a, " A") if in_a else "")
         return f"{rating} {fmt_sensitivity(node.idn_mA)}".strip()
     if t == "main_breaker":
         r = _amps(node.range_A) if node.range_A else fmt(in_a, " A") if in_a else ""
         return f"{r} {fmt_sensitivity(node.idn_mA)}".strip()
+    amps = fmt(in_a, " A") if in_a else ""  # a rating of 0 is no rating: nothing printed rather than '0 A'
     if t == "rcd":
-        return f"{fmt(in_a, ' A')} {fmt_sensitivity(node.idn_mA)}".strip()
+        return f"{amps} {fmt_sensitivity(node.idn_mA)}".strip()
     if t == "fuse":
-        return f"{node.fuse_class or ''} {fmt(in_a, ' A')}".strip()
+        return f"{node.fuse_class or ''} {amps}".strip()
     if t == "fuse_switch":
-        return f"{fmt(in_a, ' A')} / {fmt(node.fuse_A, ' A')}".strip(" /")
-    if t in ("switch_disconnector", "disconnector"):
-        return fmt(in_a, " A")
-    if t == "motor_starter":
-        return f"{fmt(in_a, ' A')}"
-    if t == "spare":
-        return fmt(in_a, " A") if in_a else ""
+        return f"{amps} / {fmt(node.fuse_A, ' A') if node.fuse_A else ''}".strip(" /")
+    if t in ("switch_disconnector", "disconnector", "motor_starter", "spare"):
+        return amps
     return ""
 
 
@@ -160,40 +182,77 @@ def conductor_count(chain: list[Any], system: Optional[str] = None) -> Optional[
     return SYSTEM_CONDUCTORS.get(system or "")
 
 
-Mark = tuple[int, bool]  # conductor-count mark: (counted conductors, separate uncut neutral)
+Mark = tuple[int, bool]  # conductor-count mark: (counted conductors, separate neutral)
 SWITCHING = PROTECTIVE | {"contactor", "transfer_switch", "impulse_relay"}
-POLES_MARK: dict[str, Mark] = {"1P": (1, True), "1P+N": (1, True), "2P": (2, False), "3P": (3, False),
-                               "3P+N": (3, True), "4P": (4, False)}
+#: Whether the line of a supply system carries a neutral.
+SYSTEM_NEUTRAL = {"1P+N": True, "2P": False, "DC": False, "3P": False, "3P+N": True, "split-phase": True}
+TWO_PHASES = ("L1L2", "L2L3", "L1L3")
+
+
+def _one_phase(n: int, neutral: Optional[bool], phase: Optional[str] = None) -> Mark:
+    """Mark of a line of ``n`` live conductors: one phase and a neutral is always one stroke and '+N' ('L1+N'),
+    whatever the device cuts; without a neutral on the line (``neutral`` False), or on two phases, the conductors
+    are counted. ``neutral`` None: not known (no system declared), a neutral is assumed."""
+    if n == 2 and neutral is not False and phase not in TWO_PHASES:
+        return (1, True)
+    return (n, False)
 
 
 def system_mark(system: Optional[str]) -> Optional[Mark]:
-    """Mark of a supply line: every live conductor counted ('3P+N' -> 4)."""
+    """Mark of a supply line: every live conductor counted ('3P+N' -> 4), one phase and the neutral '+N'."""
     n = SYSTEM_CONDUCTORS.get(system or "")
-    return (n, False) if n else None
+    return _one_phase(n, SYSTEM_NEUTRAL.get(system or "")) if n else None
 
 
-def poles_mark(poles: Optional[str], neutral_downstream: bool = False) -> Optional[Mark]:
+def poles_mark(poles: Optional[str], neutral_downstream: bool = False, neutral: Optional[bool] = None,
+               phase: Optional[str] = None) -> Optional[Mark]:
     """Mark of the line leaving a switching device of ``poles``.
 
-    '4P' (neutral switched): 4 conductors; '3P+N' / '1P+N' / '1P': the phases plus a neutral that is not
-    cut; '3P': three conductors, or three plus an uncut neutral when circuits below need one.
+    '4P' (neutral switched): 4 conductors; '3P+N': the phases plus a neutral that is not cut; '3P': three
+    conductors, or three plus an uncut neutral when circuits below need one; '1P', '1P+N', '2P': one phase and
+    the neutral ('+N'). A device passes on the neutral of its supply and never makes one: on a line without a
+    neutral (``neutral`` False) no '+N', the poles are counted; nor on two phases (``phase`` 'L1L2').
     """
-    if poles == "3P" and neutral_downstream:
-        return (3, True)
-    return POLES_MARK.get(poles or "")
+    if poles not in POLES_CONDUCTORS:
+        return None
+    if neutral is False:
+        return (min(int(poles[0]), 3) if poles[0] != "1" else 2, False)
+    if poles in ("1P", "1P+N", "2P"):
+        return _one_phase(2, True, phase)
+    if poles == "3P":
+        return (3, neutral_downstream)
+    return (3, True) if poles == "3P+N" else (4, False)
 
 
-def feeder_mark(chain: list[Any], system: Optional[str] = None) -> Optional[Mark]:
-    """Mark of an outgoing cable: :func:`conductor_count`, with the neutral shown apart ('3+N', '1+N') when
-    the nearest switching device leaves it uncut. A DC feeder has no neutral: its two poles are counted."""
-    n = conductor_count(chain, system)
+def feeder_mark(chain: list[Any], system: Optional[str] = None, neutral: Optional[bool] = None,
+                above: Optional[Mark] = None) -> Optional[Mark]:
+    """Mark of an outgoing cable: :func:`conductor_count`, else the conductors of the line it leaves (``above``:
+    the mark of that line, below a two-pole device its two conductors, not the installation's), else those of
+    ``system``. The neutral is shown apart ('3+N', '+N') when the nearest switching device leaves it uncut, and
+    only on a line that has one (``neutral``: whether it has, None when not known). A DC feeder has no neutral:
+    its two poles are counted."""
+    if system == "DC":
+        n = conductor_count(chain, system)
+        return (n, False) if n else None
+    n = conductor_count(chain, None)
+    if not n:
+        if above is not None:
+            return above
+        n = SYSTEM_CONDUCTORS.get(system or "")
+    if neutral is None and system:
+        neutral = SYSTEM_NEUTRAL.get(system)
     if not n:
         return None
-    if system == "DC":
-        return (n, False)
+    phase = next((_g(c, "phase") for c in chain if _g(c, "phase")), None)
     poles = next((_g(c, "poles") for c in chain if c.type in SWITCHING | {"spare"} and _g(c, "poles")), None)
-    if poles in ("1P", "1P+N", "3P", "3P+N") and n == int(poles[0]) + 1:
-        return (n - 1, True)
+    if n == 2:
+        if system == "split-phase" and poles == "2P":
+            phase = "L1L2"  # split-phase: a two-pole device is on both lines (240 V)
+        return _one_phase(2, neutral, phase)
+    if n == 4:
+        if neutral is False:
+            return (3, False)  # a spare core: no neutral on the line to carry
+        return (3, True) if poles in ("3P", "3P+N") else (4, False)
     return (n, False)
 
 
@@ -359,7 +418,7 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
     elif t == "motor":
         lines += [fmt(g("p_kW"), " kW") if g("p_kW") else ""]
     elif t == "offpage":
-        lines += [g("target") or ""]
+        lines += [target_text(g("target"))]
     elif t == "plc":
         mods = g("modules") or []
         lines += [part_number(node) or "", _t("ann.modules", lang, count=len(mods)) if mods else "",
@@ -423,7 +482,8 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
         src = prot if _g(prot, "idn_mA") else rcd_node
         if src is None or not _g(src, "idn_mA"):
             return ""
-        rcd_type = _g(src, "rcd_type") if not column.get("rcd_type_column") else None  # else in its own row
+        # 'type A', as beside the symbol: a bare letter after the sensitivity reads as a unit ('30 mA A')
+        rcd_type = rcd_kind(src) if not column.get("rcd_type_column") else None  # else in its own row
         if NORTH_AMERICAN.get():
             rcd_type = rcd_kind(src)
         txt = fmt_sensitivity(_g(src, "idn_mA")) + (f" {rcd_type}" if rcd_type else "")
@@ -479,6 +539,19 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
     if field == "frame_A":
         v = _g(prot, "frame_A")
         return fmt(v, " AF") if v else ""
+    if field == "status":
+        v = first("status")
+        return _t(f"legend.status.{v}", lang) if v else ""
+    if field in ("manufacturer", "part_number"):
+        # the product of the feeder's device (its protection, else its switching device), else of the final node
+        get = part_number if field == "part_number" else _manufacturer
+        return next((v for v in (get(n) for n in (prot, column.get("rated"), leaf) if n is not None) if v), "")
+    if field in ("icu_kA", "icw_kA"):
+        src = prot if prot is not None else column.get("rated")
+        v = _g(src, field)
+        return fmt(v, " kA") if v else ""
+    if field == "socket_type":
+        return _g(leaf, "socket_type") or ""
     if cable is not None:
         if field == "cable_type":
             return cable.designation or ""
@@ -497,6 +570,8 @@ CARTOUCHE_TITLES = {
         "points": "Points", "circuit": "Circuit", "ib_A": "Ib", "cos_phi": "cos φ", "count": "Nombre",
         "un_V": "Tension", "frame_A": "Boîtier", "cable_type": "Type de câble", "cable_ref": "Repère câble",
         "install": "Mode de pose",
+        "status": "État", "manufacturer": "Fabricant", "part_number": "Référence",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Type de prise",
     },
     "ru": {
         "label": "Наименование", "ref": "Обозначение", "protection": "Защита", "in_A": "Ном. ток", "curve": "Хар-ка",
@@ -505,6 +580,8 @@ CARTOUCHE_TITLES = {
         "points": "Точки", "circuit": "Группа", "ib_A": "Ib", "cos_phi": "cos φ", "count": "Кол-во",
         "un_V": "Напряжение", "frame_A": "Корпус", "cable_type": "Марка кабеля", "cable_ref": "Обозн. кабеля",
         "install": "Способ прокладки",
+        "status": "Состояние", "manufacturer": "Изготовитель", "part_number": "Артикул",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Тип розетки",
     },
     "zh": {
         "label": "名称", "ref": "编号", "protection": "保护", "in_A": "额定电流", "curve": "脱扣曲线", "icn_kA": "分断能力",
@@ -512,6 +589,8 @@ CARTOUCHE_TITLES = {
         "section_mm2": "截面", "length_m": "长度", "p_kW": "功率", "phase": "相别", "room": "房间", "points": "点数",
         "circuit": "回路", "ib_A": "Ib", "cos_phi": "功率因数", "count": "数量", "un_V": "电压", "frame_A": "壳架",
         "cable_type": "电缆型号", "cable_ref": "电缆编号", "install": "敷设方式",
+        "status": "状态", "manufacturer": "制造商", "part_number": "型号",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "插座类型",
     },
     "es": {
         "label": "Descripción", "ref": "Designación", "protection": "Protección", "in_A": "Calibre", "curve": "Curva",
@@ -520,6 +599,8 @@ CARTOUCHE_TITLES = {
         "p_kW": "Potencia", "phase": "Fase", "room": "Local", "points": "Puntos", "circuit": "Circuito", "ib_A": "Ib",
         "cos_phi": "cos φ", "count": "Cant.", "un_V": "Tensión", "frame_A": "Caja", "cable_type": "Tipo de cable",
         "cable_ref": "Ref. cable", "install": "Mét. instalación",
+        "status": "Estado", "manufacturer": "Fabricante", "part_number": "Referencia",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Tipo de toma",
     },
     "de": {
         "label": "Bezeichnung", "ref": "BMK", "protection": "Schutzorgan", "in_A": "Nennstrom", "curve": "Charakteristik",
@@ -528,6 +609,8 @@ CARTOUCHE_TITLES = {
         "p_kW": "Leistung", "phase": "Außenleiter", "room": "Raum", "points": "Auslässe", "circuit": "Stromkreis",
         "ib_A": "Ib", "cos_phi": "cos φ", "count": "Anz.", "un_V": "Spannung", "frame_A": "Baugröße",
         "cable_type": "Leitungstyp", "cable_ref": "Leitungs-BMK", "install": "Verlegeart",
+        "status": "Status", "manufacturer": "Hersteller", "part_number": "Bestellnummer",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Steckdosentyp",
     },
     "pt": {
         "label": "Descrição", "ref": "Ident.", "protection": "Proteção", "in_A": "Corr. nominal",
@@ -536,6 +619,8 @@ CARTOUCHE_TITLES = {
         "p_kW": "Potência", "phase": "Fase", "room": "Local", "points": "Pontos", "circuit": "Circuito", "ib_A": "Ib",
         "cos_phi": "cos φ", "count": "Qtd.", "un_V": "Tensão", "frame_A": "Carcaça", "cable_type": "Tipo de cabo",
         "cable_ref": "Ident. cabo", "install": "Mét. instalação",
+        "status": "Situação", "manufacturer": "Fabricante", "part_number": "Referência",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Tipo de tomada",
     },
     "it": {
         "label": "Descrizione", "ref": "Sigla", "protection": "Protezione", "in_A": "In",
@@ -544,6 +629,8 @@ CARTOUCHE_TITLES = {
         "p_kW": "Potenza", "phase": "Fase", "room": "Locale", "points": "Punti", "circuit": "Circuito", "ib_A": "Ib",
         "cos_phi": "cos φ", "count": "Q.tà", "un_V": "Tensione", "frame_A": "Taglia", "cable_type": "Tipo cavo",
         "cable_ref": "Sigla cavo", "install": "Posa",
+        "status": "Stato", "manufacturer": "Costruttore", "part_number": "Codice",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Tipo presa",
     },
     "pl": {
         "label": "Opis", "ref": "Oznaczenie", "protection": "Zabezpieczenie", "in_A": "In",
@@ -552,6 +639,8 @@ CARTOUCHE_TITLES = {
         "length_m": "Długość", "p_kW": "Moc", "phase": "Faza", "room": "Pomieszczenie", "points": "Punkty",
         "circuit": "Obwód", "ib_A": "Ib", "cos_phi": "cos φ", "count": "Liczba", "un_V": "Napięcie",
         "frame_A": "Obudowa", "cable_type": "Typ przewodu", "cable_ref": "Ozn. przewodu", "install": "Sposób ułożenia",
+        "status": "Status", "manufacturer": "Producent", "part_number": "Nr katalogowy",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Typ gniazda",
     },
     "tr": {
         "label": "Açıklama", "ref": "Etiket", "protection": "Koruma", "in_A": "Anma akımı", "curve": "Eğri",
@@ -560,6 +649,8 @@ CARTOUCHE_TITLES = {
         "p_kW": "Güç", "phase": "Faz", "room": "Mahal", "points": "Nokta", "circuit": "Devre", "ib_A": "Ib",
         "cos_phi": "cos φ", "count": "Adet", "un_V": "Gerilim", "frame_A": "Kasa", "cable_type": "Kablo tipi",
         "cable_ref": "Kablo etiketi", "install": "Döşeme şekli",
+        "status": "Durum", "manufacturer": "Üretici", "part_number": "Ürün kodu",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Priz tipi",
     },
     "ja": {
         "label": "名称", "ref": "記号", "protection": "保護", "in_A": "定格電流", "curve": "特性", "icn_kA": "遮断容量",
@@ -567,6 +658,8 @@ CARTOUCHE_TITLES = {
         "section_mm2": "断面積", "length_m": "こう長", "p_kW": "容量", "phase": "相", "room": "室名", "points": "箇所",
         "circuit": "回路", "ib_A": "Ib", "cos_phi": "力率", "count": "数量", "un_V": "電圧", "frame_A": "AF",
         "cable_type": "ケーブル種別", "cable_ref": "ケーブル番号", "install": "布設方法",
+        "status": "状態", "manufacturer": "メーカー", "part_number": "型番",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "コンセント種別",
     },
     "nl": {
         "label": "Omschrijving", "ref": "Codering", "protection": "Beveiliging", "in_A": "Nominaal",
@@ -575,6 +668,8 @@ CARTOUCHE_TITLES = {
         "length_m": "Lengte", "p_kW": "Vermogen", "phase": "Fase", "room": "Ruimte", "points": "Punten",
         "circuit": "Groep", "ib_A": "Ib", "cos_phi": "Arbeidsfactor", "count": "Aantal", "un_V": "Spanning",
         "frame_A": "Frame", "cable_type": "Kabeltype", "cable_ref": "Kabelcodering", "install": "Installatiemethode",
+        "status": "Status", "manufacturer": "Fabrikant", "part_number": "Artikelnummer",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Type contactdoos",
     },
     "hr": {
         "label": "Opis", "ref": "Oznaka", "protection": "Zaštita", "in_A": "In", "curve": "Karakt.",
@@ -583,6 +678,8 @@ CARTOUCHE_TITLES = {
         "room": "Prostorija", "points": "Točke", "circuit": "Strujni krug", "ib_A": "Ib", "cos_phi": "cos φ",
         "count": "Kom.", "un_V": "Napon", "frame_A": "Kućište", "cable_type": "Tip kabela",
         "cable_ref": "Oznaka kabela", "install": "Način polaganja",
+        "status": "Status", "manufacturer": "Proizvođač", "part_number": "Kataloški broj",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Tip utičnice",
     },
     "sr": {
         "label": "Opis", "ref": "Oznaka", "protection": "Zaštita", "in_A": "In", "curve": "Karakt.",
@@ -591,6 +688,8 @@ CARTOUCHE_TITLES = {
         "room": "Prostorija", "points": "Tačke", "circuit": "Strujno kolo", "ib_A": "Ib", "cos_phi": "cos φ",
         "count": "Kom.", "un_V": "Napon", "frame_A": "Kućište", "cable_type": "Tip kabla",
         "cable_ref": "Oznaka kabla", "install": "Način polaganja",
+        "status": "Status", "manufacturer": "Proizvođač", "part_number": "Kataloški broj",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Tip utičnice",
     },
     "bs": {
         "label": "Opis", "ref": "Oznaka", "protection": "Zaštita", "in_A": "In", "curve": "Karakt.",
@@ -599,6 +698,8 @@ CARTOUCHE_TITLES = {
         "room": "Prostorija", "points": "Tačke", "circuit": "Strujni krug", "ib_A": "Ib", "cos_phi": "cos φ",
         "count": "Kom.", "un_V": "Napon", "frame_A": "Kućište", "cable_type": "Tip kabla",
         "cable_ref": "Oznaka kabla", "install": "Način polaganja",
+        "status": "Status", "manufacturer": "Proizvođač", "part_number": "Kataloški broj",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Tip utičnice",
     },
     "en": {
         "label": "Description", "ref": "Tag", "protection": "Protection", "in_A": "Rating", "curve": "Curve",
@@ -607,6 +708,8 @@ CARTOUCHE_TITLES = {
         "points": "Points", "circuit": "Circuit", "ib_A": "Ib", "cos_phi": "Power factor", "count": "Qty",
         "un_V": "Voltage", "frame_A": "Frame", "cable_type": "Cable type", "cable_ref": "Cable tag",
         "install": "Raceway / method",
+        "status": "Status", "manufacturer": "Manufacturer", "part_number": "Part number",
+        "icu_kA": "Icu", "icw_kA": "Icw", "socket_type": "Socket type",
     },
 }
 CARTOUCHE_TITLES["sr-Cyrl"] = {k: cyrillic(v) for k, v in CARTOUCHE_TITLES["sr"].items()}
