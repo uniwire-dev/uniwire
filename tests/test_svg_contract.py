@@ -196,11 +196,39 @@ def test_pdf_cjk_text(tmp_path, monkeypatch):
     assert pdf._runs("조명", "Helvetica", None)[0][0] == "HYGothic-Medium"
     assert pdf._runs("Q1 16 A", "Helvetica", None) == [("Helvetica", "Q1 16 A")]
     assert text_width("照明", 10) == 20
-    monkeypatch.setattr(pdf, "_FONT_CANDIDATES", [])  # a system without fonts, like a slim container
+    monkeypatch.setattr(pdf, "_packaged_fonts", list)  # no font at all: Helvetica, CJK still drawn
+    monkeypatch.setattr(pdf, "_FONT_CANDIDATES", [])
     page = Page(100, 30)
     page.root.add(Text((5, 10), "照明 客厅", 5))
     pdf.write_pdf([page], tmp_path / "t.pdf")
     assert b"STSong-Light" in (tmp_path / "t.pdf").read_bytes()
+
+
+def test_pdf_packaged_font_draws_every_european_letter(tmp_path, monkeypatch):
+    pytest.importorskip("reportlab")
+    from reportlab.pdfgen.canvas import Canvas
+
+    from uniwire.render import pdf
+    from uniwire.render.scene import Page, Text
+
+    monkeypatch.setattr(pdf, "_FONT_CANDIDATES", [])  # no system font, like the browser or a slim container
+    drawn: list[tuple[str, str]] = []
+    draw_string = Canvas.drawString
+
+    def spy(self, x, y, text, *args, **kwargs):
+        drawn.append((self._fontname, text))
+        return draw_string(self, x, y, text, *args, **kwargs)
+
+    monkeypatch.setattr(Canvas, "drawString", spy)
+    texts = ["Освещение кухни", "Gniazdka łazienka źródło", "Çamaşır makinesi İşık ğ", "IΔn 30 mA", "Rf ≥ 50 kΩ"]
+    page = Page(200, 60)
+    for i, text in enumerate(texts):
+        page.root.add(Text((5, 10 + 10 * i), text, 5, bold=i == 0))
+    pdf.write_pdf([page], tmp_path / "t.pdf")
+    data = (tmp_path / "t.pdf").read_bytes()
+    assert b"+LiberationSans" in data and b"+LiberationSans-Bold" in data and b"/FontFile2" in data  # embedded
+    assert sorted(text for _, text in drawn) == sorted(texts)  # whole: no letter replaced or left out
+    assert {font for font, _ in drawn} == {"UW", "UW-Bold"}  # never Helvetica, which has none of these letters
 
 
 def test_pdf_arrows_without_a_glyph_written_in_ascii():

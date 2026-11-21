@@ -8,6 +8,12 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* PDF: the package ships a font, Liberation Sans (Regular and Bold, SIL Open Font License 1.1, see NOTICE), and every
+  PDF is written with it. Where Arial or Liberation Sans was not installed (the web editor, slim containers, many
+  systems), Cyrillic, Polish and Turkish letters came out as black boxes and "IΔn" as "IDn"; they are now drawn, and
+  a document gives the same PDF on every system. The font has the widths of Arial, so the layout does not change.
+  Chinese, Japanese and Korean text is drawn as before.
+
 * Single-line drawings: a characteristic of a device (a rating, a curve, a type of meter) is left out beside its
   label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
   out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a
