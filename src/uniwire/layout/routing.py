@@ -13,6 +13,7 @@ Everything works on axis-aligned boxes ``(x0, y0, x1, y1)`` in drawing coordinat
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Optional
@@ -535,7 +536,142 @@ GRID_LENGTH = 0.1  # cost per mm of a grid route
 _DIRS = ((1, 0), (-1, 0), (0, 1), (0, -1))  # +x, -x, +y (down), -y
 _LEAVE = {"left": 1, "right": 0, "down": 2, "up": 3}  # first move from an end
 _ARRIVE = {"left": 0, "right": 1, "down": 3, "up": 2}  # last move into an end ('up': a terminal on top)
+
+
+def _load_native():
+    """The compiled search of ``route_grid`` (the optional package ``uniwire-native``), or None: not installed, of
+    another interface, or turned off with the environment variable ``UNIWIRE_NATIVE=0``. Both searches find the same
+    routes (same costs, same floating-point operations, same tie order); the compiled one is many times faster."""
+    if os.environ.get("UNIWIRE_NATIVE", "").strip() == "0":
+        return None
+    try:
+        import uniwire_native
+    except ImportError:
+        return None
+    if getattr(uniwire_native, "GRID_API", None) != 1:  # built for another version of this search
+        return None
+    return uniwire_native.grid_search
+
+
+_grid_search = _load_native()
+# ``_wind`` as two tables by turns * 16 + d * 4 + d2 (for the compiled search): the turns after, a wrap made or not
+_WIND = [_wind(t, d, d2) for t in range(16) for d in range(4) for d2 in range(4)]
+_WIND_TURNS, _WIND_WRAP = bytes(w for w, _ in _WIND), bytes(k for _, k in _WIND)
 _PROBE: list[list[Point]] = []  # debugging aid, see route_grid
+
+
+def _ragged(lists: list[tuple], width: int = 4) -> tuple[list[int], list[float]]:
+    """Lists of tuples of ``width`` floats as (offsets, flat values), for the compiled search."""
+    off, vals = [0], []
+    for items in lists:
+        for item in items:
+            vals.extend(item[-width:])
+        off.append(len(vals) // width)
+    return off, vals
+
+
+def _gaps(vals: list[float], kinds: list[list]) -> list[tuple[list[int], list[float]]]:
+    """For each kind of line (position, start, end), the lines between each grid line and the next (the ones a move
+    between them crosses, as ``between``), as ``_ragged`` (start, end) lists, for the compiled search."""
+    from bisect import bisect_right
+
+    out = []
+    for lines in kinds:
+        keys = [bisect_right(lines, (v, 1e18, 1e18)) for v in vals]
+        out.append(_ragged([lines[keys[n]:keys[n + 1]] if n + 1 < len(vals) else [] for n in range(len(vals))], 2))
+    return out
+
+
+def _grid_dijkstra(nx: int, ny: int, start_at: list[tuple[int, int]], goal_at: dict[int, int], wrap: float,
+                   then: Optional[list[Optional[int]]], bend: float, cache: list[Optional[float]],
+                   edge_cost: Callable[[int], float]) -> tuple[list[int], int, float]:
+    """The search of ``route_grid`` (pure Python): the states from the goal reached back to the start used ([]: no
+    route), the index of that start and the cost of the route."""
+    import heapq
+
+    # states (column, row, direction of the last move) numbered (i * ny + j) * 4 + d: flat arrays, not dictionaries;
+    # with ``wrap``, the turns made on the cheapest way to each state kept with it (see ``_wind``: not a state of its
+    # own, many times more states to search, for a cost that the cheapest way gets right but in rare cases).
+    # The heap holds (cost, state << 6 | kind << 4 | turns[, state before]), kind 1: the first move from an end, 2: a
+    # goal reached (wrap): the same order as (cost, i, j, d, kind, turns[, before]), with less to compare.
+    heap: list[tuple] = []
+    size = nx * ny * 4
+    origin = [0] * size
+    prev = [-1] * size
+    dist = [1e18] * size
+    turns = [0] * size
+    for st, k in start_at:
+        dist[st], prev[st], origin[st] = 0.0, -1, k
+        heapq.heappush(heap, (0.0, st << 6 | 16))
+    # the moves from a state: (direction, step of the cell number, step of the edge key from cell * 2)
+    px, mx, py, my = (0, ny, 0), (1, -ny, -2 * ny), (2, 1, 1), (3, -1, -1)
+    moves = [(px, py, my), (mx, py, my), (px, mx, py), (px, mx, my)]  # no turning back
+    straight = [(px,), (mx,), (py,), (my,)]  # the first move from an end
+    last_i, last_j = nx - 1, ny - 1
+    pop, push = heapq.heappop, heapq.heappush
+    found = -1
+    last = -1  # wrap: the state before the goal reached (a goal is reached by its own heap entry)
+    while heap:
+        item = pop(heap)
+        cost, code = item[0], item[1]
+        st = code >> 6
+        fresh = (code >> 4) & 3
+        if fresh == 2:  # wrap: a goal reached, the turn into the line it joins counted
+            found, last = st, item[2]
+            break
+        if cost > dist[st]:
+            continue
+        t = code & 15
+        if wrap:
+            if t != turns[st]:
+                continue
+        elif not fresh and st in goal_at:
+            found = st
+            break
+        d = st & 3
+        cell = st >> 2
+        i, j = divmod(cell, ny)
+        for d2, dc, dk in (straight[d] if fresh else moves[d]):
+            if d2 == 0:
+                if i == last_i:
+                    continue
+            elif d2 == 1:
+                if i == 0:
+                    continue
+            elif d2 == 2:
+                if j == last_j:
+                    continue
+            elif j == 0:
+                continue
+            key = cell * 2 + dk
+            e = cache[key]
+            if e is None:
+                e = edge_cost(key)
+            c = cost + e + (bend if d2 != d else 0.0)
+            s2 = (cell + dc) * 4 + d2
+            if wrap:
+                t2 = t
+                if not fresh and d2 != d:
+                    t2, k = _wind(t, d, d2)
+                    c += wrap * k
+                if s2 in goal_at:
+                    nxt = then[goal_at[s2]] if then is not None else None
+                    k = _wind(t2, d2, nxt)[1] if nxt is not None else 0
+                    push(heap, (c + wrap * k, s2 << 6 | 32 | t2, st))
+                if c < dist[s2]:
+                    dist[s2], prev[s2], origin[s2], turns[s2] = c, st, origin[st], t2
+                    push(heap, (c, s2 << 6 | t2))
+            elif c < dist[s2]:
+                dist[s2], prev[s2], origin[s2] = c, st, origin[st]
+                push(heap, (c, s2 << 6))
+    if found < 0:
+        return [], 0, 0.0
+    chain = [found] if wrap else []  # wrap: the way the goal was reached by (its own state may be reached cheaper)
+    s = last if wrap else found
+    while s >= 0:
+        chain.append(s)
+        s = prev[s]
+    return chain, origin[chain[-1]], cost if wrap else dist[found]
 
 
 def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box, lane: float = LANE,
@@ -549,7 +685,6 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
     frames), plus a cost per corner (``bend``, ``BEND`` if not given) and per mm (``length``). ``wrap``: the cost of a
     turn closing the route round what it passes (see ``wraps``); ``then``: for each goal, the move the line goes on
     with from there (a trunk), or None. Returns the points and the indexes of the ends used (no route: [])."""
-    import heapq
     from bisect import bisect_left, bisect_right
 
     bend = bend or BEND
@@ -700,98 +835,30 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
     # The heap holds (cost, state << 6 | kind << 4 | turns[, state before]), kind 1: the first move from an end, 2: a
     # goal reached (wrap): the same order as (cost, i, j, d, kind, turns[, before]), with less to compare.
     goal_at = {(xs.index(e.x) * ny + ys.index(e.y)) * 4 + _ARRIVE[e.side]: k for k, e in enumerate(goals)}
-    heap: list[tuple] = []
-    size = nx * ny * 4
-    origin = [0] * size
-    prev = [-1] * size
-    dist = [1e18] * size
-    turns = [0] * size
-    for k, e in enumerate(starts):
-        i, j, d = xs.index(e.x), ys.index(e.y), _LEAVE[e.side]
-        st = (i * ny + j) * 4 + d
-        dist[st], prev[st], origin[st] = 0.0, -1, k
-        heapq.heappush(heap, (0.0, st << 6 | 16))
-    # the moves from a state: (direction, step of the cell number, step of the edge key from cell * 2)
-    px, mx, py, my = (0, ny, 0), (1, -ny, -2 * ny), (2, 1, 1), (3, -1, -1)
-    moves = [(px, py, my), (mx, py, my), (px, mx, py), (px, mx, my)]  # no turning back
-    straight = [(px,), (mx,), (py,), (my,)]  # the first move from an end
-    last_i, last_j = nx - 1, ny - 1
-    pop, push = heapq.heappop, heapq.heappush
-    found = -1
-    last = -1  # wrap: the state before the goal reached (a goal is reached by its own heap entry)
-    while heap:
-        item = pop(heap)
-        cost, code = item[0], item[1]
-        st = code >> 6
-        fresh = (code >> 4) & 3
-        if fresh == 2:  # wrap: a goal reached, the turn into the line it joins counted
-            found, last = st, item[2]
-            break
-        if cost > dist[st]:
-            continue
-        t = code & 15
-        if wrap:
-            if t != turns[st]:
-                continue
-        elif not fresh and st in goal_at:
-            found = st
-            break
-        d = st & 3
-        cell = st >> 2
-        i, j = divmod(cell, ny)
-        for d2, dc, dk in (straight[d] if fresh else moves[d]):
-            if d2 == 0:
-                if i == last_i:
-                    continue
-            elif d2 == 1:
-                if i == 0:
-                    continue
-            elif d2 == 2:
-                if j == last_j:
-                    continue
-            elif j == 0:
-                continue
-            key = cell * 2 + dk
-            e = cache[key]
-            if e is None:
-                e = edge_cost(key)
-            c = cost + e + (bend if d2 != d else 0.0)
-            s2 = (cell + dc) * 4 + d2
-            if wrap:
-                t2 = t
-                if not fresh and d2 != d:
-                    t2, k = _wind(t, d, d2)
-                    c += wrap * k
-                if s2 in goal_at:
-                    nxt = then[goal_at[s2]] if then is not None else None
-                    k = _wind(t2, d2, nxt)[1] if nxt is not None else 0
-                    push(heap, (c + wrap * k, s2 << 6 | 32 | t2, st))
-                if c < dist[s2]:
-                    dist[s2], prev[s2], origin[s2], turns[s2] = c, st, origin[st], t2
-                    push(heap, (c, s2 << 6 | t2))
-            elif c < dist[s2]:
-                dist[s2], prev[s2], origin[s2] = c, st, origin[st]
-                push(heap, (c, s2 << 6))
-    if found < 0:
-        return [], 0, 0
+    start_at = [((xs.index(e.x) * ny + ys.index(e.y)) * 4 + _LEAVE[e.side], k) for k, e in enumerate(starts)]
+    if _grid_search is not None:  # the same search, compiled: on every grid line's costs, built here
+        res = _grid_search(nx, ny, xs, ys, bytes(blocked_at),
+                             _ragged([terms(x, True) for x in xs]), _ragged([terms(y, False) for y in ys]),
+                             *_gaps(ys, [buses, fy, hl]), *_gaps(xs, [vw, fx]),
+                             box_cross, length, bend, wrap, BUS_CROSS, FRAME_CROSS, WIRE_CROSS, start_at,
+                             [(st, k, -1 if then is None or then[k] is None else then[k]) for st, k in goal_at.items()],
+                             _WIND_TURNS, _WIND_WRAP)
+        if res is None:
+            return [], 0, 0
+        chain, used, reported = res
+    else:
+        chain, used, reported = _grid_dijkstra(nx, ny, start_at, goal_at, wrap, then, bend, cache, edge_cost)
+        if not chain:
+            return [], 0, 0
     if cost_out is not None:
-        cost_out.append(cost if wrap else dist[found])
-    path = []
-    s = found
-    if wrap:  # the way the goal was reached by (its own state may have been reached cheaper another way)
-        path.append((xs[s // 4 // ny], ys[s // 4 % ny]))
-        s = last
-    while s >= 0:
-        path.append((xs[s // 4 // ny], ys[s // 4 % ny]))
-        if prev[s] < 0:
-            first = s
-        s = prev[s]
-    path.reverse()
-    a, b = starts_in[origin[first]], goals_in[goal_at[found]]
+        cost_out.append(reported)
+    found = chain[0]
+    path = [(xs[s // 4 // ny], ys[s // 4 % ny]) for s in reversed(chain)]
+    a, b = starts_in[used], goals_in[goal_at[found]]
     pts = _simplify(([(a.x, a.y)] if a.side == "down" else []) + path + ([(b.x, b.y)] if b.side == "down" else []))
     if record:
         record_route(obs, pts)
-    return pts, origin[first], goal_at[found]
+    return pts, used, goal_at[found]
 
 
 DETOUR_BEND = 15.0  # a single-line route rerouted on the grid: few corners (a jog round a mark reads as a fault)

@@ -39,6 +39,7 @@ Changelog = "https://github.com/uniwire-dev/uniwire/blob/main/CHANGELOG.md"
 [project.optional-dependencies]
 pdf = ["reportlab>=4"]
 iec81346 = ["uniwire-data-iec81346"]
+native = ["uniwire-native"]
 mcp = ["mcp>=2.0"]
 dev = ["pytest>=8", "jsonschema>=4.20", "reportlab>=4", "mcp>=2.0", "ruff>=0.6"]
 
