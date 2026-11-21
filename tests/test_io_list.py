@@ -83,46 +83,70 @@ def test_io_list_one_row_per_channel_connected_or_spare():
     io = [(r["slot"], r["module_kind"], r["channel"]) for r in rows if r["module_kind"] != "comm" and r["slot"] != ""]
     assert io == [(0, "di", 1), (0, "di", 2), (0, "di", 3), (0, "di", 4), (0, "do", 1), (0, "do", 2),
                   (1, "ai", 1), (1, "ai", 2), (1, "ai", 3), (3, "mixed_io", 1), (3, "mixed_io", 2)]
-    spare = _io(doc, "0.3")
+    spare = _io(doc, "DI0.3")
     assert spare[0]["device"] == "" and spare[0]["io_type"] == "DI" and spare[0]["direction"] == "in"
 
 
 def test_io_list_slot_shared_by_input_and_output_modules():
     doc = _panel()
-    out = _io(doc, "0.1", module_kind="do")
+    out = _io(doc, "DO0.1", module_kind="do")
     assert len(out) == 1 and out[0]["io_type"] == "DO" and out[0]["device_display"] == "-KM1"
     assert out[0]["label"] == "Pump run" and out[0]["link_kind"] == "control" and out[0]["un_V"] == "24"
-    inp = _io(doc, "0.1", module_kind="di")
+    inp = _io(doc, "DI0.1", module_kind="di")
     assert len(inp) == 1 and inp[0]["io_type"] == "DI" and inp[0]["direction"] == "in"
 
 
 def test_io_list_follows_the_terminal_to_the_field_device():
     doc = _panel()
-    r = _io(doc, "0.1", module_kind="di")[0]
+    r = _io(doc, "DI0.1", module_kind="di")[0]
     # the PLC link lands on -X2:3; the flow switch arrives on the same terminal through its own cable
     assert (r["device"], r["device_display"], r["device_port"], r["terminal"]) == ("S1", "-S1", "13", "-X2:3")
     assert r["label"] == "Pump on" and r["cable"] == "W5"
-    r = _io(doc, "1.1")[0]
+    r = _io(doc, "AI1.1")[0]
     assert (r["device_display"], r["terminal"], r["label"], r["signal"], r["module"], r["io_type"]) == (
         "-B1", "-X2:5", "Tank level", "4-20 mA", "AI-2", "AI")
 
 
 def test_io_list_terminal_without_continuation_names_the_block():
     doc = _panel(extra_links=[{"kind": "control", "from": "A1", "from_port": "0.2", "to": "X2", "to_port": "6"}])
-    r = _io(doc, "0.2", module_kind="do")[0]
+    r = _io(doc, "DO0.2", module_kind="do")[0]
     assert (r["device"], r["device_port"], r["terminal"]) == ("X2", "", "-X2:6")
 
 
 def test_io_list_mixed_module_comm_module_and_links_without_channel():
     doc = _panel()
-    assert _io(doc, "3.1")[0]["io_type"] == "DI" and _io(doc, "3.1")[0]["label"] == "Running"
-    assert _io(doc, "3.2")[0]["io_type"] == "DO" and _io(doc, "3.2")[0]["direction"] == "out"
-    bus = _io(doc, "2")[0]
+    assert _io(doc, "DI3.1")[0]["io_type"] == "DI" and _io(doc, "DI3.1")[0]["label"] == "Running"
+    assert _io(doc, "DO3.2")[0]["io_type"] == "DO" and _io(doc, "DO3.2")[0]["direction"] == "out"
+    bus = _io(doc, "COM2")[0]
     assert (bus["module_kind"], bus["io_type"], bus["direction"], bus["signal"], bus["device_display"]) == (
         "comm", "COM", "bus", "RS485", "-P1")
     loose = [r for r in io_rows(doc) if r["slot"] == ""]
     assert [(r["label"], r["device"], r["direction"]) for r in loose] == [("Enable", "KM1", "out")]
     assert not [r for r in io_rows(doc) if r["link_kind"] == "earth"]
+
+
+def test_io_list_addresses_are_unique_per_plc():
+    doc = _panel()
+    rows = io_rows(doc)
+    owner = {}
+    for r in rows:
+        if r["plc"] == "A1" and r["slot"] != "":
+            owner.setdefault(r["address"], set()).add((r["module_kind"], r["channel"]))
+    assert all(len(v) == 1 for v in owner.values())
+    # built-in inputs and outputs share slot 0: the type tells them apart, as the tag drawn on the module
+    assert {r["address"] for r in rows if r["slot"] == 0 and r["channel"] == 1} == {"DI0.1", "DO0.1"}
+    # a spare channel of a mixed module has no known direction: no signal type, the drawn tag "IO" in its address
+    mixed = load({"sources": [{"type": "grid", "id": "G", "children": [
+        {"type": "plc", "id": "A9", "ref": "-A9", "modules": [{"slot": 1, "kind": "mixed_io", "channels": 2}]}]}]})
+    assert [(r["address"], r["io_type"], r["direction"]) for r in io_rows(mixed)] == [("IO1.1", "", ""),
+                                                                                       ("IO1.2", "", "")]
+
+
+def test_terminal_strip_names_plc_ports_by_their_io_address():
+    doc = _panel(extra_links=[{"kind": "control", "from": "A1", "from_port": "0.1", "to": "X2", "to_port": "1"}])
+    rows = _strip(doc, "X2")
+    assert (rows[0]["from_display"], rows[0]["from_port"]) == ("-A1", "DO0.1")
+    assert (rows[2]["to_display"], rows[2]["to_port"]) == ("-A1", "DI0.1")
 
 
 def test_io_list_without_plc_is_empty():
@@ -140,7 +164,7 @@ def test_terminal_strip_lists_declared_terminals_and_link_ends():
     assert [r["terminal"] for r in rows] == ["1", "2", "3", "4", "5", "6", "", ""]
     t3 = rows[2]
     assert (t3["from_display"], t3["from_port"], t3["from_cable"], t3["to_display"], t3["to_port"]) == (
-        "-S1", "13", "W5", "-A1", "0.1")
+        "-S1", "13", "W5", "-A1", "DI0.1")
     assert (t3["link_kind"], t3["label"]) == ("measure", "Pump on")
     assert rows[0]["from"] == rows[0]["to"] == ""  # spare
     # link ends without a terminal number: one row each, at the end
