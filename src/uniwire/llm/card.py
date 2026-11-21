@@ -146,8 +146,8 @@ _TEXT: dict[str, dict[str, str]] = {
         "views": "Vues (facultatives ; préférences de rendu)",
         "views_note": "Unifilaire pour une vue d'ensemble. Pour un tableau ou une armoire à fabriquer ou câbler "
                       "(machine, automate, pompes), déclarer deux vues : multifilaire d'abord (`kind: "
-                      "\"multi-line\"`, conducteurs et liaisons de puissance ; `auxiliaries: true` ajoute les "
-                      "appareils annexes et leurs liaisons), puis unifilaire (appareils annexes et liaisons) ; "
+                      "\"multi-line\"`, puissance seule ; `auxiliaries: true` ajoute les annexes), puis "
+                      "unifilaire (appareils annexes et liaisons) ; "
                       "pdf_url contient toutes les vues. Couleurs : `color`, `conductor_colors`. Pas de schéma de "
                       "commande (bobines, contacts) : le dire d'abord, proposer la partie puissance.",
         "profiles": "Profils de règles (`profiles` ; `core` s'applique toujours)",
