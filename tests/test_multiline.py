@@ -9,7 +9,7 @@ from tests.conftest import ROOT
 from uniwire import load, render_pages, render_svg
 from uniwire.layout.multiline import conductors
 from uniwire.render import default_view
-from uniwire.render.scene import Group, Text, bbox
+from uniwire.render.scene import Group, Line, Text, bbox
 from uniwire.render.svg import page_to_svg
 
 EXAMPLES = sorted((ROOT / "examples").glob("*.uniwire.json"))
@@ -470,6 +470,47 @@ def test_converters_drawn_in_the_direction_they_convert():
     page = render_pages(doc, default_view(doc, kind="multi-line"))[0]
     marks = {g.id: [t.text for t in g.items if isinstance(t, Text)] for g in _groups(page.root) if g.id in ("U1", "T2", "T3")}
     assert marks == {"U1": ["=", "~"], "T2": ["=", "="], "T3": ["~", "="]}
+
+
+def _earthed(page) -> set[str]:
+    """Conductors drawn hooked to an earth symbol: three stacked bars, each two thirds as long as the one above."""
+    def earth(g):
+        w = [abs(i.a[0] - i.b[0]) for i in g.items if isinstance(i, Line) and abs(i.a[1] - i.b[1]) < 1e-6]
+        return any(abs(w[k + 1] - w[k] * 2 / 3) < 1e-3 and abs(w[k + 2] - w[k] / 3) < 1e-3 for k in range(len(w) - 2))
+    return {g.attrs["data-uw-cond"] for g in _groups(page.root) if "data-uw-cond" in g.attrs and earth(g)}
+
+
+@pytest.mark.parametrize("root, system, earthing", [("busbar", "DC", None), ("dc_converter", "DC", None),
+                                                    ("board", "3P+N", "TN-S"), ("busbar", "1P+N", "TT")])
+def test_live_conductors_of_an_unfed_root_are_never_earthed(root, system, earthing):
+    doc = load({"installation": {"system": system, "earthing": earthing}, "sources": [{"type": root, "id": "R", "children": [
+        {"type": "fuse", "id": "F1", "poles": "1P", "children": [{"type": "load", "id": "L1"}]},
+        {"type": "breaker", "id": "Q2", "children": [{"type": "load", "id": "L2"}]}]}]})
+    page = render_pages(doc, default_view(doc, kind="multi-line"))[0]
+    info = conductors(doc)
+    assert all(s is None for s in info["R"].src.values())  # every conductor starts at the root
+    assert _earthed(page) == ({"PE"} if earthing else set())  # the PE alone, where it starts
+    texts = _texts(page.root)
+    assert all(c in texts for c in info["R"].inp)  # each incoming conductor named
+
+
+@pytest.mark.parametrize("feeder, supply", [
+    ({"type": "breaker", "id": "Q", "children": [{"type": "socket", "id": "X"}]}, ["L1", "N", "PE"]),
+    ({"type": "breaker", "id": "Q", "children": [{"type": "load", "id": "X"}]}, ["L1", "N", "PE"]),
+    ({"type": "breaker", "id": "Q", "phase": "L2", "children": [{"type": "lighting", "id": "X"}]},
+     ["L1", "L2", "L3", "N", "PE"]),
+    ({"type": "breaker", "id": "Q", "poles": "3P", "children": [{"type": "motor", "id": "X", "phases": 3}]},
+     ["L1", "L2", "L3", "PE"]),
+    ({"type": "breaker", "id": "Q", "poles": "4P", "children": [{"type": "load", "id": "X"}]},
+     ["L1", "L2", "L3", "N", "PE"]),
+])
+def test_undeclared_system_drawn_from_what_the_devices_state(feeder, supply):
+    # no system anywhere: never three phases nobody asked for; nothing stated is one phase and the neutral
+    doc = load({"sources": [{"type": "grid", "id": "G", "children": [{"type": "board", "id": "B", "children": [feeder]}]}]})
+    info = conductors(doc)
+    assert info["G"].out == supply and info["B"].out == supply
+    page = render_pages(doc, default_view(doc, kind="multi-line"))[0]
+    assert _poles(page, "Q")[0] == len([c for c in info["Q"].inp if c != "PE"])
 
 
 def test_busbar_split_shares_its_ways_evenly_among_its_sheets():
