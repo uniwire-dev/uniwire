@@ -14,8 +14,11 @@ Everything works on axis-aligned boxes ``(x0, y0, x1, y1)`` in drawing coordinat
 from __future__ import annotations
 
 import os
+from bisect import bisect_left, bisect_right
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
+from functools import lru_cache
+from math import floor
 from typing import Optional
 
 Box = tuple[float, float, float, float]
@@ -113,6 +116,165 @@ class Obstacles:
                          self.label_channel, self.grid)
 
 
+class _Lines:
+    """Lines (position, start, end) sorted by their position: the ones strictly between two positions in one slice."""
+
+    def __init__(self, lines: Iterable[tuple[float, float, float]]):
+        self.lines = sorted(lines)
+        self.keys = [ln[0] for ln in self.lines]
+
+    def inside(self, lo: float, hi: float) -> list[tuple[float, float, float]]:
+        """The lines whose position p is such that lo < p < hi (the same test, the same floats)."""
+        return self.lines[bisect_right(self.keys, lo):bisect_left(self.keys, hi)]
+
+
+class _Index:
+    """The obstacles of a window that does not change while ``place_label`` searches it, indexed for the box tests:
+    texts and symbols in the cells of a uniform grid, lines sorted by their position. The counts of
+    ``Obstacles.box_free`` / ``overlap`` (a yes / no, or a count: the order the obstacles are met in does not change
+    them), testing only the obstacles near the box rather than all of them."""
+
+    CELL = 10.0  # mm
+    BIG = 64  # a box over more cells than this is tested for every box
+    EPS = 1e-3  # the cells looked at reach this much further: whatever the rounding of the tests
+
+    def __init__(self, obs: Obstacles):
+        c = self.CELL
+        self.boxes = obs.boxes
+        cells: dict[int, list[int]] = {}
+        self.big: list[int] = []
+        for k, o in enumerate(obs.boxes):
+            i0, i1, j0, j1 = floor(o[0] / c), floor(o[2] / c), floor(o[1] / c), floor(o[3] / c)
+            if (i1 - i0 + 1) * (j1 - j0 + 1) > self.BIG:
+                self.big.append(k)
+                continue
+            for i in range(i0, i1 + 1):
+                for j in range(j0, j1 + 1):
+                    cells.setdefault(i * 65536 + j, []).append(k)
+        self.cells = cells
+        self.seen: dict[tuple[int, int, int, int], list[Box]] = {}
+        self.vwires, self.hlines = _Lines(obs.vwires), _Lines(obs.hlines)
+
+    def near(self, b: Box, pad: float) -> list[Box]:
+        """The boxes that may come within ``pad`` of ``b``: every one that does, as many times as it is in the
+        obstacles."""
+        c, e = self.CELL, self.EPS
+        key = (floor((b[0] - pad - e) / c), floor((b[2] + pad + e) / c), floor((b[1] - pad - e) / c),
+               floor((b[3] + pad + e) / c))
+        got = self.seen.get(key)  # (the boxes searched one after the other are often in the same cells)
+        if got is None:
+            got = self.seen[key] = self._near(*key)
+        return got
+
+    def _near(self, i0: int, i1: int, j0: int, j1: int) -> list[Box]:
+        """The boxes in the cells i0..i1 x j0..j1, each as many times as it is in the obstacles."""
+        boxes, cells = self.boxes, self.cells
+        if i0 == i1 and j0 == j1 and not self.big:  # in one cell: each box once
+            return [boxes[k] for k in cells.get(i0 * 65536 + j0, ())]
+        ks: set[int] = set(self.big)
+        for i in range(i0, i1 + 1):
+            for j in range(j0, j1 + 1):
+                got = cells.get(i * 65536 + j)
+                if got:
+                    ks.update(got)
+        return [boxes[k] for k in ks]
+
+    def hits(self, b: Box, pad: float, near: list[Box]) -> int:
+        """How many boxes come within ``pad`` of ``b``; ``near``: ``self.near(b, p)`` with p >= ``pad``."""
+        x0, y0, x1, y1 = b
+        return sum(1 for o in near if x0 < o[2] + pad and o[0] < x1 + pad and y0 < o[3] + pad and o[1] < y1 + pad)
+
+    def crossed(self, b: Box, wire_pad: float) -> tuple[int, int]:
+        """How many vertical, and horizontal, lines cross ``b`` grown by ``wire_pad`` (as ``Obstacles.overlap``)."""
+        nv = sum(1 for x, y0, y1 in self.vwires.inside(b[0] - wire_pad, b[2] + wire_pad) if y0 < b[3] and b[1] < y1)
+        nh = sum(1 for y, x0, x1 in self.hlines.inside(b[1] - wire_pad, b[3] + wire_pad) if x0 < b[2] and b[0] < x1)
+        return nv, nh
+
+
+@lru_cache(maxsize=32, typed=True)
+def _offsets(step: float, reach: float, dx_weight: float, dy_weight: float) -> tuple[tuple[float, float, int], ...]:
+    """The moves ``place_box`` tries, by increasing (weighted) distance: (dx, dy, number of the lattice point, row
+    by row)."""
+    cands = []
+    n = int(reach / step)
+    for i in range(-n, n + 1):
+        for j in range(-n // 2, n // 2 + 1):
+            dx, dy = i * step, j * step
+            cands.append((abs(dx) * dx_weight + abs(dy) * dy_weight, dx, dy, (j - (-n // 2)) * (2 * n + 1) + i + n))
+    cands.sort()
+    return tuple((dx, dy, k) for _, dx, dy, k in cands)
+
+
+def _edge(cond: Callable[[int], bool], lo: int, hi: int, guess: float, rising: bool) -> int:
+    """For ``cond`` false then true over lo..hi (``rising``): its first true (hi + 1: none); otherwise, true then false:
+    its last true (lo - 1: none). Looked for from ``guess``, a near estimate."""
+    g = lo if guess != guess else min(max(floor(max(lo - 1.0, min(hi + 1.0, guess))), lo), hi)
+    if cond(g):
+        if rising:
+            while g > lo and cond(g - 1):
+                g -= 1
+        else:
+            while g < hi and cond(g + 1):
+                g += 1
+        return g
+    if rising:
+        while g < hi:
+            g += 1
+            if cond(g):
+                return g
+        return hi + 1
+    while g > lo:
+        g -= 1
+        if cond(g):
+            return g
+    return lo - 1
+
+
+def _blocked(obs: Obstacles, w: float, h: float, px: float, py: float, step: float, n: int, pad: float) -> bytearray:
+    """The lattice of ``place_box``: for each of its points (dx, dy) = (i * step, j * step), i in -n..n, j in
+    -n // 2..n // 2, row by row, whether the box there is not ``obs.box_free(b, pad)``. Each test of ``box_free`` is
+    monotonic along a row or a column (a box further right is further right, after rounding too), so each obstacle
+    blocks a rectangle of points, found by testing its edges with the same floating-point operations."""
+    i0, i1, j0, j1 = -n, n, -n // 2, n // 2
+    width = i1 - i0 + 1
+    grid = bytearray(width * (j1 - j0 + 1))
+    ones = b"\x01" * width
+
+    def mark(ia: int, ib: int, ja: int, jb: int) -> None:
+        if ia <= ib:
+            for j in range(ja, jb + 1):
+                r = (j - j0) * width - i0
+                grid[r + ia:r + ib + 1] = ones[:ib - ia + 1]
+
+    def cols(lo_ok: Callable[[int], bool], lo_at: float, hi_ok: Callable[[int], bool], hi_at: float) -> tuple[int, int]:
+        """The i (columns) where both ``lo_ok`` (false, then true) and ``hi_ok`` (true, then false) hold."""
+        return _edge(lo_ok, i0, i1, lo_at, True), _edge(hi_ok, i0, i1, hi_at, False)
+
+    def rows(lo_ok: Callable[[int], bool], lo_at: float, hi_ok: Callable[[int], bool], hi_at: float) -> tuple[int, int]:
+        return _edge(lo_ok, j0, j1, lo_at, True), _edge(hi_ok, j0, j1, hi_at, False)
+
+    for o in obs.boxes:  # x0 < o[2] + pad and o[0] < x1 + pad and y0 < o[3] + pad and o[1] < y1 + pad
+        ox0, oy0, ox1, oy1 = o
+        ia, ib = cols(lambda i, a=ox0: a < px + i * step + w + pad, (ox0 - pad - w - px) / step,
+                      lambda i, a=ox1: px + i * step < a + pad, (ox1 + pad - px) / step)
+        if ia <= ib:
+            mark(ia, ib, *rows(lambda j, a=oy0: a < py + j * step + h + pad, (oy0 - pad - h - py) / step,
+                               lambda j, a=oy1: py + j * step < a + pad, (oy1 + pad - py) / step))
+    for x, y0, y1 in obs.vwires:  # b[0] - pad < x < b[2] + pad and y0 < b[3] and b[1] < y1
+        ia, ib = cols(lambda i, a=x: a < px + i * step + w + pad, (x - pad - w - px) / step,
+                      lambda i, a=x: px + i * step - pad < a, (x + pad - px) / step)
+        if ia <= ib:
+            mark(ia, ib, *rows(lambda j, a=y0: a < py + j * step + h, (y0 - h - py) / step,
+                               lambda j, a=y1: py + j * step < a, (y1 - py) / step))
+    for y, x0, x1 in obs.hlines:  # b[1] - pad < y < b[3] + pad and x0 < b[2] and b[0] < x1
+        ja, jb = rows(lambda j, a=y: a < py + j * step + h + pad, (y - pad - h - py) / step,
+                      lambda j, a=y: py + j * step - pad < a, (y + pad - py) / step)
+        if ja <= jb:
+            mark(*cols(lambda i, a=x0: a < px + i * step + w, (x0 - w - px) / step,
+                       lambda i, a=x1: px + i * step < a, (x1 - px) / step), ja, jb)
+    return grid
+
+
 def place_box(obs: Obstacles, w: float, h: float, pref: Point, step: float = 1.25, reach: float = 120.0,
               pad: float = 1.0, dx_weight: float = 1.0, dy_weight: float = 2.0,
               within: Optional[Box] = None) -> Optional[Point]:
@@ -124,19 +286,14 @@ def place_box(obs: Obstacles, w: float, h: float, pref: Point, step: float = 1.2
     """
     px, py = pref
     sub = obs.window((px - reach - w, py - reach / 2 - h, px + reach + w, py + reach / 2 + h))
-    cands = []
-    n = int(reach / step)
-    for i in range(-n, n + 1):
-        for j in range(-n // 2, n // 2 + 1):
-            dx, dy = i * step, j * step
-            cands.append((abs(dx) * dx_weight + abs(dy) * dy_weight, dx, dy))
-    cands.sort()
-    for _, dx, dy in cands:
+    blocked = _blocked(sub, w, h, px, py, step, int(reach / step), pad)  # (``sub.box_free``, at every point at once)
+    for dx, dy, k in _offsets(step, reach, dx_weight, dy_weight):
+        if blocked[k]:
+            continue
         b = (px + dx, py + dy, px + dx + w, py + dy + h)
         if within is not None and not (within[0] <= b[0] and b[2] <= within[2] and within[1] <= b[1] and b[3] <= within[3]):
             continue
-        if sub.box_free(b, pad):
-            return px + dx, py + dy
+        return px + dx, py + dy
     if within is not None:
         return None
     right = max([b[2] for b in obs.boxes] + [px])
@@ -161,41 +318,54 @@ def _along(length: float, weight: float = RUN_ALONG) -> float:
 
 def _seg_cost(obs: Obstacles, a: Point, b: Point, lane: float = LANE, solid: bool = False) -> float:
     """Cost of a straight route segment; ``solid``: a power link, which along a busbar would read as one."""
+    # (each term summed by ``sum`` over the same obstacles in the same order as ever, list comprehensions rather than
+    # generators, an empty kind of obstacle skipped: the hottest function of the channel router)
     (x0, y0), (x1, y1) = a, b
     if abs(x0 - x1) < 1e-9 and abs(y0 - y1) < 1e-9:
         return 0.0
     seg = (min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1))
     sx0, sy0, sx1, sy1 = seg
-    cost = sum(obs.box_cross for o in obs.boxes  # _hit(seg, o, CLEAR), written out
-               if sx0 < o[2] + CLEAR and o[0] < sx1 + CLEAR and sy0 < o[3] + CLEAR and o[1] < sy1 + CLEAR)
+    boxes, frames, vwires = obs.boxes, obs.frames, obs.vwires
+    cost = sum([obs.box_cross for o in boxes  # _hit(seg, o, CLEAR), written out
+                if sx0 < o[2] + CLEAR and o[0] < sx1 + CLEAR and sy0 < o[3] + CLEAR and o[1] < sy1 + CLEAR]) if boxes else 0
     if abs(x0 - x1) < 1e-9:  # vertical: crosses busbars (reads like a tap) and frames at a price
-        cost += sum(BUS_CROSS for y, h0, h1 in obs.buses if seg[1] < y < seg[3] and h0 < x0 < h1)
-        cost += sum(FRAME_CROSS for f in obs.frames for y in (f[1], f[3]) if seg[1] < y < seg[3] and f[0] < x0 < f[2])
+        if obs.buses:
+            cost += sum([BUS_CROSS for y, h0, h1 in obs.buses if sy0 < y < sy1 and h0 < x0 < h1])
+        if frames:
+            cost += sum([FRAME_CROSS for f in frames for y in (f[1], f[3]) if sy0 < y < sy1 and f[0] < x0 < f[2]])
     else:
-        cost += sum(FRAME_CROSS for f in obs.frames for x in (f[0], f[2]) if seg[0] < x < seg[2] and f[1] < y0 < f[3])
-        cost += sum(SOLID_CROSS if solid else WIRE_CROSS for x, v0, v1 in obs.vwires if seg[0] < x < seg[2] and v0 < y0 < v1)
+        if frames:
+            cost += sum([FRAME_CROSS for f in frames for x in (f[0], f[2]) if sx0 < x < sx1 and f[1] < y0 < f[3]])
+        if vwires:
+            cost += sum([SOLID_CROSS if solid else WIRE_CROSS for x, v0, v1 in vwires if sx0 < x < sx1 and v0 < y0 < v1])
     if abs(x0 - x1) < 1e-9:  # vertical: must not run along a conductor
-        cost += sum(_along(min(v1, seg[3]) - max(v0, seg[1]), obs.run_along) for x, v0, v1 in obs.vwires
-                    if abs(x - x0) < lane / 2 and v0 < seg[3] and seg[1] < v1)
-        if obs.near_wire:  # beside a conductor: reads as one more conductor of its bundle
-            cost += sum(NEAR_RUN * (min(v1, seg[3]) - max(v0, seg[1])) for k, x, v0, v1 in obs.conductors
-                        if k == "v" and lane / 2 <= abs(x - x0) < obs.near_wire and v0 < seg[3] and seg[1] < v1)
-        cost += sum(obs.frame_along if abs(x - x0) >= lane / 2 else BOX_CROSS for f in obs.frames for x in (f[0], f[2])
-                    if abs(x - x0) < obs.frame_clear and min(f[3], seg[3]) - max(f[1], seg[1]) > FRAME_RUN)
+        if vwires:
+            half = lane / 2
+            cost += sum([_along(min(v1, sy1) - max(v0, sy0), obs.run_along) for x, v0, v1 in vwires
+                         if abs(x - x0) < half and v0 < sy1 and sy0 < v1])
+        if obs.near_wire and obs.conductors:  # beside a conductor: reads as one more conductor of its bundle
+            cost += sum([NEAR_RUN * (min(v1, sy1) - max(v0, sy0)) for k, x, v0, v1 in obs.conductors
+                         if k == "v" and lane / 2 <= abs(x - x0) < obs.near_wire and v0 < sy1 and sy0 < v1])
+        if frames:
+            cost += sum([obs.frame_along if abs(x - x0) >= lane / 2 else BOX_CROSS for f in frames for x in (f[0], f[2])
+                         if abs(x - x0) < obs.frame_clear and min(f[3], sy1) - max(f[1], sy0) > FRAME_RUN])
     else:  # horizontal: must not run along a busbar or another channel
-        cost += sum(_along(min(h1, seg[2]) - max(h0, seg[0]), obs.run_along) for y, h0, h1 in obs.hlines
-                    if abs(y - y0) < lane * 0.9 and h0 < seg[2] and seg[0] < h1)
-        if obs.near_wire:
-            cost += sum(NEAR_RUN * (min(h1, seg[2]) - max(h0, seg[0])) for k, y, h0, h1 in obs.conductors
-                        if k == "h" and lane * 0.9 <= abs(y - y0) < obs.near_wire and h0 < seg[2] and seg[0] < h1)
-        cost += sum(obs.frame_along if abs(y - y0) >= lane * 0.9 else BOX_CROSS for f in obs.frames for y in (f[1], f[3])
-                    if abs(y - y0) < obs.frame_clear and min(f[2], seg[2]) - max(f[0], seg[0]) > FRAME_RUN)
-        if solid:  # a long run along a busbar, close enough to read as part of it or as a second busbar
-            cost += sum(300.0 for y, h0, h1 in obs.buses
-                        if abs(y - y0) < BUS_CLEAR and min(h1, seg[2]) - max(h0, seg[0]) > BUS_RUN)
-        else:  # a thin link on or hugging a busbar (a thick line) is lost in it, and runs over the feeders' texts
-            cost += sum(RUN_ALONG for y, h0, h1 in obs.buses
-                        if abs(y - y0) < BUS_CLEAR_THIN and min(h1, seg[2]) - max(h0, seg[0]) > FRAME_RUN)
+        if obs.hlines:
+            cost += sum([_along(min(h1, sx1) - max(h0, sx0), obs.run_along) for y, h0, h1 in obs.hlines
+                         if abs(y - y0) < lane * 0.9 and h0 < sx1 and sx0 < h1])
+        if obs.near_wire and obs.conductors:
+            cost += sum([NEAR_RUN * (min(h1, sx1) - max(h0, sx0)) for k, y, h0, h1 in obs.conductors
+                         if k == "h" and lane * 0.9 <= abs(y - y0) < obs.near_wire and h0 < sx1 and sx0 < h1])
+        if frames:
+            cost += sum([obs.frame_along if abs(y - y0) >= lane * 0.9 else BOX_CROSS for f in frames for y in (f[1], f[3])
+                         if abs(y - y0) < obs.frame_clear and min(f[2], sx1) - max(f[0], sx0) > FRAME_RUN])
+        if obs.buses:
+            if solid:  # a long run along a busbar, close enough to read as part of it or as a second busbar
+                cost += sum([300.0 for y, h0, h1 in obs.buses
+                             if abs(y - y0) < BUS_CLEAR and min(h1, sx1) - max(h0, sx0) > BUS_RUN])
+            else:  # a thin link on or hugging a busbar (a thick line) is lost in it, and runs over the feeders' texts
+                cost += sum([RUN_ALONG for y, h0, h1 in obs.buses
+                             if abs(y - y0) < BUS_CLEAR_THIN and min(h1, sx1) - max(h0, sx0) > FRAME_RUN])
     return cost
 
 
@@ -288,25 +458,143 @@ def _leg(obs: Obstacles, e: End, y: float, lane: float = LANE,
     return best
 
 
-def _leg_within(obs: Obstacles, e: End, y: float, lane: float, seg: _Costs, total: Callable[[float], float],
-                bound: float) -> tuple[float, list[Point]]:
-    """``_leg``, leaving out the stubs that cannot give a route cheaper than ``bound``: ``total`` gives a lower bound
-    of the route's cost from a lower bound of the leg's. The leg returned is ``_leg``'s whenever its route is cheaper
-    than ``bound`` (1e9: none is)."""
-    if e.side in ("down", "up"):
-        return _leg(obs, e, y, lane, seg)
-    best: tuple[float, list[Point]] = (1e9, [])
-    for s in e.stubs:
-        xs = e.x + s if e.side == "right" else e.x - s
-        pts = [(e.x, e.y), (xs, e.y), (xs, y)]
-        h, t = seg(pts[0], pts[1]), 0.15 * s
-        low = h + t  # the leg costs h + v + t >= this
-        if low >= best[0] or total(low) >= bound:
-            continue
-        c = h + seg(pts[1], pts[2]) + t
-        if c < best[0]:
-            best = (c, pts)
-    return best
+class _VLine:
+    """``_seg_cost`` of the vertical segments at x = ``x`` (not ``solid``), for the many legs ``route`` tries on one
+    line: the tests that depend on x alone done once, the others on the obstacles that pass them. The same terms, in
+    the same order, summed the same way: the same costs."""
+
+    def __init__(self, obs: Obstacles, x: float, lane: float):
+        half = lane / 2
+        self.box_cross, self.run_along = obs.box_cross, obs.run_along
+        self.boxes = [(o[1], o[3] + CLEAR) for o in obs.boxes if x < o[2] + CLEAR and o[0] < x + CLEAR]
+        self.buses = [y for y, h0, h1 in obs.buses if h0 < x < h1]
+        self.sides = [y for f in obs.frames for y in (f[1], f[3]) if f[0] < x < f[2]]  # frame sides crossed
+        self.along = [(v0, v1) for v, v0, v1 in obs.vwires if abs(v - x) < half]
+        self.near = [(v0, v1) for k, v, v0, v1 in obs.conductors
+                     if k == "v" and half <= abs(v - x) < obs.near_wire] if obs.near_wire else []
+        self.frames = [(obs.frame_along if abs(v - x) >= half else BOX_CROSS, f[1], f[3])
+                       for f in obs.frames for v in (f[0], f[2]) if abs(v - x) < obs.frame_clear]
+        self.empty = not (self.boxes or self.buses or self.sides or self.along or self.near or self.frames)
+
+    def leg(self, ye: float) -> Callable[[float], float]:
+        """``cost(ye, y)`` as a function of y, for the legs from one end: the tests and bounds that depend on ``ye`` alone
+        done once for each way (y above or below ``ye``), the boxes, busbars and frame sides crossed counted by
+        bisection (a sum of equal terms: the same sum)."""
+        w, bc = self.run_along, self.box_cross
+        # y > ye: lo = ye, hi = y
+        up_boxes = sorted(y0 for y0, y1c in self.boxes if ye < y1c)
+        up_bars = sorted(y for y in self.buses if ye < y)
+        up_sides = sorted(y for y in self.sides if ye < y)
+        up_along = [(v0, v1, max(v0, ye)) for v0, v1 in self.along if ye < v1]
+        up_near = [(v0, v1, max(v0, ye)) for v0, v1 in self.near if ye < v1]
+        up_frames = [(k, f3, max(f1, ye)) for k, f1, f3 in self.frames]
+        # y < ye: lo = y, hi = ye
+        yc = ye + CLEAR
+        down_boxes = sorted(y1c for y0, y1c in self.boxes if y0 < yc)
+        down_bars = sorted(y for y in self.buses if y < ye)
+        down_sides = sorted(y for y in self.sides if y < ye)
+        down_along = [(v0, v1, min(v1, ye)) for v0, v1 in self.along if v0 < ye]
+        down_near = [(v0, v1, min(v1, ye)) for v0, v1 in self.near if v0 < ye]
+        down_frames = [(k, f1, min(f3, ye)) for k, f1, f3 in self.frames]
+
+        def cost(y: float) -> float:
+            if abs(ye - y) < 1e-9:
+                return 0.0
+            if ye < y:
+                c = sum([bc] * bisect_left(up_boxes, y + CLEAR)) if up_boxes else 0
+                if up_bars:
+                    c += sum([BUS_CROSS] * bisect_left(up_bars, y))
+                if up_sides:
+                    c += sum([FRAME_CROSS] * bisect_left(up_sides, y))
+                if up_along:  # (``_along`` written out)
+                    c += sum([w * min(1.0, max(min(v1, y) - m0, 0.3) / 3.0) for v0, v1, m0 in up_along if v0 < y])
+                if up_near:
+                    c += sum([NEAR_RUN * (min(v1, y) - m0) for v0, v1, m0 in up_near if v0 < y])
+                if up_frames:
+                    c += sum([k for k, f3, m1 in up_frames if min(f3, y) - m1 > FRAME_RUN])
+                return c
+            c = sum([bc] * (len(down_boxes) - bisect_right(down_boxes, y))) if down_boxes else 0
+            if down_bars:
+                c += sum([BUS_CROSS] * (len(down_bars) - bisect_right(down_bars, y)))
+            if down_sides:
+                c += sum([FRAME_CROSS] * (len(down_sides) - bisect_right(down_sides, y)))
+            if down_along:
+                c += sum([w * min(1.0, max(m1 - max(v0, y), 0.3) / 3.0) for v0, v1, m1 in down_along if y < v1])
+            if down_near:
+                c += sum([NEAR_RUN * (m1 - max(v0, y)) for v0, v1, m1 in down_near if y < v1])
+            if down_frames:
+                c += sum([k for k, f1, m3 in down_frames if m3 - max(f1, y) > FRAME_RUN])
+            return c
+
+        return cost
+
+    def cost(self, ya: float, yb: float) -> float:
+        """``_seg_cost`` from (x, ya) to (x, yb)."""
+        if abs(ya - yb) < 1e-9:
+            return 0.0
+        if self.empty:
+            return 0
+        lo, hi = min(ya, yb), max(ya, yb)
+        if self.boxes:
+            hc = hi + CLEAR
+            cost = sum([self.box_cross for y0, y1c in self.boxes if lo < y1c and y0 < hc])
+        else:
+            cost = 0
+        if self.buses:
+            cost += sum([BUS_CROSS for y in self.buses if lo < y < hi])
+        if self.sides:
+            cost += sum([FRAME_CROSS for y in self.sides if lo < y < hi])
+        if self.along:  # (``_along`` written out)
+            w = self.run_along
+            cost += sum([w * min(1.0, max(min(v1, hi) - max(v0, lo), 0.3) / 3.0) for v0, v1 in self.along
+                         if v0 < hi and lo < v1])
+        if self.near:
+            cost += sum([NEAR_RUN * (min(v1, hi) - max(v0, lo)) for v0, v1 in self.near if v0 < hi and lo < v1])
+        if self.frames:
+            cost += sum([k for k, f1, f3 in self.frames if min(f3, hi) - max(f1, lo) > FRAME_RUN])
+        return cost
+
+
+class _Legs:
+    """The ways ``_leg`` tries from the end ``e`` to a channel, for ``route``: each stub with its horizontal cost and the
+    line of its vertical, costed once."""
+
+    def __init__(self, obs: Obstacles, e: End, lane: float, seg: _Costs):
+        self.e = e
+        lines: dict[float, _VLine] = {}
+        if e.side in ("down", "up"):
+            self.line = _VLine(obs, e.x, lane).leg(e.y)  # (``cost(y, e.y)`` is ``cost(e.y, y)``)
+            return
+        self.stubs = []
+        for s in e.stubs:
+            xs = e.x + s if e.side == "right" else e.x - s
+            h, t = seg((e.x, e.y), (xs, e.y)), 0.15 * s
+            line = lines.get(xs)
+            if line is None:
+                line = lines[xs] = _VLine(obs, xs, lane)
+            self.stubs.append((xs, h, t, h + t, line.leg(e.y)))
+
+    def within(self, y: float, ca: Optional[float], extra: float, bound: float) -> tuple[float, list[Point]]:
+        """``_leg`` to the channel at ``y``, leaving out the stubs that cannot give a route cheaper than ``bound``: the
+        route costs at least (``ca`` + this leg) + ``extra`` (``ca`` None: this leg + ``extra``). The leg returned is
+        ``_leg``'s whenever its route is cheaper than ``bound`` (1e9: none is)."""
+        e = self.e
+        if e.side == "down":
+            if y < e.y + 1.0:
+                return 1e9, []
+            return self.line(y), [(e.x, e.y), (e.x, y)]
+        if e.side == "up":  # high enough above the busbar not to read as its extension
+            if y > e.y - 4.0:
+                return 1e9, []
+            return self.line(y), [(e.x, e.y), (e.x, y)]
+        best: tuple[float, list[Point]] = (1e9, [])
+        for xs, h, t, low, vertical in self.stubs:  # the leg costs h + v + t >= low
+            if low >= best[0] or (low + extra if ca is None else (ca + low) + extra) >= bound:
+                continue
+            c = h + vertical(y) + t
+            if c < best[0]:
+                best = (c, [(e.x, e.y), (xs, e.y), (xs, y)])
+        return best
 
 
 def route(obs: Obstacles, a: End, b: End, y_min: Optional[float] = None, y_max: Optional[float] = None,
@@ -321,6 +609,7 @@ def route(obs: Obstacles, a: End, b: End, y_min: Optional[float] = None, y_max: 
     hi = max(a.y, b.y) + 30.0 if y_max is None else y_max
     sub = obs.window((min(a.x, b.x) - 12.0, lo - 2.0, max(a.x, b.x) + 12.0, hi + 2.0))
     seg = _Costs(sub, lane)
+    legs_a, legs_b = _Legs(sub, a, lane, seg), _Legs(sub, b, lane, seg)
     best: tuple[float, list[Point]] = (1e18, [])
     n = int((hi - lo) / step)
     # Every cost is >= 0 and a rounded sum never decreases when a term grows: a channel, or a stub, whose cost so far
@@ -331,12 +620,12 @@ def route(obs: Obstacles, a: End, b: End, y_min: Optional[float] = None, y_max: 
         extra = 0.08 * length
         if extra >= best[0]:
             continue
-        ca, pa = _leg_within(sub, a, y, lane, seg, lambda c, extra=extra: c + extra, best[0])
+        ca, pa = legs_a.within(y, None, extra, best[0])
         if ca >= 1e9:
             continue
         if ca + extra >= best[0]:
             continue
-        cb, pb = _leg_within(sub, b, y, lane, seg, lambda c, ca=ca, extra=extra: (ca + c) + extra, best[0])
+        cb, pb = legs_b.within(y, ca, extra, best[0])
         if cb >= 1e9:
             continue
         if (ca + cb) + extra >= best[0]:
@@ -454,32 +743,55 @@ def place_label(obs: Obstacles, pts: list[Point], w: float, size: float, from_en
         m = max(obs.label_pad, CLEAR, BUS_PAD, SHARE_GAP) + 1.0
         obs = obs.window((min(b[0] for b in tb) - m, min(b[1] for b in tb) - m,
                           max(b[2] for b in tb) + m, max(b[3] for b in tb) + m))
-    h_lines = obs.hlines + [(c[1], c[2], c[3]) for c in obs.conductors if c[0] == "h"]
-    v_lines = obs.vwires + [(c[1], c[2], c[3]) for c in obs.conductors if c[0] == "v"]
-
-    def between(b: Box, own: tuple[str, float]) -> bool:
-        """Another line runs along the far side of the label: it could belong to either (multi-line)."""
-        g = SHARE_GAP
-        if own[0] == "h":
-            return any(abs(y - own[1]) > 1e-6 and b[1] - g < y < b[3] + g and x0 < b[2] and b[0] < x1
-                       for y, x0, x1 in h_lines)
-        return any(abs(x - own[1]) > 1e-6 and b[0] - g < x < b[2] + g and y0 < b[3] and b[1] < y1
-                   for x, y0, y1 in v_lines)
+    index = _Index(obs) if cands else None
+    if obs.label_channel:
+        h_lines = _Lines(obs.hlines + [(c[1], c[2], c[3]) for c in obs.conductors if c[0] == "h"])
+        v_lines = _Lines(obs.vwires + [(c[1], c[2], c[3]) for c in obs.conductors if c[0] == "v"])
 
     best: tuple[float, int] = (1e18, 0)
     clean = False
-    for i, (x, y, anchor) in enumerate(cands):
-        b = text_box(x, y, w, size, anchor)
-        on_bus = sum(1 for by, x0, x1 in obs.buses if b[1] - BUS_PAD < by < b[3] + BUS_PAD and x0 < b[2] and b[0] < x1)
-        shared = obs.label_channel and between(b, owns[i])
-        if not on_bus and not shared and obs.box_free(b, obs.label_pad, wire_pad=0.1):
+    pad, channel, buses, g = obs.label_pad, obs.label_channel, obs.buses, SHARE_GAP
+    small, large = min(pad, CLEAR / 2), max(pad, CLEAR / 2)
+    if index is not None:
+        vk, vl, hk, hl = index.vwires.keys, index.vwires.lines, index.hlines.keys, index.hlines.lines
+    for i, b in enumerate(tb if cands else ()):  # (each ``text_box`` of ``cands``)
+        x0, y0, x1, y1 = b
+        on_bus = sum([1 for by, h0, h1 in buses if y0 - BUS_PAD < by < y1 + BUS_PAD and h0 < x1 and x0 < h1]) if buses else 0
+        shared = False  # another line runs along the far side of the label: it could belong to either (multi-line)
+        if channel:
+            kind, at = owns[i]
+            if kind == "h":
+                for y, h0, h1 in h_lines.lines[bisect_right(h_lines.keys, y0 - g):bisect_left(h_lines.keys, y1 + g)]:
+                    if h0 < x1 and x0 < h1 and abs(y - at) > 1e-6:
+                        shared = True
+                        break
+            else:
+                for x, v0, v1 in v_lines.lines[bisect_right(v_lines.keys, x0 - g):bisect_left(v_lines.keys, x1 + g)]:
+                    if v0 < y1 and y0 < v1 and abs(x - at) > 1e-6:
+                        shared = True
+                        break
+        # ``obs.box_free(b, pad, 0.1)`` and ``obs.overlap(b, pad, 0.1)`` and ``obs.overlap(b, CLEAR / 2, 0.1)`` from the
+        # same counts: the boxes within ``large``, those of them within ``small`` (a box within the smaller pad is within
+        # the larger one, after rounding too), and the lines crossed (as ``_Index.hits``, ``_Index.crossed``)
+        near = index.near(b, large)
+        if near:
+            hits = [o for o in near if x0 < o[2] + large and o[0] < x1 + large and y0 < o[3] + large and o[1] < y1 + large]
+            k_large = len(hits)
+            k_small = len([o for o in hits if x0 < o[2] + small and o[0] < x1 + small and y0 < o[3] + small
+                           and o[1] < y1 + small]) if hits else 0
+        else:
+            k_large = k_small = 0
+        k = k_large if pad == large else k_small
+        nv = sum([1 for v, v0, v1 in vl[bisect_right(vk, x0 - 0.1):bisect_left(vk, x1 + 0.1)] if v0 < y1 and y0 < v1])
+        nh = sum([1 for h, h0, h1 in hl[bisect_right(hk, y0 - 0.1):bisect_left(hk, y1 + 0.1)] if h0 < x1 and x0 < h1])
+        if not on_bus and not shared and not k and not nv and not nh:
             best = (0.0, i)
             break
         # clear of the texts at the usual distance at least, if not at the wider one asked
-        hit = obs.overlap(b, CLEAR / 2, 0.1)
+        hit = 10.0 * (k_large if CLEAR / 2 == large else k_small) + nv + nh
         clean = clean or hit == 0
-        cost = hit * 10.0 + obs.overlap(b, obs.label_pad, 0.1) + on_bus + i * 1e-3
-        if obs.label_channel:  # multi-line: on a text is worse than beside another line
+        cost = hit * 10.0 + (10.0 * k + nv + nh) + on_bus + i * 1e-3
+        if channel:  # multi-line: on a text is worse than beside another line
             cost += 5.0 * (hit > 0) + 0.5 * shared
         if cost < best[0]:
             best = (cost, i)
@@ -671,24 +983,29 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
     def rng(vals: list[float], lo: float, hi: float) -> range:  # indexes of the values strictly inside (lo, hi)
         return range(bisect_right(vals, lo), bisect_left(vals, hi))
 
-    blocked: set[tuple[int, int]] = set()
+    blocked_at = bytearray(nx * ny)  # grid points too close to a text or a symbol, by cell number i * ny + j
     for b in sub.boxes:
-        for i in rng(xs, b[0] - CLEAR, b[2] + CLEAR):
-            for j in rng(ys, b[1] - CLEAR, b[3] + CLEAR):
-                blocked.add((i, j))
+        rows = rng(ys, b[1] - CLEAR, b[3] + CLEAR)
+        if rows:
+            ones = b"\x01" * len(rows)
+            for i in rng(xs, b[0] - CLEAR, b[2] + CLEAR):
+                blocked_at[i * ny + rows.start:i * ny + rows.stop] = ones
     for e in starts + goals:  # an end is against its device: the first 1.5 mm out of it are free
         i, j = xs.index(e.x), ys.index(e.y)
         if e.side == "down":
-            blocked -= {(i, k) for k in range(j, len(ys)) if ys[k] <= e.y + 1.5}
+            for k in range(j, len(ys)):
+                if ys[k] <= e.y + 1.5:
+                    blocked_at[i * ny + k] = 0
         elif e.side == "up":
-            blocked -= {(i, k) for k in range(len(ys)) if e.y - 1.5 <= ys[k] <= e.y}
+            for k in range(len(ys)):
+                if e.y - 1.5 <= ys[k] <= e.y:
+                    blocked_at[i * ny + k] = 0
         else:
             free = 1.5 + 2 * CLEAR  # an end inside its symbol (an earth terminal) gets out of its clearance
             lo, hi = (e.x - free, e.x) if e.side == "left" else (e.x, e.x + free)
-            blocked -= {(k, j) for k in range(len(xs)) if lo <= xs[k] <= hi}
-    blocked_at = bytearray(nx * ny)  # the same, by cell number i * ny + j
-    for i, j in blocked:
-        blocked_at[i * ny + j] = 1
+            for k in range(len(xs)):
+                if lo <= xs[k] <= hi:
+                    blocked_at[k * ny + j] = 0
     near = obs.near_wire
     fx = sorted((x, f[1], f[3]) for f in sub.frames for x in (f[0], f[2]))  # vertical frame sides
     fy = sorted((y, f[0], f[2]) for f in sub.frames for y in (f[1], f[3]))
