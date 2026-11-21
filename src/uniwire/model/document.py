@@ -173,7 +173,8 @@ class View(UWModel):
         description="Rows of the feeder table, in order",
     )
     folio_split: Literal["auto", "none"] = "auto"
-    min_scale: float = Field(0.7, gt=0, le=1, description="Maximum scale reduction before splitting into several sheets")
+    min_scale: float = Field(0.7, gt=0, le=1, description="Maximum scale reduction before splitting into several "
+                             "sheets (folio_split 'auto'); a value below 0.6 is read as 0.6: no sheet is drawn smaller")
     annotations: bool = Field(True, description="Show tag + ratings next to the symbols")
     tag_field: Literal["ref", "part_number"] = Field("ref", description="Identifier shown at the top of the annotation")
     conductor_marks: bool = Field(

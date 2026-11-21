@@ -96,6 +96,7 @@ from .engine import (
     interlock_mark,
     label_drawn_below,
     line_phase,
+    min_scale,
     sheet_node_ids,
 )
 from .routing import FRAME_CROSS, Box, Obstacles, boxes_union
@@ -2766,7 +2767,7 @@ def plan_multiline(doc: Document, view: View, index: Index | None = None,
         conts: list[SheetSpec] = []
         for _ in range(60):
             lay = _layout(doc, view, spec, index, info, annex=False)
-            if view.folio_split == "none" or _fit(lay, view) >= view.min_scale:
+            if view.folio_split == "none" or _fit(lay, view) >= min_scale(view):
                 break
             roots = _build_roots(spec, index, info)
             for r in roots:
@@ -2774,8 +2775,12 @@ def plan_multiline(doc: Document, view: View, index: Index | None = None,
             _annotate(roots, view, lang)
             for r in roots:
                 _measure(r)
+            # a busbar cut into sheets stays with the boards and devices feeding it (they head each of its sheets)
+            cut = (spec.bus_slice or spec.continuation or (None,))[0]
+            above = {cut} | {a.id for a in index.ancestors(cut)} if cut in index.nodes else set()
             boards = [n for r in roots for n in r.walk() if n.is_board and n.node is not None and n.node.id not in root_ids
                       and n.node.id not in spec.detached and len(n.children) >= 1
+                      and not (conts and n.node.id in above)
                       and not _strands(spec, n.node.id, index)]  # type: ignore[arg-type]
             if boards:
                 boards.sort(key=lambda n: -n.width)
@@ -2787,8 +2792,16 @@ def plan_multiline(doc: Document, view: View, index: Index | None = None,
                 if cut is not None:
                     spec.detached.add(cut)
                     continue
-            if allow_bus_split:
+            # a way too wide for any sheet: one of its branches goes to a sheet of its own before the busbar is cut
+            branch = _wide_branch(spec, roots, lay, view, index, above)
+            bus = _bus_to_split(roots) if allow_bus_split and not conts else None
+            if bus is not None and (branch is None or all(c.width <= _bus_cap(view) - 30.0 for c in bus.children)):
                 conts = _split_bus(spec, roots, view, lang, index)
+                if conts:
+                    continue  # a way left on this sheet may still be too wide for it
+            if branch is not None:  # nothing else makes the sheet narrow enough
+                spec.detached.add(branch)
+                continue
             break
         out = [spec]
         for c in conts:
@@ -2839,7 +2852,7 @@ def _tall_branch(doc: Document, view: View, spec: SheetSpec, index: Index, info:
     for n in sorted(cands, key=size, reverse=True)[:40]:
         trial = SheetSpec(list(spec.roots), detached=spec.detached | {n.id}, bus_slice=spec.bus_slice)  # type: ignore[arg-type]
         f = _fit(_layout(doc, view, trial, index, info, annex=False), view)
-        if f > fit + 0.02 or f > fit and f >= view.min_scale:  # a real gain, or enough to make it readable
+        if f > fit + 0.02 or f > fit and f >= min_scale(view):  # a real gain, or enough to make it readable
             tried.append((n, f))
     return max(tried, key=lambda t: t[1])[0].id if tried else None
 
@@ -2852,16 +2865,52 @@ def _subtree(n: NodeBase) -> Iterator[NodeBase]:
         stack.extend(x.children)
 
 
-def _split_bus(spec: SheetSpec, roots: list[MLNode], view: View, lang: str, index: Index) -> list[SheetSpec]:
+def _wide_branch(spec: SheetSpec, roots: list[MLNode], lay: SheetLayout, view: View, index: Index,
+                 kept: set[str]) -> Optional[str]:
+    """A branch to draw on a sheet of its own when nothing else makes a sheet narrow enough (no sub-board to take
+    out, no busbar left to cut): a way wider than a sheet, a distribution below a device rather than a board. Among
+    the branches that are not nearly the whole sheet, the narrowest whose departure makes the sheet fit, otherwise
+    the widest; when the sheet is a single branch, the first node that splits it (its sheet then cuts it further).
+    ``None`` when the height, not the width, sets the scale, or when nothing can go (``kept``: nodes that stay)."""
+    _, _, aw, ah = drawing_area(view)
+    if aw / max(lay.width, 1e-6) > ah / max(lay.height, 1e-6):
+        return None
+    root_ids = {r.id for r in spec.roots}
+    cands = [n for r in roots for n in r.walk() if n.kind == "node" and n.node is not None and n.node.id
+             and n.children and n.node.id not in root_ids and n.node.id not in spec.detached and n.node.id not in kept
+             and n.width >= 2 * view.pitch_mm and not _strands(spec, n.node.id, index)]
+    widest = max((r.width for r in roots), default=0.0)
+    excess = lay.width - aw / min_scale(view)
+    part = [n for n in cands if n.width < 0.85 * widest]
+    enough = [n for n in part if n.width >= excess + 10.0]
+    if enough:
+        return min(enough, key=lambda n: round(n.width, 3)).node.id  # type: ignore[union-attr]
+    if part:
+        return max(part, key=lambda n: round(n.width, 3)).node.id  # type: ignore[union-attr]
+    split = [n for n in cands if len(n.children) >= 2]
+    return split[0].node.id if split else None  # type: ignore[union-attr]
+
+
+def _bus_to_split(roots: list[MLNode]) -> Optional[MLNode]:
+    """The most crowded busbar of a sheet, the one cut into continuation sheets; ``None``: none to cut."""
     cands = [n for r in roots for n in r.walk() if n.kind == "node" and n.rails and n.node is not None
              and len(n.children) >= 3]
-    if not cands:
+    return max(cands, key=lambda n: sum(c.width for c in n.children)) if cands else None
+
+
+def _bus_cap(view: View) -> float:
+    """Width the ways of a busbar cut into continuation sheets may take on a sheet."""
+    _, _, aw, _ = drawing_area(view)
+    return aw / min_scale(view) - 20.0
+
+
+def _split_bus(spec: SheetSpec, roots: list[MLNode], view: View, lang: str, index: Index) -> list[SheetSpec]:
+    bus = _bus_to_split(roots)
+    if bus is None:
         return []
-    bus = max(cands, key=lambda n: sum(c.width for c in n.children))
     node = bus.node
     assert node is not None
-    _, _, aw, _ = drawing_area(view)
-    cap = aw / view.min_scale - 20.0
+    cap = _bus_cap(view)
     first_cap = cap - (bus.x_left + bus.lanes_max() + RAIL_IN)
 
     def cut(less: float) -> list[tuple[int, int]]:  # the ways in order, as many on each sheet as its room allows

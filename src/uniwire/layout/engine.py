@@ -282,6 +282,31 @@ def _build(node: NodeBase, spec: SheetSpec, is_root: bool) -> LNode:
     return ln
 
 
+AUX_ROW = 16.0  # single-line: height of a row of the list of auxiliary devices linked to nothing
+AREA_RATIO = 1.66  # width / height of the drawing area of a landscape sheet, about the same from A4 to A0
+
+
+def _list_rows(listed: list[LNode], box: Optional[tuple[float, float, float, float]], x0: float,
+               bottom: float) -> int:
+    """Rows of each column of the list of auxiliary devices drawn beside the tree from ``x0``: one column, or, when
+    it is taller than the drawing area of the smallest sheet, as many as make the drawing (the tree's ``box``, down
+    to ``bottom``, and the list) fit a landscape sheet at the largest scale (a long list in one column would be far
+    taller than the tree and shrink the whole sheet)."""
+    n = len(listed)
+    w, h = PAPER["A4"]
+    if n * AUX_ROW <= h - 2 * MARGIN - TITLE_BAND - 12.0:
+        return max(n, 1)
+    col = max(max(ln.sym_box()[2], (ln.ann_box() or ln.sym_box())[2]) for ln in listed) - x0 + 8.0
+    left, tree_h = (box[0], max(box[3], bottom) - min(box[1], 0.0)) if box else (x0, bottom)
+
+    def size(k: int) -> float:  # the larger side of the drawing, in widths of the drawing area
+        rows = -(-n // k)
+        return max((x0 - left + k * col) / AREA_RATIO, max(tree_h, rows * AUX_ROW))
+
+    k = min(range(1, n + 1), key=lambda k: (round(size(k), 6), k))
+    return -(-n // k)
+
+
 SPREAD_STEP = 1.5  # single-line: spacing of the link ends on the side of a controller many links reach
 SPREAD_FROM = 3  # from this many links on a controller, one point each (fewer: one point per kind, as before)
 
@@ -1234,10 +1259,18 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
         box = boxes_union(obs.boxes)
         ax0 = (box[2] if box else 0) + 12.0
         g.add(Text((ax0 - 2.0, -3.0), _t("render.auxiliary_devices", lang), 2.0, bold=True))
-        for i, dev in enumerate(unlinked):
+        listed = []
+        for dev in unlinked:
             ln = LNode(dev, "node", symbol_for(dev))
-            ln.x, ln.y, ln.width, ln.x_left = ax0 + ln.sym.left, 1.0 + i * 16.0, pitch, ax0 - 2
+            ln.x, ln.width, ln.x_left = ax0 + ln.sym.left, pitch, ax0 - 2
             _annotate(ln, view, lang, avail_override=60.0)
+            listed.append(ln)
+        table = 40.0 + 5.5 * len(view.cartouche) if view.cartouche else 10.0  # the feeder table, drawn below
+        rows = _list_rows(listed, box, ax0, y_load + table)
+        col_w = max(max(ln.sym_box()[2], (ln.ann_box() or ln.sym_box())[2]) for ln in listed) - ax0 + 8.0
+        for i, ln in enumerate(listed):
+            dx = (i // rows) * col_w
+            ln.x, ln.x_left, ln.y = ln.x + dx, ln.x_left + dx, 1.0 + (i % rows) * AUX_ROW
             annex.append(ln)
             obs.add_box(ln.sym_box())
             obs.add_box(ln.ann_box())
@@ -4630,6 +4663,22 @@ def drawing_area(view: View) -> tuple[float, float, float, float]:
     return x0, y0, w - 2 * MARGIN - 10.0, h - 2 * MARGIN - TITLE_BAND - 12.0 - notes
 
 
+#: Smallest scale a sheet is drawn at when the view may be split into sheets (``folio_split: auto``): below it the
+#: texts get too small to read on paper. A view's ``min_scale`` below it is raised to it.
+MIN_SCALE = 0.6
+
+
+def min_scale(view: View) -> float:
+    """The reduction a sheet of ``view`` may take before its content is split into further sheets."""
+    return max(view.min_scale, MIN_SCALE)
+
+
+def width_bound(lay: SheetLayout, view: View) -> bool:
+    """True when the width of the drawing, not its height, sets the scale of its sheet."""
+    _, _, aw, ah = drawing_area(view)
+    return aw / max(lay.width, 1e-6) <= ah / max(lay.height, 1e-6)
+
+
 def fit_scale(lay: SheetLayout, view: View) -> float:
     _, _, aw, ah = drawing_area(view)
     return min(1.0, aw / max(lay.width, 1e-6), ah / max(lay.height, 1e-6))
@@ -4668,7 +4717,7 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None,
         for _ in range(50):
             spec.moved = {s.id for nid in spec.detached for s in standby(nid) if s.id and s in spec.roots}
             lay = trial(spec)
-            if view.folio_split == "none" or fit_scale(lay, view) >= view.min_scale:
+            if view.folio_split == "none" or fit_scale(lay, view) >= min_scale(view):
                 break
             if allow_bus_split and not groups and spec.continuation is None:
                 # several installations side by side: each whole on a sheet, before taking boards out of them
@@ -4677,20 +4726,32 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None,
                     spec.roots = groups.pop(0)
                     root_ids = {r.id for r in spec.roots}
                     continue
+            # a busbar cut into sheets stays with the boards and devices feeding it (they head each of its sheets)
+            cut = (spec.bus_slice or spec.continuation or (None,))[0]
+            above = {cut} | {a.id for a in index.ancestors(cut)} if cut in index.nodes else set()
             boards = [n for n in lay.lnodes if n.is_board and n.node is not None and n.node.id not in root_ids
-                      and n.node.id not in spec.detached and n.width >= 3 * view.pitch_mm]
+                      and n.node.id not in spec.detached and n.width >= 3 * view.pitch_mm
+                      and not (conts and n.node.id in above)]
             drawn = {n.node.id for n in lay.lnodes if n.is_board and n.node is not None}
             nested = {n.node.id for n in boards if any(a.id in drawn for a in index.ancestors(n.node.id))}  # type: ignore[union-attr]
             board = _board_to_detach(boards, lay, view, keep_whole=allow_bus_split, nested=nested)
             if board is not None:
                 spec.detached.add(board.node.id)  # type: ignore[union-attr]
                 continue
-            if allow_bus_split:
+            # a way too wide for any sheet: one of its branches goes to a sheet of its own before the busbar is cut
+            branch = _branch_to_detach(lay, view, root_ids | spec.detached | above)
+            bus = _bus_to_split(lay) if allow_bus_split and not conts else None
+            if bus is not None and (branch is None or all(c.width <= _bus_room(lay, bus, view, False)
+                                                          for c in bus.children)):
                 conts = _split_bus(spec, lay, view, index, normalize_lang(doc.meta.lang))
                 if conts:
                     specs = [spec] + conts
                     _refill(doc, view, index, specs, lay)
                     conts = specs[1:]
+                    continue  # a way left on this sheet may still be too wide for it
+            if branch is not None:  # nothing else makes the sheet narrow enough
+                spec.detached.add(branch)
+                continue
             break
         out = [spec]
         for c in conts:
@@ -4722,7 +4783,7 @@ def _board_to_detach(boards: list[LNode], lay: SheetLayout, view: View, keep_who
     the sheet (``nested``: their ids) is not kept so: however wide, it goes, and the board feeding it keeps its ways
     together rather than being cut way by way."""
     _, _, aw, _ = drawing_area(view)
-    excess = lay.width - aw / view.min_scale
+    excess = lay.width - aw / min_scale(view)
     boards = boards[::-1]  # of boards as wide, the last one goes: the sheets keep the order of the document
 
     def width(n: LNode) -> float:
@@ -4740,6 +4801,30 @@ def _board_to_detach(boards: list[LNode], lay: SheetLayout, view: View, keep_who
     return None if keep_whole or not boards else max(boards, key=width)
 
 
+def _branch_to_detach(lay: SheetLayout, view: View, kept: set[str]) -> Optional[str]:
+    """A branch to draw on a sheet of its own when nothing else makes a sheet narrow enough (no board to take out,
+    no busbar left to cut): a way wider than a sheet, a distribution below a device rather than a board. Among the
+    branches that are not nearly the whole sheet, the narrowest whose departure makes the sheet fit, otherwise the
+    widest; when the sheet is a single branch, the first node that splits it (its sheet then cuts it further).
+    ``None`` when the height, not the width, sets the scale, or when nothing can go (``kept``: roots and branches
+    already gone)."""
+    if not width_bound(lay, view):
+        return None
+    cands = [n for n in lay.lnodes if n.kind == "node" and n.node is not None and n.node.id and n.children
+             and n.node.id not in kept and n.width >= 2 * view.pitch_mm]
+    _, _, aw, _ = drawing_area(view)
+    excess = lay.width - aw / min_scale(view)
+    widest = max((n.width for n in lay.lnodes), default=0.0)  # the tree, without what is drawn beside it
+    part = [n for n in cands if n.width < 0.85 * widest]
+    enough = [n for n in part if n.width - view.pitch_mm >= excess]
+    if enough:
+        return min(enough, key=lambda n: round(n.width, 3)).node.id  # type: ignore[union-attr]
+    if part:
+        return max(part, key=lambda n: round(n.width, 3)).node.id  # type: ignore[union-attr]
+    split = [n for n in cands if len(n.children) >= 2]
+    return split[0].node.id if split else None  # type: ignore[union-attr]
+
+
 def _walk_nodes(n: NodeBase) -> Iterator[NodeBase]:
     yield n
     for c in n.children:
@@ -4755,7 +4840,7 @@ def _split_trees(doc: Document, spec: SheetSpec, lay: SheetLayout, view: View, i
     if len(trees) < 2:
         return []
     _, _, aw, _ = drawing_area(view)
-    cap = aw / view.min_scale - 30.0
+    cap = aw / min_scale(view) - 30.0
     pos = {n.id: k for k, r in enumerate(trees) for n in _walk_nodes(r.node) if n.id}  # type: ignore[arg-type]
     spans = [(pos[l.from_], pos[l.to], 100 if l.kind in ("tie", "transfer") else 1) for l in doc.links
              if l.from_ in pos and l.to in pos and pos[l.from_] != pos[l.to]]
@@ -4815,7 +4900,7 @@ def _ordered(spec: SheetSpec, index: Index) -> list[str]:
 def _bus_room(lay: SheetLayout, bus: LNode, view: View, first: bool) -> float:
     """Width the ways of a busbar split over sheets may take on a sheet (``first``: the sheet of its supply)."""
     _, _, aw, _ = drawing_area(view)
-    return aw / view.min_scale - 30.0 - ((bus.x - (lay.lnodes[0].x_left if lay.lnodes else 0)) if first else 0.0)
+    return aw / min_scale(view) - 30.0 - ((bus.x - (lay.lnodes[0].x_left if lay.lnodes else 0)) if first else 0.0)
 
 
 def _refill(doc: Document, view: View, index: Index, specs: list[SheetSpec], lay: SheetLayout) -> None:
@@ -4871,12 +4956,17 @@ def _refill(doc: Document, view: View, index: Index, specs: list[SheetSpec], lay
             del specs[k]
 
 
+def _bus_to_split(lay: SheetLayout) -> Optional[LNode]:
+    """The most crowded busbar of a sheet, the one cut into continuation sheets; ``None``: none to cut."""
+    cands = [n for n in lay.lnodes if n.kind == "node" and n.has_bus and n.node is not None and len(n.children) >= 4]
+    return max(cands, key=lambda n: n.width) if cands else None
+
+
 def _split_bus(spec: SheetSpec, lay: SheetLayout, view: View, index: Index, lang: str = "en") -> list[SheetSpec]:
     """Split the most crowded busbar into several continuation sheets."""
-    cands = [n for n in lay.lnodes if n.kind == "node" and n.has_bus and n.node is not None and len(n.children) >= 4]
-    if not cands:
+    bus = _bus_to_split(lay)
+    if bus is None:
         return []
-    bus = max(cands, key=lambda n: n.width)
     node = bus.node
     assert node is not None
     widths = [c.width for c in bus.children]

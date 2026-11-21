@@ -73,11 +73,12 @@ def compose_page(doc: Document, view: View, lay: SheetLayout, folio: int, total:
     dx = ax + max(0.0, (aw - lay.width * scale) / 2) if lay.width * scale < aw * 0.6 else ax
     drawing = transform(lay.group, dx, ay, scale=scale)
     root.add(drawing)  # type: ignore[arg-type]
-    if scale < 0.995:
+    noted = scale < 0.995 and not view.title_block  # with a title block, the scale is in its cell
+    if noted:
         root.add(Text((w - MARGIN - 2.0, MARGIN + 4.0), _t("render.scale", lang, scale=fmt(round(scale, 2))), 1.8, "end"))
     if legend is not None and legend.entries:
         lw, lh = _legend_size(legend)
-        scale_box = [(w - MARGIN - 40.0, MARGIN, w - MARGIN, MARGIN + 6.0)] if scale < 0.995 else []
+        scale_box = [(w - MARGIN - 40.0, MARGIN, w - MARGIN, MARGIN + 6.0)] if noted else []
         x, y = _free_spot(drawing, (ax, ay, aw, ah), lw, lh, scale_box)
         root.add(_legend(legend, x, y, lw, lh))
 
@@ -90,7 +91,8 @@ def compose_page(doc: Document, view: View, lay: SheetLayout, folio: int, total:
     tb_w = min(TITLE_BLOCK_W, w - 2 * MARGIN)
     first = lay.spec.roots[0] if lay.spec.roots else None
     here = first if first is not None and all(first is not s for s in doc.sources) else None  # a board on its sheet
-    _title_block(root, doc, w - MARGIN - tb_w, band_y, tb_w, TITLE_BAND, folio, total, sheet_title, lang, here)
+    _title_block(root, doc, w - MARGIN - tb_w, band_y, tb_w, TITLE_BAND, folio, total, sheet_title, lang, here,
+                 scale)
     if not _note_lines(doc, lang):  # no notes: no empty "Notes" band
         return page
     if notes_beside(view):
@@ -151,9 +153,10 @@ _PROFILE_NAMES = {"iec60364": "IEC 60364", "nfc15100": "NF C 15-100", "enedis": 
 
 
 def _title_block(g: Group, doc: Document, x: float, y: float, w: float, h: float, folio: int, total: Optional[int],
-                 sheet_title: str, lang: str = "en", here: Any = None) -> None:
+                 sheet_title: str, lang: str = "en", here: Any = None, scale: Optional[float] = None) -> None:
     """``here``: the node a sheet of its own is drawn from (a board behind a transformer has its own voltage and
-    short-circuit current, shown instead of the installation's)."""
+    short-circuit current, shown instead of the installation's). ``scale``: the scale the drawing is printed at
+    (its symbols and texts at their drawn size: 1; ``None``: a page with no drawing, the cell left empty)."""
     L = lambda key: _t(key, lang)  # noqa: E731
     m, inst = doc.meta, doc.installation
     rev = m.revisions[-1] if m.revisions else None
@@ -195,8 +198,11 @@ def _title_block(g: Group, doc: Document, x: float, y: float, w: float, h: float
     _cell(tb, c3x, y + rh, c3 / 2, rh, L("tb.date"), (rev.date if rev and rev.date else m.date) or "")
     _cell(tb, c3x + c3 / 2, y + rh, c3 / 2, rh, L("tb.revision"), rev.index if rev else "")
     sheet = Group(cls="tb-sheet")  # the sheet number: renumbered when several views make one drawing set
-    _cell(sheet, c3x, y + rh * 2, c3, rh, L("tb.sheet"), f"{folio} / {total}" if total else str(folio), 3.0, True)
+    sw = c3 * 0.6
+    _cell(sheet, c3x, y + rh * 2, sw, rh, L("tb.sheet"), f"{folio} / {total}" if total else str(folio), 3.0, True)
     tb.add(sheet)
+    _cell(tb, c3x + sw, y + rh * 2, c3 - sw, rh, L("tb.scale"),
+          fmt(round(scale, 2)) if scale is not None else "")
     _cell(tb, c3x, y + rh * 3, c3, rh, L("tb.generated_by"), _generator(), 1.8)
     g.add(tb)
 
