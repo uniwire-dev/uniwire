@@ -247,8 +247,12 @@ def audit(root: Group, detours: bool = False) -> list[Finding]:
         if t.color == "#000000" and t.size < SHRUNK * usual - 1e-6:
             out.append(Finding("small_text", f"{t.text!r} at {t.size:.2f} mm ({usual:.2f} usually)", t.p))
     ids = sorted(links)
+    trunk = {g.attrs["data-uw-link"]: g.attrs["data-uw-trunk"] for g in _groups(root)
+             if has_cls(g, "uw-link") and "data-uw-link" in g.attrs and "data-uw-trunk" in g.attrs}
     for i, la in enumerate(ids):
         for lb in ids[i + 1:]:
+            if la in trunk and trunk[la] == trunk.get(lb):  # the links of one trunk share it by design
+                continue
             run = max((_run(p, q, 0.3) for p in links[la] for q in links[lb]), default=0.0)
             if run > 3.0:
                 out.append(Finding("shared_run", f"links {la} and {lb} share {run:.0f} mm", links[la][0][0]))

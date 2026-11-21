@@ -186,6 +186,21 @@ def test_wire_marks_on_conductors():
     assert not any(g.get("data-uw-mark") for s in _svgs(doc, "multi-line") for g in s.iter(NS + "g"))
 
 
+def test_text_width_per_glyph():
+    """The layout measures a text with the advance widths of Arial: never narrower than the text drawn (six wide
+    capitals ran past the box sized for them), at most a hundredth of an em wider per character."""
+    pytest.importorskip("reportlab")
+    from reportlab.pdfbase.pdfmetrics import stringWidth  # the Helvetica metrics: the widths of Arial
+
+    from uniwire.render.scene import text_width
+
+    for text in ("WWWWWW", "MMm mm", "0123456789", "Pump P-12 (spare)", "QA1 4x25+PE16", "Éclairage îlot", "@%&*"):
+        real = stringWidth(text, "Helvetica", 2.0)
+        assert real <= text_width(text, 2.0) <= real + 0.01 * 2.0 * len(text), text
+    assert text_width("Ш", 1.0) > text_width("Ы", 1.0) > text_width("г", 1.0)  # Cyrillic, from the same font
+    assert text_width("\u2192", 1.0) == 1.0 and text_width("\u4e2d", 1.0) == 1.0  # an arrow, a CJK character
+
+
 def test_pdf_cjk_text(tmp_path, monkeypatch):
     pytest.importorskip("reportlab")
     from uniwire.render import pdf

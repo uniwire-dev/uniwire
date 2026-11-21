@@ -249,36 +249,68 @@ def _leg(obs: Obstacles, e: End, y: float, lane: float = LANE,
 
 def route(obs: Obstacles, a: End, b: End, y_min: Optional[float] = None, y_max: Optional[float] = None,
           step: float = 0.5, record: bool = True, lane: float = LANE, solid: bool = False,
-          cost_out: Optional[list[float]] = None) -> list[Point]:
+          cost_out: Optional[list[float]] = None, deeper: bool = False) -> list[Point]:
     """Orthogonal route from ``a`` to ``b`` through a horizontal channel that avoids texts and symbols.
     ``lane``: minimum spacing from parallel conductors (wider for a link that will carry a device symbol);
     ``solid``: a power link drawn as a plain line, kept off the busbars it would run along;
-    ``cost_out``: receives the cost of the route found (to compare the ends a link could use)."""
+    ``cost_out``: receives the cost of the route found (to compare the ends a link could use);
+    ``deeper``: when the best channel runs on another line, a channel of its own lower down, under everything drawn
+    between the ends if need be (room is made there: what is drawn under the routes moves down)."""
     lo = min(a.y, b.y) - 30.0 if y_min is None else y_min
     hi = max(a.y, b.y) + 30.0 if y_max is None else y_max
     sub = obs.window((min(a.x, b.x) - 12.0, lo - 2.0, max(a.x, b.x) + 12.0, hi + 2.0))
-    seg = _Costs(sub, lane)
-    best: tuple[float, list[Point]] = (1e18, [])
-    n = int((hi - lo) / step)
-    for i in range(n + 1):
-        y = lo + i * step
-        ca, pa = _leg(sub, a, y, lane, seg)
-        if ca >= 1e9:
-            continue
-        cb, pb = _leg(sub, b, y, lane, seg)
-        if cb >= 1e9:
-            continue
-        ch = seg(pa[-1], pb[-1], solid)
-        length = abs(y - a.y) + abs(y - b.y)
-        cost = ca + cb + ch + 0.08 * length
-        if cost < best[0]:
-            best = (cost, pa + pb[::-1])
+    best = _channel(sub, a, b, lo, hi, step, lane, solid)
+    if deeper and best[1] and _shared(sub, best[3], lane):
+        x0, x1 = min(a.x, b.x) - 12.0, max(a.x, b.x) + 12.0
+        floor = max([o[3] for o in obs.boxes if o[0] < x1 and x0 < o[2]]
+                    + [y for y, h0, h1 in obs.hlines if h0 < x1 and x0 < h1] + [hi]) + 2.0 * lane
+        low = obs.window((x0, lo - 2.0, x1, floor + 2.0))
+        alt = _channel(low, a, b, best[2], floor, step, lane, solid, unshared=True)
+        if alt[1]:
+            best = alt
     pts = _simplify(best[1])
     if cost_out is not None:
         cost_out.append(best[0])
     if record:
         record_route(obs, pts)
     return pts
+
+
+def _channel(obs: Obstacles, a: End, b: End, lo: float, hi: float, step: float, lane: float, solid: bool,
+             unshared: bool = False) -> tuple[float, list[Point], float]:
+    """Cheapest route through one channel between the heights ``lo`` and ``hi``: (cost, points, height of the
+    channel, the channel); ``unshared``: only channels running on no other line."""
+    seg = _Costs(obs, lane)
+    best: tuple[float, list[Point], float, list[Point]] = (1e18, [], lo, [])
+    n = int((hi - lo) / step)
+    for i in range(n + 1):
+        y = lo + i * step
+        ca, pa = _leg(obs, a, y, lane, seg)
+        if ca >= 1e9:
+            continue
+        cb, pb = _leg(obs, b, y, lane, seg)
+        if cb >= 1e9:
+            continue
+        ch = seg(pa[-1], pb[-1], solid)
+        length = abs(y - a.y) + abs(y - b.y)
+        cost = ca + cb + ch + 0.08 * length
+        if cost < best[0] and not (unshared and _shared(obs, [pa[-1], pb[-1]], lane)):
+            best = (cost, pa + pb[::-1], y, [pa[-1], pb[-1]])
+    return best
+
+
+SHARED_RUN = 3.0  # mm: two lines running on one another longer than this read as one
+
+
+def _shared(obs: Obstacles, pts: list[Point], lane: float) -> bool:
+    """Whether the horizontal stretches of a route run on another line (the channel of a link already routed, a
+    busbar, the side of a frame) for longer than ``SHARED_RUN``."""
+    for p, q in zip(pts, pts[1:]):
+        if abs(p[1] - q[1]) < 1e-9:
+            x0, x1 = min(p[0], q[0]), max(p[0], q[0])
+            if any(abs(y - p[1]) < lane * 0.9 and min(h1, x1) - max(h0, x0) > SHARED_RUN for y, h0, h1 in obs.hlines):
+                return True
+    return False
 
 
 def _simplify(pts: list[Point]) -> list[Point]:
@@ -385,11 +417,12 @@ _PROBE: list[list[Point]] = []  # debugging aid, see route_grid
 
 def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box, lane: float = LANE,
                step: float = 1.0, record: bool = True,
-               cost_out: Optional[list[float]] = None, bend: float = 0.0) -> tuple[list[Point], int, int]:
+               cost_out: Optional[list[float]] = None, bend: float = 0.0,
+               length: float = GRID_LENGTH) -> tuple[list[Point], int, int]:
     """Cheapest orthogonal route, with as many corners as needed, from one of ``starts`` to one of ``goals``
     (the ends a link may use on each device): Dijkstra on a grid of ``step`` mm laid over ``window``, through
     the coordinates of the ends. Same costs as ``route`` (texts and symbols, lines run along or crossed,
-    frames), plus a cost per corner (``bend``, ``BEND`` if not given). Returns the points and the indexes of the
+    frames), plus a cost per corner (``bend``, ``BEND`` if not given) and per mm (``length``). Returns the points and the indexes of the
     ends used (no route: [])."""
     import heapq
     from bisect import bisect_left, bisect_right
@@ -490,7 +523,7 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
         c = sub.box_cross if (i, j) in blocked or (i2, j2) in blocked else 0.0
         if dj == 0:  # horizontal, at y = ys[j]
             y, a, b = ys[j], min(xs[i], xs[i2]), max(xs[i], xs[i2])
-            c += GRID_LENGTH * (b - a) + run_cost(y, a, b, *lines_at(j, False))
+            c += length * (b - a) + run_cost(y, a, b, *lines_at(j, False))
             g = min(i, i2)
             if g not in gap_x:  # the lines crossed between two grid columns, the same on every row
                 gap_x[g] = (between(vw, a, b), between(fx, a, b))
@@ -499,7 +532,7 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
             c += sum(FRAME_CROSS for x, v0, v1 in sides if v0 < y < v1)
         else:  # vertical, at x = xs[i]
             x, a, b = xs[i], min(ys[j], ys[j2]), max(ys[j], ys[j2])
-            c += GRID_LENGTH * (b - a) + run_cost(x, a, b, *lines_at(i, True))
+            c += length * (b - a) + run_cost(x, a, b, *lines_at(i, True))
             g = min(j, j2)
             if g not in gap_y:
                 gap_y[g] = (between(buses, a, b), between(fy, a, b), between(hl, a, b))
