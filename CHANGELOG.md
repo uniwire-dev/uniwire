@@ -13,6 +13,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   costs, same order of operations, same choice between equal routes). Without the package, or with
   `UNIWIRE_NATIVE=0`, the pure Python search is used, as before (and in the browser editor). The largest documents,
   many links on several sheets, are drawn about three times faster than with the pure Python router.
+* Faster layout of large documents, with or without the compiled router: link labels, leader texts and the legs of
+  channel routes are placed against an index of what is already drawn (texts and symbols by area, lines by
+  position) rather than by testing every obstacle at every position tried, with the same drawings. The documents
+  that took longest to lay out are drawn two to four times faster.
 * Faster layout: the drawings of large documents, with many links, take about half the time they took (the
   slowest twice as fast or more), with the same drawings: link routes costed on the obstacles near them, the
   channels and stubs that cannot beat the best route found left out, the sheets of a view with no paper planned
