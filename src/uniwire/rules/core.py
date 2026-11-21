@@ -399,7 +399,7 @@ def system_missing(doc: Document, idx: Index):
 @rule("core")
 def pen_split_missing(doc: Document, idx: Index):
     """TN-C-S: the PEN is split into PE and N at one board; the document must say which (``pen_split``, or a board
-    declaring its own earthing): the single-line drawing never guesses it."""
+    declaring its own earthing); both drawings otherwise split it at the first board."""
     if doc.installation.earthing != "TN-C-S":
         return
     boards = [n for n in idx.nodes.values() if n.type in ("board", "busbar")]  # type: ignore[attr-defined]

@@ -31,7 +31,7 @@
       "u2_V": 480, "ucc_pct": 5.75, "coupling": "Dyn1", "external": true,
       "children": [
         {
-          "id": "MSB", "pen_split": true, "type": "board", "ref": "MSB", "label": "Main switchboard 1200 A", "kind": "switchboard",
+          "id": "MSB", "type": "board", "ref": "MSB", "label": "Main switchboard 1200 A", "kind": "switchboard",
           "in_A": 1200, "un_V": 480, "ik_kA": 18, "location": "Electrical room 102",
           "cable": {
             "designation": "THHN/THWN-2", "cores": "3x(4-600 kcmil)+G", "size_awg": "600 kcmil",

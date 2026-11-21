@@ -147,10 +147,10 @@ def test_split_phase_neutral_passes_a_two_pole_main():
     assert texts["X1"] == "L1+N" and texts["W2"] == "L1L2"
 
 
-def test_pen_split_drawn_only_where_declared():
+def test_pen_split_at_the_first_board_unless_declared():
     guess = _board({"type": "breaker", "in_A": 16, "children": [{"type": "socket"}]},
                    installation={"earthing": "TN-C-S", "system": "3P+N"})
-    assert "PEN" not in _texts(render_pages(guess))
+    assert "PEN" in _texts(render_pages(guess))  # SPEC default, as in the multi-line view
     assert [f.rule for f in check(guess)].count("core.pen-split-missing") == 1
     declared = uniwire.load({"installation": {"earthing": "TN-C-S", "system": "3P+N"}, "sources": [
         {"type": "grid", "children": [{"type": "board", "id": "B", "pen_split": True, "children": [

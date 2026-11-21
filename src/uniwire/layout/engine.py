@@ -1828,10 +1828,18 @@ def _line_above(chain: list[NodeBase], m_in: LineMarks, below: set[int]) -> Opti
 
 
 def _draw_pen_splits(main: list[LNode], doc: Document, g: Group, obs: Obstacles) -> None:
-    """TN-C-S: PEN -> PE + N split at the boards where the document says it is: flagged ``pen_split``, or declaring
-    their own earthing TN-C-S. Never guessed (an installation declared TN-C-S does not say at which board)."""
+    """TN-C-S: PEN -> PE + N split at the boards flagged ``pen_split`` or declaring their own earthing TN-C-S; when
+    none does in a TN-C-S installation, at the first board of the drawing (as the multi-line view splits it; a check
+    finding asks to declare it)."""
     boards = [n for r in main for n in r.walk() if n.is_board and n.node is not None]
-    flagged = [b for b in boards if getattr(b.node, "pen_split", None) or getattr(b.node, "earthing", None) == "TN-C-S"]
+    if any(getattr(n, "pen_split", None) is not None or (n.type == "board" and getattr(n, "earthing", None) == "TN-C-S")
+           for n, _, _ in iter_nodes(doc)):
+        flagged = [b for b in boards if getattr(b.node, "pen_split", None) or getattr(b.node, "earthing", None) == "TN-C-S"]
+    elif doc.installation.earthing == "TN-C-S":
+        first = _first_boards(doc)[:1]
+        flagged = [b for b in boards if first and b.node is first[0]]
+    else:
+        flagged = []
     parent = {id(c): n for r in main for n in r.walk() for c in n.children}
     for b in flagged:
         p = parent.get(id(b))
