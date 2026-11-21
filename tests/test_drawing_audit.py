@@ -14,8 +14,11 @@ from uniwire.render.scene import Group, Polyline, Rect, Style, Text
 KNOWN: dict[str, int] = {"38": 1, "44": 1}  # findings tolerated per example (single-line views): an off-sheet text
 # on its own stub (38), a data link through the ellipsis of a protocol list (44)
 # multi-line view of every example: power links outside the tree still drawn along a conductor or a frame; the
-# cable text of a power link between two boards written across the gap between their frames (49)
-KNOWN_ML: dict[str, int] = {"49": 2, "50": 2, "53": 1}
+# cable text of a power link between two boards written across the gap between their frames (49); the transfer link
+# of 50 leaves its inlet along the inlet's own conductors (counted as running on a conductor at the size the
+# power-only sheet is drawn)
+KNOWN_ML: dict[str, int] = {"49": 2, "50": 3, "53": 1}
+KNOWN_ML_AUX: dict[str, int] = {"49": 2, "50": 2, "53": 1}  # same, with the auxiliary devices and their links
 EXAMPLES = sorted((ROOT / "examples").glob("*.uniwire.json"))
 
 
@@ -64,3 +67,11 @@ def test_a_frame_edge_through_a_text_is_a_finding():
     assert [f.kind for f in audit(cut)] == ["frame_crosses_text"]
     assert [f.kind for f in audit(on_top)] == ["frame_crosses_text"]
     assert audit(clear) == []
+
+
+@pytest.mark.parametrize("path", EXAMPLES, ids=[p.name.split("_")[0] for p in EXAMPLES])
+def test_example_multiline_with_auxiliaries_readable(path):
+    doc = load(json.loads(path.read_text(encoding="utf-8")))
+    view = default_view(doc, kind="multi-line").model_copy(update={"auxiliaries": True})
+    findings = [f for pg in render_pages(doc, view) for f in audit(pg.root)]
+    assert len(findings) <= KNOWN_ML_AUX.get(path.name.split("_")[0], 0), "\n".join(map(str, findings))

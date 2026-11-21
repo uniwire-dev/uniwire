@@ -180,7 +180,7 @@ def test_auxiliary_devices_and_signal_links():
                 "devices": [{"type": "controller", "id": "RLY", "ref": "-K9", "label": "Pump relay"}],
                 "links": [{"kind": "control", "from": "PLC", "from_port": "1.0", "to": "QM"},
                           {"kind": "data", "from": "PLC", "to": "RLY", "protocol": "Modbus"}]})
-    page = render_pages(doc, default_view(doc, kind="multi-line"))[0]
+    page = render_pages(doc, default_view(doc, kind="multi-line").model_copy(update={"auxiliaries": True}))[0]
     groups = _groups(page.root)
     kinds = {g.attrs.get("data-uw-kind") for g in groups if "uw-link" in (g.cls or "")}
     assert {"control", "data"} <= kinds
@@ -470,3 +470,59 @@ def test_converters_drawn_in_the_direction_they_convert():
     page = render_pages(doc, default_view(doc, kind="multi-line"))[0]
     marks = {g.id: [t.text for t in g.items if isinstance(t, Text)] for g in _groups(page.root) if g.id in ("U1", "T2", "T3")}
     assert marks == {"U1": ["=", "~"], "T2": ["=", "="], "T3": ["~", "="]}
+
+
+def _panel_with_auxiliaries(auxiliaries=None) -> dict:
+    """A panel fed by a grid or (transfer link) a generator: a PLC, a terminal block and a meter outside the tree,
+    reached by control, data and measure links; a meter and a contactor in the tree."""
+    ml = {"id": "ml", "kind": "multi-line"}
+    if auxiliaries is not None:
+        ml["auxiliaries"] = auxiliaries
+    return {
+        "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
+        "sources": [
+            {"id": "S1", "type": "grid", "children": [{"id": "MB", "type": "board", "ref": "=MB", "children": [
+                {"id": "Q0", "type": "transfer_switch", "ref": "-Q0", "poles": "4P", "in_A": 63, "children": [
+                    {"id": "PM", "type": "meter", "ref": "-P0"},
+                    {"id": "W1", "type": "busbar", "children": [
+                        {"id": "Q1", "type": "breaker", "ref": "-Q1", "in_A": 16, "children": [
+                            {"id": "KM1", "type": "contactor", "ref": "-KM1", "children": [
+                                {"id": "M1", "type": "motor", "p_kW": 4, "label": "Pump"}]}]},
+                        {"id": "Q2", "type": "breaker", "ref": "-Q2", "in_A": 10, "poles": "1P+N", "children": [
+                            {"id": "L2", "type": "lighting", "p_kW": 0.5}]}]}]}]}]},
+            {"id": "S2", "type": "generator", "sn_kVA": 30, "children": [
+                {"id": "QG", "type": "breaker", "ref": "-QG", "in_A": 63, "poles": "4P"}]},
+        ],
+        "devices": [{"id": "PLC", "type": "controller", "ref": "-A1", "label": "Pump controller"},
+                    {"id": "XT", "type": "terminal_block", "ref": "-X1"},
+                    {"id": "PE1", "type": "meter", "ref": "-P1"}],
+        "links": [{"kind": "transfer", "from": "QG", "to": "Q0"},
+                  {"kind": "control", "from": "PLC", "to": "KM1"},
+                  {"kind": "data", "from": "PLC", "to": "PE1", "protocol": "Modbus"},
+                  {"kind": "measure", "from": "PE1", "to": "Q2"},
+                  {"kind": "control", "from": "XT", "to": "PLC"}],
+        "views": [ml],
+    }
+
+
+@pytest.mark.parametrize("auxiliaries", [None, False])
+def test_multi_line_view_draws_the_power_parts_only(auxiliaries):
+    """By default a multi-line view is the power diagram: the tree (a meter or a contactor in it included) and the
+    power links; the devices outside the tree and the control, data and measure links are left out."""
+    doc = load(_panel_with_auxiliaries(auxiliaries))
+    page = render_pages(doc, doc.views[0])[0]
+    groups = _groups(page.root)
+    ids = {g.id for g in groups}
+    assert {"PM", "KM1", "M1", "QG", "Q0"} <= ids
+    assert not ids & {"PLC", "XT", "PE1"}
+    kinds = {g.attrs.get("data-uw-kind") for g in groups if "uw-link" in (g.cls or "")}
+    assert kinds == {"transfer"}
+
+
+def test_multi_line_view_with_auxiliaries_draws_them_and_their_links():
+    doc = load(_panel_with_auxiliaries(True))
+    page = render_pages(doc, doc.views[0])[0]
+    groups = _groups(page.root)
+    assert {"PM", "KM1", "M1", "QG", "Q0", "PLC", "XT", "PE1"} <= {g.id for g in groups}
+    kinds = {g.attrs.get("data-uw-kind") for g in groups if "uw-link" in (g.cls or "")}
+    assert kinds == {"transfer", "control", "data", "measure"}
