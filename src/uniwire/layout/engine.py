@@ -52,6 +52,8 @@ from ..render.scene import (
     transform,
 )
 from ..render.semantics import (
+    HIT_COLOR,
+    HIT_WIDTH,
     add_cls,
     busbar_group,
     edge_group,
@@ -66,13 +68,19 @@ from ..symbols import BUSWAY_H, DASH, PORT_STEP, Symbol, symbol, symbol_for
 from ..symbols import kind as symbol_kind
 from ..units import fmt
 from .routing import (
+    CLEAR,
+    DETOUR_BEND,
     LANE,
+    RUN_ALONG,
     WIRE_CROSS,
     Box,
     End,
     Obstacles,
+    _Costs,
     _hit,
+    _leg,
     _seg_cost,
+    _simplify,
     boxes_union,
     improve_route,
     place_box,
@@ -2710,6 +2718,122 @@ def _band_device(link: Any, dev: NodeBase, pts: list[tuple[float, float]], style
     return True
 
 
+TRUNK_KINDS = ("measure", "data")  # links of these kinds sharing one end: one trunk with a tap to each other end
+TRUNK_FROM = 3  # from this many links of one kind on one device (on one sheet)
+TRUNK_LEAD = 1.0  # cost per mm of the lead from the hub to its trunk: a short lead, not a round that reads as a frame
+
+
+@dataclass
+class Trunk:
+    """Links of one kind sharing one end (``hub``), drawn as one line with a tee tap to each other end."""
+    hub: LNode
+    kind: str
+    taps: list[tuple[int, LNode]]  # (link, the device it reaches), in the order of the links
+
+
+def _trunks(doc: Document, roots: list[LNode], order: list[int], skip: set[int]) -> list[Trunk]:
+    """Single-line: the links of one kind (``TRUNK_KINDS``) between one device and three others or more on this sheet.
+    Not a controller's (its own points, see ``_spread_ends``), nor a PLC's (its channels), nor a link in ``skip``
+    (drawn otherwise: interrupted, on a PLC channel, in a band), nor a link carrying a device or ending on a
+    busbar, nor one naming its terminal on the shared device (each to its own terminal: drawn one by one)."""
+    cands: list[tuple[int, LNode, LNode]] = []
+    for i in order:
+        link = doc.links[i]
+        if i in skip or link.kind not in TRUNK_KINDS or link.device is not None:
+            continue
+        a, b = _find(roots, link.from_), _find(roots, link.to)
+        if a is None or b is None or a is b or any(
+                n.sym.height == 0 or symbol_kind(n.sym) == "controller" or "ports" in n.sym.extra for n in (a, b)):
+            continue
+        cands.append((i, a, b))
+    def free(i: int, k: int) -> bool:  # no terminal named at that end (several named: separate wires, not one line)
+        return not (doc.links[i].from_port, doc.links[i].to_port)[k]
+    count = Counter((n.id, doc.links[i].kind) for i, a, b in cands for k, n in enumerate((a, b)) if free(i, k))
+    groups: dict[tuple[str, str], Trunk] = {}
+    for i, a, b in cands:
+        kind = doc.links[i].kind
+        ca, cb = count[(a.id, kind)] if free(i, 0) else 0, count[(b.id, kind)] if free(i, 1) else 0
+        if max(ca, cb) < TRUNK_FROM:
+            continue
+        hub, other = (a, b) if ca >= cb else (b, a)
+        t = groups.setdefault((hub.id, kind), Trunk(hub, kind, []))
+        if count[(hub.id, kind)] >= TRUNK_FROM and all(o is not other for _j, o in t.taps):
+            t.taps.append((i, other))
+    return [t for t in groups.values() if len(t.taps) >= TRUNK_FROM]
+
+
+TrunkLeg = tuple[float, list[tuple[float, float]]]  # cost, points from a link end to the trunk
+
+
+def _trunk_heights(obs: Obstacles, taps: list[list[End]], lo: float, hi: float, lane: float, count: int = 3
+                   ) -> list[tuple[float, float, list[list[tuple[float, float]]], list[float]]]:
+    """The heights a trunk reaching every tap (the possible ends of each) may take over ``lo``..``hi``, the cheapest
+    first and at least 2 mm apart, as ``route`` chooses the channel of one link: (cost, y, the leg of each tap from its
+    end to the trunk, the cost of each leg)."""
+    ends = [e for es in taps for e in es]
+    xs = [e.x for e in ends]
+    sub = obs.window((min(xs) - 12.0, lo - 2.0, max(xs) + 12.0, hi + 2.0))
+    seg = _Costs(sub, lane)
+    found = []
+    for k in range(int((hi - lo) / 0.5) + 1):
+        y = lo + 0.5 * k
+
+        def leg(es: list[End], y: float = y) -> TrunkLeg:
+            return min((_leg(sub, e, y, lane, seg) for e in es), key=lambda t: t[0])
+        legs = [leg(es) for es in taps]
+        if any(c >= 1e9 for c, _p in legs):
+            continue
+        tx = [p[-1][0] for _c, p in legs]
+        cost = sum(c for c, _p in legs) + seg((min(tx), y), (max(tx), y)) \
+            + 0.08 * sum(abs(y - p[0][1]) for _c, p in legs)
+        found.append((cost, y, [p for _c, p in legs], [c for c, _p in legs]))
+    found.sort(key=lambda f: f[0])
+    out: list[tuple[float, float, list[list[tuple[float, float]]], list[float]]] = []
+    for f in found:
+        if all(abs(f[1] - g[1]) >= 2.0 for g in out):
+            out.append(f)
+            if len(out) == count:
+                break
+    return out
+
+
+TAP_APART = 2.0  # the taps of one trunk at least this far apart (closer: one line, or a crossing of four)
+
+
+def _tap_legs(obs: Obstacles, taps: list[list[End]], y: float, lane: float
+              ) -> tuple[list[list[tuple[float, float]]], list[float]]:
+    """The legs of the taps of a trunk at the height ``y`` (from each end to the trunk), one after the other, the
+    nearest the trunk first: each one off the lines of the ones before and away from where they meet the trunk (two
+    taps on one vertical read as one line, two from either side at one point as a crossing). Returns the legs and
+    their costs."""
+    ends = [e for es in taps for e in es]
+    xs, ys = [e.x for e in ends], [e.y for e in ends] + [y]
+    sub = obs.window((min(xs) - 14.0, min(ys) - 2.0, max(xs) + 14.0, max(ys) + 2.0))
+    legs: list[list[tuple[float, float]]] = [[] for _ in taps]
+    costs = [0.0] * len(taps)
+    taken: list[float] = []
+    for k in sorted(range(len(taps)), key=lambda k: (min(abs(e.y - y) for e in taps[k]), k)):
+        best: tuple[float, list[tuple[float, float]]] = (1e18, [])
+        for e in taps[k]:
+            if e.side in ("down", "up"):
+                ok = y >= e.y + 1.0 if e.side == "down" else y <= e.y - 4.0
+                shapes = [([(e.x, e.y), (e.x, y)], 0.0)] if ok else []
+            else:
+                shapes = [([(e.x, e.y), (e.x + s if e.side == "right" else e.x - s, e.y),
+                            (e.x + s if e.side == "right" else e.x - s, y)], 0.15 * s) for s in e.stubs]
+            for pts, extra in shapes:
+                c = extra + sum(_seg_cost(sub, p, q, lane) for p, q in zip(pts, pts[1:]))
+                if any(abs(pts[-1][0] - u) < TAP_APART for u in taken):
+                    c += RUN_ALONG
+                if c < best[0]:
+                    best = (c, pts)
+        legs[k], costs[k] = _simplify(best[1]), best[0]
+        if best[1]:
+            record_route(sub, best[1])
+            taken.append(best[1][-1][0])
+    return legs, costs
+
+
 def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, view: View, obs: Obstacles,
                 y_load: float, lang: str = "en", node_folio: Callable[[str], Optional[int]] | None = None,
                 band: Optional[AltBand] = None, only: Optional[set[int]] = None,
@@ -2902,7 +3026,145 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         i not in own, i not in side_runs, side_runs[i][2] - side_runs[i][1] if i in side_runs else 0.0,
         i in bus_land, not (far and i in far), -abs(
         bus_land[i].x - (_find(roots, doc.links[i].to) or roots[0]).x) if i in bus_land else 0.0))
-    for i in first + rest:
+    # single-line: the links of one kind sharing one end, three or more: one trunk with a tee tap to each other end
+    # (drawn after the off-sheet stubs, before the other links: the widest route, the others go round it)
+    trunk_of: dict[int, str] = {}  # link -> its trunk (the links of one trunk run on one another by design)
+    trunk_paths: dict[int, list[tuple[float, float]]] = {}  # link -> its whole route (end to end, along the trunk)
+
+    def kind_point(n: LNode, e: End, kind: str) -> End:
+        """Links of different kinds on the side of a node: one point per kind (as the links routed one by one)."""
+        if e.side != "left":
+            return e
+        kinds = side_ends.setdefault((n.id, round(e.x, 2), round(e.y, 2)), [])
+        if kind not in kinds:
+            kinds.append(kind)
+        shift = kinds.index(kind)
+        return End(e.x, e.y + 1.5 * shift) if shift else e
+
+    def draw_trunk(t: Trunk) -> None:
+        style = _link_style(t.kind)
+        # the ends, one point per kind on the left side of a node (as for the links routed one by one)
+        hub = [kind_point(t.hub, _end(t.hub, t.kind), t.kind)] + [r for r in [_right_end(t.hub)] if r is not None]
+        taps = list(t.taps)
+        alts = {i: [kind_point(o, _end(o, t.kind), t.kind)] + [r for r in [_right_end(o)] if r is not None]
+                for i, o in taps}
+        best: Optional[tuple[float, float, list[tuple[float, float]], list[list[tuple[float, float]]]]] = None
+        while len(taps) >= TRUNK_FROM:
+            ys = [e.y for i, _o in taps for e in alts[i]]
+            lo, hi = min(ys) - 30.0, max(ys) + 30.0
+            if max(ys) < y_max:
+                hi = min(hi, y_max)
+            cands = _trunk_heights(obs, [alts[i] for i, _o in taps], lo, hi, SIGNAL_LANE)
+            if not cands:
+                return
+            # a tap through a text or a symbol, or on another tap's line (devices stacked in one column): that link
+            # on its own route
+            _legs, apart = _tap_legs(obs, [alts[i] for i, _o in taps], cands[0][1], SIGNAL_LANE)
+            bad = {i for (i, _o), c in zip(taps, apart) if c >= min(obs.box_cross, RUN_ALONG)}
+            if bad:
+                taps = [(i, o) for i, o in taps if i not in bad]
+                continue
+            for cost, y, legs, costs in cands:  # the hub joins the trunk where it can, with as few corners as it can
+                legs, apart = _tap_legs(obs, [alts[i] for i, _o in taps], y, SIGNAL_LANE)  # (each clear of the others)
+                if any(c >= min(obs.box_cross, RUN_ALONG) for c in apart) or any(not p for p in legs):
+                    continue
+                cost += sum(apart) - sum(costs)
+                tx = [p[-1][0] for p in legs]
+                x0, x1 = min(tx), max(tx)
+                gx0, gx1 = min([x0] + [e.x for e in hub]) - 25.0, max([x1] + [e.x for e in hub]) + 25.0
+                goals = [End(gx0 + k, y, s) for k in range(int(gx1 - gx0) + 1)
+                         if all(abs(gx0 + k - u) >= 2 * TAP_APART for u in tx) for s in ("up", "down")]
+                win = (gx0 - 5.0, min([y] + [e.y for e in hub]) - 15.0, gx1 + 5.0, max([y + 3.0] + [e.y for e in hub]) + 15.0)
+                sub = obs.window((win[0] - 6.0, win[1] - 6.0, win[2] + 6.0, win[3] + 6.0))
+                for p in legs + [[(x0, y), (x1, y)]]:
+                    record_route(sub, p)
+                c: list[float] = []
+                pts, _ka, _kb = route_grid(sub, hub, goals, win, SIGNAL_LANE, record=False, cost_out=c,
+                                           bend=DETOUR_BEND, length=TRUNK_LEAD)
+                if not pts or c[0] >= obs.box_cross:
+                    continue
+                hx = pts[-1][0]  # beyond the taps: the trunk goes on to it (never through a text or a symbol)
+                whole = (min(x0, hx), y - 1e-6, max(x1, hx), y + 1e-6)
+                if any(_hit(whole, b, CLEAR) for b in obs.boxes):
+                    continue
+                ext = _seg_cost(sub, (min(hx, x1), y), (max(hx, x1), y)) if hx > x1 else \
+                    _seg_cost(sub, (hx, y), (x0, y)) if hx < x0 else 0.0
+                if best is None or cost + c[0] + ext < best[0]:
+                    best = (cost + c[0] + ext, y, pts, legs)
+            break
+        if best is None:
+            return
+        _total, y, hub_leg, legs = best
+        hx = hub_leg[-1][0]
+        key = f"{t.hub.id}:{t.kind}"
+        # each link draws the trunk from the tap before its own (nearer the hub) to its own, and its tap; the nearest
+        # tap also the hub's lead: the trunk is drawn once, in pieces that meet at the taps
+        nearest = min(range(len(taps)), key=lambda k: (abs(legs[k][-1][0] - hx), k))
+        xs = sorted({hx} | {leg[-1][0] for leg in legs})
+        dirs: dict[float, set[str]] = {x: set() for x in xs}  # the lines meeting at each point of the trunk
+        for leg in [hub_leg] + legs:
+            x = leg[-1][0]
+            if len(leg) > 1:
+                dirs[x].add("up" if leg[-2][1] < y else "down")
+        for x in xs:
+            if x > xs[0] + 1e-9:
+                dirs[x].add("left")
+            if x < xs[-1] - 1e-9:
+                dirs[x].add("right")
+        texts: dict[int, str] = {}
+        for k, ((i, o), leg) in enumerate(zip(taps, legs)):
+            link = doc.links[i]
+            tx = leg[-1][0]
+            side = [x for x in xs if (x - hx) * (tx - hx) > 0 and abs(x - hx) < abs(tx - hx) - 1e-9]
+            prev = min(side, key=lambda x: abs(tx - x)) if side else hx
+            piece = (hub_leg if k == nearest else [(prev, y)]) + [(tx, y)] + leg[::-1]
+            lg = group_of(i)
+            lg.attrs["data-uw-trunk"] = key
+            lg.add(Polyline(_simplify(piece), style))
+            if len(dirs[tx]) >= 3:  # a tee: a junction dot
+                lg.add(Circle((tx, y), 0.45, Style(width=THIN, fill=style.color)))
+            if k == nearest and abs(tx - hx) > 1e-9 and len(dirs[hx]) >= 3:
+                lg.add(Circle((hx, y), 0.45, Style(width=THIN, fill=style.color)))
+            path = _simplify(hub_leg + [(tx, y)] + leg[::-1])
+            trunk_paths[i] = path
+            trunk_of[i] = key
+            k_hub = 0 if link.from_ == t.hub.id else 1
+            heads[i] = (t.hub.id, o.id)
+            tap = _simplify([(tx, y)] + leg[::-1])
+            for kk, port in enumerate((link.from_port, link.to_port)):  # a terminal named: on its tap, at its end
+                if port:
+                    labels.append((i, tap if kk != k_hub else tap[::-1], str(port), PORT_SIZE, PORT_COLOR))
+            text = link.label
+            if not text and link.kind == "data" and link.protocol \
+                    and not any(link.protocol in s for s in (t.hub.ann or []) + (o.ann or [])):
+                text = link.protocol
+            if text:
+                texts[i] = text
+        for leg in [hub_leg] + legs:
+            record_route(obs, leg)
+        record_route(obs, [(xs[0], y), (xs[-1], y)])
+        if texts and len(set(texts.values())) == 1 and len(texts) == len(taps):  # one text for all: once, on the trunk
+            i, o = taps[nearest]
+            a, b = max(zip(xs, xs[1:]), key=lambda ab: ab[1] - ab[0]) if len(xs) > 1 else (hx, hx)
+            # in the widest stretch between two taps, from its middle (away from the taps' own lines)
+            labels.append((i, [((a + b) / 2, y), (b, y)] if b - a > 1e-9 else hub_leg,
+                           next(iter(texts.values())), 1.6, "#000000"))
+            heads[i] = (o.id, t.hub.id)  # (the start of that stretch first: see the labels below)
+        else:
+            for (i, _o), leg in zip(taps, legs):
+                if i in texts:
+                    labels.append((i, _simplify([(leg[-1][0], y)] + leg[::-1]), texts[i], 1.6, "#000000"))
+
+    single = obs.min_lane == 0 and not obs.grid
+    trunks = _trunks(doc, roots, order, set(channel) | set(done) | set(far or ()) | set(tap_end) | set(bus_land)
+                     | set(side_runs) | {i for i, _k in spread}) if single else []
+
+    def sequence() -> Iterator[int]:
+        yield from first
+        for t in trunks:
+            draw_trunk(t)
+        yield from (i for i in rest if i not in trunk_of)
+    for i in sequence():
         link = doc.links[i]
         a, b = _find(roots, link.from_), _find(roots, link.to)
         if (a is None and b is None) or i in done:
@@ -3239,7 +3501,11 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             group_of(i).add(Text((at[0], at[1]), txt, size, at[2], color=color))
     for i in sorted(groups):
         if groups[i].items:
-            g.add(finish_link_group(groups[i]))
+            lg = finish_link_group(groups[i])
+            if i in trunk_paths:  # hovering a link of a trunk shows its whole route, the trunk to its hub included
+                hit = next(it for it in lg.items if isinstance(it, Group) and it.cls == "uw-hit")
+                hit.items.insert(0, Polyline(trunk_paths[i], Style(HIT_WIDTH, None, HIT_COLOR)))
+            g.add(lg)
     return chosen
 
 
