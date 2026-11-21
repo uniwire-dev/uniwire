@@ -8,6 +8,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Optional compiled link router: `pip install "uniwire[native]"` adds the package `uniwire-native` (Rust), which
+  runs the search of the grid link router many times faster; the drawings are exactly the same as without it (same
+  costs, same order of operations, same choice between equal routes). Without the package, or with
+  `UNIWIRE_NATIVE=0`, the pure Python search is used, as before (and in the browser editor). The largest documents,
+  many links on several sheets, are drawn about three times faster than with the pure Python router.
 * Faster layout: the drawings of large documents, with many links, take about half the time they took (the
   slowest twice as fast or more), with the same drawings: link routes costed on the obstacles near them, the
   channels and stubs that cannot beat the best route found left out, the sheets of a view with no paper planned

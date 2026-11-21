@@ -25,6 +25,7 @@ PLC consistency), produces bills of materials and draws SVG / PDF sheets. You de
 pip install uniwire                 # validation, rules, SVG rendering, BOM
 pip install "uniwire[pdf]"          # + PDF output (reportlab)
 pip install "uniwire[iec81346]"     # + optional IEC 81346-2 class table (CC BY-SA 4.0 data package)
+pip install "uniwire[native]"       # + optional compiled link router (same drawings, faster)
 ```
 
 Python 3.10 or later is required.
