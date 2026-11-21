@@ -4,7 +4,7 @@ import math
 import re
 import unicodedata
 from collections import Counter
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import Any, Optional
@@ -42,6 +42,7 @@ from ..render.scene import (
     Circle,
     Ellipse,
     Group,
+    Item,
     Line,
     Polyline,
     Rect,
@@ -869,6 +870,17 @@ def _far_links(doc: Document, main: list[LNode]) -> set[int]:
     return far
 
 
+def _conductor_runs(roots: list[LNode]) -> list[tuple[float, float, float]]:
+    """Vertical conductors (x, y0, y1) from each node (its busbar) down to the nodes it feeds; to a load, down to the
+    bottom of the drawing (the loads are not on their baseline yet)."""
+    out = []
+    for r in roots:
+        for n in r.walk():
+            start = n.bus_y if n.bus_y is not None else n.out_y
+            out += [(c.x, start, math.inf if c.bottom else c.y) for c in n.children]
+    return out
+
+
 def _boxes(ln: LNode) -> list[tuple[float, float, float, float]]:
     out = []
     for n in ln.walk():
@@ -1178,6 +1190,14 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
         lanes = max([_port_room(doc, n, here, index, pitch) - pitch / 2 for n in r.walk()] + [0.0])  # (its links)
         new_x = max(sx, right + 3.0 + lanes + max(r.sym.left, last.x - min(b[0] for b in own)))
         _translate(r, new_x - last.x, top)
+        # never across a conductor of the drawing (a feeder passing by from its busbar down to its load): beyond it
+        runs = _conductor_runs(main + placed)
+        for _ in range(len(runs) + 1):
+            own = _boxes(r) + [_frame_box(n) for n in r.walk() if n.is_board]
+            hit = [x for x, y0, y1 in runs if any(b[0] - 1.0 < x < b[2] + 1.0 and b[1] < y1 and y0 < b[3] for b in own)]
+            if not hit:
+                break
+            _translate(r, max(hit) + 1.5 - min(b[0] for b in own), 0.0)
         placed.append(r)
 
     everything = [n for r in roots for n in r.walk()]
@@ -1313,8 +1333,9 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
             for i, t in enumerate(ln.ann):
                 g.add(Text((ab[0], ln.y + 0.3 + (i + 0.8) * ANN_LINE * ln.ann_size / ANN_SIZE), t, ln.ann_size,
                            bold=(i == 0 and ln.tagged)))
-    frames += _draw_view_frames(view, everything + annex, g, obs)
-    frames += _draw_enclosures(doc, everything + annex, g, obs)
+    shared = _shared_frames(doc, view, everything + annex)
+    frames += _draw_view_frames(view, everything + annex, g, obs, shared)
+    frames += _draw_enclosures(doc, everything + annex, g, obs, view.frames, shared)
     _draw_links(doc, roots + annex, anchored, g, view, obs, y_load, lang, node_folio, band, far=far,
                 feed_taps=feed_taps)
 
@@ -2282,13 +2303,17 @@ def _restyle(item: Any, style: Style) -> Any:
     return item
 
 
-def _framed(g: Group, obs: Obstacles, box: tuple[float, float, float, float], label: Optional[str], size: float,
-            style: Style, gap: float = 2.0) -> Rect:
+def _framed(g: Group, obs: Obstacles, box: tuple[float, float, float, float], label: Optional[str | list[str]],
+            size: float, style: Style, gap: float = 2.0) -> Rect:
     """Frame ``box`` (content + padding) with its label, kept clear of busbars and of the frames already drawn.
 
     The label goes above the content when there is room below the nearest busbar / frame edge, otherwise
     at the bottom of the frame; on one line, else on two or three lines and between the conductors crossing
-    the frame, slightly smaller if need be; the frame and its label then become obstacles for the link routes."""
+    the frame, slightly smaller if need be; the frame and its label then become obstacles for the link routes.
+    A list of labels (one frame for a view frame and an enclosure around the same nodes): each one on its own
+    line(s), stacked."""
+    if isinstance(label, list):
+        label = [t for t in label if t] or None
     x0, top, x1, y1 = box
     content_top = top + gap
     # nearest busbar or frame edge crossing the frame above the content: the frame must start below it
@@ -2329,10 +2354,13 @@ def _framed(g: Group, obs: Obstacles, box: tuple[float, float, float, float], la
                     break
             if placed:
                 break
-        if placed is None:  # nothing free: one line above the content, as before
-            base = y0 + size + 0.6 if content_top - y0 >= size + 1.6 else y1 + size + 0.3
-            placed = ([label], size, x0 + 1.0, base, "start", [text_box(x0 + 1.0, base, text_width(label, size), size)],
-                      (x0, y0, x1, y1 + (size + 1.2 if base > y1 else 0.0)))
+        if placed is None:  # nothing free: one line (each label on its own) above the content, as before
+            parts = label if isinstance(label, list) else [label]
+            lh = size * 1.25 * (len(parts) - 1) + size + 1.2
+            base = y0 + size + 0.6 if content_top - y0 >= lh + 0.4 else y1 + size + 0.3
+            placed = (parts, size, x0 + 1.0, base, "start",
+                      [text_box(x0 + 1.0, base + i * size * 1.25, text_width(t, size), size) for i, t in enumerate(parts)],
+                      (x0, y0, x1, y1 + (lh if base > y1 else 0.0)))
         lines, s, lx, base, anchor, tbs, (x0, y0, x1, y1) = placed
         for i, t in enumerate(lines):
             g.add(Text((lx, base + i * s * 1.25), t, s, anchor, bold=True))
@@ -2344,17 +2372,21 @@ def _framed(g: Group, obs: Obstacles, box: tuple[float, float, float, float], la
     return rect
 
 
-def _frame_label_tries(label: str, size: float, width: float) -> Iterator[tuple[float, list[str], bool]]:
+def _frame_label_tries(label: str | list[str], size: float, width: float) -> Iterator[tuple[float, list[str], bool]]:
     """Ways of writing a frame label, best first: (size, lines, the frame may widen). One line, then two
-    lines fitting ``width``, in the frame; the same widening the frame; then three lines or a smaller size."""
-    words = text_units(label)
+    lines fitting ``width``, in the frame; the same widening the frame; then three lines or a smaller size.
+    Several labels: each one written so, one under the other."""
+    parts = [text_units(t) for t in (label if isinstance(label, list) else [label])]
 
     def wrapped(n: int, s: float) -> Optional[list[str]]:
-        return _wrap_words(words, n, lambda t: text_width(t, s)) if len(words) >= n else None
+        if len(parts) == 1 and len(parts[0]) < n:
+            return None
+        return [line for words in parts  # several labels: each on n lines (a short one on fewer)
+                for line in _wrap_words(words, min(n, len(words)), lambda t: text_width(t, s))]
 
     two, three = wrapped(2, size), wrapped(3, size)
     small = round(size * 0.85, 2)
-    tries = [(size, [label]), (size, two)]
+    tries = [(size, wrapped(1, size)), (size, two)]
     for widen in (False, True):
         for s, lines in tries:
             if lines and (widen or max(text_width(t, s) for t in lines) <= width):
@@ -2408,10 +2440,73 @@ def _cuts(m: int, n: int) -> Iterator[tuple[int, ...]]:
             yield (i,) + tuple(i + r for r in rest)
 
 
-def _draw_view_frames(view: View, everything: list[LNode], g: Group, obs: Obstacles) -> list[Rect]:
+def _enclosed_nodes(doc: Document) -> dict[str, set[str]]:
+    """Nodes of each enclosure, those of the enclosures inside it (``parent``) included."""
+    sets = {e.id: set(e.nodes) for e in doc.enclosures}
+    parent_of = {e.id: e.parent for e in doc.enclosures}
+    out = {}
+    for enc in doc.enclosures:
+        nids = set(enc.nodes)
+        for child in doc.enclosures:  # an enclosure also encloses the nodes of its child enclosures
+            p = child.parent
+            while p is not None and p != enc.id:
+                p = parent_of.get(p)
+            if p == enc.id:
+                nids |= sets[child.id]
+        out[enc.id] = nids
+    return out
+
+
+SAME_FRAME = 1.0  # mm: a view frame and an enclosure whose contents are this close on every side are one frame
+
+
+def _content_box(nids: Iterable[str], by_id: dict[str, LNode]) -> Optional[Box]:
+    """Symbols and texts of the nodes ``nids`` drawn on the sheet."""
+    boxes = []
+    for nid in nids:
+        n = by_id.get(nid)
+        if n is not None:
+            boxes.append(n.sym_box())
+            if n.ann_box():
+                boxes.append(n.ann_box())
+    return boxes_union(boxes) if boxes else None
+
+
+def _shared_frames(doc: Document, view: View, nodes: list[LNode]) -> dict[int, str]:
+    """View frames (by index) drawn round the same content of the sheet as an enclosure, with that enclosure's id:
+    their two frames would be drawn on one another and their labels at one place. The enclosure is drawn alone,
+    with the label of the view frame (see ``_draw_enclosures``)."""
+    by_id = {n.node.id: n for n in nodes if n.node is not None and n.kind == "node"}
+    encl = [(eid, _content_box(nids, by_id)) for eid, nids in _enclosed_nodes(doc).items()]
+    out: dict[int, str] = {}
+    for i, fr in enumerate(view.frames):
+        b = _content_box(fr.nodes, by_id)
+        eid = next((e for e, u in encl if b is not None and u is not None
+                    and all(abs(p - q) <= SAME_FRAME for p, q in zip(b, u))), None)
+        if eid is not None:
+            out[i] = eid
+    return out
+
+
+def _merged_labels(labels: list[str]) -> list[str]:
+    """Labels of one frame (a view frame and an enclosure), each one left out when another says it all (its words
+    all in that one: 'TB1' and 'TB1 Battery protection')."""
+    out: list[str] = []
+    words = [set(_words(t)) for t in labels]
+    for i, t in enumerate(labels):
+        if any(j != i and words[i] <= o and (words[i] != o or j < i) for j, o in enumerate(words)):
+            continue
+        out.append(t)
+    return out
+
+
+def _draw_view_frames(view: View, everything: list[LNode], g: Group, obs: Obstacles,
+                      shared: Optional[dict[int, str]] = None) -> list[Rect]:
     by_id = {n.node.id: n for n in everything if n.node is not None and n.kind == "node"}
     out = []
-    for fr in view.frames:
+    for i, fr in enumerate(view.frames):
+        if i in (shared or {}):
+            continue  # drawn as the frame of its enclosure
         boxes = []
         for nid in fr.nodes:
             n = by_id.get(nid)
@@ -2458,8 +2553,10 @@ def _mirror_up(item: Any, c: float) -> Any:
     return it
 
 
-def _draw_enclosures(doc: Document, nodes: list[LNode], g: Group, obs: Obstacles) -> list[Rect]:
-    """Addressable enclosures (enveloppes, 1.2): frame around the listed nodes present on the sheet."""
+def _draw_enclosures(doc: Document, nodes: list[LNode], g: Group, obs: Obstacles, frames: Optional[list[Any]] = None,
+                     shared: Optional[dict[int, str]] = None) -> list[Rect]:
+    """Addressable enclosures (enveloppes, 1.2): frame around the listed nodes present on the sheet. ``shared``:
+    view frames (of ``frames``) round the same nodes, their labels written above the enclosure's own."""
     by_id = {n.node.id: n for n in nodes if n.node is not None and n.kind == "node"}
     style = {"cell": Style(width=THIN, color="#444444"), "zone": Style(width=THIN, dash=(4.0, 1.5), color="#777777"),
              "boundary": Style(width=NORMAL, dash=(6.0, 1.5, 1.0, 1.5), color="#555555")}
@@ -2482,17 +2579,11 @@ def _draw_enclosures(doc: Document, nodes: list[LNode], g: Group, obs: Obstacles
         return n
 
     out: list[Rect] = []
+    enclosed = _enclosed_nodes(doc)
     for enc in sorted(doc.enclosures, key=lambda e: -inner_count(e.id)):
         pad = 2.0 + 2.2 * min(inner_count(enc.id), 4)
         boxes = []
-        nids = set(enc.nodes)
-        for child in doc.enclosures:  # an enclosure also encloses the nodes of its child enclosures
-            p = child.parent
-            while p is not None and p != enc.id:
-                p = parent_of.get(p)
-            if p == enc.id:
-                nids |= sets[child.id]
-        for nid in nids:
+        for nid in enclosed[enc.id]:
             n = by_id.get(nid)
             if n is None:
                 continue
@@ -2502,9 +2593,12 @@ def _draw_enclosures(doc: Document, nodes: list[LNode], g: Group, obs: Obstacles
         if not boxes:
             continue
         label = " ".join(x for x in (enc.ref, enc.label or enc.cell_type) if x)
+        above = [frames[i].label for i, e in (shared or {}).items() if e == enc.id and frames and frames[i].label]
+        labels = _merged_labels([*above, label]) if above and label else above or [label]
         u = boxes_union(boxes)
         assert u is not None
-        out.append(_framed(g, obs, (u[0] - pad, u[1] - pad, u[2] + pad, u[3] + pad), label or None, 2.0,
+        out.append(_framed(g, obs, (u[0] - pad, u[1] - pad, u[2] + pad, u[3] + pad),
+                           labels if len(labels) > 1 else labels[0] or None, 2.0,
                            style.get(enc.kind, Style(width=THIN, dash=(2.0, 1.0), color="#444444")), gap=pad))
     return out
 
@@ -4106,27 +4200,28 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         far_end = color != "#000000" or degree[heads[i][1]] <= degree[heads[i][0]]
         if color == "#000000":
             # a clear place on one line near the preferred end, else near the other end, else on two lines (a short
-            # link), near either end
-            two = _wrap_words(units, 2, lambda u, sz=size: text_width(u, sz)) if len(units) > 1 else []
-            tries = [(fe, lines) for lines in ([txt], two) if lines for fe in (far_end, not far_end)]
+            # link), near either end, else on three
+            wrapped = [_wrap_words(units, n, lambda u, sz=size: text_width(u, sz)) if len(units) >= n else []
+                       for n in (2, 3)]
+            tries = [(fe, lines) for lines in ([txt], *wrapped) if lines for fe in (far_end, not far_end)]
             placed = False
             for fe, lines in tries:
                 w = max(text_width(u, size) for u in lines)
-                h = size if len(lines) == 1 else 2.2 * size
+                h = size + 1.2 * size * (len(lines) - 1)
                 at = place_label(obs, seq, w, h, from_end=fe, optional=True)
                 if at is None:
                     continue
                 if len(lines) == 1:
                     group_of(i).add(Text((at[0], at[1]), txt, size, at[2], color=color))
-                else:  # the box of the two lines: baselines 1.2 size apart
+                else:  # the box of the lines: baselines 1.2 size apart
                     for k, u in enumerate(lines):
-                        group_of(i).add(Text((at[0], at[1] - 0.96 * size + 1.2 * size * k), u, size, at[2],
-                                             color=color))
+                        group_of(i).add(Text((at[0], at[1] - 0.8 * h + 0.8 * size + 1.2 * size * k), u, size,
+                                             at[2], color=color))
                 placed = True
                 break
             if placed:
                 continue
-            if _leader_label(obs, seq, txt, size, group_of(i)):  # in the nearest free space, a leader to its link
+            if _leader_tries(obs, seq, txt, size, group_of(i)):  # in the nearest free space, a leader to its link
                 continue
         # never left out: where it fits best along its route
         at = place_label(obs, seq, text_width(txt, size), size, from_end=far_end)
@@ -4219,16 +4314,19 @@ def _round_own(pts: list[tuple[float, float]], nodes: tuple[LNode, LNode]) -> in
 LEADER_REACH = 25.0  # how far from its link a label may go, joined to it by a leader
 
 
-def _leader_label(obs: Obstacles, pts: list[tuple[float, float]], txt: str, size: float, g: Group) -> bool:
+def _leader_label(obs: Obstacles, pts: list[tuple[float, float]], txt: str | list[str], size: float,
+                  g: Optional[Group] = None, reach: float = LEADER_REACH) -> Optional[list[Item]]:
     """A link label with no clear place along its route (a short link between neighbours): in the nearest free
     space (searched from the middle of its longest stretch), a thin leader to it from the nearest point of the link.
-    False if none is near."""
+    ``txt``: its lines (one line, or the label wrapped). The leader and the text, added to ``g`` when given; None
+    if no place is near."""
+    lines = [txt] if isinstance(txt, str) else txt
     p, q = max(zip(pts, pts[1:]), key=lambda s: abs(s[0][0] - s[1][0]) + abs(s[0][1] - s[1][1]))
     mx, my = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
-    w, h = text_width(txt, size), size * 1.1
-    x, y = place_box(obs, w, h, (mx - w / 2, my + 2.0), step=0.5, reach=LEADER_REACH, pad=0.6)
-    if abs(x + w / 2 - mx) > LEADER_REACH + w / 2 or abs(y - my) > LEADER_REACH:
-        return False
+    w, h = max(text_width(t, size) for t in lines), size * (1.1 + 1.2 * (len(lines) - 1))
+    x, y = place_box(obs, w, h, (mx - w / 2, my + 2.0), step=0.5, reach=reach, pad=0.6)
+    if abs(x + w / 2 - mx) > reach + w / 2 or abs(y - my) > reach:
+        return None
     box = (x, y, x + w, y + h)
 
     def nearest(s: tuple) -> tuple[float, tuple[float, float], tuple[float, float]]:
@@ -4246,11 +4344,29 @@ def _leader_label(obs: Obstacles, pts: list[tuple[float, float]], txt: str, size
     _, (mx, my), (tx, ty) = min((nearest(s) for s in zip(pts, pts[1:])), key=lambda c: c[0])
     lead = (min(mx, tx), min(my, ty), max(mx, tx), max(my, ty))
     if any(_hit(lead, o, -0.05) for o in obs.boxes):  # a leader through a symbol or a text: on its link instead
-        return False
-    g.add(Line((mx, my), (tx, ty), Style(width=THIN)))
-    g.add(Text((x, y + 0.85 * size), txt, size))
+        return None
+    items: list[Item] = [Line((mx, my), (tx, ty), Style(width=THIN))]
+    items += [Text((x, y + 0.85 * size + 1.2 * size * k), t, size) for k, t in enumerate(lines)]
+    if g is not None:
+        g.add(*items)
     obs.add_box(box)
-    return True
+    return items
+
+
+def _leader_tries(obs: Obstacles, pts: list[tuple[float, float]], txt: str, size: float,
+                  g: Optional[Group] = None, lines: int = 3, far: bool = True) -> Optional[list[Item]]:
+    """A label with a leader (see ``_leader_label``): on one line, else on two, else on three (up to ``lines``), near
+    its link; then (``far``) further."""
+    units = text_units(txt)
+    wrapped = [_wrap_words(units, n, lambda u: text_width(u, size)) if len(units) >= n else None
+               for n in range(2, lines + 1)]
+    for reach in (LEADER_REACH, 2 * LEADER_REACH) if far else (LEADER_REACH,):
+        for lines in ([txt], *wrapped):
+            if lines:
+                items = _leader_label(obs, pts, lines, size, g, reach)
+                if items is not None:
+                    return items
+    return None
 
 
 def _spread_ends(doc: Document, roots: list[LNode], order: list[int]) -> dict[tuple[int, int], End]:
@@ -4565,57 +4681,103 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
             txts[0] = f"{ptxt} {txts[0]}"
         else:
             txts.insert(0, ptxt)
-    written: dict[int, list[Text]] = {}
-    for k, txt in reversed(list(enumerate(txts))):  # the sheet reference first: it must be written, at the best place
-        w = text_width(txt, 1.6)
-        spot = None
-        if k < len(txts) - 1 and len(txts) - 1 in written and e.side in ("left", "right"):
-            # the link's label with its sheet reference, on the same side of the arrow, the reference on top: below
-            # it, or in its place with the reference one line up when it is above the arrow
-            (rt,) = written[len(txts) - 1]
-            rb = text_box(rt.p[0], rt.p[1], text_width(rt.text, 1.6), 1.6, rt.anchor)
-            if rt.p[1] > e.y:
-                if obs.box_free(text_box(rt.p[0], rt.p[1] + 1.92, w, 1.6, rt.anchor), 0.1):
-                    spot = (rt.p[0], rt.p[1] + 1.92, rt.anchor)
-            elif rb in obs.boxes:
-                obs.boxes.remove(rb)
-                up = text_box(rt.p[0], rt.p[1] - 1.92, text_width(rt.text, 1.6), 1.6, rt.anchor)
-                if obs.box_free(up, 0.1) and obs.box_free(text_box(rt.p[0], rt.p[1], w, 1.6, rt.anchor), 0.1):
-                    spot, rt.p, rb = (rt.p[0], rt.p[1], rt.anchor), (rt.p[0], rt.p[1] - 1.92), up
-                obs.add_box(rb)
-        if spot is None:
-            spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False, optional=True)
-        if spot is None:  # no free place beside it: on its arrow rather than on a conductor or a symbol
+    def write(leader_first: bool) -> tuple[dict[int, list[Item]], int]:
+        """The texts of the stub, and how badly they are placed (on its arrow: 1, wherever they fit best: 3 and
+        what they are written on).
+        ``leader_first``: a text with no free place beside the stub goes in the nearest free space with a leader
+        before going on the arrow (else after)."""
+        written: dict[int, list[Item]] = {}
+        bad = 0
+
+        def leader(k: int, txt: str) -> bool:
+            items = _leader_tries(obs, [pts[0], tip], txt, 1.6, lines=2, far=False)  # (near its stub)
+            if items is not None:
+                written[k] = items
+            return items is not None
+
+        def on_arrow(w: float) -> Optional[tuple[float, float, str]]:
             obs.boxes.remove(hb)
             spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False, optional=True)
             obs.boxes.append(hb)
-        if spot is None and k < len(txts) - 1:  # the link's label is never left out: on two or three lines, else
-            # in the nearest free space with a leader to its stub, else where it fits best
-            units = text_units(txt)
-            for n in (2, 3):
-                lines = _wrap_words(units, n, lambda u: text_width(u, 1.6)) if len(units) >= n else []
-                if not lines:
+            return spot
+
+        for k, txt in reversed(list(enumerate(txts))):  # the sheet reference first: it must be written, at the best
+            # place
+            w = text_width(txt, 1.6)
+            spot = None
+            if k < len(txts) - 1 and len(written.get(len(txts) - 1, ())) == 1 and e.side in ("left", "right"):
+                # the link's label with its sheet reference, on the same side of the arrow, the reference on top:
+                # below it, or in its place with the reference one line up when it is above the arrow
+                (rt,) = written[len(txts) - 1]
+                assert isinstance(rt, Text)
+                rb = text_box(rt.p[0], rt.p[1], text_width(rt.text, 1.6), 1.6, rt.anchor)
+                if rt.p[1] > e.y:
+                    if obs.box_free(text_box(rt.p[0], rt.p[1] + 1.92, w, 1.6, rt.anchor), 0.1):
+                        spot = (rt.p[0], rt.p[1] + 1.92, rt.anchor)
+                elif rb in obs.boxes:
+                    obs.boxes.remove(rb)
+                    up = text_box(rt.p[0], rt.p[1] - 1.92, text_width(rt.text, 1.6), 1.6, rt.anchor)
+                    if obs.box_free(up, 0.1) and obs.box_free(text_box(rt.p[0], rt.p[1], w, 1.6, rt.anchor), 0.1):
+                        spot, rt.p, rb = (rt.p[0], rt.p[1], rt.anchor), (rt.p[0], rt.p[1] - 1.92), up
+                    obs.add_box(rb)
+            if spot is None:
+                spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False, optional=True)
+            if spot is None and leader_first:  # by the point of its arrow, clear of its head
+                spot = on_arrow(w)
+                if spot is not None and _hit(text_box(spot[0], spot[1], w, 1.6, spot[2]), hb, -0.4):
+                    spot = None
+            if spot is None and not leader_first:  # no free place beside it: on its arrow rather than on a conductor
+                # or a symbol
+                spot = on_arrow(w)
+                bad += spot is not None
+            if spot is None and k < len(txts) - 1:  # the link's label on two or three lines
+                units = text_units(txt)
+                for n in (2, 3):
+                    lines = _wrap_words(units, n, lambda u: text_width(u, 1.6)) if len(units) >= n else []
+                    if not lines:
+                        continue
+                    lw, lh = max(text_width(u, 1.6) for u in lines), 1.6 + 1.92 * (len(lines) - 1)
+                    at = place_label(obs, [pts[0], tip], lw, lh, from_end=True, record=False, optional=True)
+                    if at is not None:
+                        x, y, anchor = at
+                        obs.add_box(text_box(x, y, lw, lh, anchor))
+                        written[k] = [Text((x, y - 0.8 * lh + 1.28 + 1.92 * j), u, 1.6, anchor)
+                                      for j, u in enumerate(lines)]
+                        break
+                if k in written:
                     continue
-                lw, lh = max(text_width(u, 1.6) for u in lines), 1.6 + 1.92 * (len(lines) - 1)
-                at = place_label(obs, [pts[0], tip], lw, lh, from_end=True, record=False, optional=True)
-                if at is not None:
-                    x, y, anchor = at
-                    obs.add_box(text_box(x, y, lw, lh, anchor))
-                    written[k] = [Text((x, y - 0.8 * lh + 1.28 + 1.92 * j), u, 1.6, anchor)
-                                  for j, u in enumerate(lines)]
-                    break
-            if k in written or _leader_label(obs, [pts[0], tip], txt, 1.6, rg):
+            if spot is None and (leader_first or k < len(txts) - 1) and leader(k, txt):  # never left out: in the
+                # nearest free space with a leader to its stub (the sheet reference as before: on its arrow, else
+                # where it fits best)
                 continue
-        if spot is None:
-            spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False)
-        x, y, anchor = spot
-        b = text_box(x, y, w, 1.6, anchor)
-        if e.side == "left" and anchor == "end" and x > tip[0] - 0.6 and b[1] < e.y + 0.8 and e.y - 0.8 < b[3]:
-            moved = text_box(tip[0] - 0.6, y, w, 1.6, anchor)  # running onto the point of its arrow: ends before it
-            if obs.box_free(moved, 0.1, wire_pad=0.0):
-                x, b = tip[0] - 0.6, moved
-        obs.add_box(b)
-        written[k] = [Text((x, y), txt, 1.6, anchor)]
+            if spot is None and leader_first:
+                spot = on_arrow(w)
+                bad += spot is not None
+            if spot is None:  # else where it fits best
+                spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False)
+                bad += 3 + int(obs.overlap(text_box(spot[0], spot[1], w, 1.6, spot[2])))
+            x, y, anchor = spot
+            b = text_box(x, y, w, 1.6, anchor)
+            if e.side == "left" and anchor == "end" and x > tip[0] - 0.6 and b[1] < e.y + 0.8 and e.y - 0.8 < b[3]:
+                moved = text_box(tip[0] - 0.6, y, w, 1.6, anchor)  # running onto the point of its arrow: ends
+                if obs.box_free(moved, 0.1, wire_pad=0.0):  # before it
+                    x, b = tip[0] - 0.6, moved
+            obs.add_box(b)
+            written[k] = [Text((x, y), txt, 1.6, anchor)]
+        return written, bad
+
+    # texts across the arrow are avoided first; when that leaves one of them worse placed (a crowded side: the
+    # room taken by a leader), the texts as before if they fare better
+    saved = list(obs.boxes)
+    written, bad = write(True)
+    if bad:
+        mine = list(obs.boxes)
+        obs.boxes[:] = saved
+        other, worse = write(False)
+        if worse < bad:
+            written = other
+        else:
+            obs.boxes[:] = mine
     rg.add(*(t for k in sorted(written) for t in written[k]))  # the sheet reference last: render.number_sheets
     # prints it
     g.add(rg)

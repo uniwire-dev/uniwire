@@ -374,7 +374,7 @@ def test_a_label_leader_never_crosses_a_symbol():
     for ln in leaders:
         x0, y0, x1, y1 = min(ln.a[0], ln.b[0]), min(ln.a[1], ln.b[1]), max(ln.a[0], ln.b[0]), max(ln.a[1], ln.b[1])
         assert not (x0 < 30.0 and 0.0 < x1 and y0 < 6.0 and 2.0 < y1), ln
-    assert placed == bool(leaders)
+    assert (placed is not None) == bool(leaders)
 
 
 def test_off_sheet_stubs_of_a_board_stay_inside_its_frame():
@@ -530,3 +530,57 @@ def test_the_terminal_of_an_off_sheet_stub_is_never_written_on_a_symbol_or_a_lin
                     assert not any(_overlap(text_box(t), b) > 0 for b in bodies), t
                     assert not any(_crosses(text_box(t), s) for s in strokes), t
     assert named >= 8
+
+
+def test_long_link_label_between_neighbours_is_never_written_over_a_device():
+    """An interlock between the contactors of neighbouring feeders, with a long label: no room for it on one or two
+    lines along its short link, so on three, or in a free space with a leader; never across a contactor, a
+    conductor or another text (it was written over the next contactor's blade)."""
+    for n in (2, 3, 4):
+        feeders = [{"type": "breaker", "id": f"Q{i}", "ref": f"-Q{i}", "in_A": 32, "poles": "3P", "children": [
+            {"type": "contactor", "id": f"K{i}", "ref": f"-K{i}", "in_A": 25, "label": f"Pump {i} contactor",
+             "children": [{"type": "thermal_relay", "id": f"F{i}", "ref": f"-F{i}", "range_A": "6-25", "children": [
+                 {"type": "motor", "ref": f"-M{i}", "label": f"Pump {i}", "p_kW": 7.5}]}]}]} for i in range(1, n + 1)]
+        links = [{"kind": "interlock", "from": f"K{i}", "to": f"K{i + 1}",
+                  "label": "Electrical interlock, one pump at a time (example contacts 1-2, 3-4)"} for i in range(1, n)]
+        links += [{"kind": "trip", "from": f"F{i}", "to": f"K{i}", "label": f"Overload trip {i}"}
+                  for i in range(1, n + 1)]
+        doc = {"sources": [{"type": "grid", "children": [{"type": "board", "ref": "B1", "system": "3P",
+                                                          "children": feeders}]}], "links": links}
+        for page in render_views(load(doc)):
+            bad = [f for f in audit(page.root) if f.kind in ("text_crossed", "text_on_conductor", "text_on_symbol",
+                                                             "text_overlap")]
+            assert bad == [], "\n".join(map(str, bad))
+
+
+def _across_own_stub(root) -> list[str]:
+    """Texts of an off-sheet stub written across its own line or arrow head."""
+    out = []
+    for g in _groups(root):
+        refs = [i for i in g.items if isinstance(i, Group) and "data-uw-target-sheet" in i.attrs]
+        if "data-uw-link" not in g.attrs or not refs:
+            continue
+        segs = [s for i in g.items for s in _segments(i)]
+        for r in refs:
+            for i in r.items:
+                if isinstance(i, Polyline) and i.closed:
+                    segs += list(zip(i.points, i.points[1:] + i.points[:1]))
+            for t in r.items:
+                if isinstance(t, Text):
+                    a = text_box(t)
+                    dx, dy = 0.04 * (a[2] - a[0]), 0.15 * (a[3] - a[1])
+                    if any(_crosses((a[0] + dx, a[1] + dy, a[2] - dx, a[3] - dy), s) for s in segs):
+                        out.append(t.text)
+    return out
+
+
+@pytest.mark.parametrize("motors,drives", [(9, 4), (12, 2)])
+def test_off_sheet_stub_texts_are_not_written_across_their_arrow(motors, drives):
+    """A crowded side of stubs (long labels): a text with no free place beside its stub goes in the nearest free
+    space with a leader rather than across its own stub and arrow."""
+    d = panel(motors, drives, True, 0)
+    for lk in d["links"]:
+        if lk.get("label", "").startswith("Fb"):
+            lk["label"] = "Feedback contact of the contactor " + lk["label"]
+    d["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    assert [t for page in render_views(load(d)) for t in _across_own_stub(page.root)] == []

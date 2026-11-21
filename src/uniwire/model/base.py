@@ -31,7 +31,8 @@ Status = Literal["new", "existing", "spare", "future", "removed"]
 Earthing = Literal["TT", "TN", "TN-C", "TN-S", "TN-C-S", "IT"]
 System = Literal["1P+N", "2P", "3P", "3P+N", "DC", "split-phase"]
 Material = Literal["Cu", "Al"]
-ConductorName = Literal["L1", "L2", "L3", "N", "PE", "PEN", "L+", "L-"]
+ConductorName = Literal["L1", "L2", "L3", "N", "PE", "PEN", "L+", "L-", "U2", "V2", "W2"]  # U2 V2 W2: the other ends of
+# the windings of a motor started star-delta (its second cable)
 
 
 class Cable(UWModel):
