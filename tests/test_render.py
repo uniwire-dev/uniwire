@@ -136,9 +136,9 @@ def test_free_spare_way_is_not_drawn_as_a_conductor():
             return next((e for c in g.items if (e := edge(c, nid)) is not None), None)
         return None
 
-    def strokes(g):
+    def strokes(g):  # the live conductors (the protective conductor is drawn dash-dot)
         return [i for i in g.items if isinstance(i, (Line, Polyline))] + \
-            [s for i in g.items if isinstance(i, Group) for s in strokes(i)]
+            [s for i in g.items if isinstance(i, Group) and i.attrs.get("data-uw-cond") != "PE" for s in strokes(i)]
 
     for kind in ("single-line", "multi-line"):
         doc = load({"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230}, "sources": [{"type": "grid", "children": [
@@ -308,3 +308,69 @@ def test_device_label_over_a_spare_way_is_drawn_in_every_view():
     sld, ml = _label_texts([{"type": "breaker", "ref": "-Q1", "label": "Future kitchen", "in_A": 16, "children": [
         {"type": "spare"}]}, {"type": "breaker", "ref": "-Q2", "in_A": 16, "children": [{"type": "socket"}]}])
     assert "Future kitchen" in sld and "Future kitchen" in ml  # the table shows "Spare" for the way
+
+
+def test_incoming_reference_names_the_board_when_its_tag_is_not_unique():
+    from uniwire.render.scene import Text
+
+    """A board drawn on its own sheet says where it is fed from; when the sheet holding its feeding device holds
+    another device with the same tag, the tag is qualified with the feeding device's board."""
+    def ways(prefix, n):
+        return [{"type": "breaker", "ref": f"-Q{j}", "in_A": 16, "children": [{"type": "socket", "label": f"{prefix}{j}"}]}
+                for j in range(2, n)]
+
+    def doc(sub_tag):
+        return load({"installation": {"system": "1P+N", "earthing": "TT"}, "sources": [{"type": "grid", "children": [
+            {"type": "board", "ref": "=MB", "children": [
+                {"type": "breaker", "ref": "-Q1", "in_A": 40, "children": [{"type": "board", "ref": "=SA", "children": [
+                    {"type": "breaker", "ref": sub_tag, "in_A": 32, "cable": {"cores": "3G", "section_mm2": 10},
+                     "children": [{"type": "board", "ref": "=SX", "children": ways("X", 12)}]}, *ways("A", 10)]}]},
+                *ways("M", 10)]}]}]})
+
+    def texts(item):
+        return [item.text] if isinstance(item, Text) else [t for i in getattr(item, "items", []) for t in texts(i)]
+
+    def incoming(d):
+        return [t for p in render_pages(d)[1:] for t in texts(p.root) if t.startswith("from ")]
+
+    assert incoming(doc("-Q1")) == ["from =SA, -Q1 (sheet 1)"]
+    assert incoming(doc("-Q20")) == ["from -Q20 (sheet 1)"]
+
+
+def test_off_page_reference_to_a_node_id_prints_the_node_tag():
+    """An off-page reference whose target is the id of a node of the document prints that node's tag (else its
+    label), never the bare id; a target that is no id (another drawing) is printed as written."""
+    from uniwire.render.scene import Text
+
+    def texts(item):
+        return [item.text] if isinstance(item, Text) else [t for i in getattr(item, "items", []) for t in texts(i)]
+
+    doc = load({"installation": {"system": "1P+N"}, "sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 16, "children": [
+            {"type": "transfer_switch", "id": "ts_main", "ref": "-S9", "children": [{"type": "load", "label": "X"}]}]},
+        {"type": "breaker", "ref": "-Q2", "in_A": 16, "children": [
+            {"type": "offpage", "label": "Way B", "target": "ts_main"}]},
+        {"type": "breaker", "ref": "-Q3", "in_A": 16, "children": [
+            {"type": "offpage", "label": "Annex", "target": "doc. E-04"}]}]}]}],
+        "views": [{"id": "sld", "cartouche": ["label", "ref"]}, {"id": "ml", "kind": "multi-line"}]})
+    for view in doc.views:
+        t = " ".join(texts(render_pages(doc, view)[0].root))
+        assert "ts_main" not in t and "-S9" in t.replace("→ ", "")
+        assert "E-04" in t
+
+
+def test_sheet_of_an_installation_without_a_board_is_not_named_after_its_source():
+    """Installations side by side drawn one per sheet: a sheet is named after its board; one without a board takes
+    the title of the drawing, as the first sheet does, not the label of its source."""
+    from uniwire.layout import plan_sheets
+    from uniwire.render import default_view
+
+    def ways(p, n):
+        return [{"type": "breaker", "ref": f"-{p}{j}", "in_A": 16, "children": [{"type": "socket", "label": f"{p}{j}"}]}
+                for j in range(n)]
+
+    doc = load({"installation": {"system": "1P+N", "earthing": "TT"}, "sources": [
+        {"type": "grid", "label": "Utility supply", "children": [{"type": "board", "ref": "=MB", "children": ways("Q", 14)}]},
+        {"type": "pv_array", "label": "Roof array", "children": [{"type": "inverter", "ref": "-T1", "children": ways("F", 12)}]}]})
+    specs = plan_sheets(doc, default_view(doc))
+    assert len(specs) == 2 and [s.name for s in specs] == ["", ""]

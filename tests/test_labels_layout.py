@@ -385,11 +385,11 @@ def test_mark_phase_comes_from_above_and_stops_at_a_converter():
                 {"type": "inverter", "kind": "micro", "children": [{"type": "pv_array", "id": "PV"}]}]}]}]}]})
     texts = _mark_texts(doc)
     assert texts["S1"] == texts["S2"] == ["L2+N"]  # the phase of the group above them
-    assert texts["R"] == ["L2 N"] and texts["S3"] == ["L1 N"]  # two poles on one phase: the phase and the neutral
+    assert texts["R"] == ["L2+N"] and texts["S3"] == ["L1+N"]  # two poles on one phase: written as one pole + N
     assert texts["Q4"] == ["L3+N"]  # the line leaving a single-phase device: its phase too
     assert texts["PV"] == []  # the DC side of a micro-inverter is not on the phase of its AC side
     assert texts.get("K", []) == []  # a phase names a two-wire line only, never three strokes
-    assert texts["Q5"] == ["L2+N"] and texts["TS"] == ["L2 N"]  # the conductors change at each device
+    assert texts["Q5"] == ["L2+N"] and "TS" not in texts  # two poles on the same phase and neutral: not repeated
     assert "S5" not in texts  # the same mark and the same text lower in the column: not repeated
 
 
@@ -444,12 +444,13 @@ def test_declared_systems_win_over_the_vector_group_and_the_installation():
         {"type": "grid", "children": [{"type": "breaker", "children": [{"type": "load"}]}]},
         {"type": "generator", "id": "GEN", "un_V": 230, "children": [{"type": "breaker", "poles": "1P+N", "children": [
             {"type": "board", "system": "1P+N", "children": sockets}]}]}]})
-    assert dict(_marks(gen))["GEN"] == "cm-2"
+    assert dict(_marks(gen))["GEN"] == "cm-1N"  # one phase and the neutral: one stroke and '+N'
 
 def test_three_pole_device_with_neutral_downstream():
     from uniwire.labels import feeder_mark, poles_mark
     assert poles_mark("3P", True) == (3, True) and poles_mark("3P") == (3, False) and poles_mark("4P") == (4, False)
-    assert poles_mark("2P") == (2, False) and poles_mark("1P+N") == (1, True)
+    assert poles_mark("2P") == poles_mark("1P+N") == (1, True)  # one phase and the neutral, whatever is cut
+    assert poles_mark("2P", neutral=False) == (2, False) and poles_mark("2P", phase="L1L2") == (2, False)
     d = load({"sources": [{"type": "grid", "children": [
         {"type": "breaker", "poles": "3P", "cable": {"cores": "5G", "section_mm2": 6}, "children": [{"type": "load"}]},
         {"type": "breaker", "poles": "4P", "cable": {"cores": "5G", "section_mm2": 6}, "children": [{"type": "load"}]},
@@ -803,7 +804,7 @@ def test_power_supply_output_is_marked_with_its_two_poles_not_its_input():
                     {"type": "socket", "id": "S", "label": "Sockets", "phase": "L2"}]}]}]})
     texts = _mark_texts(doc)
     assert texts["T1"] == []  # the 24 V output is not "L1+N"
-    assert texts["Q2"] == ["L1+N"] and texts["S"] == ["L2 N"]  # its input and the socket keep their phase
+    assert texts["Q2"] == ["L1+N"] and texts["S"] == ["L2+N"]  # its input and the socket keep their phase
 
 
 def _dc_doc():
@@ -973,3 +974,70 @@ def test_off_sheet_stub_texts_keep_clear_of_the_column_before():
     pages = render_views(doc)
     assert len(pages) == 2
     assert [str(f) for p in pages for f in audit(p.root)] == []
+def test_rating_of_zero_is_not_printed():
+    """A rating of 0 (an unknown rating written as 0) prints nothing, not '0 A', nor 'C0' after a curve."""
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "switch_disconnector", "ref": "-Q0", "in_A": 0, "poles": "2P", "children": [
+            {"type": "breaker", "ref": "-Q1", "in_A": 0, "curve": "C", "children": [{"type": "load", "label": "X"}]},
+            {"type": "rcd", "ref": "-F1", "in_A": 0, "idn_mA": 30, "children": [
+                {"type": "fuse", "ref": "-F2", "in_A": 0, "children": [{"type": "load", "label": "Y"}]}]},
+            {"type": "thermal_relay", "ref": "-F4", "range_A": 0, "setting_A": 0, "children": [
+                {"type": "motor", "label": "Z"}]}]}]}]}],
+        "views": [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]})
+    for view in doc.views:
+        texts = _texts(render_pages(doc, view)[0].root)
+        assert "0 A" not in texts and "C0" not in texts
+        assert "C" in texts and "30 mA" in texts
+
+
+def test_curve_kept_in_multi_line_when_the_label_holds_its_letter():
+    """A breaker with a curve and no rating keeps its curve beside a label holding the letter inside a word."""
+    doc = load({"installation": {"system": "1P+N"}, "sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "breaker", "ref": "-Q1", "label": "Socket circuit", "curve": "C", "children": [
+            {"type": "socket", "label": "Sockets"}]}]}]}],
+        "views": [{"id": "ml", "kind": "multi-line"}]})
+    texts = _texts(render_pages(doc)[0].root)
+    assert texts[texts.index("Socket circuit") + 1] == "C"
+
+
+def test_rcd_type_in_the_circuit_table_is_written_as_a_type():
+    """The residual-current cell gives the RCD type as 'type A': a bare letter after the sensitivity reads as a
+    unit ('30 mA A')."""
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "rcd", "ref": "-F1", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "children": [
+            {"type": "breaker", "ref": "-Q1", "in_A": 16, "children": [{"type": "socket", "label": "Sockets"}]}]}]}]}],
+        "views": [{"id": "sld", "cartouche": ["label", "ref", "protection", "idn_mA"]}]})
+    t = next(_texts(g) for g in _items_groups(render_pages(doc)[0].root) if g.cls == "cartouche")
+    assert "30 mA type A" in t and "30 mA A" not in t
+
+
+def test_relay_at_the_end_of_its_own_way_has_a_column_in_the_circuit_table():
+    """A protection relay alone behind its own breaker is a circuit of the board: the table gives it a column, as
+    it does to a contactor there; beside other devices of a way (a relay watching a feeder) it has none."""
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 16, "children": [{"type": "socket", "label": "Sockets"}]},
+        {"type": "breaker", "ref": "-Q2", "in_A": 2, "children": [{"type": "protection_relay", "label": "Relay A"}]},
+        {"type": "breaker", "ref": "-Q3", "in_A": 2, "children": [{"type": "contactor", "label": "Contactor B"}]},
+        {"type": "breaker", "ref": "-Q4", "in_A": 32, "children": [
+            {"type": "protection_relay", "label": "Relay C"}, {"type": "load", "label": "Heater"}]}]}]}],
+        "views": [{"id": "sld", "cartouche": ["label", "ref"]}]})
+    t = next(_texts(g) for g in _items_groups(render_pages(doc)[0].root) if g.cls == "cartouche")
+    assert "Relay A" in t and "-Q2" in t and "Contactor B" in t
+    assert "Relay C" not in t and "Heater" in t
+
+
+def test_cable_designation_and_socket_type_are_drawn():
+    """The designation of a cable written beside its device (feeder of a sub-board) comes with its composition, as
+    in the multi-line view; the multi-line view writes the socket type under the socket."""
+    doc = load({"installation": {"system": "1P+N"}, "sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 16, "children": [
+            {"type": "socket", "label": "Sockets", "points": 4, "socket_type": "Type Z"}]},
+        {"type": "breaker", "ref": "-Q3", "in_A": 32, "cable": {"designation": "XYZ-1", "cores": "3G", "section_mm2": 10},
+         "children": [{"type": "board", "ref": "TD2", "children": [
+             {"type": "breaker", "ref": "-Q31", "in_A": 16, "children": [{"type": "socket"}]},
+             {"type": "breaker", "ref": "-Q32", "in_A": 10, "children": [{"type": "lighting"}]}]}]}]}]}],
+        "views": [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]})
+    sld = _texts(render_pages(doc, doc.views[0])[0].root)
+    assert "XYZ-1 3G10" in sld
+    ml = _texts(render_pages(doc, doc.views[1])[0].root)
+    assert any("Type Z" in t for t in ml)
