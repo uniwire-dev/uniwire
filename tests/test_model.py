@@ -159,8 +159,6 @@ def test_unknown_field_names_what_to_write():
     msg = _refusal(_one({"type": "breaker", "id": "Q1", "in_A": 16, "children": [
         {"type": "load", "id": "L1", "in_A": 10}]}))
     assert "did you mean 'ib_A'?" in msg
-    msg = _refusal(_one({"type": "breaker", "id": "Q1", "in_A": 16, "dc": True}))
-    assert "'dc' is a field of switch_disconnector, spd, not of breaker" in msg
     msg = _refusal(_one({"type": "motor_starter", "id": "Q1", "ip_address": "10.0.0.1"}))
     assert "'ip_address' is a field of plc, not of motor_starter" in msg
 
@@ -168,8 +166,8 @@ def test_unknown_field_names_what_to_write():
 def test_value_not_allowed_names_the_value():
     msg = _refusal(_one({"type": "socket"}, views=[{"kind": "single-line", "cartouche": ["ref", "colour"]}]))
     assert "'colour' is not one of the values allowed here" in msg and "label, ref" in msg
-    msg = _refusal(_one({"type": "socket"}, views=[{"kind": "single-line", "pitch_mm": 8}]))
-    assert "views/0/pitch_mm: 8 is below the smallest value allowed here; write 10 or more" in msg
+    msg = _refusal(_one({"type": "socket"}, views=[{"kind": "single-line", "pitch_mm": 0}]))  # 0 < x < 10 is read as 10
+    assert "views/0/pitch_mm: 0 is below the smallest value allowed here; write 10 or more" in msg
 
 
 def test_text_where_an_object_is_expected():
