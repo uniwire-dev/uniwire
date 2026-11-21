@@ -62,7 +62,7 @@ from ..render.semantics import (
     ref_group,
 )
 from ..resolve import Index, build_index, iter_nodes
-from ..symbols import BUSWAY_H, DASH, PORT_STEP, Symbol, symbol, symbol_for
+from ..symbols import BUSWAY_H, DASH, PORT_STEP, Symbol, symbol, symbol_for, without_leads
 from ..symbols import kind as symbol_kind
 from ..units import fmt
 from .routing import (
@@ -127,7 +127,9 @@ class LNode:
     bus_x0: float = 0.0
     bus_x1: float = 0.0
     bottom: bool = False  # load placed on the common baseline
-    open_feeder: bool = False  # feeder with no described load: arrow down to the common baseline
+    open_feeder: bool = False  # feeder with no described load: a free way, down to the common baseline
+    no_in: bool = False  # nothing feeds it (a busbar, a board, a device first in the document): no input lead
+    no_out: bool = False  # nothing below it and no conductor leaving it (a transformer feeding nothing): no output lead
     ann: list[str] = field(default_factory=list)
     ann_size: float = ANN_SIZE
     tagged: bool = False
@@ -861,6 +863,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         for n in r.walk():
             if n.node is not None and n.node.id in connected:
                 n.open_feeder = False
+    _mark_open_ends(doc, roots, index)
 
     # 'transfer' links: roots anchored on a transfer switch of another root
     anchored: dict[int, tuple[LNode, Any]] = {}
@@ -1106,8 +1109,9 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
             annex.append(ln)
             obs.add_box(ln.sym_box())
             obs.add_box(ln.ann_box())
-    for ln in annex:
-        g.add(node_group(ln.sym.group(ln.x, ln.y, ln.id)))
+    for ln in annex:  # in the power path of nothing: no conductor leads, unless a power link uses its output
+        out = ln.node is not None and any(l.kind in SWITCHED_LINKS and ln.node.id in (l.from_, l.to) for l in doc.links)
+        g.add(node_group(without_leads(ln.sym, True, not out).group(ln.x, ln.y, ln.id)))
         if ln.ann:
             ab = ln.ann_box()
             for i, t in enumerate(ln.ann):
@@ -1791,6 +1795,28 @@ def _first_boards(doc: Document) -> list[NodeBase]:
 
 
 # ---------------------------------------------------------------- strokes
+FREE_END_R = 0.7  # free terminal at the end of a way with nothing on it (as the spare symbol)
+
+
+def _mark_open_ends(doc: Document, roots: list[LNode], index: Index) -> None:
+    """Leads that would end in nothing: the input of a node first in the document (no source above it, no power
+    link landing on it: a busbar, a board, a device declared as a root) and the output of a node with nothing below
+    it that is neither a load nor a free way (a transformer, a meter or a controller feeding nothing, no power link
+    leaving it). Drawn without them, they do not read as fed from the edge of the sheet or as wired to something
+    not drawn."""
+    landed = {l.to for l in doc.links if l.kind in SWITCHED_LINKS}
+    linked = {e for l in doc.links if l.kind in SWITCHED_LINKS for e in (l.from_, l.to)}
+    for r in roots:
+        nid = r.node.id if r.node is not None else None
+        if (r.kind == "node" and nid and nid in index.nodes and index.parent.get(nid) is None
+                and r.type != "offpage" and not (nid in landed and r.sym.height > 0)):
+            r.no_in = True
+        for n in r.walk():
+            if (n.kind == "node" and not n.children and not n.bottom and not n.open_feeder and n.node is not None
+                    and n.node.id not in linked):
+                n.no_out = True
+
+
 def _free_way(ln: LNode, parent: Optional[LNode]) -> bool:
     """A spare way with no device (no rating, no poles) straight on a busbar or in a board: a free space, drawn
     dashed and without a conductor mark, not a conductor leaving the busbar (below a device, it is that device's
@@ -1804,7 +1830,7 @@ def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callabl
     trunk = BUSWAY_H / 2 if ln.bus_y is not None and symbol_kind(ln.sym) == "busway" else 0.0
     if ln.kind == "node" or ln.kind == "stub":
         if not (ln.is_board and ln.sym.height == 0) and not trunk:  # busway with tap-offs: drawn as its trunk
-            sg = ln.sym.group(ln.x, ln.y, ln.id)
+            sg = without_leads(ln.sym, ln.no_in, ln.no_out).group(ln.x, ln.y, ln.id)
             if ln.node is not None and getattr(ln.node, "external", False):
                 sg = _restyle(sg, Style(width=THIN, dash=(1.2, 0.8), color="#555555"))
                 sg.cls = (sg.cls or "") + " external"
@@ -1823,14 +1849,15 @@ def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callabl
             tg.add(Text((ab[0], ab[1] + (i + 0.8) * ANN_LINE * ln.ann_size / ANN_SIZE), t,
                         ln.ann_size, bold=(i == 0 and ln.tagged)))
         g.add(tg)
-    if ln.open_feeder:
-        y0, y1 = ln.out_y, y_load + 4.0
+    if ln.open_feeder:  # a way with nothing described on it: its conductor ends on a free terminal (as a spare
+        # way), never on an arrow (read as a reference to another sheet)
+        y0, y1 = ln.out_y, y_load + 4.0 - 2 * FREE_END_R
         g.add(Line((ln.x, y0), (ln.x, y1)))
-        g.add(Polyline([(ln.x - 1.0, y1 - 1.8), (ln.x, y1), (ln.x + 1.0, y1 - 1.8)], Style(fill="#000000"), closed=True))
+        g.add(Circle((ln.x, y1 + FREE_END_R), FREE_END_R))
     me = ln.target if ln.kind == "bus_in" else ln.id
     if ln.bus_y is not None:
         bg = busbar_group(me or ln.id)
-        if ln.kind != "bus_in" and ln.bus_y > ln.out_y:
+        if ln.kind != "bus_in" and ln.bus_y > ln.out_y and not ln.no_in:  # (fed by nothing: no lead from above)
             bg.add(Line((ln.x, ln.y if trunk else ln.out_y), (ln.x, ln.bus_y - trunk)))
         x1 = max(ln.bus_x1, ln.bus_x0 + 4)
         if trunk:  # busbar trunking: casing along the bars, tap-off units below it
