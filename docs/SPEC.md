@@ -382,6 +382,7 @@ Common enumerations: `poles` ∈ {1P, 1P+N, 2P, 3P, 3P+N, 4P}.
 | `title_block` | `true` | Sheet border and title block |
 | `first_folio`, `total_folios` | 1, - | Numbering within a partial set of sheets ("sheet 1/3"). Drawn together, the views make one set: a view without `first_folio` follows the one before it, and so does a view whose sheets would take numbers already given |
 | `show_pe` | `true` | `multi-line` views: draw the protective conductor (PE) |
+| `auxiliaries` | `false` | `multi-line` views: also draw the auxiliary devices (`devices`: controllers, terminal blocks, sensors, meters placed through links) and the `control`, `interlock`, `trip`, `measure`, `data`, `key` and `earth` links, as on the single-line diagram (§7.1) |
 | `color` | `none` | Colour mode: `conductors` (multi-line: every conductor in its colour; single-line: single-phase feeders in their phase colour), `phase` (single-phase feeders by phase, phase cell of the schedule tinted), `source` (what each source (tree root) feeds in normal operation; normally-open alternative supplies in the colour of the source they come from, dashed), `status` (`status` of nodes and links, inherited downstream: existing grey, new black, future blue dashed, temporary orange, removed red; outside this mode a node of status `future`, and what inherits it, has "(future)" added to its label), `voltage` (MV > 1 kV AC, LV, ELV ≤ 50 V AC, DC). Strokes only: texts stay black, frames and earth / data links keep their colour; a legend of the colours used is drawn in a free corner of each sheet. Omitted: black drawing |
 | `palette` | - | Colour overrides `{key: "#rrggbb"}` for the colour mode: conductor names (`L1` … `PE`, `PEN`, `L+`, `L-`), source ids, status values, `mv` / `lv` / `elv` / `dc` |
 | `conductor_colors` | - | Preset of the `conductors` mode: `iec` (IEC 60445: L1 brown, L2 black, L3 grey, N blue, PE green-yellow) or `us` (L1 black, L2 red, L3 blue (brown / orange / yellow from 480 V), N white drawn light grey, ground green). Omitted: `us` when `installation.standard` names the NEC / CEC, else `iec` |
@@ -416,7 +417,11 @@ A document may declare several views, of either kind, e.g.
   motors as `M 3~` with terminals `U V W` and PE; loads as a box with one terminal per conductor; other types as a
   labelled box across their conductors. Ratings and tags are written as on the single-line diagram, load
   descriptions under the loads, outgoing cables above them. Large documents are split into sheets like the
-  single-line diagram. Auxiliary devices, links other than the tree and `frames` are not drawn in this view.
+  single-line diagram. The power links outside the tree (`transfer`, `bypass`, `parallel`, `tie`, `infeed`) are
+  drawn conductor by conductor, with an off-sheet reference when their other end is on another sheet. Every node
+  of the tree is drawn whatever its type (a meter, a contactor, a controller in the tree); the auxiliary devices
+  (`devices`), the other links and `frames` are not drawn in this view, unless `auxiliaries` is `true`: then the
+  auxiliary devices and their links are drawn as on the single-line diagram (`frames` still not drawn).
 
 ### 7.2 Wire marking and wiring exports (part of UEP-0001)
 
