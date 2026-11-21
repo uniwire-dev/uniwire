@@ -8,6 +8,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line drawings: three measure or data links or more between one device and others on its sheet (a
+  multi-channel meter measuring every feeder, a meter reading every charger) are drawn as one trunk with a tee tap
+  to each other end, a junction dot at each tee. Before, each link was routed on its own: a stair of dashed runs
+  about 1 mm apart that read as one thick line, links looping round the incomer and small loops round each feeder.
+  The protocol or label shared by all the links is written once on the trunk, different ones on their taps; a
+  controller's or a PLC's links (their own points and channels), links naming their terminal on the shared
+  device (separate wires) and the links to another sheet (their stubs) are drawn as before. In the SVG, each link of a trunk carries `data-uw-trunk`.
 * Multi-line drawings: below an inverter/charger, a busbar or board with no system stated that feeds only DC ways
   (a battery busbar and the breakers of its batteries) is on the DC side, drawn with L+ and L-. It was drawn with the
   AC conductors of the supply (L1, N, PE on a battery). An inverter whose children are all on its DC side keeps its
