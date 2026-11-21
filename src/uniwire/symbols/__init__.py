@@ -60,6 +60,38 @@ def _lead(y0: float, y1: float) -> Line:
     return Line((0, y0), (0, y1))
 
 
+def without_leads(sym: Symbol, top: bool = False, bottom: bool = False) -> Symbol:
+    """``sym`` without its input lead (``top``: the conductor stub on its axis from its top) and/or its output lead
+    (``bottom``: the stub on its axis down to its output terminal), for a terminal nothing is connected to. A lead
+    running through the whole symbol (a fuse) is kept: it is the body of the symbol, and so are the leads of a
+    switching contact (a blade pivoting on the axis): they are its fixed contacts. Same geometry (height,
+    footprint), so the layout is unchanged."""
+    eps = 1e-6
+    if any(isinstance(i, Line) and (abs(i.a[0]) <= eps) != (abs(i.b[0]) <= eps) and abs(i.a[1] - i.b[1]) > eps
+           for i in sym.items):
+        return sym
+
+    def lead(i: Item) -> Optional[str]:
+        if not isinstance(i, Line) or abs(i.a[0]) > eps or abs(i.b[0]) > eps or i.style.dash:
+            return None
+        y0, y1 = sorted((i.a[1], i.b[1]))
+        if y1 - y0 > 2 * M:  # longer than a terminal: a part of the symbol (the shaft of a supply arrow)
+            return None
+        if y0 <= eps and y1 < sym.height - eps:
+            return "top"
+        if y0 > eps and y1 >= sym.height - eps:
+            return "bottom"
+        return None
+
+    drop = {"top"} if top else set()
+    if bottom:
+        drop.add("bottom")
+    items = [i for i in sym.items if lead(i) not in drop]
+    if len(items) == len(sym.items):
+        return sym
+    return Symbol(sym.name, items, sym.height, sym.left, sym.right, sym.has_output, sym.side_input, dict(sym.extra))
+
+
 def _contact(top: float = 1.5 * M, pivot: float = 3.5 * M, h: float = 5 * M) -> list[Item]:
     """Make contact (normally open): top terminal, inclined blade starting from the bottom pivot."""
     ang = math.radians(28)
