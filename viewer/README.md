@@ -71,6 +71,7 @@ conductor colour preset); `viewer.py` lists them (`options`) and applies the cho
 - Pyodide `0.27.7` from `cdn.jsdelivr.net` (`PYODIDE_VERSION` in `worker.js`).
 - CodeMirror 6 modules from `esm.sh` (import map in `index.html`). If they cannot be loaded, the
   viewer falls back to a plain textarea editor with line numbers.
-- PDF export installs `reportlab` (pinned, `REPORTLAB` in `worker.js`) from PyPI with `micropip` on first use; built-in PDF fonts
-  (Helvetica) are used, so a few symbols are transliterated. *All sheets (print / PDF)* opens a
+- PDF export installs `reportlab` (pinned, `REPORTLAB` in `worker.js`) from PyPI with `micropip` on first use; the
+  PDF uses the font shipped in the wheel (`uniwire/render/fonts/`, Liberation Sans, read with `importlib.resources`),
+  so it is the same as the PDF written by the library on any system. *All sheets (print / PDF)* opens a
   print-ready page of the SVG sheets as an alternative.
