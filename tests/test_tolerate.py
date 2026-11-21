@@ -75,7 +75,7 @@ def test_misnamed_field_read_under_the_missing_name():
 
 
 def test_ambiguous_names_refused_with_the_fields_of_the_object():
-    d = _doc({"type": "socket"}, meta={"revisions": [{"rev": "A", "num": "1"}]})
+    d = _doc({"type": "socket"}, meta={"revisions": [{"r": "A", "num": "1"}]})
     with pytest.raises(UniwireError) as e:
         uniwire.load(d)
     msg = "\n".join(e.value.issues)
@@ -119,3 +119,63 @@ def test_symbol_text_too_long_read_short(raw, short):
         {"type": "load", "id": "L1", "label": raw.strip(), "symbol_text": raw}]})
     assert uniwire.load(d).sources[0].children[0].children[0].symbol_text == short
     assert len(_notes(d)) == 1 and short in _notes(d)[0]
+
+
+def test_revision_table_names_read_as_the_format_names():
+    d = _doc({"type": "socket"}, meta={"revisions": [{"rev": "A", "by": "JE", "note": "First issue"},
+                                                     {"rev": "B", "note": "Cable sections"}]})
+    revs = uniwire.load(d).meta.revisions
+    assert [(r.index, r.author, r.description) for r in revs] == [("A", "JE", "First issue"), ("B", None, "Cable sections")]
+    assert len(_notes(d)) == 5
+
+
+def test_plc_module_kinds_written_in_full():
+    d = _doc({"type": "breaker", "id": "Q1", "in_A": 6, "children": [
+        {"type": "plc", "id": "A1", "onboard": [{"slot": 0, "kind": "Digital input"}],
+         "modules": [{"slot": 1, "kind": "digital_output"}, {"slot": 2, "kind": "analog-inputs"},
+                     {"slot": 3, "kind": "MIXED_IO"}, {"slot": 4, "kind": "mixed_io"}]}]})
+    plc = uniwire.load(d).sources[0].children[0].children[0]
+    assert [m.kind for m in plc.onboard + plc.modules] == ["di", "do", "ai", "mixed_io", "mixed_io"]
+    assert len(_notes(d)) == 4
+
+
+def test_unknown_module_kind_still_fails():
+    d = _doc({"type": "plc", "id": "A1", "modules": [{"slot": 1, "kind": "digital"}]})
+    with pytest.raises(UniwireError) as e:
+        uniwire.load(d)
+    assert "'digital' is not one of the values allowed here" in e.value.issues[0] and "mixed_io" in e.value.issues[0]
+
+
+def test_whole_number_for_a_quoted_choice():
+    d = _doc({"type": "breaker", "id": "Q1", "in_A": 32, "children": [{"type": "ev_charger", "id": "E1", "mode": 3}]},
+             {"type": "breaker", "id": "Q2", "in_A": 32, "children": [{"type": "ev_charger", "id": "E2", "mode": "4"}]})
+    doc = uniwire.load(d)
+    assert [q.children[0].mode for q in doc.sources[0].children] == ["3", "4"] and len(_notes(d)) == 1
+    with pytest.raises(UniwireError):  # a number that is not one of the choices is still refused
+        uniwire.load(_doc({"type": "ev_charger", "id": "E1", "mode": 5}))
+
+
+def test_unknown_field_given_null_left_out():
+    d = _doc({"type": "breaker", "id": "Q1", "in_A": 16, "cable": {"cores": "3G", "section_mm2": 2.5, "remark": None}})
+    assert uniwire.load(d).sources[0].children[0].cable.section_mm2 == 2.5
+    assert len(_notes(d)) == 1 and "'remark'" in _notes(d)[0]
+    with pytest.raises(UniwireError):  # with a value it is still an unknown field
+        uniwire.load(_doc({"type": "breaker", "id": "Q1", "in_A": 16, "cable": {"remark": "x"}}))
+
+
+def test_only_the_problems_left_are_listed():
+    """Values that would have been read in canonical form are not listed beside the real mistake."""
+    d = _doc({"type": "breaker", "id": "Q1", "in_A": 32, "ref": 7, "children": [
+        {"type": "ev_charger", "id": "E1", "mode": 3},
+        {"type": "load", "id": "L1", "symbol_text": "Air conditioner", "colour": "blue"}]})
+    with pytest.raises(UniwireError) as e:
+        uniwire.load(d)
+    assert len(e.value.issues) == 1 and "colour" in e.value.issues[0]
+
+
+def test_misnamed_field_not_guessed_when_the_document_stays_invalid():
+    d = _doc({"type": "socket", "colour": "blue"}, meta={"revisions": [{"idx": "A"}]})
+    with pytest.raises(UniwireError) as e:
+        uniwire.load(d)
+    msg = "\n".join(e.value.issues)
+    assert "revisions/0/idx" in msg and "missing: index" in msg and "colour" in msg
