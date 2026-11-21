@@ -8,6 +8,14 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line drawings: no conductor lead ends in nothing. A device outside the power path (a meter, a controller,
+  a surge arrester, a battery or PV unit reached only by links) was drawn with conductor tails above and below its
+  symbol; it is now drawn without them (a switching device keeps its fixed contacts, and a lead a power link lands
+  on stays). A busbar, a board or a device first in the document (no source above it) was drawn fed by a bare
+  line from above, as if from the edge of the sheet; it now starts at the busbar or at the symbol, with no
+  incoming lead. A node feeding nothing (a transformer with nothing below it) no longer shows an open output stub.
+  A way with no load ended on a filled arrow, which read as a reference to another sheet; it now ends on a small
+  free terminal, as a spare way.
 * Loading: more near-misses are read in canonical form, each reported by `core.normalized`: revision columns
   `rev`, `by` and `note` (as `index`, `author`, `description`), PLC module kinds written in full (`digital_input`,
   `analog-outputs`, `MIXED_IO`), a whole number written for a quoted choice (EV charger `mode: 3` as `"3"`), an
