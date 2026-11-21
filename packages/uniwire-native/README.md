@@ -2,7 +2,7 @@
 
 Optional compiled part of [uniwire](https://uniwire.sh): the search of the grid link router (the costs of each grid
 move and the cheapest-route search over them), written in Rust. uniwire uses it when it is installed and draws
-exactly the same drawings without it, in pure Python (as in the browser editor), only slower on large documents.
+exactly the same drawings without it, in pure Python (as in the browser editor), only slower on large drawings.
 
 ```
 pip install "uniwire[native]"
