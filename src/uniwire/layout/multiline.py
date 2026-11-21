@@ -37,7 +37,7 @@ from .. import registry
 from ..graph import POWER_LINKS
 from ..i18n import normalize_lang, render_lang
 from ..i18n import t as _t
-from ..labels import annotation, cable_text, drawn_cable_text, part_number, without_ref
+from ..labels import annotation, cable_text, drawn_cable_text, part_number, target_text, without_ref
 from ..marks import marked_wires, marks_shown
 from ..model import Document, NodeBase, View
 from ..render.scene import (
@@ -85,11 +85,13 @@ from .engine import (
     _bus_name,
     _device_homes,
     _is_dc,
+    _says,
     _signal_links,
     _wrap_words,
     board_parts,
     drawing_area,
-    feeding_sheet,
+    feeds_dc_input,
+    incoming_text,
     interlock_mark,
     label_drawn_below,
     line_phase,
@@ -449,8 +451,9 @@ class _Assigner:
     def _source(self, node: Any) -> tuple[list[str], list[str], bool]:
         t = node.type
         inst = self.doc.installation
-        if t in ("pv_array", "battery"):
-            return list(DC), list(DC), False
+        if t in ("pv_array", "battery") or (t == "generator" and (getattr(node, "system", None) == "DC"
+                                                                   or feeds_dc_input(node))):
+            return list(DC), list(DC), False  # a generator feeding DC equipment: a DC machine
         if t == "transformer":
             out, pending = self._transformer_out(node)
             return list(PHASES), out, pending
@@ -521,10 +524,12 @@ def _declared_below(node: Any) -> Optional[str]:
 
 
 def _vfd_to_three_phase(node: Any, inp: list[str]) -> bool:
-    """A drive fed with fewer than three phases that feeds something three-phase: a three-phase load (a motor),
-    or a three-pole device, anywhere below it up to the next converter, drive or transformer."""
-    if not (node.type == "motor_starter" and getattr(node, "method", None) == "vfd"
-            and len([c for c in inp if c in PHASES]) < 3):
+    """A drive fed with fewer than three phases (single phase, or a DC line) that feeds something three-phase: a
+    three-phase load (a motor), or a three-pole device, anywhere below it up to the next converter, drive or
+    transformer. A controller in that place (an electronic speed controller) is such a drive: what it feeds cannot
+    run on the two conductors it is fed with."""
+    drive = (node.type == "motor_starter" and getattr(node, "method", None) == "vfd") or node.type == "controller"
+    if not (drive and len([c for c in inp if c in PHASES]) < 3):
         return False
     stack = list(node.children)
     while stack:
@@ -979,7 +984,7 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
             name = node.label or registry.label(ln.type, lang)
             if ln.type == "offpage":
                 name = " ".join(x for x in (node.ref, node.label) if x) or name
-                ln.load_lines = [name] + ([f"→ {node.target}"] if getattr(node, "target", None) else [])
+                ln.load_lines = [name] + ([f"→ {target_text(node.target)}"] if getattr(node, "target", None) else [])
                 continue
             power = fmt(node.p_kW, " kW") if node.p_kW else ""
             if power and power in name:
@@ -988,7 +993,8 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
             if n and n > 1:  # identical loads drawn once: power given per load
                 power = f"{n} x {power}" if power else f"x {n}"
             details = [x for x in (node.ref, power,
-                                   _t("cell.points", lang, count=node.points) if getattr(node, "points", None) else "")
+                                   _t("cell.points", lang, count=node.points) if getattr(node, "points", None) else "",
+                                   getattr(node, "socket_type", None) or "")
                        if x]
             ln.load_lines = [name] + ([" ".join(details)] if details else [])
             holder = _feeder_cable(ln, parent)
@@ -1011,7 +1017,7 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
             if node.label and node.label in lines:  # the label: not repeating the tag above it, nor the lines below it
                 label = without_ref(node.label, node.ref) if tag == node.ref else node.label
                 lines = [label if t == node.label else t for t in lines]
-                lines = [t for t in lines if t and (t == label or t.casefold() not in label.casefold())]
+                lines = [t for t in lines if t and (t == label or not _says(label, t))]
                 lines = list(dict.fromkeys(lines))  # a label that is a rating once the tag is gone ("-Q5 16 A")
             if ln.type == "spare":  # a spare way: what it is kept for, its rating
                 in_a = getattr(node, "in_A", None)
@@ -1380,8 +1386,8 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
             cxr, r = _circle(ln)
             c = (ln.x_left + cxr, y + 1.0 + r)
             g.add(Circle(c, r), Text((c[0], c[1] - 0.6), "G", 2.6, "middle", "middle", bold=True),
-                  Text((c[0], c[1] + 2.0), "3~" if len([x for x in ln.out if x in PHASES]) == 3 else "1~", 1.5,
-                       "middle", "middle"))
+                  Text((c[0], c[1] + 2.0), "=" if any(x in DC for x in ln.out)
+                       else "3~" if len([x for x in ln.out if x in PHASES]) == 3 else "1~", 1.5, "middle", "middle"))
             _draw_out_from_circle(g, ln, c, r, y + h)
             return g
         x0, x1 = ln.x_left + ln.lanes_min() - 1.5, ln.x_left + ln.lanes_max() + 1.5
@@ -1428,15 +1434,16 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
         surge = [c for c in ln.inp if c in LIVE]
         pe = next((c for c in ln.inp if c in ("PE", "PEN")), None)
         yj = y + 9.0
-        for c in surge:
+        for c in surge:  # the leads in the colour of their conductor, the surge element itself black
             x = xs[c]
-            g.add(Line((x, y), (x, y + 2.5)), Rect(x - 0.8, y + 2.5, 1.6, 4.5), Line((x, y + 4.0), (x, y + 6.0)),
-                  Line((x, y + 7.0), (x, yj)))
+            g.add(cond_group(c, Line((x, y), (x, y + 2.5))), Rect(x - 0.8, y + 2.5, 1.6, 4.5),
+                  Line((x, y + 4.0), (x, y + 6.0)), cond_group(c, Line((x, y + 7.0), (x, yj))))
         if surge:
             xe = xs[pe] if pe else max(xs[c] for c in surge) + S
-            g.add(Line((min(xs[c] for c in surge), yj), (xe, yj)))
+            bar = Line((min(xs[c] for c in surge), yj), (xe, yj))
+            g.add(cond_group(pe, bar) if pe else bar)
             if pe:
-                g.add(Line((xe, y), (xe, yj)))
+                g.add(cond_group(pe, Line((xe, y), (xe, yj))))
             if not pe or pe == "PEN":
                 g.add(*_earth(xe, yj))
             for c in surge[1:]:
@@ -1450,8 +1457,8 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
         return g
 
     if t == "earth":
-        for _c, x in lanes:
-            g.add(Line((x, y), (x, y + 2.0)), *_earth(x, y + 2.0)[1:])
+        for c, x in lanes:
+            g.add(cond_group(c, Line((x, y), (x, y + 2.0))), *_earth(x, y + 2.0)[1:])
         return g
 
     if _is_busway(ln):  # busbar trunking: casing spanning every conductor (PE included), one bar per conductor
@@ -2877,12 +2884,7 @@ def multiline_layouts(doc: Document, view: View, index: Index | None = None) -> 
         incoming = None
         incoming_ref: tuple[Optional[int], Optional[str]] = (None, None)
         if i > 1 and spec.roots and not spec.continuation:
-            rid = spec.roots[0].id
-            src = feeding_sheet(specs, i, rid, index, sheet_of)
-            incoming_ref = (src, index.parent.get(rid or ""))
-            feeder = next((a for a in index.ancestors(rid or "") if a.ref), None)
-            what = _t("render.incoming_from", lang, ref=feeder.ref) if feeder is not None else _t("render.incoming", lang)
-            incoming = _t("render.incoming_folio", lang, what=what, folio=src) if src else what
+            incoming, incoming_ref = incoming_text(specs, i, spec.roots[0].id, index, sheet_of, lang)
         out.append(_layout(doc, view, spec, index, info, folio_of=folio_by_root.get, continuation=(prev_f, next_f),
                            incoming=incoming, incoming_ref=incoming_ref, marks=marks, node_folio=sheet_of.get))
     return out

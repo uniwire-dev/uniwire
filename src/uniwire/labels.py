@@ -26,6 +26,23 @@ NORTH_AMERICAN: contextvars.ContextVar[bool] = contextvars.ContextVar("uniwire_n
 # kind of each declared interlock key ("trapped_key", "electrical"...), for the drawing being made
 INTERLOCK_KINDS: contextvars.ContextVar[Optional[dict[str, str]]] = contextvars.ContextVar("uniwire_interlock_kinds",
                                                                                           default=None)
+# name of each node of the drawing being made (its tag, else its label), by id: what an off-page reference that
+# targets a node by its id prints in place of that id
+NODE_NAMES: contextvars.ContextVar[Optional[dict[str, str]]] = contextvars.ContextVar("uniwire_node_names",
+                                                                                      default=None)
+
+
+def node_names(doc: Any) -> dict[str, str]:
+    """Tag (else label) of each node of ``doc`` that has one, by id."""
+    from .resolve import iter_nodes
+    return {n.id: n.ref or n.label for n, _, _ in iter_nodes(doc) if n.id and (n.ref or n.label)}
+
+
+def target_text(target: Optional[str]) -> str:
+    """What an off-page reference says it leads to: its ``target``, or when that is the id of a node of the
+    document, the tag (else the label) of that node, never its bare id."""
+    t = str(target or "")
+    return (NODE_NAMES.get() or {}).get(t, t)
 
 
 def north_american(doc: Any) -> bool:
@@ -73,6 +90,8 @@ def _manufacturer(node: Any) -> Optional[str]:
 def _amps(text: Any) -> str:
     """A setting range with its unit, '9-13 A'; a range given as words ('to confirm') stays as written."""
     s = str(text or "")
+    if re.fullmatch(r"\s*0+(?:[.,]0*)?\s*", s):  # a range of 0 is no range: nothing printed rather than '0 A'
+        return ""
     return f"{s} A" if re.search(r"\d", s) and not re.search(r"\d\s*A\b", s) else s
 
 
@@ -81,25 +100,22 @@ def protection_short(node: Any) -> str:
     t = node.type
     in_a = _g(node, "in_A")
     if t == "breaker":
-        return f"{node.curve or ''}{fmt(in_a)}" if node.curve else (fmt(in_a, " A") if in_a else "")
+        return f"{node.curve}{fmt(in_a) if in_a else ''}" if node.curve else (fmt(in_a, " A") if in_a else "")
     if t == "rcbo":  # 'C16 30 mA', or '20 A 5 mA' without a curve
-        rating = f"{node.curve}{fmt(in_a)}" if node.curve else (fmt(in_a, " A") if in_a else "")
+        rating = f"{node.curve}{fmt(in_a) if in_a else ''}" if node.curve else (fmt(in_a, " A") if in_a else "")
         return f"{rating} {fmt_sensitivity(node.idn_mA)}".strip()
     if t == "main_breaker":
         r = _amps(node.range_A) if node.range_A else fmt(in_a, " A") if in_a else ""
         return f"{r} {fmt_sensitivity(node.idn_mA)}".strip()
+    amps = fmt(in_a, " A") if in_a else ""  # a rating of 0 is no rating: nothing printed rather than '0 A'
     if t == "rcd":
-        return f"{fmt(in_a, ' A')} {fmt_sensitivity(node.idn_mA)}".strip()
+        return f"{amps} {fmt_sensitivity(node.idn_mA)}".strip()
     if t == "fuse":
-        return f"{node.fuse_class or ''} {fmt(in_a, ' A')}".strip()
+        return f"{node.fuse_class or ''} {amps}".strip()
     if t == "fuse_switch":
-        return f"{fmt(in_a, ' A')} / {fmt(node.fuse_A, ' A')}".strip(" /")
-    if t in ("switch_disconnector", "disconnector"):
-        return fmt(in_a, " A")
-    if t == "motor_starter":
-        return f"{fmt(in_a, ' A')}"
-    if t == "spare":
-        return fmt(in_a, " A") if in_a else ""
+        return f"{amps} / {fmt(node.fuse_A, ' A') if node.fuse_A else ''}".strip(" /")
+    if t in ("switch_disconnector", "disconnector", "motor_starter", "spare"):
+        return amps
     return ""
 
 
@@ -365,7 +381,7 @@ def annotation(node: NodeBase, lang: str = "en", show_label: bool = False) -> li
     elif t == "motor":
         lines += [fmt(g("p_kW"), " kW") if g("p_kW") else ""]
     elif t == "offpage":
-        lines += [g("target") or ""]
+        lines += [target_text(g("target"))]
     elif t == "plc":
         mods = g("modules") or []
         lines += [part_number(node) or "", _t("ann.modules", lang, count=len(mods)) if mods else "",
@@ -429,7 +445,8 @@ def cell(field: str, column: dict[str, Any], lang: str = "en") -> str:
         src = prot if _g(prot, "idn_mA") else rcd_node
         if src is None or not _g(src, "idn_mA"):
             return ""
-        rcd_type = _g(src, "rcd_type") if not column.get("rcd_type_column") else None  # else in its own row
+        # 'type A', as beside the symbol: a bare letter after the sensitivity reads as a unit ('30 mA A')
+        rcd_type = rcd_kind(src) if not column.get("rcd_type_column") else None  # else in its own row
         if NORTH_AMERICAN.get():
             rcd_type = rcd_kind(src)
         txt = fmt_sensitivity(_g(src, "idn_mA")) + (f" {rcd_type}" if rcd_type else "")

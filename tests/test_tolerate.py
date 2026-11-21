@@ -112,8 +112,9 @@ def test_rcd_count_only_for_dwellings():
     assert "nfc15100.rcd-count" not in rules(d)
 
 
-@pytest.mark.parametrize("raw,short", [("Air conditioner", "AC"), ("Ventilation", "Ventil"), ("  Heat pump unit ", "HPU"),
-                                       ("L1 L2 L3", "L1L2L3"), ("3 x L300 lamps", "3 x L3")])
+@pytest.mark.parametrize("raw,short", [("Air conditioner", "AC"), ("Ventilation", "Venti."), ("  Heat pump unit ", "HPU"),
+                                       ("L1 L2 L3", "L1L2L3"), ("3 x L300 lamps", "3 x"), ("Pump P-200", "Pump"),
+                                       ("2-way relay", "2-way"), ("A1 / B2 / C3", "A1")])
 def test_symbol_text_too_long_read_short(raw, short):
     d = _doc({"type": "breaker", "id": "Q1", "in_A": 16, "children": [
         {"type": "load", "id": "L1", "label": raw.strip(), "symbol_text": raw}]})
