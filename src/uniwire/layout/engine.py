@@ -327,6 +327,14 @@ OVERCURRENT = {"breaker", "rcbo", "main_breaker", "fuse", "fuse_switch"}  # what
 DC_ACCESSORIES = {"spd", "meter", "insulation_monitor"}  # beside a DC way, they do not make it an AC feeder
 
 
+def line_phase(node: Any) -> Optional[str]:
+    """The phase(s) ``node`` connects its line to (its ``phase``), or None. A current shunt names with ``phase`` the
+    conductor it is in, among those of the line: it does not narrow the line."""
+    if node.type == "instrument_transformer" and getattr(node, "kind", None) == "shunt":
+        return None
+    return getattr(node, "phase", None)
+
+
 def _is_dc(node: NodeBase) -> bool:
     """A child on the DC side of an inverter/charger: batteries, PV, DC converters, DC boards, or a device
     (fuse, disconnector...) feeding one of them alone, or a device declared for direct current (``dc``)."""
@@ -1429,9 +1437,9 @@ def _supply_system(ln: LNode, index: Index, doc: Document) -> Optional[str]:
         if getattr(n, "system", None):
             return n.system  # type: ignore[attr-defined]
         if k and n.type in CONVERTER_TYPES:  # type: ignore[attr-defined]
-            fed = next((a for a in up[k + 1:] if getattr(a, "poles", None) or getattr(a, "phase", None)), None)
+            fed = next((a for a in up[k + 1:] if getattr(a, "poles", None) or line_phase(a)), None)
             two = fed is not None and (getattr(fed, "poles", None) in ("1P", "1P+N", "2P")
-                                       or getattr(fed, "phase", None) in ("L1", "L2", "L3", "L1L2", "L2L3", "L1L3"))
+                                       or line_phase(fed) in ("L1", "L2", "L3", "L1L2", "L2L3", "L1L3"))
             if two:
                 return "2P"
     return doc.installation.system
@@ -1472,7 +1480,7 @@ def _needs_neutral(node: NodeBase) -> bool:
         if n.type == "transformer":  # type: ignore[attr-defined]
             continue
         cores = (n.cable.cores or "") if n.cable is not None else ""
-        if (getattr(n, "poles", None) in ("1P", "1P+N", "3P+N", "4P") or getattr(n, "phase", None) in ("L1", "L2", "L3")
+        if (getattr(n, "poles", None) in ("1P", "1P+N", "3P+N", "4P") or line_phase(n) in ("L1", "L2", "L3")
                 or getattr(n, "system", None) in ("1P+N", "3P+N", "split-phase")
                 or (len(cores) == 2 and cores[0] in "35" and cores[1] in "Gg")):
             return True
@@ -1548,8 +1556,8 @@ def _phase_above(node: NodeBase, index: Index) -> Optional[str]:
     for n in [node] + (index.ancestors(node.id) if node.id else []):
         if n is not node and n.type in CONVERTER_TYPES:  # type: ignore[attr-defined]
             return None
-        if getattr(n, "phase", None):
-            return n.phase  # type: ignore[attr-defined]
+        if line_phase(n):
+            return line_phase(n)
     return None
 
 

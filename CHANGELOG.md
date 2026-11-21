@@ -8,6 +8,14 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Format, without a version change (the specification is still a draft): the circuit schedule takes the rows
+  `status`, `manufacturer`, `part_number`, `icu_kA`, `icw_kA` and `socket_type`, with their titles in every
+  language; a `breaker` takes `dc`, like `switch_disconnector` and `spd` (its line is drawn as a DC line, L+ and L-);
+  an `instrument_transformer` takes `kind: "shunt"`, drawn as a resistor on the line, and in the multi-line view on
+  the one conductor it measures (its `phase`, else L+ on a DC line, else L1) instead of a ring on each phase. Before,
+  these documents were refused. A view `pitch_mm` under 10 is now read as 10 with a `core.normalized` note instead
+  of refusing the document, and residual-current fields written on a breaker (`residual_mA`, `idn_mA`, `rcd_type`...)
+  are still refused, with a message that points to an `rcbo` (or an `rcd`) with `idn_mA` and `rcd_type`.
 * Single-line drawings: a characteristic of a device (a rating, a curve, a type of meter) is left out beside its
   label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
   out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a
