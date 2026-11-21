@@ -1,5 +1,7 @@
 """Displayed texts and placement of auxiliary devices, link routes, frames and notes."""
 
+import pytest
+
 from tests.conftest import ROOT
 from uniwire import load, render_pages
 from uniwire.labels import annotation, cable_text, cell
@@ -941,3 +943,33 @@ def test_annotation_line_dropped_only_when_the_label_says_it():
     assert texts[texts.index("Hall 116 A") + 1] == "16 A"
     assert texts[texts.index("Night rate (contacts C1-C2)") + 1] == "C2"  # a rating, not the contacts named
     assert "Type 2" not in texts
+
+
+@pytest.mark.parametrize("paper", [("A3", "landscape"), ("A4", "portrait")])
+def test_no_empty_notes_band(paper):
+    """A document without notes, site, supply or revision draws no "Notes" title over an empty band."""
+    view = {"paper": paper[0], "orientation": paper[1]}
+    src = [{"type": "grid", "children": [{"type": "breaker", "children": [{"type": "socket"}]}]}]
+    empty = render_pages(load({"views": [view], "sources": src}))[0]
+    assert not any(g.cls == "notes" for g in _items_groups(empty.root))
+    noted = render_pages(load({"meta": {"notes": ["Spare way left"]}, "views": [view], "sources": src}))[0]
+    assert any(g.cls == "notes" for g in _items_groups(noted.root))
+
+
+def test_off_sheet_stub_texts_keep_clear_of_the_column_before():
+    """A meter with a data link to a device drawn on another sheet: its column keeps room on its left for the stub
+    and its texts, which ran into the label of the column before and over the meter itself."""
+    from tests.drawing_audit import audit
+    from uniwire.render import render_views
+
+    def way(i):
+        return {"type": "breaker", "id": f"Q{i}", "ref": f"-Q{i}", "in_A": 16, "children": [{"type": "socket"}]}
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "ref": "=MB", "children": [
+        {"type": "breaker", "ref": "-Q0", "in_A": 63, "children": [
+            way(1), {"type": "meter", "id": "P1", "ref": "-P1", "label": "Example meter", "children": [way(2)]}, way(3),
+            {"type": "breaker", "ref": "-Q9", "in_A": 32, "children": [{"type": "board", "ref": "=SB", "own_sheet": True,
+             "children": [{"type": "controller", "id": "A1", "ref": "-A1", "label": "Example gateway"}]}]}]}]}]}],
+        "links": [{"kind": "data", "from": "P1", "to": "A1", "label": "Modbus RTU"}]})
+    pages = render_views(doc)
+    assert len(pages) == 2
+    assert [str(f) for p in pages for f in audit(p.root)] == []
