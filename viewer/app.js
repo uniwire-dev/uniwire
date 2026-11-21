@@ -326,8 +326,15 @@ async function showPreview(url) {
     if (!svg || state.ready || state.pages.length) return;
     state.pages = [{ svg, title: "", sheetNo: null, preview: true }];
     $("#empty").hidden = true;
-    $("#loader").classList.add("compact");
+    // The note appears in its corner one frame after the full loader goes: shrinking the loader in place would
+    // move it across the drawing (a layout shift).
+    $("#loader").hidden = true;
     showSheet(0);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (state.ready || !$("#loader-error").hidden) return;
+      $("#loader").classList.add("compact");
+      $("#loader").hidden = false;
+    }));
   } catch (_) { /* no preview: the loader stays */ }
 }
 
