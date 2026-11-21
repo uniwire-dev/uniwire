@@ -417,11 +417,12 @@ _PROBE: list[list[Point]] = []  # debugging aid, see route_grid
 
 def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box, lane: float = LANE,
                step: float = 1.0, record: bool = True,
-               cost_out: Optional[list[float]] = None, bend: float = 0.0) -> tuple[list[Point], int, int]:
+               cost_out: Optional[list[float]] = None, bend: float = 0.0,
+               length: float = GRID_LENGTH) -> tuple[list[Point], int, int]:
     """Cheapest orthogonal route, with as many corners as needed, from one of ``starts`` to one of ``goals``
     (the ends a link may use on each device): Dijkstra on a grid of ``step`` mm laid over ``window``, through
     the coordinates of the ends. Same costs as ``route`` (texts and symbols, lines run along or crossed,
-    frames), plus a cost per corner (``bend``, ``BEND`` if not given). Returns the points and the indexes of the
+    frames), plus a cost per corner (``bend``, ``BEND`` if not given) and per mm (``length``). Returns the points and the indexes of the
     ends used (no route: [])."""
     import heapq
     from bisect import bisect_left, bisect_right
@@ -522,7 +523,7 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
         c = sub.box_cross if (i, j) in blocked or (i2, j2) in blocked else 0.0
         if dj == 0:  # horizontal, at y = ys[j]
             y, a, b = ys[j], min(xs[i], xs[i2]), max(xs[i], xs[i2])
-            c += GRID_LENGTH * (b - a) + run_cost(y, a, b, *lines_at(j, False))
+            c += length * (b - a) + run_cost(y, a, b, *lines_at(j, False))
             g = min(i, i2)
             if g not in gap_x:  # the lines crossed between two grid columns, the same on every row
                 gap_x[g] = (between(vw, a, b), between(fx, a, b))
@@ -531,7 +532,7 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
             c += sum(FRAME_CROSS for x, v0, v1 in sides if v0 < y < v1)
         else:  # vertical, at x = xs[i]
             x, a, b = xs[i], min(ys[j], ys[j2]), max(ys[j], ys[j2])
-            c += GRID_LENGTH * (b - a) + run_cost(x, a, b, *lines_at(i, True))
+            c += length * (b - a) + run_cost(x, a, b, *lines_at(i, True))
             g = min(j, j2)
             if g not in gap_y:
                 gap_y[g] = (between(buses, a, b), between(fy, a, b), between(hl, a, b))
