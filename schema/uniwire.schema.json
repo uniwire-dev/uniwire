@@ -27033,7 +27033,7 @@
         },
         "min_scale": {
           "default": 0.7,
-          "description": "Maximum scale reduction before splitting into several sheets",
+          "description": "Maximum scale reduction before splitting into several sheets (folio_split 'auto'); a value below 0.6 is read as 0.6: no sheet is drawn smaller",
           "exclusiveMinimum": 0,
           "maximum": 1,
           "title": "Min Scale",

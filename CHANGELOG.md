@@ -8,6 +8,14 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Use of the sheet: no sheet is drawn below scale 0.6 any more (`folio_split: auto`). A way wider than a sheet,
+  such as a long distribution below a device rather than a board, used to be squeezed on one sheet at a third of
+  its size (texts under 1 mm) while the busbar around it was cut into sheets holding two feeders; its branches go to sheets of their own, with off-page references at both ends, before the
+  busbar is cut, in single-line and multi-line views. A `min_scale` below 0.6 is read as 0.6; `folio_split: none`
+  still draws one sheet at whatever scale it needs. A long list of auxiliary devices linked to nothing, drawn in
+  one column far taller than the sheet, is now drawn in several columns. The scale of a sheet is written in a
+  "Scale" cell of the title block (next to the sheet number) instead of in the corner of the sheet; a sheet with
+  no title block keeps the note in its corner.
 * Faster layout of large drawings, with or without the compiled router: link labels, leader texts and the legs of
   channel routes are placed against an index of what is already drawn (texts and symbols by area, lines by
   position) rather than by testing every obstacle at every position tried, with the same drawings. The slowest

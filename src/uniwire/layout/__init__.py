@@ -13,7 +13,8 @@ Principle (radial tree, power flowing top to bottom):
 6. split into sheets if the required reduction exceeds ``view.min_scale``: several trees side by side are cut into
    groups that each fit, a tree and the supplies drawn beside it together (links between groups end on off-page
    references); then a sub-distribution board goes to a dedicated sheet (off-page reference), the smallest one that
-   makes the sheet fit, otherwise the busbar is cut into continuation sheets;
+   makes the sheet fit, otherwise the busbar is cut into continuation sheets; a way still wider than a sheet (a
+   distribution below a device rather than a board) has a branch drawn on a sheet of its own; never below 0.6;
 7. auxiliary devices go on the sheet of the node they are linked to, in the nearest free space; links are routed
    through horizontal channels clear of texts and symbols (:mod:`uniwire.layout.routing`), and a link to a node
    drawn on another sheet ends on an off-page reference.
