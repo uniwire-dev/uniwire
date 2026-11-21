@@ -8,6 +8,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Faster layout: the drawings of large documents, with many links, take about half the time they took (the
+  slowest twice as fast or more), with the same drawings: link routes costed on the obstacles near them, the
+  channels and stubs that cannot beat the best route found left out, the sheets of a view with no paper planned
+  once, and each text measured once.
 * Frames and texts: a board, enclosure or view frame is no longer drawn through a text (a neighbour's label
   running into it, the "Auxiliary devices" title, a bus coupler's text): its edge moves past the text, or the
   coupler between two boards side by side gets the room its text needs. A board feeding sub-boards ends after its
