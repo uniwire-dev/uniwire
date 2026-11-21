@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from .. import registry
+from ..graph import POWER_LINKS
 from ..i18n import normalize_lang, render_lang
 from ..i18n import t as _t
 from ..labels import annotation, cable_text, drawn_cable_text, part_number, without_ref
@@ -139,12 +140,13 @@ def _sorted(conds: list[str]) -> list[str]:
     return sorted(dict.fromkeys(conds), key=lambda c: ORDER.get(c, 99))
 
 
-def _dc_side(node: Any) -> list[Any]:
-    """Children on the DC side of an inverter/charger or UPS that also feeds an AC side (none otherwise)."""
+def _dc_side(node: Any, ac_out: frozenset[str] = frozenset()) -> list[Any]:
+    """Children on the DC side of an inverter/charger or UPS that also feeds an AC side (none otherwise): AC
+    children, or a power link leaving it (``ac_out``: its AC output on a transfer, bypass... link)."""
     if node.type not in DC_PORT_TYPES:
         return []
     dc = [c for c in node.children if _is_dc(c)]
-    return dc if len(dc) < len(node.children) else []
+    return dc if len(dc) < len(node.children) or (dc and node.id in ac_out) else []
 
 
 # ------------------------------------------------------------- conductors
@@ -161,6 +163,7 @@ class Conductors:
 class _Assigner:
     def __init__(self, doc: Document, show_pe: bool = True):
         self.doc = doc
+        self.ac_out = frozenset(l.from_ for l in doc.links if l.kind in POWER_LINKS)
         self.show_pe = show_pe
         self.info: dict[int, Conductors] = {}
         self._needs: dict[int, bool] = {}
@@ -472,7 +475,7 @@ class _Assigner:
             elif t == "inverter" and any(c in DC for c in inp):  # fed in DC: the AC network starts at its output
                 inst = self.doc.installation
                 out, pending = self.lv(getattr(node, "system", None) or inst.system, inst.earthing, node)
-            elif t in CONVERTERS and not any(c in DC for c in inp) and not _dc_side(node):
+            elif t in CONVERTERS and not any(c in DC for c in inp) and not _dc_side(node, self.ac_out):
                 out = list(DC)
             elif _vfd_to_three_phase(node, inp):  # a drive fed in single phase makes the motor's three phases
                 out = list(PHASES) + (["PE"] if "PE" in inp else [])
@@ -491,7 +494,7 @@ class _Assigner:
             src["PE"] = None
             out = _sorted(out + ["PE"]) if t not in CONVERTERS | {"transformer"} else out
             pending = False
-        dc_side = _dc_side(node) if not any(c in DC for c in inp) else []
+        dc_side = _dc_side(node, self.ac_out) if not any(c in DC for c in inp) else []
         if dc_side:  # AC side on the outputs, plus a DC pair for the batteries, PV...
             out = list(inp)
             self.info[id(node)] = Conductors(inp, _sorted(out + list(DC)), src)
@@ -787,7 +790,10 @@ def _build(node: NodeBase, spec: SheetSpec, info: dict[int, Conductors], is_root
         _, s, e = spec.bus_slice
         bus_out = e < len(children)
         children = children[s:e]
-    dc = [ch for ch in children if any(ch is d for d in _dc_side(node))]
+    # the DC side of an inverter/charger feeding an AC side too: the children the assigner fed from its DC pair
+    two_sides = (node.type in DC_PORT_TYPES and not any(x in DC for x in c.inp) and any(x in DC for x in c.out)
+                 and any(x not in DC and x != "PE" for x in c.out))
+    dc = [ch for ch in children if two_sides and any(x in DC for x in info[id(ch)].inp)]
     children = [ch for ch in children if not any(ch is d for d in dc)] + dc
     return MLNode(node, "node", list(c.inp), list(c.out), dict(c.src),
                   [_build(ch, spec, info, False) for ch in children], bus_out=bus_out, root=is_root, dc_side=len(dc))

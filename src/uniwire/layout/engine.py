@@ -336,7 +336,13 @@ def _is_dc(node: NodeBase) -> bool:
         if n.type in ("battery", "pv_array", "dc_converter") or getattr(n, "dc", None):
             return True
         if n.type in ("board", "busbar"):
-            return getattr(n, "kind", None) == "dc_box" or getattr(n, "system", None) == "DC"
+            if getattr(n, "kind", None) == "dc_box" or getattr(n, "system", None) == "DC":
+                return True
+            # a board or busbar with no system stated that feeds only DC ways (a battery busbar) is on the DC side
+            kids = [c for c in n.children if c.type not in DC_ACCESSORIES]
+            return getattr(n, "system", None) is None and bool(kids) and all(_is_dc(c) for c in kids)
+        if n is not node and n.type in DC_PORT_TYPES:  # its AC side is what feeds it: the way is not DC
+            return False
         if len(n.children) != 1:
             # a string or battery way with its own surge protector / meter is still on the DC side
             kids = [c for c in n.children if c.type not in DC_ACCESSORIES]

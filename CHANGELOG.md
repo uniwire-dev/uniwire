@@ -8,6 +8,12 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Multi-line drawings: below an inverter/charger, a busbar or board with no system stated that feeds only DC ways
+  (a battery busbar and the breakers of its batteries) is on the DC side, drawn with L+ and L-. It was drawn with the
+  AC conductors of the supply (L1, N, PE on a battery). An inverter whose children are all on its DC side keeps its
+  AC output when a transfer, bypass, parallel or tie link leaves it, so that link is still drawn. A way that reaches
+  a battery or PV array through another inverter stays on the AC side.
+
 * Web viewer: the drawing no longer jumps while the viewer starts. The loading card left in place grew into a
   small note in a corner across the preview of the drawing, and the drawing toolbar gained a row when the document's
   view and colour selects appeared; the sheet tabs now keep their own row (one row with the controls in a wide
