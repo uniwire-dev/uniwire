@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import math
 import re
+from collections import Counter
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -86,6 +87,7 @@ from .engine import (
     _clear_frame_edges,
     _device_homes,
     _is_dc,
+    _port_where,
     _says,
     _signal_links,
     _wrap_words,
@@ -174,6 +176,9 @@ class _Assigner:
     def __init__(self, doc: Document, show_pe: bool = True):
         self.doc = doc
         self.ac_out = frozenset(l.from_ for l in doc.links if l.kind in POWER_LINKS)
+        index = build_index(doc)  # inverters/chargers a DC link reaches on their DC side: a DC pair of their own
+        self.dc_linked = frozenset(nid for l in doc.links for k, nid in enumerate((l.from_, l.to))
+                                   if _port_where(l, k, index) == "left")
         self.show_pe = show_pe
         self.info: dict[int, Conductors] = {}
         self._needs: dict[int, bool] = {}
@@ -518,7 +523,8 @@ class _Assigner:
             out = _sorted(out + ["PE"]) if t not in CONVERTERS | {"transformer"} else out
             pending = False
         dc_side = _dc_side(node, self.ac_out) if not any(c in DC for c in inp) else []
-        if dc_side:  # AC side on the outputs, plus a DC pair for the batteries, PV...
+        if dc_side or (node.id in self.dc_linked and not any(c in DC for c in inp)):
+            # AC side on the outputs, plus a DC pair for the batteries, PV... (in the tree or reaching it by links)
             out = list(inp)
             self.info[id(node)] = Conductors(inp, _sorted(out + list(DC)), src)
         else:
@@ -2009,6 +2015,7 @@ def _plan_links(doc: Document, roots: list[MLNode], lang: str) -> list[_Link]:
     nodes = {n.node.id: n for r in roots for n in r.walk() if n.kind == "node" and n.node is not None and n.node.id}
     parent = {id(c): n for r in roots for n in r.walk() for c in n.children}
     order = _order(roots)
+    index = build_index(doc)
     out: list[_Link] = []
     for link in doc.links:
         if link.kind not in ML_LINKS:
@@ -2017,7 +2024,10 @@ def _plan_links(doc: Document, roots: list[MLNode], lang: str) -> list[_Link]:
         if a is None or b is None or a is b:
             continue
         src = "rails" if a.rails else "out"
-        if link.kind == "transfer" and b.type == "transfer_switch":
+        dc_in = _port_where(link, 1, index) == "left"  # onto the DC pair of an inverter/charger
+        if dc_in:
+            dst = "dc"
+        elif link.kind == "transfer" and b.type == "transfer_switch":
             dst = "side"
         elif link.kind in ("infeed", "transfer") and id(b) in parent and (link.kind == "transfer" or b.children):
             dst = "inp"  # a device feeding nothing (back-feed breaker of a PV inverter) is fed on its outputs
@@ -2030,7 +2040,7 @@ def _plan_links(doc: Document, roots: list[MLNode], lang: str) -> list[_Link]:
         else:
             dst = "out"
         have = a.out
-        want = b.inp if dst in ("inp", "side", "top") else b.out
+        want = b.inp if dst in ("inp", "side", "top") else [c for c in b.out if c in DC] if dst == "dc" else b.out
         # a source with a PEN (TN-C) feeds the neutral of a target that has N and PE (the PEN is split there)
         alias = {"N": "PEN"} if "PEN" in have and "N" in want and "N" not in have else {}
         conds = [c for c in sorted(want, key=lambda c: (b.off_in if dst in ("inp", "side", "top") else b.off_out).get(c, 0))
@@ -2088,7 +2098,7 @@ def _make_room(links: list[_Link], roots: list[MLNode]) -> None:
         room = lk.n * LAND + 2.5
         if lk.dst in ("inp", "top"):
             _shift(lk.b, room)
-        elif lk.dst == "out":
+        elif lk.dst in ("out", "dc"):
             for c in lk.b.children:
                 _shift(c, room)
             if not lk.b.children:
@@ -2139,6 +2149,11 @@ def _route_links(links: list[_Link], roots: list[MLNode]) -> None:
         # conductor k of the link (target order) taps at x0 + (n-1-k) S: no crossing inside the bundle
         return {c: x0 + (lk.n - 1 - k) * S for k, c in enumerate(lk.conds)}
 
+    dc_seen: dict[int, int] = {}  # landings already on the DC pair of each inverter/charger
+    dc_total: Counter[int] = Counter()  # ... and all of them
+    for lk in links:
+        if lk.dst == "dc":
+            dc_total[id(lk.b)] += lk.n
     for lk in links:
         a, b = lk.a, lk.b
         if lk.src == "rails":
@@ -2164,6 +2179,11 @@ def _route_links(links: list[_Link], roots: list[MLNode]) -> None:
             if lk.from_right:  # down beyond the device's text, then under the device: never across its inputs
                 base = b.x_left + b.right() + 1.0 + max([text_width(t, b.ann_size) for t in b.ann], default=0.0) + 2.5
                 lk.dx = {c: base + (lk.n - 1 - k) * S for k, c in enumerate(lk.conds)}
+            m = dc_seen.get(id(b), 0)  # the DC pair of an inverter/charger: from the left of all its outputs, each
+            if lk.dst == "dc":  # link outside and above the ones before (none across another's verticals)
+                right = b.x_left + min(b.off_out.values()) - 2.5  # (outside the links reaching its input)
+                inner = sum(o.n for o in links if o.b is b and o.dst in ("inp", "top"))
+                lk.dx = {c: right - (inner + m + k) * S for k, c in enumerate(lk.conds)}
             for k, c in enumerate(lk.conds):
                 if lk.dst == "inp":
                     y = b.y - 1.5 - (lk.n - 1 - k) * LAND
@@ -2171,9 +2191,13 @@ def _route_links(links: list[_Link], roots: list[MLNode]) -> None:
                     y = b.y - 1.5 - k * LAND
                 elif lk.dst == "out":  # (from the right: the first conductor lowest, no crossing)
                     y = b.y + b.h + 1.5 + ((lk.n - 1 - k) if lk.from_right else k) * LAND
+                elif lk.dst == "dc":  # on the DC pair under an inverter/charger
+                    y = b.y + b.h + 1.5 + (dc_total.get(id(b), 0) - 1 - (m + k)) * LAND
                 else:  # side input of a transfer switch: arrows toward its blades
                     y = b.y + 3.0 + k * LAND
                 lk.land[c] = (b.x_left + offs[c], y)
+            if lk.dst == "dc":
+                dc_seen[id(b)] = dc_seen.get(id(b), 0) + lk.n
 
     def span(lk: _Link) -> tuple[float, float]:
         xs = list(lk.sx.values()) + list(lk.dx.values())
@@ -2283,10 +2307,13 @@ def _draw_links(doc: Document, links: list[_Link], g: Group, lang: str) -> None:
             c0 = min(lk.conds, key=lambda c: lk.lane[c])
             x0, x1 = sorted((lk.sx[c0], lk.dx[c0]))
             lg.add(Text(((x0 + x1) / 2, lk.lane[c0] - 0.8), lk.text[0], ANN_SIZE, "middle"))
-        if lk.dst == "out" and not lk.b.children:  # output conductors of a final device: extended to the landings
-            for c in lk.conds:
+        if (lk.dst == "out" and not lk.b.children) or (lk.dst == "dc" and not lk.b.dc_side):
+            # output conductors of a final device (the DC pair of an inverter/charger): extended to the landings
+            for c in lk.conds:  # (the DC pair: down to the lowest landing of the links reaching it)
                 x = lk.b.xo(c)
-                lg.add(cond_group(c, Line((x, lk.b.y + lk.b.h), (x, lk.land[c][1]))))
+                low = max([o.land[c][1] for o in links if o.b is lk.b and o.dst == "dc" and c in o.land] +
+                          [lk.land[c][1]])
+                lg.add(cond_group(c, Line((x, lk.b.y + lk.b.h), (x, low))))
         if dev is not None and (s0 is not None or v0 is not None):
             dg = Group(id=dev.id, cls=f"ml-sym ml-{dev.type} ml-link-device")
             prot, unprot = switched(dev, lk.conds)
