@@ -187,6 +187,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ### Drawings
 
+* A drawing narrower than 60 % of its sheet is drawn from the left of the drawing area, as the wider ones. It was
+  centred, so a sheet filled in height but not in width read as pushed to the right, with nearly half of it empty on
+  the left, beside the other sheets of the set drawn from the left (24 sheets of 13 bundled examples move left).
 * Boards: the frame of a board no longer encloses the equipment at the far end of its outgoing cables (an inverter,
   a UPS, a transfer switch, another busbar, a transformer fed above 1000 V, or a local isolator in front of them):
   they are drawn below it with what they feed (SPEC §3.1). A board feeding sub-boards ends after its own last way

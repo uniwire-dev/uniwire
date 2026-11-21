@@ -433,3 +433,31 @@ def test_sheet_of_an_installation_without_a_board_is_not_named_after_its_source(
         {"type": "pv_array", "label": "Roof array", "children": [{"type": "inverter", "ref": "-T1", "children": ways("F", 12)}]}]})
     specs = plan_sheets(doc, default_view(doc))
     assert len(specs) == 2 and [s.name for s in specs] == ["", ""]
+
+
+def test_narrow_drawing_drawn_from_the_left_of_its_sheet():
+    """A drawing narrower than its sheet starts at the left of the drawing area, as the wider sheets of the set: it
+    was centred, which left half the sheet empty on the left and read as pushed to the right."""
+    from uniwire.render.frame import drawing_area
+    from uniwire.render.scene import Group, Line, Polyline, Rect, Text
+
+    doc = load({"sources": [{"type": "grid", "ref": "-G1", "children": [{"type": "board", "ref": "=MB", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 16, "children": [{"type": "socket", "ref": "-X1"}]}]}]}],
+        "views": [{"id": "v", "paper": "A3"}]})
+    (page,) = render_pages(doc)
+    diagram = next(g for g in page.root.items if isinstance(g, Group) and g.cls == "diagram")
+
+    def xs(item):
+        if isinstance(item, Group):
+            for c in item.items:
+                yield from xs(c)
+        elif isinstance(item, Rect):
+            yield item.x
+        elif isinstance(item, Line):
+            yield min(item.a[0], item.b[0])
+        elif isinstance(item, Polyline):
+            yield min(p[0] for p in item.points)
+        elif isinstance(item, Text):
+            yield item.p[0]
+    left = drawing_area(doc.views[0])[0]
+    assert min(xs(diagram)) < left + 5.0
