@@ -182,7 +182,7 @@ def _title_block(g: Group, doc: Document, x: float, y: float, w: float, h: float
                                                 if n.type == "earth" and getattr(n, "resistance_ohm", None)), None)
     _cell(tb, c2x, y + rh * 2, half, rh, L("tb.earth_electrode"), fmt(earth, " Ω") if earth else "")
     _cell(tb, c2x + half, y + rh * 2, half, rh, L("tb.standard"),
-          inst.standard or ", ".join(_PROFILE_NAMES.get(p, p) for p in doc.profiles))
+          inst.standard or ", ".join(_PROFILE_NAMES.get(p, p) for p in doc.profiles if p != "core"))  # not a standard
     _cell(tb, c2x, y + rh * 3, half, rh, L("tb.drawn_by"), m.author or "")
     _cell(tb, c2x + half, y + rh * 3, half, rh, L("tb.checked_by"), m.checked_by or "")
     # right column
