@@ -182,40 +182,77 @@ def conductor_count(chain: list[Any], system: Optional[str] = None) -> Optional[
     return SYSTEM_CONDUCTORS.get(system or "")
 
 
-Mark = tuple[int, bool]  # conductor-count mark: (counted conductors, separate uncut neutral)
+Mark = tuple[int, bool]  # conductor-count mark: (counted conductors, separate neutral)
 SWITCHING = PROTECTIVE | {"contactor", "transfer_switch", "impulse_relay"}
-POLES_MARK: dict[str, Mark] = {"1P": (1, True), "1P+N": (1, True), "2P": (2, False), "3P": (3, False),
-                               "3P+N": (3, True), "4P": (4, False)}
+#: Whether the line of a supply system carries a neutral.
+SYSTEM_NEUTRAL = {"1P+N": True, "2P": False, "DC": False, "3P": False, "3P+N": True, "split-phase": True}
+TWO_PHASES = ("L1L2", "L2L3", "L1L3")
+
+
+def _one_phase(n: int, neutral: Optional[bool], phase: Optional[str] = None) -> Mark:
+    """Mark of a line of ``n`` live conductors: one phase and a neutral is always one stroke and '+N' ('L1+N'),
+    whatever the device cuts; without a neutral on the line (``neutral`` False), or on two phases, the conductors
+    are counted. ``neutral`` None: not known (no system declared), a neutral is assumed."""
+    if n == 2 and neutral is not False and phase not in TWO_PHASES:
+        return (1, True)
+    return (n, False)
 
 
 def system_mark(system: Optional[str]) -> Optional[Mark]:
-    """Mark of a supply line: every live conductor counted ('3P+N' -> 4)."""
+    """Mark of a supply line: every live conductor counted ('3P+N' -> 4), one phase and the neutral '+N'."""
     n = SYSTEM_CONDUCTORS.get(system or "")
-    return (n, False) if n else None
+    return _one_phase(n, SYSTEM_NEUTRAL.get(system or "")) if n else None
 
 
-def poles_mark(poles: Optional[str], neutral_downstream: bool = False) -> Optional[Mark]:
+def poles_mark(poles: Optional[str], neutral_downstream: bool = False, neutral: Optional[bool] = None,
+               phase: Optional[str] = None) -> Optional[Mark]:
     """Mark of the line leaving a switching device of ``poles``.
 
-    '4P' (neutral switched): 4 conductors; '3P+N' / '1P+N' / '1P': the phases plus a neutral that is not
-    cut; '3P': three conductors, or three plus an uncut neutral when circuits below need one.
+    '4P' (neutral switched): 4 conductors; '3P+N': the phases plus a neutral that is not cut; '3P': three
+    conductors, or three plus an uncut neutral when circuits below need one; '1P', '1P+N', '2P': one phase and
+    the neutral ('+N'). A device passes on the neutral of its supply and never makes one: on a line without a
+    neutral (``neutral`` False) no '+N', the poles are counted; nor on two phases (``phase`` 'L1L2').
     """
-    if poles == "3P" and neutral_downstream:
-        return (3, True)
-    return POLES_MARK.get(poles or "")
+    if poles not in POLES_CONDUCTORS:
+        return None
+    if neutral is False:
+        return (min(int(poles[0]), 3) if poles[0] != "1" else 2, False)
+    if poles in ("1P", "1P+N", "2P"):
+        return _one_phase(2, True, phase)
+    if poles == "3P":
+        return (3, neutral_downstream)
+    return (3, True) if poles == "3P+N" else (4, False)
 
 
-def feeder_mark(chain: list[Any], system: Optional[str] = None) -> Optional[Mark]:
-    """Mark of an outgoing cable: :func:`conductor_count`, with the neutral shown apart ('3+N', '1+N') when
-    the nearest switching device leaves it uncut. A DC feeder has no neutral: its two poles are counted."""
-    n = conductor_count(chain, system)
+def feeder_mark(chain: list[Any], system: Optional[str] = None, neutral: Optional[bool] = None,
+                above: Optional[Mark] = None) -> Optional[Mark]:
+    """Mark of an outgoing cable: :func:`conductor_count`, else the conductors of the line it leaves (``above``:
+    the mark of that line, below a two-pole device its two conductors, not the installation's), else those of
+    ``system``. The neutral is shown apart ('3+N', '+N') when the nearest switching device leaves it uncut, and
+    only on a line that has one (``neutral``: whether it has, None when not known). A DC feeder has no neutral:
+    its two poles are counted."""
+    if system == "DC":
+        n = conductor_count(chain, system)
+        return (n, False) if n else None
+    n = conductor_count(chain, None)
+    if not n:
+        if above is not None:
+            return above
+        n = SYSTEM_CONDUCTORS.get(system or "")
+    if neutral is None and system:
+        neutral = SYSTEM_NEUTRAL.get(system)
     if not n:
         return None
-    if system == "DC":
-        return (n, False)
+    phase = next((_g(c, "phase") for c in chain if _g(c, "phase")), None)
     poles = next((_g(c, "poles") for c in chain if c.type in SWITCHING | {"spare"} and _g(c, "poles")), None)
-    if poles in ("1P", "1P+N", "3P", "3P+N") and n == int(poles[0]) + 1:
-        return (n - 1, True)
+    if n == 2:
+        if system == "split-phase" and poles == "2P":
+            phase = "L1L2"  # split-phase: a two-pole device is on both lines (240 V)
+        return _one_phase(2, neutral, phase)
+    if n == 4:
+        if neutral is False:
+            return (3, False)  # a spare core: no neutral on the line to carry
+        return (3, True) if poles in ("3P", "3P+N") else (4, False)
     return (n, False)
 
 

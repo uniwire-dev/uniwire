@@ -250,7 +250,37 @@ def _enlargement(lays: list[Any], view: View, cap: float) -> Optional[float]:
     return min(cap, k) if k > 1.0 else None
 
 
+def _future_labels(doc: Document, view: View, lang: str) -> Document:
+    """Outside the ``status`` colour mode (where future is drawn blue and dashed), a node of status ``future``, and
+    what inherits that status below it (as the colour mode does: down to a node stating its own status, not below a
+    spare), has "(future)" added to its label, so that a proposed circuit is not read as an existing one. The strokes
+    are unchanged. Returns ``doc`` itself when nothing is future, else a copy."""
+    if view.color == "status":
+        return doc
+
+    def future(n: Any, up: Optional[str]) -> bool:
+        st = n.status or up
+        return st == "future" or any(future(c, st if st != "spare" else None) for c in n.children)
+
+    if not any(future(s, None) for s in doc.sources):
+        return doc
+    doc = doc.model_copy(deep=True)
+    word = _t("legend.status.future", lang)
+
+    def mark(n: Any, up: Optional[str]) -> None:
+        st = n.status or up
+        if st == "future" and word.casefold() not in (n.label or "").casefold():
+            n.label = f"{n.label} ({word})" if n.label else f"({word})"
+        for c in n.children:
+            mark(c, st if st != "spare" else None)
+
+    for s in doc.sources:
+        mark(s, None)
+    return doc
+
+
 def _render_pages(doc: Document, view: View, lang: str) -> list[Page]:
+    doc = _future_labels(doc, view, lang)
     if view.kind == "multi-line":
         return _render_multiline(doc, view, lang)
     if "paper" not in view.model_fields_set:
