@@ -8,6 +8,20 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line drawings: links avoid closing round what they pass, and power links join conductors. A link leaves a
+  device by the side facing the other end when it can: a route turning three times the same way (round its own
+  device, round a group of devices back to the trunk it joins) is costed like a crossing, so a meter's lead to its
+  trunk goes the short way instead of drawing a dashed rectangle round the incomer that read as a board frame, and two
+  interlocked contactors one above the other are joined on one side, as a bracket, instead of the link running back
+  across the leads of the first one. A thin link routed on another line (another link, a conductor) is rerouted with
+  more corners when that is clearly better. A standby supply leaving a busbar for the side input of its transfer
+  switch (a UPS bypass) taps the busbar where its run crosses the fewest feeders, never beyond an end that a bus tie
+  continues; before, it left the far end of the busbar and crossed every feeder of the section. A power link leaving
+  a conductor that ends on an outgoing arrow (a generator feeding a busbar) starts on that conductor, with a junction
+  dot, level with the busbar; before, the busbar end turned down to the arrow beside the conductor. A device
+  connected in parallel after another (a surge arrester after its fuse) lands on the conductor below that device,
+  with a junction dot; before, its link ended on the side of the device's body and read as a bypass of it. A solid
+  power link pays more for each conductor it crosses, and no link label is written on the switch of a bus tie.
 * Frames and texts: a board, enclosure or view frame is no longer drawn through a text (a neighbour's label
   running into it, the "Auxiliary devices" title, a bus coupler's text): its edge moves past the text, or the
   coupler between two boards side by side gets the room its text needs. A board feeding sub-boards ends after its
