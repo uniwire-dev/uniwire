@@ -926,3 +926,18 @@ def test_table_rating_not_taken_from_a_board_and_small_kw_rounded():
     t = next(_texts(g) for g in _items_groups(render_pages(doc)[0].root) if g.cls == "cartouche")
     assert "63 A" not in t  # the busbar rating of a board is not the rating of a feeder
     assert "0.83 kW" in t and "2 kW" in t
+
+
+def test_annotation_line_dropped_only_when_the_label_says_it():
+    """A characteristic is left out beside the label only when the label holds it as whole words ('Type 2' in
+    'SPD type 2'), not as a piece of a longer number or word ('16 A' in 'Hall 116 A', 'C2' in 'C1-C2')."""
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "breaker", "ref": "-Q1", "label": "Hall 116 A", "in_A": 16, "children": [
+            {"type": "load", "label": "X"}, {"type": "load", "label": "Y"}]},
+        {"type": "breaker", "ref": "-Q2", "label": "Night rate (contacts C1-C2)", "in_A": 2, "curve": "C", "children": [
+            {"type": "load", "label": "V"}, {"type": "load", "label": "W"}]},
+        {"type": "spd", "label": "SPD type 2", "spd_type": "2"}]}]}]})
+    texts = _texts(render_pages(doc)[0].root)
+    assert texts[texts.index("Hall 116 A") + 1] == "16 A"
+    assert texts[texts.index("Night rate (contacts C1-C2)") + 1] == "C2"  # a rating, not the contacts named
+    assert "Type 2" not in texts

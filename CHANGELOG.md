@@ -17,6 +17,47 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Single-line drawings: the texts of the off-sheet stubs of a device (one under the other on its left) are no longer
   written over the text of the device on its left: its column moves right by what they need. The room is taken
   only where the sheet keeps its scale with it (never a smaller drawing, never one more sheet).
+* Multi-line drawings: a busbar too long for one sheet shares its ways evenly among as many sheets as it needs
+  (27 ways: 9 on each of three sheets, no longer 13, 13 and 1).
+* Single-line drawings: the label of a device keeps at least 0.4 mm from the symbol of a device beside it in the
+  next column, on more lines when needed (it ran up to the abbreviation written left of a UPS, or to the box of a
+  converter).
+* Single-line drawings: of two boards as wide that could go to a sheet of their own, the one later in the
+  document goes, so the sheets keep the order of the document (two identical boards could swap sheets on a small
+  change of their widths).
+* Drawings: every text cut to fit its place ends with an ellipsis and is cut by its width, by one rule. The
+  family of a PLC was cut to twelve characters in its head and the function of a protection relay to six in its
+  box, without an ellipsis; a title block value had its own cut. No space is left before the ellipsis.
+* Drawings: the width of a text is measured with the advance width of each character in Arial (the widths of
+  Liberation Sans, the font of the PDF on a server: a table in `uniwire.render.glyph_widths`, written by
+  `tools/glyph_widths.py` from the font file). The estimate by classes of characters was narrower than the text
+  for wide capitals ("W" by 0.14 em: six of them were drawn 1.4 mm wider than measured), Cyrillic letters and
+  arrows; boxes, columns and texts placed by their width now fit what is drawn. A text reduced to fit its room
+  exactly (a title block value, a device annotation) is no longer cut by a rounding error, and a label of a
+  multi-line drawing keeps off the triangle of a mechanical interlock.
+* Single-line drawings: a characteristic of a device (a rating, a curve, a type of meter) is left out beside its
+  label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
+  out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a
+  label with a word containing a C, a "C2" rating beside contacts named "C1-C2".
+* Single-line drawings: an earth link never ends on the power path. To a board it ended on the busbar end or on
+  the incoming conductor above the isolator (it read as a protective conductor tied to a phase, its label often on
+  the busbar); it now ends on an earth terminal drawn inside the board's frame, low on its side, one per link, clear
+  of the devices and texts, its off-sheet stub included. To a busbar drawn alone it ends on an earth terminal beside
+  the busbar's end; to a device whose left side carries conductors (an inverter/charger with its DC side and its
+  feeds there) on the top of its body, beside its conductor, instead of on its DC terminal.
+* Single-line drawings: an earth bar, main earthing terminal or electrode drawn inside a board's frame is that board's
+  earth point. The earth link between them is a short straight lead from it to the nearest side of the frame it
+  reaches without crossing anything (it ran across the whole board to a terminal on the far side), and the other
+  earth links of the board end on it when their route there is short and crosses nothing, its off-sheet stubs
+  included.
+* Drawings: off-sheet stubs stacked on the side of a device past its body (many links from one earth bar, a
+  controller or a drive to other sheets) are attached to it; their leads ended in empty space. Earth stubs (one
+  potential) start on a riser from the earth stub above, with a junction dot where they branch off; the stubs of
+  other thin links (control, data, trip...) each keep a lead of their own from the device, out of a point of its
+  side or of its bottom (clear of its conductor and of its PLC channel wires), never joined to another nor crossing
+  one, their arrows in one column. The two texts of a stub stay together on one side of its arrow, the sheet
+  reference on top.
+
 * PDF: an arrow the font has no glyph for ("⇄", "⇒") is written in ASCII ("<->", "=>") instead of being left out
   of the text; without a Unicode font, where a box was drawn, too.
 * Single-line symbols: a box widens for the text written in it. The coil of an impulse relay was 2.6 mm wide
