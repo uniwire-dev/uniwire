@@ -161,6 +161,11 @@ class Conductors:
     inp: list[str]
     out: list[str]
     src: dict[str, Optional[str]]
+    star: Optional[str] = None  # a transformer whose star point is earthed: its neutral conductor (N or PEN)
+
+
+#: Earthing systems whose supply has its neutral earthed at the source (TT: by its own electrode).
+EARTHED_NEUTRAL = ("TN-S", "TN-C", "TN-C-S", "TT")
 
 
 class _Assigner:
@@ -435,6 +440,18 @@ class _Assigner:
             system = "3P+N" if neutral else "3P"
         return self.lv(system, self._downstream_earthing(node))
 
+    def _star(self, node: Any, out: list[str]) -> Optional[str]:
+        """The conductor earthed at the star point of a transformer: its neutral (N, or the PEN) in TN and TT
+        systems, and with a PE leaving it (TN-S drawn with its PE, or no earthing system declared). None: no
+        neutral out, an IT system (isolated, or earthed through a ``neutral_impedance`` drawn on its own), a safety
+        extra-low voltage or a high-voltage secondary."""
+        u2 = getattr(node, "u2_V", None)
+        if u2 is not None and (u2 <= 50 or u2 > 1000):
+            return None
+        if "PE" not in out and self._downstream_earthing(node) not in EARTHED_NEUTRAL:
+            return None
+        return next((c for c in ("PEN", "N") if c in out), None)
+
     def _is_mv(self, node: Any) -> bool:
         if (getattr(node, "un_V", None) or 0) > 1000:
             return True
@@ -503,7 +520,7 @@ class _Assigner:
             out = list(inp)
             self.info[id(node)] = Conductors(inp, _sorted(out + list(DC)), src)
         else:
-            self.info[id(node)] = Conductors(inp, out, src)
+            self.info[id(node)] = Conductors(inp, out, src, self._star(node, out) if t == "transformer" else None)
         for c in node.children:
             if any(c is d for d in dc_side):
                 self._walk(c, list(DC), False, node)
@@ -674,6 +691,7 @@ class MLNode:
     under: float = 0.0  # room under the contacts for what the device writes there (the W2 U2 V2 of a star-delta)
     body: float = 0.0  # a boxed device many links reach: its box drawn this much taller (see _pad_boards)
     text_room: float = 0.0  # ... and the room on its left for the texts of its links
+    star: Optional[str] = None  # transformer: its neutral earthed at the star point (see Conductors.star)
 
     @property
     def id(self) -> str:
@@ -812,7 +830,8 @@ def _build(node: NodeBase, spec: SheetSpec, info: dict[int, Conductors], is_root
     dc = [ch for ch in children if two_sides and any(x in DC for x in info[id(ch)].inp)]
     children = [ch for ch in children if not any(ch is d for d in dc)] + dc
     return MLNode(node, "node", list(c.inp), list(c.out), dict(c.src),
-                  [_build(ch, spec, info, False) for ch in children], bus_out=bus_out, root=is_root, dc_side=len(dc))
+                  [_build(ch, spec, info, False) for ch in children], bus_out=bus_out, root=is_root, dc_side=len(dc),
+                  star=c.star)
 
 
 def _build_roots(spec: SheetSpec, index: Index, info: dict[int, Conductors]) -> list[MLNode]:
@@ -1378,7 +1397,7 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
                 continue
             dx = min(abs(x - cx), r * 0.95)
             g.add(cond_group(c, Line((x, y), (x, c1[1] - math.sqrt(r * r - dx * dx)))))
-        _draw_out_from_circle(g, ln, c2, r, y + h)
+        _draw_out_from_circle(g, ln, c2, r, y + h, ln.star)
         return g
 
     if t == "generator" or (ln.root and t in SOURCE_TYPES):
@@ -1587,9 +1606,14 @@ def _box_text(ln: MLNode) -> str:
     return _abbr(t)  # never the tag: it is written beside the device
 
 
-def _draw_out_from_circle(g: Group, ln: MLNode, c: tuple[float, float], r: float, y_end: float) -> None:
+def _draw_out_from_circle(g: Group, ln: MLNode, c: tuple[float, float], r: float, y_end: float,
+                          star: Optional[str] = None) -> None:
     """Output conductors of a machine / transformer: from the bottom of the circle; the PE starts beside it,
-    bonded to the neutral (TN) or to an earth electrode."""
+    bonded to the neutral (TN) or to an earth electrode. ``star``: the neutral (N, PEN) of a transformer earthed at
+    its star point; with no PE leaving it (TN-C, TN-C-S, TT), that conductor is earthed there by its own electrode."""
+    if star in ln.out and "PE" not in ln.out:
+        x, yb = ln.xo(star), y_end - 2.0
+        g.add(Group([_dot(x, yb), Line((x, yb), (x + 2.5, yb)), *_earth(x + 2.5, yb)], cls="star-point-earth"))
     for cond in ln.out:
         x = ln.xo(cond)
         if cond == "PE":
