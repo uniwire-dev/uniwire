@@ -82,6 +82,13 @@ def busbar_group(owner: str, items: Iterable[Item] = (), cond: Optional[str] = N
     return g
 
 
+#: Target sheet of a reference to a node drawn in another view of the drawing set (a link between two views): the
+#: layout of one view does not know the sheets of the others, the drawing set writes it (render.place_elsewhere).
+ELSEWHERE = -1
+#: The sheet number such a reference is laid out with (its text as wide as a reference to a sheet of two figures).
+ELSEWHERE_SHOWN = 99
+
+
 def ref_group(sheet: Optional[int], target: Optional[str], items: Iterable[Item] = ()) -> Group:
     """Reference to another sheet (off-page arrow, continuation, cross-sheet link end, incoming feed)."""
     return Group(list(items), cls="uw-ref", attrs={"data-uw-target-sheet": str(sheet) if sheet else "",
