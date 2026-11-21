@@ -8,6 +8,12 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Multi-line drawings: below an inverter/charger, a busbar or board with no system stated that feeds only DC ways
+  (a battery busbar and the breakers of its batteries) is on the DC side, drawn with L+ and L-. It was drawn with the
+  AC conductors of the supply (L1, N, PE on a battery). An inverter whose children are all on its DC side keeps its
+  AC output when a transfer, bypass, parallel or tie link leaves it, so that link is still drawn. A way that reaches
+  a battery or PV array through another inverter stays on the AC side.
+
 * Single-line drawings: a characteristic of a device (a rating, a curve, a type of meter) is left out beside its
   label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
   out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a
