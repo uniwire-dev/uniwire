@@ -34,9 +34,17 @@ BUS_CLEAR_THIN = 4.0  # a thin link keeps this far from a busbar it runs along
 FRAME_CLEAR, FRAME_RUN = 2.5, 6.0  # a link keeps this far from a dashed frame it runs along for longer
 FRAME_ALONG = 60.0  # ... unless the way out runs on another line, which is worse
 BUS_CROSS, FRAME_CROSS, WIRE_CROSS = 80.0, 60.0, 5.0  # crossings: a busbar reads like a tap, fewer is clearer
+# a dashed link across a busbar: drawn with a gap there, a crossing like that of a few feeders (not the price of a
+# tap: a dashed link kept off a board's busbars runs across every feeder below them instead)
+DASHED_BUS_CROSS = 4 * WIRE_CROSS
 NEAR_RUN = 20.0  # per mm run within ``Obstacles.near_wire`` of a conductor (multi-line)
 SOLID_CROSS = 30.0  # a solid power link across a conductor: reads as a connection there (a dashed link does not)
 WRAP = 50.0  # a turn taking a route round what it passes on three sides (with its ends, it reads as a frame)
+
+
+def bus_cross(solid: bool) -> float:
+    """Cost of a link crossing a busbar: a solid line there reads like a tap, a dashed one is drawn with a gap."""
+    return BUS_CROSS if solid else DASHED_BUS_CROSS
 
 
 def _hit(a: Box, b: Box, pad: float = 0.0) -> bool:
@@ -330,7 +338,8 @@ def _seg_cost(obs: Obstacles, a: Point, b: Point, lane: float = LANE, solid: boo
                 if sx0 < o[2] + CLEAR and o[0] < sx1 + CLEAR and sy0 < o[3] + CLEAR and o[1] < sy1 + CLEAR]) if boxes else 0
     if abs(x0 - x1) < 1e-9:  # vertical: crosses busbars (reads like a tap) and frames at a price
         if obs.buses:
-            cost += sum([BUS_CROSS for y, h0, h1 in obs.buses if sy0 < y < sy1 and h0 < x0 < h1])
+            bus = bus_cross(solid)
+            cost += sum([bus for y, h0, h1 in obs.buses if sy0 < y < sy1 and h0 < x0 < h1])
         if frames:
             cost += sum([FRAME_CROSS for f in frames for y in (f[1], f[3]) if sy0 < y < sy1 and f[0] < x0 < f[2]])
     else:
@@ -459,12 +468,13 @@ def _leg(obs: Obstacles, e: End, y: float, lane: float = LANE,
 
 
 class _VLine:
-    """``_seg_cost`` of the vertical segments at x = ``x`` (not ``solid``), for the many legs ``route`` tries on one
-    line: the tests that depend on x alone done once, the others on the obstacles that pass them. The same terms, in
-    the same order, summed the same way: the same costs."""
+    """``_seg_cost`` of the vertical segments at x = ``x``, for the many legs ``route`` tries on one line: the tests
+    that depend on x alone done once, the others on the obstacles that pass them. The same terms, in the same order,
+    summed the same way: the same costs."""
 
-    def __init__(self, obs: Obstacles, x: float, lane: float):
+    def __init__(self, obs: Obstacles, x: float, lane: float, solid: bool = False):
         half = lane / 2
+        self.bus = bus_cross(solid)
         self.box_cross, self.run_along = obs.box_cross, obs.run_along
         self.boxes = [(o[1], o[3] + CLEAR) for o in obs.boxes if x < o[2] + CLEAR and o[0] < x + CLEAR]
         self.buses = [y for y, h0, h1 in obs.buses if h0 < x < h1]
@@ -480,7 +490,7 @@ class _VLine:
         """``cost(ye, y)`` as a function of y, for the legs from one end: the tests and bounds that depend on ``ye`` alone
         done once for each way (y above or below ``ye``), the boxes, busbars and frame sides crossed counted by
         bisection (a sum of equal terms: the same sum)."""
-        w, bc = self.run_along, self.box_cross
+        w, bc, bus = self.run_along, self.box_cross, self.bus
         # y > ye: lo = ye, hi = y
         up_boxes = sorted(y0 for y0, y1c in self.boxes if ye < y1c)
         up_bars = sorted(y for y in self.buses if ye < y)
@@ -503,7 +513,7 @@ class _VLine:
             if ye < y:
                 c = sum([bc] * bisect_left(up_boxes, y + CLEAR)) if up_boxes else 0
                 if up_bars:
-                    c += sum([BUS_CROSS] * bisect_left(up_bars, y))
+                    c += sum([bus] * bisect_left(up_bars, y))
                 if up_sides:
                     c += sum([FRAME_CROSS] * bisect_left(up_sides, y))
                 if up_along:  # (``_along`` written out)
@@ -515,7 +525,7 @@ class _VLine:
                 return c
             c = sum([bc] * (len(down_boxes) - bisect_right(down_boxes, y))) if down_boxes else 0
             if down_bars:
-                c += sum([BUS_CROSS] * (len(down_bars) - bisect_right(down_bars, y)))
+                c += sum([bus] * (len(down_bars) - bisect_right(down_bars, y)))
             if down_sides:
                 c += sum([FRAME_CROSS] * (len(down_sides) - bisect_right(down_sides, y)))
             if down_along:
@@ -541,7 +551,7 @@ class _VLine:
         else:
             cost = 0
         if self.buses:
-            cost += sum([BUS_CROSS for y in self.buses if lo < y < hi])
+            cost += sum([self.bus for y in self.buses if lo < y < hi])
         if self.sides:
             cost += sum([FRAME_CROSS for y in self.sides if lo < y < hi])
         if self.along:  # (``_along`` written out)
@@ -559,11 +569,11 @@ class _Legs:
     """The ways ``_leg`` tries from the end ``e`` to a channel, for ``route``: each stub with its horizontal cost and the
     line of its vertical, costed once."""
 
-    def __init__(self, obs: Obstacles, e: End, lane: float, seg: _Costs):
+    def __init__(self, obs: Obstacles, e: End, lane: float, seg: _Costs, solid: bool = False):
         self.e = e
         lines: dict[float, _VLine] = {}
         if e.side in ("down", "up"):
-            self.line = _VLine(obs, e.x, lane).leg(e.y)  # (``cost(y, e.y)`` is ``cost(e.y, y)``)
+            self.line = _VLine(obs, e.x, lane, solid).leg(e.y)  # (``cost(y, e.y)`` is ``cost(e.y, y)``)
             return
         self.stubs = []
         for s in e.stubs:
@@ -571,7 +581,7 @@ class _Legs:
             h, t = seg((e.x, e.y), (xs, e.y)), 0.15 * s
             line = lines.get(xs)
             if line is None:
-                line = lines[xs] = _VLine(obs, xs, lane)
+                line = lines[xs] = _VLine(obs, xs, lane, solid)
             self.stubs.append((xs, h, t, h + t, line.leg(e.y)))
 
     def within(self, y: float, ca: Optional[float], extra: float, bound: float) -> tuple[float, list[Point]]:
@@ -675,7 +685,7 @@ def _channel(obs: Obstacles, a: End, b: End, lo: float, hi: float, step: float, 
     """Cheapest route through one channel between the heights ``lo`` and ``hi``: (cost, points, height of the
     channel, the channel); ``unshared``: only channels running on no other line; ``wrap``: see ``route``."""
     seg = _Costs(obs, lane)
-    legs_a, legs_b = _Legs(obs, a, lane, seg), _Legs(obs, b, lane, seg)
+    legs_a, legs_b = _Legs(obs, a, lane, seg, solid), _Legs(obs, b, lane, seg, solid)
     best: tuple[float, list[Point], float, list[Point]] = (1e18, [], lo, [])
     n = int((hi - lo) / step)
     # Every cost is >= 0 and a rounded sum never decreases when a term grows: a channel, or a stub, whose cost so far
@@ -991,14 +1001,17 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
                step: float = 1.0, record: bool = True,
                cost_out: Optional[list[float]] = None, bend: float = 0.0,
                length: float = GRID_LENGTH, wrap: float = 0.0,
-               then: Optional[list[Optional[int]]] = None) -> tuple[list[Point], int, int]:
+               then: Optional[list[Optional[int]]] = None, solid: bool = False) -> tuple[list[Point], int, int]:
     """Cheapest orthogonal route, with as many corners as needed, from one of ``starts`` to one of ``goals``
     (the ends a link may use on each device): Dijkstra on a grid of ``step`` mm laid over ``window``, through
     the coordinates of the ends. Same costs as ``route`` (texts and symbols, lines run along or crossed,
     frames), plus a cost per corner (``bend``, ``BEND`` if not given) and per mm (``length``). ``wrap``: the cost of a
     turn closing the route round what it passes (see ``wraps``); ``then``: for each goal, the move the line goes on
-    with from there (a trunk), or None. Returns the points and the indexes of the ends used (no route: [])."""
+    with from there (a trunk), or None; ``solid``: a power link drawn as a plain line (a busbar crossed costs a tap,
+    see ``bus_cross``). Returns the points and the indexes of the ends used (no route: [])."""
     from bisect import bisect_left, bisect_right
+
+    bus = bus_cross(solid)
 
     bend = bend or BEND
 
@@ -1114,7 +1127,7 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
                 g = gap_y[j] = (between(buses, a, b), between(fy, a, b), between(hl, a, b))
             bars, sides, wires = g
             if bars:
-                c += sum(BUS_CROSS for y, h0, h1 in bars if h0 < x < h1)
+                c += sum(bus for y, h0, h1 in bars if h0 < x < h1)
             if sides:
                 c += sum(FRAME_CROSS for y, h0, h1 in sides if h0 < x < h1)
             if wires:
@@ -1158,7 +1171,7 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
         res = _grid_search(nx, ny, xs, ys, bytes(blocked_at),
                              _ragged([terms(x, True) for x in xs]), _ragged([terms(y, False) for y in ys]),
                              *_gaps(ys, [buses, fy, hl]), *_gaps(xs, [vw, fx]),
-                             box_cross, length, bend, wrap, BUS_CROSS, FRAME_CROSS, WIRE_CROSS, start_at,
+                             box_cross, length, bend, wrap, bus, FRAME_CROSS, WIRE_CROSS, start_at,
                              [(st, k, -1 if then is None or then[k] is None else then[k]) for st, k in goal_at.items()],
                              _WIND_TURNS, _WIND_WRAP)
         if res is None:
@@ -1267,7 +1280,7 @@ def improve_route(obs: Obstacles, a: End, b: End, pts: list[Point], lane: float 
     starts, goals = starts or [a], goals or [b]
     xs, ys = [e.x for e in starts + goals], [e.y for e in starts + goals]
     window = (min(xs) - 25.0, min(ys) - 25.0, max(xs) + 25.0, max(ys) + 25.0)
-    alt, _ka, _kb = route_grid(obs, starts, goals, window, lane, record=False, bend=DETOUR_BEND)
+    alt, _ka, _kb = route_grid(obs, starts, goals, window, lane, record=False, bend=DETOUR_BEND, solid=solid)
     if len(alt) < 2 or max((_length([p, q]) for p, q in zip(alt, alt[1:])), default=0.0) < min_run:
         return pts
     if not crossing and _length(alt) > 0.8 * _length(pts):  # far round only: worth it when clearly shorter

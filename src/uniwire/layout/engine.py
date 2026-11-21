@@ -19,19 +19,21 @@ from ..labels import (
     SYSTEM_NEUTRAL,
     Mark,
     annotation,
+    cable_caption,
     cable_in_awg,
     cell,
     conductor_count,
-    drawn_cable_text,
     feeder_mark,
     part_number,
     poles_mark,
     protection_short,
     ref_label,
+    says,
     state_text,
     system_mark,
     target_text,
     without_ref,
+    words,
 )
 from ..model import NODE_TYPES, Document, NodeBase, View
 from ..render.scene import (
@@ -79,7 +81,6 @@ from ..symbols import (
     without_leads,
 )
 from ..symbols import kind as symbol_kind
-from ..units import fmt
 from .routing import (
     CLEAR,
     DETOUR_BEND,
@@ -571,17 +572,7 @@ def _label_text(node: Any, view: View) -> str:
     return without_ref(node.label, node.ref) if _tag(node, view) == node.ref else node.label
 
 
-def _words(text: str) -> list[str]:
-    """The words of ``text`` as written between spaces, case aside, without the punctuation around them
-    ('(night' -> 'night'; 'C1-C2' and '1P+N' stay whole)."""
-    return [w for w in (re.sub(r"^[\W_]+|[\W_]+$", "", w) for w in text.casefold().split()) if w]
-
-
-def _says(label: str, line: str) -> bool:
-    """Whether ``label`` already says ``line``: it holds its words, one after the other ('Type 2' in 'SPD type 2';
-    not '16 A' in '116 A', 'C' in a word starting with C, nor 'C2' in 'C1-C2')."""
-    words, have = _words(line), _words(label)
-    return bool(words) and any(have[i:i + len(words)] == words for i in range(len(have) - len(words) + 1))
+_words, _says = words, says
 
 
 def _ann_lines(ln: LNode, view: View, lang: str) -> list[str]:
@@ -2100,14 +2091,7 @@ def _in_column(n: LNode) -> bool:
     return True
 
 
-def _cable_caption(c: Any) -> str:
-    """'W7 U1000R2V 5x6 38 m': tag, designation, composition and length of a cable written in the text of its
-    device, as the multi-line view writes them ('' without a composition nor a designation: a bare length says
-    nothing)."""
-    comp = drawn_cable_text(c)
-    if not (comp or c.designation):
-        return ""
-    return " ".join(x for x in (c.ref, c.designation, comp, fmt(c.length_m, " m") if c.length_m else "") if x)
+_cable_caption = cable_caption
 
 
 def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: Group, obs: Obstacles,
@@ -4120,7 +4104,8 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 xs_ = [e.x for e in alts[0] + alts[1]]
                 ys_ = [e.y for e in alts[0] + alts[1]]
                 window = (min(xs_) - 25.0, min(ys_) - 25.0, max(xs_) + 25.0, max(ys_) + 25.0)
-                pts, ka, kb = route_grid(obs, alts[0], alts[1], window, opts["lane"], record=not carries)
+                pts, ka, kb = route_grid(obs, alts[0], alts[1], window, opts["lane"], record=not carries,
+                                         solid=opts["solid"])
                 ends = [alts[0][ka], alts[1][kb]]
                 chosen[i] = (ends[0].side, ends[1].side)
                 for k, e in enumerate(ends):  # an end turning out of an operating line: its first stretch

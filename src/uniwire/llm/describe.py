@@ -8,10 +8,12 @@ followed by the ``[ref]``, the type, the quoted label, then the node's own field
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter
 from typing import Any
 
 from ..i18n import normalize_lang
+from ..labels import states_runs
 from ..model import Document, NodeBase
 from ..resolve import load
 from .patch import DocLike, as_dict
@@ -67,14 +69,11 @@ def cable_text(cable: Any) -> str:
         parts.append(c["ref"])
     if c.get("kind") and c["kind"] != "cable":
         parts.append(c["kind"])
-    size = ""
-    if c.get("parallel"):
-        size += f"{c['parallel']}x("
-    size += c.get("cores") or ""
-    if c.get("section_mm2") is not None:
-        size += f"{_num(c['section_mm2'])}mm2"
-    if c.get("parallel"):
-        size += ")"
+    size = c.get("cores") or ""
+    if c.get("section_mm2") is not None and not (size.endswith(")") or re.search(r"\d$", size)):
+        size += f"{_num(c['section_mm2'])}mm2"  # not after a composition that has its sections ('4x(1x240)')
+    if c.get("parallel") and not states_runs(size):  # '4x(4x1x240)' already counts its runs
+        size = f"{c['parallel']}x({size})"
     if size:
         parts.append(size)
     if c.get("size_awg"):
