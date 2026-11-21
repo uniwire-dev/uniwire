@@ -8,6 +8,11 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Web viewer: the drawing no longer jumps while the viewer starts. The loading card left in place grew into a
+  small note in a corner across the preview of the drawing, and the drawing toolbar gained a row when the document's
+  view and colour selects appeared; the sheet tabs now keep their own row (one row with the controls in a wide
+  pane) and the selects narrow to stay on the controls' row. The page carries its full title and a heading for
+  screen readers.
 * Single-line drawings: an earth bar or an earth electrode placed in the power tree is on the protective conductor
   only, as in multi-line drawings. Under a busbar it is drawn beside it, with no conductor from the bars (a solid
   line from the busbar to the earth bar read as the bars earthed); elsewhere the line reaching it, and the one from
