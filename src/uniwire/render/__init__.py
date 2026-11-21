@@ -251,20 +251,25 @@ def _enlargement(lays: list[Any], view: View, cap: float) -> Optional[float]:
 def _render_pages(doc: Document, view: View, lang: str) -> list[Page]:
     if view.kind == "multi-line":
         return _render_multiline(doc, view, lang)
+    planned = None
     if "paper" not in view.model_fields_set:
         # no paper in the document: the smallest sheet that holds the drawing at full size (A4 landscape), else A3
         small = view.model_copy(update={"paper": "A4"})
         index = build_index(doc)
-        if len(plan_sheets(doc, small, index)) == len(plan_sheets(doc, view, index)):
-            pages, lays = _render_sheets(doc, small, lang)
+        trials: dict[tuple, Any] = {}
+        on_small, planned = plan_sheets(doc, small, index, trials), plan_sheets(doc, view, index, trials)
+        if len(on_small) == len(planned):  # (each plan drawn as made: planning the sheets again gives the same)
+            pages, lays = _render_sheets(doc, small, lang, on_small)
             if all(_room(lay, small) >= 0.999 for lay in lays):
                 return pages
-    return _render_sheets(doc, view, lang)[0]
+    return _render_sheets(doc, view, lang, planned)[0]
 
 
-def _render_sheets(doc: Document, view: View, lang: str) -> tuple[list[Page], list[Any]]:
+def _render_sheets(doc: Document, view: View, lang: str, specs: Optional[list[Any]] = None
+                   ) -> tuple[list[Page], list[Any]]:
+    """The sheets of a single-line view; ``specs``: its sheets as ``plan_sheets`` gives them, when already planned."""
     index = build_index(doc)
-    specs = plan_sheets(doc, view, index)
+    specs = plan_sheets(doc, view, index) if specs is None else specs
     folio_by_root: dict[str, int] = {}
     for i, s in enumerate(specs, 1):
         if s.roots and not s.continuation and i > 1:
