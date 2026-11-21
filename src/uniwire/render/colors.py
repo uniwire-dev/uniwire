@@ -388,9 +388,33 @@ def _tint(color: str, amount: float = 0.78) -> str:
     return "#" + "".join(f"{round(c + (255 - c) * amount):02x}" for c in (r, g, b))
 
 
+EARTH_STYLE = Style(dash=(3.0, 0.8, 0.6, 0.8), color="#2e7d32")  # protective conductor without colours: dash-dot
+
+
+def _protective(g: Group, inside: bool = False) -> None:
+    """The protective conductor (PE) of a multi-line sheet drawn in black, dash-dot in the green of the earth links
+    of the single-line diagram: otherwise nothing but its name at the sheet edge tells it from a phase."""
+    inside = inside or g.attrs.get("data-uw-cond") == "PE"
+    out: list[Item] = []
+    for it in g.items:
+        if isinstance(it, Group):
+            if not has_cls(it, "uw-hit"):
+                _protective(it, inside)
+        elif inside and isinstance(it, (Line, Polyline)) and not getattr(it, "closed", False) \
+                and it.style.color == BLACK and not it.style.dash:
+            s = it.style
+            it = type(it)(**{**it.__dict__, "style": Style(s.width, EARTH_STYLE.dash, EARTH_STYLE.color, s.fill,
+                                                           s.dash_offset)})
+        out.append(it)
+    g.items = out
+
+
 def colorize(group: Group, doc: Document, view: View, index: Index, multiline: bool = False) -> Optional[Legend]:
-    """Recolour a laid-out sheet (in place) for ``view.color``; returns its legend (``None``: nothing coloured)."""
+    """Recolour a laid-out sheet (in place) for ``view.color``; returns its legend (``None``: nothing coloured).
+    Without colours, the protective conductor of a multi-line sheet is drawn dash-dot (see ``_protective``)."""
     if not view.color or view.color == "none":
+        if multiline:
+            _protective(group)
         return None
     c = Colorizer(doc, view, index)
     c.apply(group, multiline)

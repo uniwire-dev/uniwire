@@ -165,7 +165,8 @@ def _repair(data: dict[str, Any], err: ValidationError) -> tuple[dict[str, Any],
 def _short_form(text: str, limit: int) -> str:
     """A text written where only ``limit`` characters fit: without its spaces when that fits ('L1 L2 L3':
     'L1L2L3'), else the initials of its words when they are all words of letters ('Air conditioner': 'AC'), else
-    its beginning."""
+    its first whole words that fit ('Pump P-200': 'Pump'), never cut in the middle of a word; a first word longer than
+    the field is cut with a full stop marking the abbreviation ('Dehumidifier': 'Dehum.')."""
     compact = "".join(text.split())
     if len(compact) <= limit:
         return compact
@@ -173,7 +174,16 @@ def _short_form(text: str, limit: int) -> str:
     initials = "".join(w[0] for w in words).upper()
     if len(words) > 1 and all(w.isalpha() for w in words) and len(initials) <= limit:
         return initials
-    return text.strip()[:limit].strip()
+    kept: list[str] = []
+    for w in words:
+        if len(" ".join([*kept, w])) > limit:
+            break
+        kept.append(w)
+    while kept and not any(ch.isalnum() for ch in kept[-1]):  # no separator left at the end ('A1 /')
+        kept.pop()
+    if kept:
+        return " ".join(kept)
+    return words[0][:max(1, limit - 1)] + "." if words else ""
 
 
 def _where(found: tuple[Any, list[str]]) -> str:

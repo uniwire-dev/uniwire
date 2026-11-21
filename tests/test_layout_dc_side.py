@@ -115,3 +115,30 @@ def test_device_declared_dc_is_on_the_dc_side():
     inv = _inverter(uniwire.load(with_ac))
     assert inv.dc_side == 2  # the DC surge protector beside the battery, not on the AC busbar
     assert [c.type for c in inv.bus_children] == ["switch_disconnector"]
+
+
+def test_power_supply_fed_from_a_dc_line_has_a_dc_input_in_both_views():
+    """A power supply fed from a DC line is a DC/DC converter in the single-line view as in the multi-line one:
+    no '~' on its input; fed from the grid it keeps it."""
+    from uniwire import render_pages
+    from uniwire.render.scene import Group, Text
+
+    def texts(item):
+        return [item.text] if isinstance(item, Text) else [t for i in getattr(item, "items", []) for t in texts(i)]
+
+    def node(item, nid):
+        if isinstance(item, Group):
+            if item.id == nid:
+                return item
+            return next((g for i in item.items if (g := node(i, nid)) is not None), None)
+        return None
+
+    def symbol_texts(src):
+        doc = uniwire.load({"installation": {"system": "DC" if src == "battery" else "1P+N", "un_V": 48},
+                            "sources": [{"type": src, "children": [{"type": "fuse", "in_A": 10, "children": [
+                                {"type": "power_supply", "id": "PS", "u2_V": 24, "children": [{"type": "load"}]}]}]}],
+                            "views": [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]})
+        return [[t for t in texts(node(render_pages(doc, v)[0].root, "PS")) if t in ("~", "=", "~/=")] for v in doc.views]
+
+    assert symbol_texts("battery") == [[], ["=", "="]]  # the single-line DC mark is drawn, not a character
+    assert symbol_texts("grid") == [["~"], ["~", "="]]
