@@ -198,7 +198,7 @@ def _breaker(i, amps, label=None):
 
 
 STANDBY_ACROSS = {  # a standby generator on the right, reaching a changeover beyond a board fed separately
-    "uniwire": "1.0.0", "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
+    "uniwire": "1.0.0-draft", "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
     "sources": [
         {"type": "grid", "id": "SA", "label": "Supply A", "children": [
             {"type": "meter", "id": "PM", "ref": "-P1", "children": [

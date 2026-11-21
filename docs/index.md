@@ -14,7 +14,7 @@ library that validates documents, checks them against rule profiles (NF C 15-100
 PLC consistency), produces bills of materials and draws SVG / PDF sheets. You describe the
 **installation** (sources, protective devices, cables, loads) and uniwire computes the drawing.
 
-* **Format**: `*.uniwire.json`, validated by a published [JSON Schema](https://uniwire.sh/schema/v1/uniwire.schema.json)
+* **Format**: `*.uniwire.json`, format 1.0.0-draft (a draft: it may still change until it is adopted), validated by a published [JSON Schema](https://uniwire.sh/schema/v1/uniwire.schema.json)
   (draft 2020-12). See the [specification](SPEC.md).
 * **Library**: `pip install uniwire`, with the [Python API and CLI](api.md), [code-first API](build.md).
 * **Licences**: code Apache-2.0, specification CC BY 4.0 ([details](license.md)).
@@ -35,7 +35,7 @@ Python 3.10 or later is required.
 ```json
 {
   "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
-  "uniwire": "1.0.0",
+  "uniwire": "1.0.0-draft",
   "profiles": ["nfc15100"],
   "meta": { "title": "Small house", "lang": "en" },
   "installation": { "earthing": "TT", "system": "1P+N", "un_V": 230 },

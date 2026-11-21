@@ -106,7 +106,9 @@ def _format_validation_error(err: ValidationError) -> list[str]:
         msg = e["msg"]
         v = e.get("input")
         ctx = e.get("ctx") or {}
-        if e["type"] == "extra_forbidden":
+        if e["loc"] == ("uniwire",):  # any other format version: the one to declare
+            msg = _t("validation.format_version", declared=v, version=FORMAT_VERSION)
+        elif e["type"] == "extra_forbidden":
             msg = _t("validation.extra_forbidden")
             msg += _residual_hint(e["loc"])
             model = _model_at(e["loc"][:-1])
@@ -160,16 +162,6 @@ def check_depth(data: Any, limit: int = MAX_DEPTH) -> None:
             stack.extend((v, depth + 1) for v in obj.values() if isinstance(v, (dict, list)))
         elif isinstance(obj, list):
             stack.extend((v, depth + 1) for v in obj if isinstance(v, (dict, list)))
-
-
-def _newer_minor(declared: Any) -> bool:
-    """True when ``declared`` is a ``1.y.z`` format version with a minor version newer than this library's.
-
-    Any ``1.y.z`` document is accepted: minor versions only add optional fields, types and enumeration values,
-    so a document from a newer minor version loads as long as it does not use them.
-    """
-    m = re.fullmatch(r"1\.(\d+)\.\d+", declared) if isinstance(declared, str) else None
-    return bool(m) and int(m.group(1)) > int(FORMAT_VERSION.split(".")[1])
 
 
 def _container(data: Any, loc: tuple) -> tuple[Any, list[str]] | None:
@@ -310,11 +302,7 @@ def _validate(data: dict[str, Any], notes: list[str] | None = None) -> tuple[Doc
     if any(e["type"] == "recursion_loop" for e in err.errors()):
         # pydantic-core's own nesting guard (lower on some platforms, e.g. Windows): not a cyclic reference
         raise UniwireError([_t("validation.too_deep_validator")]) from None
-    issues = _format_validation_error(err)
-    declared = data.get("uniwire")
-    if _newer_minor(declared) and any(e["type"] == "extra_forbidden" for e in err.errors()):
-        issues.append(_t("validation.newer_minor", declared=declared, supported=FORMAT_VERSION))
-    raise UniwireError(issues) from None
+    raise UniwireError(_format_validation_error(err)) from None
 
 
 def _apply_templates(node: dict[str, Any], templates: dict[str, dict[str, Any]], path: str, issues: list[str]) -> dict:

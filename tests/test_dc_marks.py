@@ -27,7 +27,7 @@ def test_dc_lines_marked_two_poles():
 
 
 BATTERY_MOTOR = {  # a battery feeding a DC motor through single-pole devices, no system stated anywhere
-    "uniwire": "1.0.0", "installation": {"earthing": "IT", "un_V": 48},
+    "uniwire": "1.0.0-draft", "installation": {"earthing": "IT", "un_V": 48},
     "sources": [{"type": "battery", "id": "B", "un_V": 48, "children": [
         {"type": "fuse", "id": "F1", "ref": "-F1", "in_A": 40, "poles": "1P", "children": [
             {"type": "switch_disconnector", "id": "S1", "ref": "-S1", "in_A": 40, "poles": "1P", "children": [

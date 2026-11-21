@@ -10,7 +10,7 @@ from uniwire.render import default_view
 from uniwire.render.scene import Circle, Group, Polyline, Rect, bbox
 
 DOC = {
-    "uniwire": "1.0.0",
+    "uniwire": "1.0.0-draft",
     "installation": {"system": "1P+N", "earthing": "TT", "un_V": 230},
     "sources": [
         {"type": "grid", "id": "grid", "children": [

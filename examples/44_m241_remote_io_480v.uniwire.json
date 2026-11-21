@@ -1,6 +1,6 @@
 {
  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
- "uniwire": "1.0.0",
+ "uniwire": "1.0.0-draft",
  "profiles": [],
  "meta": {
   "title": "Packaging line control panel CP-100: Modicon M241 with EtherNet/IP remote I/O",

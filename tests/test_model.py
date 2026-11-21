@@ -89,33 +89,44 @@ def test_errors_in_french(bad, needle, monkeypatch):
     assert needle in str(e.value)
 
 
-@pytest.mark.parametrize("version", ["1.0.0", "1.0.3", "1.3.0", "1.12.1"])
-def test_any_1y_format_version_loads(version):
-    doc = load({**MINI, "uniwire": version})
-    assert doc.uniwire == version
+def test_format_version_is_the_draft():
+    import uniwire
+
+    assert uniwire.FORMAT_VERSION == "1.0.0-draft"
 
 
-@pytest.mark.parametrize("version", ["2.0.0", "0.9.0", "1.0", "one"])
-def test_other_major_versions_are_rejected(version):
-    with pytest.raises(UniwireError):
+def test_draft_version_loads_and_round_trips():
+    doc = load({**MINI, "uniwire": "1.0.0-draft"})
+    assert doc.uniwire == "1.0.0-draft"
+    assert json.loads(dump(doc))["uniwire"] == "1.0.0-draft"
+
+
+def test_missing_version_reads_as_the_draft():
+    data = {k: v for k, v in MINI.items() if k != "uniwire"}
+    doc = load(data)
+    assert doc.uniwire == "1.0.0-draft"
+    assert json.loads(dump(doc))["uniwire"] == "1.0.0-draft"
+
+
+@pytest.mark.parametrize("version", ["1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.0.0-beta", "2.0.0", "0.9.0", "1.0", "one"])
+def test_other_format_versions_are_rejected_with_the_version_to_declare(version):
+    with pytest.raises(UniwireError) as exc:
         load({**MINI, "uniwire": version})
+    issue = next(i for i in exc.value.issues if version in i)
+    assert '"uniwire": "1.0.0-draft"' in issue
 
 
-def test_newer_minor_with_unknown_fields_hints_at_upgrade():
-    data = json.loads(json.dumps(MINI))
-    data["uniwire"] = "1.9.0"
-    data["sources"][0]["future_field"] = 1
+def test_other_format_version_message_in_french(monkeypatch):
+    monkeypatch.setenv("UNIWIRE_LANG", "fr")
     with pytest.raises(UniwireError) as exc:
-        load(data)
-    assert any("1.9.0" in i and "upgrade" in i for i in exc.value.issues)
+        load({**MINI, "uniwire": "1.2.0"})
+    assert any("brouillon" in i and '"uniwire": "1.0.0-draft"' in i for i in exc.value.issues)
 
 
-def test_current_minor_with_unknown_fields_has_no_upgrade_hint():
-    data = json.loads(json.dumps(MINI))
-    data["sources"][0]["future_field"] = 1
+def test_newer_version_message_suggests_an_upgrade():
     with pytest.raises(UniwireError) as exc:
-        load(data)
-    assert not any("upgrade" in i for i in exc.value.issues)
+        load({**MINI, "uniwire": "1.3.0"})
+    assert any("1.3.0" in i and "upgrade uniwire" in i for i in exc.value.issues)
 
 
 def test_cli_version(capsys):
@@ -140,7 +151,7 @@ def _refusal(doc):
     return "\n".join(e.value.issues)
 
 
-_BASE = {"uniwire": "1.0.0", "installation": {"earthing": "TT", "system": "3P+N", "un_V": 400}}
+_BASE = {"uniwire": "1.0.0-draft", "installation": {"earthing": "TT", "system": "3P+N", "un_V": 400}}
 
 
 def _one(*children, **extra):

@@ -148,7 +148,7 @@ def test_pdf_route(tmp_path, monkeypatch):
     assert r.headers["content-disposition"] == 'inline; filename="studio-28-m2-tableau-de-repartition.pdf"'
     assert client.get(f"/pdf/{id_}").content == r.content and len(calls) == 1  # opened again: drawn once
     assert client.get("/pdf/AAAAAAAAAAAA").status_code == 404
-    bad_id = store.put('{"uniwire": "1.0.0"}')
+    bad_id = store.put('{"uniwire": "1.0.0-draft"}')
     bad = client.get(f"/pdf/{bad_id}")
     assert bad.status_code == 422 and "cannot draw" in bad.text
     ml = client.get(f"/pdf/{id_}?kind=multi-line&color=phase&x=1")
@@ -181,7 +181,7 @@ def test_pdf_route_pages_for_a_browser(tmp_path):
     client.post(f"/doc/{id_}/delete")
     gone = client.get(f"/pdf/{id_}", headers={**html, "accept-language": "de"})
     assert gone.status_code == 410 and "gelöscht" in gone.text
-    bad_id = store.put(json.dumps({"uniwire": "1.0.0", "meta": {"title": "<b>"}}))
+    bad_id = store.put(json.dumps({"uniwire": "1.0.0-draft", "meta": {"title": "<b>"}}))
     bad = client.get(f"/pdf/{bad_id}", headers=html)
     assert bad.status_code == 422 and "<pre>" not in bad.text and "<b>" not in bad.text  # the document is not quoted
 
@@ -203,7 +203,7 @@ def test_svg_route(tmp_path):
     assert r.headers["content-type"].startswith("image/svg+xml") and r.headers["cache-control"] == "no-store"
     assert "default-src 'none'" in r.headers["content-security-policy"]
     assert client.get("/svg/AAAAAAAAAAAA").status_code == 404
-    bad_id = store.put('{"uniwire": "1.0.0"}')
+    bad_id = store.put('{"uniwire": "1.0.0-draft"}')
     bad = client.get(f"/svg/{bad_id}")
     assert bad.status_code == 422
 

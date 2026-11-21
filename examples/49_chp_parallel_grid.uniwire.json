@@ -1,6 +1,6 @@
 {
  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
- "uniwire": "1.0.0",
+ "uniwire": "1.0.0-draft",
  "profiles": [
   "iec60364"
  ],

@@ -20,7 +20,7 @@ from uniwire.render import render_views
 from uniwire.render.scene import Circle, Group
 from uniwire.render.semantics import _conductor_segments, _crossings, has_cls
 
-DOC = {"uniwire": "1.0.0", "meta": {"title": "Routes"}, "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
+DOC = {"uniwire": "1.0.0-draft", "meta": {"title": "Routes"}, "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
        "views": [{"kind": "single-line", "paper": "A3"}]}
 
 
@@ -167,7 +167,7 @@ def _group(g: int, n: int, contactor: bool = False) -> dict:
 def test_signal_link_into_a_board_crosses_its_busbars_rather_than_every_feeder():
     """A control link from the meter above a board to a contactor under one of its feeders: down into the board
     across its busbars (drawn with a gap there), not along the board below the breakers across every feeder."""
-    doc = {"uniwire": "1.0.0", "meta": {"title": "Meter signal"},
+    doc = {"uniwire": "1.0.0-draft", "meta": {"title": "Meter signal"},
            "installation": {"earthing": "TT", "system": "1P+N", "un_V": 230},
            "views": [{"kind": "single-line", "paper": "A3"}],
            "sources": [{"type": "grid", "id": "S", "label": "Public network", "supply": "Example tariff", "un_V": 230,

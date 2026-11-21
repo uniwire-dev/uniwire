@@ -5,7 +5,7 @@ from uniwire.layout import engine
 from uniwire.render.svg import page_to_svg
 
 DOC = {
-    "uniwire": "1.0.0",
+    "uniwire": "1.0.0-draft",
     "installation": {"earthing": "TT", "system": "1P+N", "un_V": 230},
     "sources": [{"type": "grid", "children": [
         {"type": "inverter", "ref": "-G1", "kind": "battery", "p_kVA": 10, "children": [

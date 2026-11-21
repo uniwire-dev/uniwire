@@ -1,5 +1,5 @@
 {
-  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0-draft",
   "profiles": ["iec60364"],
   "meta": {
     "title": "Poste HTA/BT 20 kV / 410 V : 1000 kVA, comptage BT, TGBT", "project": "EX-25",

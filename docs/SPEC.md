@@ -3,7 +3,11 @@ title: "Specification: electrical installations in JSON"
 description: "The uniwire format: a JSON power tree of sources, devices and loads, plus links, that describes an electrical installation and its diagrams."
 ---
 
-# uniwire format specification, version 1.2
+# uniwire format specification, version 1.0 (draft)
+
+> **Status: draft.** The format is under construction: until it is adopted, it may still change without a version
+> change, and documents declare `"uniwire": "1.0.0-draft"`. Once adopted, it becomes the stable 1.0.0 and later
+> additions follow §9 (a minor version for optional additions).
 
 > Open exchange format for **describing electrical installations**, drawn as single-line and multi-line
 > diagrams (residential, commercial and industrial LV, with an MV/LV transformer at the head, standby sources, PV, EV charging (IRVE)).
@@ -40,7 +44,7 @@ The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are to be interpret
 ```json
 {
   "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
-  "uniwire": "1.2.0",
+  "uniwire": "1.0.0-draft",
   "profiles": ["nfc15100"],
   "meta": { ... },
   "installation": { ... },
@@ -55,9 +59,9 @@ The key words **MUST**, **MUST NOT**, **SHOULD** and **MAY** are to be interpret
 | Key | Required | Purpose |
 |---|---|---|
 | `$schema` | no | Schema URL (the major version appears in the path: `/v1/`) |
-| `uniwire` | no (default `1.2.0`) | Format version, semver `1.x.y` |
+| `uniwire` | no (default `1.0.0-draft`) | Format version: `1.0.0-draft` (any other value is rejected while the format is a draft) |
 | `profiles` | no | Business rule profiles to apply (`nfc15100`, `vde0100`, `iec60364`, `enedis`…) |
-| `symbols` | no (default `iec`) | Symbol set of the drawing *(1.2)* (§7.3) |
+| `symbols` | no (default `iec`) | Symbol set of the drawing (§7.3) |
 | `meta` | no | Title, project, client, author, date, `revisions[]`, `notes[]`, `lang` |
 | `installation` | no | `earthing` (TT, TN-C, TN-S, TN-C-S, IT), `system` (1P+N, 3P+N…), `un_V`, `f_Hz`, `supply`, `subscribed_kVA`, `planned_kVA`, `ik3_kA`, `earth_resistance_ohm`, `surface_m2`, `standard`, `premises` (dwelling, commercial, office, industrial, public, agricultural, other: dwelling rules apply to `dwelling` or when absent) |
 | `templates` | no | Named attribute templates |
@@ -184,7 +188,7 @@ sets it, a TN-C-S installation splits at the first board, and a check finding as
 `ref` (reference designation / schedule tag), `kind` (`busway`, `trunk`...), `conductors` ("L1, L2, L3, N, PE"), `pen`,
 `cpr_class`, `size_awg`, `raceway`, `ambient_C`, `status`.
 
-Conditions that correct the current-carrying capacity *(1.1)*: `grouped` (circuits or multicore cables laid
+Conditions that correct the current-carrying capacity: `grouped` (circuits or multicore cables laid
 together, this one included), `arrangement` in air (`bunched`, the default, `single_layer`, `ceiling`,
 `perforated_tray`, `ladder`), `supports` (trays or ladders stacked one above another; `grouped` then counts the
 cables on one of them), `spacing_m` (clear distance between grouped circuits in the ground, 0 when touching),
@@ -373,7 +377,7 @@ Common enumerations: `poles` ∈ {1P, 1P+N, 2P, 3P, 3P+N, 4P}.
 | `paper` / `orientation` | `A3` / `landscape` | Sheet format. When `paper` is absent, a renderer may choose the smallest format that holds the drawing at full size (the reference library: A4 landscape when it fits, else A3) |
 | `direction` | `down` | Direction of power flow: `down`, `up` (mirrored), `right`, `left` (the reference renderer draws `right` and `left` downwards and says so with the `core.view-direction` finding) |
 | `pitch_mm` | 20 | Width of an outgoing feeder column, 10 to 40 (a value under 10 is read as 10, with a `core.normalized` note) |
-| `cartouche` | `label, ref, protection, idn_mA, cable, p_kW` | Rows of the circuit schedule (among `label`, `ref`, `protection`, `in_A`, `curve`, `icn_kA`, `idn_mA`, `rcd_type`, `poles`, `cable`, `section_mm2`, `length_m`, `p_kW`, `phase`, `room`, `points`, and the 1.2 rows below, e.g. `cable_ref` "Cable tag"); an `idn_mA` value carried by a device upstream of the feeder (incomer, group RCD), not by its own protection, reads "30 mA (upstream)" |
+| `cartouche` | `label, ref, protection, idn_mA, cable, p_kW` | Rows of the circuit schedule (among `label`, `ref`, `protection`, `in_A`, `curve`, `icn_kA`, `idn_mA`, `rcd_type`, `poles`, `cable`, `section_mm2`, `length_m`, `p_kW`, `phase`, `room`, `points`, and the additional rows of §3a, e.g. `cable_ref` "Cable tag"); an `idn_mA` value carried by a device upstream of the feeder (incomer, group RCD), not by its own protection, reads "30 mA (upstream)" |
 | `folio_split` | `auto` | `auto`: split across sheets if needed (several trees side by side: groups of whole trees first, then sub-distribution boards on their own sheet, then busbars cut into continuation sheets; a way wider than a sheet, such as a distribution below a device rather than a board, has its branches drawn on sheets of their own, with off-page references at both ends); `none`: everything on one sheet, at whatever scale it needs |
 | `min_scale` | 0.7 | Maximum reduction before splitting. With `folio_split: auto` no sheet is drawn below 0.6 (a smaller value is read as 0.6): below it the texts are too small to read on paper. The scale of each sheet is written in its title block (in a corner of the sheet when it has no title block) |
 | `annotations` | `true` | Reference designation and characteristics next to the symbols |
@@ -532,6 +536,8 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
 * Everywhere else, undefined properties are forbidden (`additionalProperties: false`).
 * Versions: `1.y.z`. A minor version only adds optional fields or enumeration values.
   An incompatible change bumps the major version and the `$id` path (`/v2/`).
+* While the format is a draft (`1.0.0-draft`), a reader accepts only that version. The rules below apply once
+  1.0.0 is stable.
 * A reader **MUST** accept any `1.y.z` document. A document written for a newer minor version than the
   reader supports loads as long as it uses only fields the reader knows; otherwise its unknown fields are
   rejected like any other, and the reader **SHOULD** say that a newer version is needed.
@@ -621,15 +627,13 @@ CIM/CGMES, IEC 61850 SCL or IFC4 (`IfcDistributionPort` + `IfcRelConnectsPorts`)
 
 | Version | Changes |
 |---|---|
-| 1.0 | Initial release |
-| 1.1 | Cable: `grouped`, `arrangement`, `supports`, `spacing_m`, `soil_resistivity_K_m_W`, `third_harmonic_pct` (conditions that correct the current-carrying capacity) |
-| 1.2 | Document: `symbols` (symbol set of the drawing) |
+| 1.0 (draft) | `1.0.0-draft`: the format under construction, not yet stable |
 
 ## 12. Complete minimal example
 
 ```json
 {
-  "uniwire": "1.2.0",
+  "uniwire": "1.0.0-draft",
   "installation": { "earthing": "TT", "system": "1P+N", "un_V": 230 },
   "sources": [
     { "type": "grid", "label": "Grid", "children": [

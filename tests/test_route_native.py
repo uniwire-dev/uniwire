@@ -106,7 +106,7 @@ def _svgs(doc) -> list[str]:
     return [re.sub(r"_\d{8,}", "_#", page_to_svg(p)) for p in render_views(doc)]  # (ids made per drawing)
 
 
-INVENTED = {"uniwire": "1.0.0", "meta": {"title": "Interlocks"},
+INVENTED = {"uniwire": "1.0.0-draft", "meta": {"title": "Interlocks"},
             "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
             "views": [{"kind": "single-line", "paper": "A3"}, {"kind": "multi-line", "paper": "A3"}],
             "sources": [{"type": "grid", "id": "S", "children": [

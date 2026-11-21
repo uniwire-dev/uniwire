@@ -368,8 +368,7 @@ EXAMPLE_HOUSE: dict[str, Any] = {
                   "children": [{"type": "socket", "id": "S1", "label": "Sockets", "points": 8}]}]}]}]}]}],
 }
 
-EXAMPLE_STANDBY: dict[str, Any] = {
-    "uniwire": FORMAT_VERSION,
+EXAMPLE_STANDBY: dict[str, Any] = {  # no "uniwire": the field is optional (the card stays within its size)
     "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
     "sources": [
         {"type": "grid", "id": "grid", "children": [

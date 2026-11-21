@@ -1,5 +1,5 @@
 {
-  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0", "profiles": [],
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0-draft", "profiles": [],
   "meta": {
     "title": "Retail store (US): 480Y/277 V service, 75 kVA step-down to 208Y/120 V", "project": "EX-32",
     "client": "Example Retail Store", "author": "uniwire examples", "lang": "en",

@@ -129,7 +129,7 @@ def test_bom_without_references():
 
 def test_bom_meters():
     """The utility's meter (fed by the grid) is not ordered; a sub-meter is."""
-    doc = load({"uniwire": "1.0.0", "installation": {"earthing": "TT", "system": "1P+N", "un_V": 230},
+    doc = load({"uniwire": "1.0.0-draft", "installation": {"earthing": "TT", "system": "1P+N", "un_V": 230},
                 "sources": [{"type": "grid", "children": [{"type": "meter", "ref": "-P1", "kind": "smart", "children": [
                     {"type": "breaker", "in_A": 40, "children": [
                         {"type": "meter", "ref": "-P2", "kind": "sub-metering", "children": [{"type": "socket"}]}]}]}]}]})
