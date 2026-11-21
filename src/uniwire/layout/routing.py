@@ -13,9 +13,9 @@ Everything works on axis-aligned boxes ``(x0, y0, x1, y1)`` in drawing coordinat
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from typing import Optional
 
 Box = tuple[float, float, float, float]
 Point = tuple[float, float]
@@ -31,6 +31,8 @@ FRAME_CLEAR, FRAME_RUN = 2.5, 6.0  # a link keeps this far from a dashed frame i
 FRAME_ALONG = 60.0  # ... unless the way out runs on another line, which is worse
 BUS_CROSS, FRAME_CROSS, WIRE_CROSS = 80.0, 60.0, 5.0  # crossings: a busbar reads like a tap, fewer is clearer
 NEAR_RUN = 20.0  # per mm run within ``Obstacles.near_wire`` of a conductor (multi-line)
+SOLID_CROSS = 30.0  # a solid power link across a conductor: reads as a connection there (a dashed link does not)
+WRAP = 50.0  # a turn taking a route round what it passes on three sides (with its ends, it reads as a frame)
 
 
 def _hit(a: Box, b: Box, pad: float = 0.0) -> bool:
@@ -170,7 +172,7 @@ def _seg_cost(obs: Obstacles, a: Point, b: Point, lane: float = LANE, solid: boo
         cost += sum(FRAME_CROSS for f in obs.frames for y in (f[1], f[3]) if seg[1] < y < seg[3] and f[0] < x0 < f[2])
     else:
         cost += sum(FRAME_CROSS for f in obs.frames for x in (f[0], f[2]) if seg[0] < x < seg[2] and f[1] < y0 < f[3])
-        cost += sum(WIRE_CROSS for x, v0, v1 in obs.vwires if seg[0] < x < seg[2] and v0 < y0 < v1)
+        cost += sum(SOLID_CROSS if solid else WIRE_CROSS for x, v0, v1 in obs.vwires if seg[0] < x < seg[2] and v0 < y0 < v1)
     if abs(x0 - x1) < 1e-9:  # vertical: must not run along a conductor
         cost += sum(_along(min(v1, seg[3]) - max(v0, seg[1]), obs.run_along) for x, v0, v1 in obs.vwires
                     if abs(x - x0) < lane / 2 and v0 < seg[3] and seg[1] < v1)
@@ -308,16 +310,83 @@ def _leg_within(obs: Obstacles, e: End, y: float, lane: float, seg: _Costs, tota
 
 def route(obs: Obstacles, a: End, b: End, y_min: Optional[float] = None, y_max: Optional[float] = None,
           step: float = 0.5, record: bool = True, lane: float = LANE, solid: bool = False,
-          cost_out: Optional[list[float]] = None) -> list[Point]:
+          cost_out: Optional[list[float]] = None, deeper: bool = False, wrap: float = 0.0) -> list[Point]:
     """Orthogonal route from ``a`` to ``b`` through a horizontal channel that avoids texts and symbols.
     ``lane``: minimum spacing from parallel conductors (wider for a link that will carry a device symbol);
     ``solid``: a power link drawn as a plain line, kept off the busbars it would run along;
-    ``cost_out``: receives the cost of the route found (to compare the ends a link could use)."""
+    ``cost_out``: receives the cost of the route found (to compare the ends a link could use);
+    ``deeper``: when the best channel runs on another line, a channel of its own lower down, under everything drawn
+    between the ends if need be (room is made there: what is drawn under the routes moves down); ``wrap``: the cost
+    of each turn that closes the route round something (see ``wraps``)."""
     lo = min(a.y, b.y) - 30.0 if y_min is None else y_min
     hi = max(a.y, b.y) + 30.0 if y_max is None else y_max
     sub = obs.window((min(a.x, b.x) - 12.0, lo - 2.0, max(a.x, b.x) + 12.0, hi + 2.0))
-    seg = _Costs(sub, lane)
-    best: tuple[float, list[Point]] = (1e18, [])
+    best = _channel(sub, a, b, lo, hi, step, lane, solid, wrap=wrap)
+    if deeper and best[1] and _shared(sub, best[3], lane):
+        x0, x1 = min(a.x, b.x) - 12.0, max(a.x, b.x) + 12.0
+        floor = max([o[3] for o in obs.boxes if o[0] < x1 and x0 < o[2]]
+                    + [y for y, h0, h1 in obs.hlines if h0 < x1 and x0 < h1] + [hi]) + 2.0 * lane
+        low = obs.window((x0, lo - 2.0, x1, floor + 2.0))
+        alt = _channel(low, a, b, best[2], floor, step, lane, solid, unshared=True, wrap=wrap)
+        if alt[1]:
+            best = alt
+    pts = _simplify(best[1])
+    if cost_out is not None:
+        cost_out.append(best[0])
+    if record:
+        record_route(obs, pts)
+    return pts
+
+
+def _dir(p: Point, q: Point) -> Optional[int]:
+    """Index in ``_DIRS`` of the move from p to q (None: no move, or not along an axis)."""
+    dx, dy = q[0] - p[0], q[1] - p[1]
+    if abs(dy) < 1e-9 and abs(dx) > 1e-9:
+        return 0 if dx > 0 else 1
+    if abs(dx) < 1e-9 and abs(dy) > 1e-9:
+        return 2 if dy > 0 else 3
+    return None
+
+
+def _hand(d: int, d2: int) -> int:
+    """+1 / -1: the way a turn from the move ``d`` to ``d2`` goes (0: no turn)."""
+    (ax, ay), (bx, by) = _DIRS[d], _DIRS[d2]
+    return ax * by - ay * bx
+
+
+def _wind(w: int, d: int, d2: int) -> tuple[int, int]:
+    """The turns of a route so far, ``w`` = 4 * a + b: ``a`` quarter turns one way since its most the other way, ``b``
+    the other way since its least (each kept at three at most), after a move ``d`` then ``d2``; and whether that turn
+    takes it past two quarter turns between its two extremes (round on three sides)."""
+    h = _hand(d, d2)
+    if h == 0:
+        return w, 0
+    a, b = divmod(w, 4)
+    a2, b2 = (a + 1, max(b - 1, 0)) if h > 0 else (max(a - 1, 0), b + 1)
+    k = int(a2 + b2 > max(2, a + b))
+    return min(a2, 3) * 4 + min(b2, 3), k
+
+
+def wraps(pts: list[Point], then: Optional[int] = None) -> int:
+    """The turns of a route that take it past two quarter turns the same way between its extremes (jogs between them
+    or not): with them it goes round what it passes on three sides and, with the line it leaves or reaches, closes a
+    rectangle that reads as a frame. ``then``: the move the line goes on with after the route's end (a trunk)."""
+    ds = [d for p, q in zip(pts, pts[1:]) if (d := _dir(p, q)) is not None]
+    if then is not None:
+        ds.append(then)
+    n, w = 0, 0
+    for d, d2 in zip(ds, ds[1:]):
+        w, k = _wind(w, d, d2)
+        n += k
+    return n
+
+
+def _channel(obs: Obstacles, a: End, b: End, lo: float, hi: float, step: float, lane: float, solid: bool,
+             unshared: bool = False, wrap: float = 0.0) -> tuple[float, list[Point], float, list[Point]]:
+    """Cheapest route through one channel between the heights ``lo`` and ``hi``: (cost, points, height of the
+    channel, the channel); ``unshared``: only channels running on no other line; ``wrap``: see ``route``."""
+    seg = _Costs(obs, lane)
+    best: tuple[float, list[Point], float, list[Point]] = (1e18, [], lo, [])
     n = int((hi - lo) / step)
     # Every cost is >= 0 and a rounded sum never decreases when a term grows: a channel, or a stub, whose cost so far
     # already reaches the best route found cannot beat it (``<``) and is not costed further. Same route, same cost.
@@ -327,26 +396,37 @@ def route(obs: Obstacles, a: End, b: End, y_min: Optional[float] = None, y_max: 
         extra = 0.08 * length
         if extra >= best[0]:
             continue
-        ca, pa = _leg_within(sub, a, y, lane, seg, lambda c: c + extra, best[0])
+        ca, pa = _leg_within(obs, a, y, lane, seg, lambda c, e=extra: c + e, best[0])
         if ca >= 1e9:
             continue
         if ca + extra >= best[0]:
             continue
-        cb, pb = _leg_within(sub, b, y, lane, seg, lambda c: (ca + c) + extra, best[0])
+        cb, pb = _leg_within(obs, b, y, lane, seg, lambda c, a_=ca, e=extra: (a_ + c) + e, best[0])
         if cb >= 1e9:
             continue
         if (ca + cb) + extra >= best[0]:
             continue
         ch = seg(pa[-1], pb[-1], solid)
         cost = ca + cb + ch + extra
-        if cost < best[0]:
-            best = (cost, pa + pb[::-1])
-    pts = _simplify(best[1])
-    if cost_out is not None:
-        cost_out.append(best[0])
-    if record:
-        record_route(obs, pts)
-    return pts
+        if wrap and cost < best[0]:  # (a wrap adds to the cost: the bounds above stay valid)
+            cost += wrap * wraps(pa + pb[::-1])
+        if cost < best[0] and not (unshared and _shared(obs, [pa[-1], pb[-1]], lane)):
+            best = (cost, pa + pb[::-1], y, [pa[-1], pb[-1]])
+    return best
+
+
+SHARED_RUN = 3.0  # mm: two lines running on one another longer than this read as one
+
+
+def _shared(obs: Obstacles, pts: list[Point], lane: float) -> bool:
+    """Whether the horizontal stretches of a route run on another line (the channel of a link already routed, a
+    busbar, the side of a frame) for longer than ``SHARED_RUN``."""
+    for p, q in zip(pts, pts[1:]):
+        if abs(p[1] - q[1]) < 1e-9:
+            x0, x1 = min(p[0], q[0]), max(p[0], q[0])
+            if any(abs(y - p[1]) < lane * 0.9 and min(h1, x1) - max(h0, x0) > SHARED_RUN for y, h0, h1 in obs.hlines):
+                return True
+    return False
 
 
 def _simplify(pts: list[Point]) -> list[Point]:
@@ -461,12 +541,14 @@ _PROBE: list[list[Point]] = []  # debugging aid, see route_grid
 def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box, lane: float = LANE,
                step: float = 1.0, record: bool = True,
                cost_out: Optional[list[float]] = None, bend: float = 0.0,
-               length: float = GRID_LENGTH) -> tuple[list[Point], int, int]:
+               length: float = GRID_LENGTH, wrap: float = 0.0,
+               then: Optional[list[Optional[int]]] = None) -> tuple[list[Point], int, int]:
     """Cheapest orthogonal route, with as many corners as needed, from one of ``starts`` to one of ``goals``
     (the ends a link may use on each device): Dijkstra on a grid of ``step`` mm laid over ``window``, through
     the coordinates of the ends. Same costs as ``route`` (texts and symbols, lines run along or crossed,
-    frames), plus a cost per corner (``bend``, ``BEND`` if not given) and per mm (``length``). Returns the points and the indexes of the
-    ends used (no route: [])."""
+    frames), plus a cost per corner (``bend``, ``BEND`` if not given) and per mm (``length``). ``wrap``: the cost of a
+    turn closing the route round what it passes (see ``wraps``); ``then``: for each goal, the move the line goes on
+    with from there (a trunk), or None. Returns the points and the indexes of the ends used (no route: [])."""
     import heapq
     from bisect import bisect_left, bisect_right
 
@@ -612,19 +694,23 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
                 if c > 1:
                     print("  step", round(xs[i], 1), round(ys[j], 1), "dir", d, "cost", round(c, 1))
                 i, j = i + _DIRS[d][0], j + _DIRS[d][1]
-    # states (column, row, direction of the last move) numbered (i * ny + j) * 4 + d: flat arrays, not dictionaries.
-    # The heap holds (cost, state * 2 + fresh): the same order as (cost, i, j, d, fresh), with less to compare.
+    # states (column, row, direction of the last move) numbered (i * ny + j) * 4 + d: flat arrays, not dictionaries;
+    # with ``wrap``, the turns made on the cheapest way to each state kept with it (see ``_wind``: not a state of its
+    # own, many times more states to search, for a cost that the cheapest way gets right but in rare cases).
+    # The heap holds (cost, state << 6 | kind << 4 | turns[, state before]), kind 1: the first move from an end, 2: a
+    # goal reached (wrap): the same order as (cost, i, j, d, kind, turns[, before]), with less to compare.
     goal_at = {(xs.index(e.x) * ny + ys.index(e.y)) * 4 + _ARRIVE[e.side]: k for k, e in enumerate(goals)}
-    heap: list[tuple[float, int]] = []
+    heap: list[tuple] = []
     size = nx * ny * 4
     origin = [0] * size
     prev = [-1] * size
     dist = [1e18] * size
+    turns = [0] * size
     for k, e in enumerate(starts):
         i, j, d = xs.index(e.x), ys.index(e.y), _LEAVE[e.side]
         st = (i * ny + j) * 4 + d
         dist[st], prev[st], origin[st] = 0.0, -1, k
-        heapq.heappush(heap, (0.0, st * 2 + 1))
+        heapq.heappush(heap, (0.0, st << 6 | 16))
     # the moves from a state: (direction, step of the cell number, step of the edge key from cell * 2)
     px, mx, py, my = (0, ny, 0), (1, -ny, -2 * ny), (2, 1, 1), (3, -1, -1)
     moves = [(px, py, my), (mx, py, my), (px, mx, py), (px, mx, my)]  # no turning back
@@ -632,13 +718,22 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
     last_i, last_j = nx - 1, ny - 1
     pop, push = heapq.heappop, heapq.heappush
     found = -1
+    last = -1  # wrap: the state before the goal reached (a goal is reached by its own heap entry)
     while heap:
-        cost, code = pop(heap)
-        st = code >> 1
+        item = pop(heap)
+        cost, code = item[0], item[1]
+        st = code >> 6
+        fresh = (code >> 4) & 3
+        if fresh == 2:  # wrap: a goal reached, the turn into the line it joins counted
+            found, last = st, item[2]
+            break
         if cost > dist[st]:
             continue
-        fresh = code & 1
-        if not fresh and st in goal_at:
+        t = code & 15
+        if wrap:
+            if t != turns[st]:
+                continue
+        elif not fresh and st in goal_at:
             found = st
             break
         d = st & 3
@@ -662,15 +757,30 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
                 e = edge_cost(key)
             c = cost + e + (bend if d2 != d else 0.0)
             s2 = (cell + dc) * 4 + d2
-            if c < dist[s2]:
+            if wrap:
+                t2 = t
+                if not fresh and d2 != d:
+                    t2, k = _wind(t, d, d2)
+                    c += wrap * k
+                if s2 in goal_at:
+                    nxt = then[goal_at[s2]] if then is not None else None
+                    k = _wind(t2, d2, nxt)[1] if nxt is not None else 0
+                    push(heap, (c + wrap * k, s2 << 6 | 32 | t2, st))
+                if c < dist[s2]:
+                    dist[s2], prev[s2], origin[s2], turns[s2] = c, st, origin[st], t2
+                    push(heap, (c, s2 << 6 | t2))
+            elif c < dist[s2]:
                 dist[s2], prev[s2], origin[s2] = c, st, origin[st]
-                push(heap, (c, s2 * 2))
+                push(heap, (c, s2 << 6))
     if found < 0:
         return [], 0, 0
     if cost_out is not None:
-        cost_out.append(dist[found])
+        cost_out.append(cost if wrap else dist[found])
     path = []
     s = found
+    if wrap:  # the way the goal was reached by (its own state may have been reached cheaper another way)
+        path.append((xs[s // 4 // ny], ys[s // 4 % ny]))
+        s = last
     while s >= 0:
         path.append((xs[s // 4 // ny], ys[s // 4 % ny]))
         if prev[s] < 0:
@@ -681,7 +791,7 @@ def route_grid(obs: Obstacles, starts: list[End], goals: list[End], window: Box,
     pts = _simplify(([(a.x, a.y)] if a.side == "down" else []) + path + ([(b.x, b.y)] if b.side == "down" else []))
     if record:
         record_route(obs, pts)
-    return pts, origin[found], goal_at[found]
+    return pts, origin[first], goal_at[found]
 
 
 DETOUR_BEND = 15.0  # a single-line route rerouted on the grid: few corners (a jog round a mark reads as a fault)
@@ -738,17 +848,35 @@ def along_bus(obs: Obstacles, pts: list[Point]) -> bool:
                for p, q in zip(pts, pts[1:]) for y, h0, h1 in obs.buses)
 
 
+def runs_along(obs: Obstacles, pts: list[Point], gap: float = 0.3, run: float = 3.0) -> bool:
+    """Whether a route runs on another line (a conductor, another link) for more than ``run`` mm: drawn on one another,
+    the two read as one."""
+    for p, q in zip(pts, pts[1:]):
+        if abs(p[1] - q[1]) < 1e-9:
+            lo, hi = sorted((p[0], q[0]))
+            if any(abs(y - p[1]) < gap and min(h1, hi) - max(h0, lo) > run for y, h0, h1 in obs.hlines):
+                return True
+        elif abs(p[0] - q[0]) < 1e-9:
+            lo, hi = sorted((p[1], q[1]))
+            if any(abs(x - p[0]) < gap and min(v1, hi) - max(v0, lo) > run for x, v0, v1 in obs.vwires):
+                return True
+    return False
+
+
 def improve_route(obs: Obstacles, a: End, b: End, pts: list[Point], lane: float = LANE, solid: bool = False,
                   min_run: float = 0.0, starts: Optional[list[End]] = None, goals: Optional[list[End]] = None,
-                  far_round: bool = True) -> list[Point]:
-    """A route through one channel that passes through a text or a symbol, runs along a busbar, or goes far round
-    (``far_round``): the route with as many corners as needed (``route_grid``) when that one is clearly better.
+                  far_round: bool = True, on_lines: bool = False) -> list[Point]:
+    """A route through one channel that passes through a text or a symbol, runs along a busbar (or on another line), or
+    goes far round (``far_round``): the route with as many corners as needed (``route_grid``) when that one is clearly
+    better.
     ``min_run``: its longest straight stretch at least this long (a link carrying a device symbol); ``starts``,
-    ``goals``: the other ends the link may use on each device (``a``, ``b`` are the ones chosen)."""
+    ``goals``: the other ends the link may use on each device (``a``, ``b`` are the ones chosen); ``on_lines``: a route
+    on another line (a thin link on another link) improved too."""
     if len(pts) < 2:
         return pts
     direct = abs(a.x - b.x) + abs(a.y - b.y)
-    crossing = _crosses_box(obs, pts) or along_bus(obs, pts)
+    through = _crosses_box(obs, pts)
+    crossing = through or along_bus(obs, pts) or (on_lines and runs_along(obs, pts))
     if not crossing and (not far_round or _length(pts) - direct <= max(30.0, 0.4 * direct)):
         return pts
     starts, goals = starts or [a], goals or [b]
@@ -758,6 +886,8 @@ def improve_route(obs: Obstacles, a: End, b: End, pts: list[Point], lane: float 
     if len(alt) < 2 or max((_length([p, q]) for p, q in zip(alt, alt[1:])), default=0.0) < min_run:
         return pts
     if not crossing and _length(alt) > 0.8 * _length(pts):  # far round only: worth it when clearly shorter
+        return pts
+    if not through and _crosses_box(obs, alt):  # (off another line, but through a text or a symbol: no better)
         return pts
     if path_cost(obs, alt, lane, solid) < path_cost(obs, pts, lane, solid) - 1.0:
         return alt

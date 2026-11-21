@@ -69,7 +69,7 @@ def test_upstream_board_frame_ends_after_its_own_ways():
 def test_board_name_is_not_written_across_its_incoming_conductor():
     """The first way of a board with room on its left (off-sheet stubs with long texts): the incoming conductor is
     far from the frame's left side, and the name of the board is not written across it."""
-    from uniwire.render.scene import Line, Polyline, Text, text_width
+    from uniwire.render.scene import Line, Text, text_width
 
     doc = {"sources": [{"type": "grid", "children": [{"type": "board", "id": "MB", "ref": "=MB",
                                                       "label": "Example main control panel, north building", "children": [
