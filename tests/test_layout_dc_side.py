@@ -142,3 +142,49 @@ def test_power_supply_fed_from_a_dc_line_has_a_dc_input_in_both_views():
 
     assert symbol_texts("battery") == [[], ["=", "="]]  # the single-line DC mark is drawn, not a character
     assert symbol_texts("grid") == [["~"], ["~", "="]]
+
+
+def _hybrid(ats_link: bool) -> dict:
+    """A hybrid inverter whose children are all DC (a PV string, a battery busbar with no system stated); its AC
+    output reaches a changeover switch through a transfer link."""
+    doc = dict(DOC)
+    doc["sources"] = [{"type": "grid", "children": [{"type": "board", "ref": "=MB", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 63, "children": [
+            {"type": "inverter", "id": "INV", "ref": "-G1", "kind": "hybrid", "p_kVA": 10, "children": [
+                {"type": "breaker", "ref": "-QS", "in_A": 25, "poles": "2P", "children": [{"type": "pv_array"}]},
+                {"type": "breaker", "ref": "-QB", "in_A": 200, "poles": "2P", "children": [
+                    {"type": "busbar", "ref": "=BB", "children": [
+                        {"type": "breaker", "ref": "-QB1", "in_A": 100, "poles": "2P", "children": [
+                            {"type": "battery", "ref": "-G2", "un_V": 51.2}]},
+                        {"type": "breaker", "ref": "-QB2", "in_A": 100, "poles": "2P", "children": [
+                            {"type": "battery", "ref": "-G3", "un_V": 51.2}]}]}]}]}]},
+        {"type": "transfer_switch", "id": "ATS", "ref": "-QA", "in_A": 63, "children": [{"type": "socket"}]}]}]}]
+    doc["links"] = [{"kind": "transfer", "from": "INV", "to": "ATS"}] if ats_link else []
+    return doc
+
+
+def test_battery_busbar_with_no_system_is_on_the_dc_side():
+    from uniwire.layout.multiline import conductors
+
+    for link in (False, True):
+        doc = uniwire.load(_hybrid(link))
+        by_ref = {n.ref: n.id for n, _, _ in uniwire.resolve.iter_nodes(doc) if n.ref}
+        c = conductors(doc)
+        for ref in ("-QB", "=BB", "-QB1", "-G2"):
+            assert c[by_ref[ref]].inp == ["L+", "L-"], (link, ref, c[by_ref[ref]].inp)
+
+
+def test_inverter_with_an_ac_output_link_keeps_its_ac_side():
+    from uniwire.layout.multiline import conductors
+
+    doc = uniwire.load(_hybrid(True))
+    by_ref = {n.ref: n.id for n, _, _ in uniwire.resolve.iter_nodes(doc) if n.ref}
+    assert {"L1", "N", "L+", "L-"} <= set(conductors(doc)[by_ref["-G1"]].out)
+
+
+def test_way_through_an_inverter_is_not_dc():
+    # a board feeding an AC/DC unit whose own child is a PV array: the board is on the AC side
+    tree = {"type": "board", "ref": "=B", "children": [
+        {"type": "breaker", "children": [{"type": "inverter", "children": [{"type": "pv_array"}]}]}]}
+    assert not engine._is_dc(uniwire.load({**DOC, "sources": [{"type": "grid", "children": [
+        {"type": "inverter", "kind": "battery", "children": [tree]}]}]}).sources[0].children[0].children[0])

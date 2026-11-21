@@ -4,8 +4,8 @@ dynamic = ["version"]
 description = "Electrical diagrams, as code: an open standard to describe electrical installations, with validation, rules, BOM, wire lists and single-line / multi-line SVG/PDF drawings"
 readme = "README.md"
 requires-python = ">=3.10"
-license = "Apache-2.0"
-license-files = ["LICENSE", "NOTICE"]
+license = "Apache-2.0 AND OFL-1.1"
+license-files = ["LICENSE", "NOTICE", "src/uniwire/render/fonts/LICENSE"]
 authors = [{ name = "uniwire contributors" }]
 keywords = ["electrical", "single-line diagram", "one-line diagram", "multi-line diagram", "schema unifilaire", "IEC 60617", "IEC 60364", "NF C 15-100", "CAD", "diagram as code", "mcp"]
 classifiers = [

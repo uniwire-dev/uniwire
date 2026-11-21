@@ -157,6 +157,7 @@ class Breaker(_Protective):
     tsd_s: Optional[Q("s", "Short-time delay")] = None
     gf_A: Optional[Q("A", "Ground-fault protection threshold (GF)")] = None
     selective: Optional[bool] = Field(None, description="Selective circuit breaker (SLS)")
+    dc: Optional[bool] = Field(None, description="Device for direct current")
 
 
 class RCD(_Protective):
@@ -458,10 +459,11 @@ class Spare(NodeBase):
 
 # ------------------------------------------------------- instrument transformers, MV equipment, auxiliaries
 class InstrumentTransformer(NodeBase):
-    """Instrument transformer: CT, VT, toroid. In series in the tree or as an auxiliary device (``devices``)."""
+    """Instrument transformer: CT, VT, toroid, or a current-measuring shunt (``kind: "shunt"``, a resistor on the
+    conductor it measures). In series in the tree or as an auxiliary device (``devices``)."""
 
     type: Literal["instrument_transformer"]
-    kind: Optional[Literal["ct", "vt", "toroid", "combined"]] = None
+    kind: Optional[Literal["ct", "vt", "toroid", "combined", "shunt"]] = None
     ratio: Optional[str] = Field(None, description="'600/5 A', '20000/100 V'")
     accuracy: Optional[str] = Field(None, description="Accuracy class: '0.5', '5P10', 'C100'")
     burden_VA: Optional[Q("VA")] = None
