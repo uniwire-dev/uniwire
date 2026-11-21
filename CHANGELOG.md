@@ -251,6 +251,7 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   contactor under a feeder) ran down beside the board and across it just below the breakers, crossing every
   feeder; it now comes down into the board across its busbars, drawn with a gap there, and crosses no feeder. A
   solid power link still keeps off the busbars it would read as a tap of.
+
 ### Languages
 
 * Drawings and rule findings in Dutch (`nl`), Japanese (`ja`, with the usual terms of Japanese panel drawings and
