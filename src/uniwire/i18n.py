@@ -45,6 +45,8 @@ EN: dict[str, str] = {
     "validation.too_deep_validator": "document nested too deeply for the validator on this platform (power tree too deep)",
     "validation.newer_minor": "the document declares format {declared}, newer than the format {supported} "
                               "supported by this version of uniwire: upgrade uniwire to read the fields it does not know",
+    "validation.residual_on_breaker": "a {type} has no residual-current protection: use an 'rcbo' (or an 'rcd') "
+                                      "with 'idn_mA' and 'rcd_type'",
     "units.unreadable": "unreadable quantity: {value!r}",
     "units.too_long": "quantity too long ({n} characters, at most {max}): {value!r}...",
     "units.unknown_unit": "unknown unit: {unit!r}",
@@ -385,6 +387,8 @@ FR: dict[str, str] = {
     "validation.newer_minor": "le document déclare le format {declared}, plus récent que le format {supported} "
                               "pris en charge par cette version d'uniwire : mettez uniwire à jour pour lire les champs "
                               "qu'il ne connaît pas",
+    "validation.residual_on_breaker": "un {type} n'a pas de protection différentielle : utiliser un 'rcbo' (ou un "
+                                      "'rcd') avec 'idn_mA' et 'rcd_type'",
     "units.unreadable": "grandeur illisible : {value!r}",
     "units.too_long": "grandeur trop longue ({n} caractères, au plus {max}) : {value!r}...",
     "units.unknown_unit": "unité inconnue : {unit!r}",
@@ -3816,7 +3820,7 @@ _LATIN_CYRILLIC |= {k.upper(): v.upper() for k, v in _LATIN_CYRILLIC.items()}
 _LATIN_CYRILLIC |= {"lj": "љ", "Lj": "Љ", "LJ": "Љ", "nj": "њ", "Nj": "Њ", "NJ": "Њ", "dž": "џ", "Dž": "Џ", "DŽ": "Џ"}
 _TOKEN = re.compile(r"\{[^{}]*\}|'[^']*'|`[^`]*`|\w+(?:[._]\w+)+|[A-Za-zČĆĐŠŽčćđšž]+|\S|\s+")
 #: Kept in Latin: symbols of quantities, unit symbols (Latin in every alphabet), names.
-_SYMBOLS = {"uniwire", "Apache", "duct", "cos", "Ib", "In", "Ir", "Ik", "Iz", "Icc", "mm", "cm", "km", "ms", "min", "kA",
+_SYMBOLS = {"uniwire", "Apache", "duct", "cos", "Ib", "In", "Ir", "Ik", "Iz", "Icc", "Icu", "Icw", "mm", "cm", "km", "ms", "min", "kA",
             "mA", "kV", "kVA", "kW", "kWh", "kWp", "Wp", "Hz"}
 #: One-letter units that are also words: kept next to a number, a placeholder, "·" or "/" (K·m/W, 2 h).
 _UNITS = {"m", "s", "h"}
