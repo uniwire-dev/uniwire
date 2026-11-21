@@ -127,6 +127,16 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ### Drawings: single-line
 
+* Links between two views (each view drawn from its own `root`, such as the grid side and the inverter side of an
+  installation) are drawn at both ends as a cross-sheet reference, as within one view split over several sheets:
+  "-T1 → sheet 2" with the link's label under the feeder breaker, "-Q2 → sheet 1" at the inverter, numbered as in
+  the drawing set (a view drawn on its own prints the same numbers; a node drawn in no view keeps its tag, without a
+  sheet). They were left out: the feeder breaker ended under its symbol with nothing, the inverter or changeover
+  switch showed a bare stub. On a power link with a way (`infeed`, `transfer`), whether between views or between
+  sheets, the arrow at the receiving end now points at the device; and a power link leaving the side of a device
+  that feeds on below it gets room for its texts, which were squeezed between the device and its neighbour's. An
+  off-page stub right under a busbar is drawn shorter rather than with its arrow on the busbar. An off-page stub
+  below a device starts at the end of its output (it began about 1 mm lower, leaving a break in the wire).
 * Inverters/chargers and UPS have separate sides: the AC input on top, the DC terminal on the left, the AC output at
   the bottom. The grid, PV array and battery of a hybrid inverter landed on one point of its left side, forming a
   rectangle that read as a frame; now an AC infeed lands on top, battery, PV and DC board infeeds on the DC terminal
@@ -179,6 +189,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ### Drawings
 
+* A drawing narrower than 60 % of its sheet is drawn from the left of the drawing area, as the wider ones. It was
+  centred, so a sheet filled in height but not in width read as pushed to the right, with nearly half of it empty on
+  the left, beside the other sheets of the set drawn from the left (24 sheets of 13 bundled examples move left).
 * Boards: the frame of a board no longer encloses the equipment at the far end of its outgoing cables (an inverter,
   a UPS, a transfer switch, another busbar, a transformer fed above 1000 V, or a local isolator in front of them):
   they are drawn below it with what they feed (SPEC §3.1). A board feeding sub-boards ends after its own last way

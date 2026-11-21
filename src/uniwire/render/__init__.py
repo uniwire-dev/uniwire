@@ -15,11 +15,12 @@ from ..i18n import normalize_lang
 from ..i18n import t as _t
 from ..layout.engine import PAPER, drawing_area, incoming_text, layout_sheet, plan_sheets, sheet_node_ids
 from ..model import Document, View
-from ..resolve import build_index
+from ..resolve import build_index, iter_nodes
 from ..symbols import ACTIVE_SET, known_set
 from .colors import colorize
 from .frame import compose_page
 from .scene import Group, Item, Page, Rect, Text, text_width
+from .semantics import ELSEWHERE, ELSEWHERE_SHOWN
 from .svg import page_to_svg
 
 
@@ -53,21 +54,69 @@ def render_pages(doc: Document, view: Optional[View] = None) -> list[Page]:
     the whole set."""
     view = view or default_view(doc)
     pages = _view_pages(doc, view)
-    counts, at = _drawing_set(doc, view, len(pages))
+    counts, at, others = _drawing_set(doc, view, pages)
     numbers, total = sheet_numbers(counts)
+    lang = normalize_lang(doc.meta.lang)
+    place_elsewhere(pages, others, lambda p: (None, numbers[p - 1]), lang)  # (sheets of this PDF only: no link)
     _write_numbers(pages, numbers[at:at + len(pages)], total)
     return pages
 
 
-def _drawing_set(doc: Document, view: View, n: int) -> tuple[list[tuple[View, int]], int]:
-    """The drawing set ``view`` (of ``n`` sheets) belongs to, as :func:`sheet_numbers` takes it, and the position of
-    its first sheet in the set. A view declared in the document (same id and kind) is one view of the set of every
-    declared view; any other view (default, or a declared view drawn in the other kind) is a set on its own."""
+def _drawing_set(doc: Document, view: View, pages: list[Page]
+                 ) -> tuple[list[tuple[View, int]], int, list[Page]]:
+    """The drawing set ``view`` (drawn as ``pages``) belongs to, as :func:`sheet_numbers` takes it, the position of
+    its first sheet in the set, and the sheets of the whole set. A view declared in the document (same id and kind)
+    is one view of the set of every declared view; any other view (default, or a declared view drawn in the other
+    kind) is a set on its own."""
     i = next((j for j, v in enumerate(doc.views) if v.id == view.id and v.kind == view.kind), None)
     if i is None or len(doc.views) < 2:
-        return [(view, n)], 0
-    counts = [(view, n) if j == i else (v, len(_view_pages(doc, v))) for j, v in enumerate(doc.views)]
-    return counts, sum(k for _, k in counts[:i])
+        return [(view, len(pages))], 0, pages
+    every = [pages if j == i else _view_pages(doc, v) for j, v in enumerate(doc.views)]
+    counts = [(v, len(p)) for v, p in zip(doc.views, every)]
+    return counts, sum(k for _, k in counts[:i]), [p for ps in every for p in ps]
+
+
+def place_elsewhere(pages: list[Page], drawn: list[Page], number: Callable[[int], tuple[Optional[int], int]],
+                    lang: str) -> None:
+    """Write the sheet of the references of ``pages`` to a node drawn in another view (a link between two views of
+    a drawing set, see ``semantics.ELSEWHERE``): the first of ``drawn`` (the sheets of the set, in order) where the
+    node is drawn, one of the same kind (single-line, multi-line) first. ``number(position)``: the target sheet of
+    the reference (none: no link) and the number written in its text. A node drawn on none of them keeps its
+    name, without a sheet."""
+    at: dict[str, list[tuple[int, str]]] = {}
+    for p, page in enumerate(drawn, 1):
+        kind = page.attrs.get("data-uw-view-kind", "")
+        for nid in _drawn_nodes(page.root):
+            if not at.get(nid) or at[nid][-1][0] != p:
+                at.setdefault(nid, []).append((p, kind))
+    old = _t("render.to_folio", lang, folio=ELSEWHERE_SHOWN)
+    for page in pages:
+        kind = page.attrs.get("data-uw-view-kind", "")
+        for g in _elsewhere_refs(page.root):
+            spots = at.get(g.attrs.get("data-uw-target-id", ""), [])
+            p = next((q for q, k in spots if k == kind), None) or next((q for q, _ in spots), None)
+            target, shown = number(p) if p is not None else (None, None)
+            g.attrs["data-uw-target-sheet"] = str(target) if target else ""
+            new = _t("render.to_folio", lang, folio=shown) if shown else ""
+            _ref_text(g, lambda s, new=new: s[:-len(old)] + new if s.endswith(old) else s)
+
+
+def _drawn_nodes(item: Item) -> Iterable[str]:
+    """Ids of the nodes whose symbol is drawn under ``item``."""
+    if isinstance(item, Group):
+        if item.id and "uw-node" in (item.cls or "").split():
+            yield item.id
+        for c in item.items:
+            yield from _drawn_nodes(c)
+
+
+def _elsewhere_refs(item: Item) -> Iterable[Group]:
+    """The references under ``item`` to a node drawn in another view (see :func:`place_elsewhere`)."""
+    if isinstance(item, Group):
+        if item.attrs.get("data-uw-target-sheet") == str(ELSEWHERE):
+            yield item
+        for c in item.items:
+            yield from _elsewhere_refs(c)
 
 
 _LANG_TAG = re.compile(r"[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*")
@@ -134,6 +183,7 @@ def render_views(doc: Document, views: Optional[Iterable[View]] = None,
         counts.append((v, len(pages)))
     for i, page in enumerate(out, 1):
         page.attrs["data-uw-sheet"] = str(i)
+    place_elsewhere(out, out, lambda p: (p, p), normalize_lang(doc.meta.lang))  # (numbered below, as the others)
     number_sheets(out, counts)
     return out
 
@@ -342,6 +392,12 @@ def _render_sheets(doc: Document, view: View, lang: str, specs: Optional[list[An
     for i, s in enumerate(specs, 1):
         for nid in sheet_node_ids(doc, s, index):
             folio_of_node.setdefault(nid, i)
+    named = {n.id for n, _, _ in iter_nodes(doc) if n.id}
+
+    def node_folio(nid: str) -> Optional[int]:
+        """Sheet of the view where node ``nid`` is drawn; a node of the document this view does not draw (a link to
+        another view): ELSEWHERE, its sheet written by the drawing set (place_elsewhere)."""
+        return folio_of_node.get(nid) or (ELSEWHERE if nid in named else None)
     built = []
     total = len(specs)
     number = {id(s): i for i, s in enumerate(specs, 1)}
@@ -354,7 +410,7 @@ def _render_sheets(doc: Document, view: View, lang: str, specs: Optional[list[An
             rid = spec.roots[0].id  # a board drawn on its own sheet (not a group of trees): fed from another one
             incoming, incoming_ref = incoming_text(specs, i, rid, index, folio_of_node, lang)
         lay = layout_sheet(doc, view, spec, index, folio_of=folio_by_root.get, continuation_folios=(prev_f, next_f),
-                           incoming=incoming, node_folio=folio_of_node.get, incoming_ref=incoming_ref)
+                           incoming=incoming, node_folio=node_folio, incoming_ref=incoming_ref)
         title = spec.name or view.title or _t("render.default_title", lang)
         legend = colorize(lay.group, doc, view, index)
         built.append((lay, title, legend))

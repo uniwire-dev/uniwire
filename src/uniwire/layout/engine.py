@@ -57,6 +57,8 @@ from ..render.scene import (
     transform,
 )
 from ..render.semantics import (
+    ELSEWHERE,
+    ELSEWHERE_SHOWN,
     HIT_COLOR,
     HIT_WIDTH,
     add_cls,
@@ -3007,7 +3009,10 @@ def _stub_widths(doc: Document, nodes: list[LNode], lang: str,
     stubs: dict[str, list[tuple[float, float]]] = {}
     for l in doc.links:
         for nid, other in ((l.from_, l.to), (l.to, l.from_)):
-            if nid in here and other not in here and l.kind not in POWER_LINKS + ("transfer",):
+            # (a power link leaves by the side of what it starts from when that goes on below it: see _end)
+            side = l.kind not in POWER_LINKS + ("transfer",) \
+                or nid == l.from_ and bool(getattr(named.get(nid), "children", ()))
+            if nid in here and other not in here and side:
                 o = named.get(other)
                 ref = (o.ref or o.label or other) if o is not None else other
                 stubs.setdefault(nid, []).append((text_width(ref + _t("render.to_folio", lang, folio=99), 1.6),
@@ -4545,6 +4550,7 @@ def _draw_link_device(link: Any, dev: NodeBase, pts: list[tuple[float, float]], 
         g.add(Text((x, y + (i + 0.8) * line), t, size, bold=(i == 0 and bool(dev.ref))))
 
 
+DIRECTED_LINKS = ("infeed", "transfer")  # power links with a way: from what supplies to what is supplied
 STUB_KINDS = ("earth", "control", "interlock", "trip", "measure", "data", "key")  # thin links (not power)
 STUB_LEAD = 1.5  # spacing of the leads from a device to its stubs past its side
 
@@ -4564,8 +4570,12 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
     if f is None and not same_sheet:
         return
     on = target_node.ref or target_node.label or other if target_node is not None else other
-    txts = ([link.label] if link.label else []) + [on + (_t("render.to_folio", lang, folio=f) if f else "")]
+    shown = ELSEWHERE_SHOWN if f == ELSEWHERE else f  # (another view: its sheet written by the drawing set)
+    txts = ([link.label] if link.label else []) + [on + (_t("render.to_folio", lang, folio=shown) if shown else "")]
+    incoming = link.kind in DIRECTED_LINKS and link.to == n.id and link.from_ != n.id  # the arrow toward the device
     e = at or _end(n, link.kind)
+    if at is None and e.side == "down" and n.sym.has_output and abs(e.x - n.x) < 1e-9 and e.y > n.out_y:
+        e = End(n.x, n.out_y, "down")  # (out of a device's output: the stub goes on from it, no gap below the device)
     key = here = n.id or ""
     if at is None and e.side == "left":  # no room on the left for its texts (a neighbour there): by the right side
         need = max(text_width(t, 1.6) for t in txts) + 9.0
@@ -4663,8 +4673,9 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         dx, dy = {"down": (0, 1), "up": (0, -1), "right": (1, 0)}.get(e.side, (-1, 0))
         base = (start + dx * n, e.y + dy * n)
         tip = (start + dx * (n + 1.5), e.y + dy * (n + 1.5))
-        return [(e.x, e.y), base], tip, [(base[0] - 0.8 * abs(dy), base[1] - 0.8 * abs(dx)), tip,
-                                         (base[0] + 0.8 * abs(dy), base[1] + 0.8 * abs(dx))]
+        point, back = (base, tip) if incoming else (tip, base)  # what comes in: pointing at the device
+        return [(e.x, e.y), base], tip, [(back[0] - 0.8 * abs(dy), back[1] - 0.8 * abs(dx)), point,
+                                         (back[0] + 0.8 * abs(dy), back[1] + 0.8 * abs(dx))]
 
     def head_box(n: float) -> tuple[float, float, float, float]:
         _, tip, head = geometry(n)
@@ -4692,9 +4703,20 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         finally:
             obs.boxes.pop()
 
-    # the usual short stub; longer when its sheet reference finds no free place beside it (a crowded device side)
+    def on_bus(n: float) -> bool:
+        """A vertical stub of length ``n`` runs into a busbar (its arrow and texts would be on it)."""
+        if e.side not in ("up", "down"):
+            return False
+        _, tip, _ = geometry(n)
+        lo, hi = sorted((e.y, tip[1] + (1.0 if tip[1] > e.y else -1.0)))
+        return any(x0 - 0.5 <= e.x <= x1 + 0.5 and lo + 0.5 < y < hi for y, x0, x1 in obs.buses)
+
+    # the usual short stub; longer when its sheet reference finds no free place beside it (a crowded device side);
+    # shorter when it would run into a busbar
     lengths = (6.0, 12.0, 18.0)
-    n = next((n for n in lengths if room(n)), next((n for n in lengths if not on_frame(n)), 6.0))
+    n = next((n for n in lengths if room(n) and not on_bus(n)),
+             next((n for n in lengths + (3.0,) if not on_frame(n) and not on_bus(n)),
+                  next((n for n in lengths if room(n)), next((n for n in lengths if not on_frame(n)), 6.0))))
     pts, tip, head = geometry(n)
     g.add(Polyline(pts, _link_style(link.kind, link.normally_open)))
     hb = head_box(n)
@@ -4743,6 +4765,9 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
             obs.boxes.remove(hb)
             spot = place_label(obs, [pts[0], tip], w, 1.6, from_end=True, record=False, optional=True)
             obs.boxes.append(hb)
+            if spot is not None and incoming and e.side in ("up", "down") and spot[2] != "middle":
+                # (beside an arrow coming in: past its wide end, not against it)
+                spot = (spot[0] + (1.0 if spot[2] == "start" else -1.0), spot[1], spot[2])
             return spot
 
         for k, txt in reversed(list(enumerate(txts))):  # the sheet reference first: it must be written, at the best
