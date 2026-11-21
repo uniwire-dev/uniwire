@@ -26,7 +26,8 @@ large ones. If the browser cannot load it, the editor draws the same drawings in
 - **Editor** with JSON syntax highlighting, error markers in the gutter and live re-rendering
   (400 ms after the last keystroke). Open a file with *Open*, drag and drop it onto the page, or paste
   a document.
-- **Drawing**: one tab per sheet, zoom with the mouse wheel or the +/− buttons, pan by dragging (dragging
+- **Drawing**: one tab per sheet, numbered as in the drawing set of the document's views (the numbers of the title
+  blocks and of the PDF), zoom with the mouse wheel or the +/− buttons, pan by dragging (dragging
   never selects text: double-click a text to select it, or drag with `Alt`/`Option` held), *Fit* to show the
   whole sheet. Switch between the document's views and between the *single-line*
   and *multi-line* diagrams. The drawing language follows `meta.lang` of the document.
@@ -47,7 +48,7 @@ large ones. If the browser cannot load it, the editor draws the same drawings in
   sheet, `+`/`-` zoom, `↑`/`↓` and `Shift`+arrows pan, `Esc` clears the selection, `Alt`+`←` goes
   back.
 - **Issues**: validation errors with their JSON path, and rule findings (severity, rule, message,
-  node). Clicking a finding highlights the node in the drawing and in the editor; clicking a symbol in
+  node), in the language of the document (`meta.lang`) when uniwire has it, else in that of the interface. Clicking a finding highlights the node in the drawing and in the editor; clicking a symbol in
   the drawing selects its node in the editor. While the document is invalid, the last valid drawing
   stays visible.
 - **Examples**: every document of the [examples](examples.md) gallery is available from the

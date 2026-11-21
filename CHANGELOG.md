@@ -8,486 +8,290 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
-* Web editor: large drawings took many seconds to draw in the browser, where the link router always ran in pure
-  Python; the editor now also loads the compiled link router (`uniwire-native`, built for its Pyodide release by
-  `packages/uniwire-native/build-pyodide.sh` and served with `python viewer/build.py --native`), so they are drawn
-  several times faster, exactly the same. When it cannot be loaded the editor draws in pure Python as before, and
-  the library falls back to pure Python as well when the module is installed but cannot be loaded. The module now
-  builds with Rust 1.83 or later (was 1.88).
-* Texts kept off conductors and off one another. Single-line drawings: a standby source on a transfer switch was
-  drawn, with its text, across the feeders passing by from the busbar to their loads; it now goes beyond them. A
-  view frame and an enclosure round the same devices were two frames drawn on one another, their labels written
-  at one place; they are now one frame with both labels, one under the other (a label saying nothing more than
-  the other is left out). A link label with no free place along its link (an interlock between neighbouring
-  contactors) was written over a conductor or a contactor's blade; it now goes on three lines if need be, else in
-  a free place with a leader. The text of an off-sheet stub with no free place beside it was written across its
-  own arrow; it now goes in a free place near it with a leader. Multi-line drawings: a star-delta starter drew W2
-  U2 V2 under its delta contactor, wired to nothing, and the motor with three terminals U V W; the three
-  conductors now go down to the motor, drawn with its six terminals U1 V1 W1 and W2 U2 V2, and are carried by its
-  cable in the wire lists. The cable `marks` keys accept `U2`, `V2` and `W2` (format: their wire marks).
-* Sheet numbers of a drawing set: a view drawn on its own (the web editor, the `render` tool, an SVG export) used
-  to number its sheets from 1, or from its own `first_folio`, while the PDF of every view numbered them after the
-  views before it: the title blocks and the "→ sheet n", "from -Q1 (sheet n)" and "continued on sheet n"
-  references of one sheet differed between the two. A view declared in the document now prints the numbers it has
-  in the set, total included, and the sheet tabs of the web editor show them. A reference in the feeder table whose
-  printed number has more figures than the layout planned for ("sheet 3" printed "sheet 103") no longer runs out
-  of its cell: it is drawn a little smaller.
-* PLCs with many wired channels: where the modules widened for their wires set the width of a sheet and made it
-  smaller, the wires are drawn closer under them (the channel numbers nearly touch) and the sheet keeps a larger
-  scale; elsewhere the usual spacing stays. The stubs of a busy PLC's links to other sheets were drawn alone below
-  the first ten or so, joined to nothing: the leads to them now leave from under every module that has room, closer
-  when needed, and never from a point beyond the side of the device. A safety relay whose links to other sheets
-  carry no label was drawn some 5 mm taller per stub; one line of text each, it is now drawn about 3 mm per stub.
-  In the multi-line view, a link leaving a PLC channel for another sheet no longer reserves a drop under its module,
-  where another link ran along it for its whole length.
+### Changes to know
 
-* Use of the sheet: no sheet is drawn below scale 0.6 any more (`folio_split: auto`). A way wider than a sheet,
-  such as a long distribution below a device rather than a board, used to be squeezed on one sheet at a third of
-  its size (texts under 1 mm) while the busbar around it was cut into sheets holding two feeders; its branches go to sheets of their own, with off-page references at both ends, before the
-  busbar is cut, in single-line and multi-line views. A `min_scale` below 0.6 is read as 0.6; `folio_split: none`
-  still draws one sheet at whatever scale it needs. A long list of auxiliary devices linked to nothing, drawn in
-  one column far taller than the sheet, is now drawn in several columns. The scale of a sheet is written in a
-  "Scale" cell of the title block (next to the sheet number) instead of in the corner of the sheet; a sheet with
-  no title block keeps the note in its corner.
-* Inverters/chargers and UPS have separate sides for what reaches them, derived from the document (no format
-  change): the AC input on top, the DC terminal on the left, the AC output at the bottom. The grid feeding a hybrid
-  inverter, its PV array and its battery used to land all on one point on its left side (a battery feeding a UPS
-  even on its AC input conductor), forming a rectangle that read as a frame, and the AC input on top was left
-  unconnected; now an AC infeed lands on the input on top, a battery, PV or DC board infeed on the DC terminal
-  (several of them joined there with a junction), a link leaving it toward a changeover switch or an AC board
-  leaves its output conductor with a junction, and its control and data links end on its right side or on the top
-  of its body, never on its DC terminal. An inverter first in the tree with only batteries or PV below it draws
-  them on its DC side. In multi-line views, a DC link to an inverter/charger or a UPS lands on its DC pair (L+, L-)
-  instead of being left out.
-* I/O list and terminal strip table from what a document already describes: the PLC channels and terminal
-  blocks were only drawn, with no list to wire or check a panel from. `uniwire io FILE` gives one row per channel
-  of each PLC I/O module, connected or spare (slot, `DI` / `DO` / `AI` / `AO`, address `slot.channel`, label, the
-  device linked to it and the terminal block terminal it passes through), and `uniwire terminals FILE [--view ID]`
-  one row per terminal of each terminal block, with what arrives on it and what leaves it (and the wire marks of
-  the view for a block in the power tree). Also in the library (`io_rows`, `terminal_rows`, `io_csv`,
-  `terminals_csv` in `uniwire.exports`) and in the `wiring` tool (`what='io'` or `'terminals'`).
-* Faster layout of large drawings, with or without the compiled router: link labels, leader texts and the legs of
-  channel routes are placed against an index of what is already drawn (texts and symbols by area, lines by
-  position) rather than by testing every obstacle at every position tried, with the same drawings. The slowest
-  large drawings are drawn two to four times faster.
-* Optional compiled link router: `pip install "uniwire[native]"` adds the package `uniwire-native` (Rust), which
-  runs the search of the grid link router many times faster; the drawings are exactly the same as without it (same
-  costs, same order of operations, same choice between equal routes). Without the package, or with
-  `UNIWIRE_NATIVE=0`, the pure Python search is used, as before (and in the browser editor). Large drawings, many
-  links on several sheets, are drawn about three times faster than with the pure Python router.
-* Multi-line views draw the power diagram only, as the specification says (§7.1): a multi-line view used to draw
-  every controller, terminal block, sensor and meter placed through links, with their control, measure, data,
-  trip and earth links and their off-sheet stubs, often shrinking a sheet to a third of its size; it now draws
-  the power tree (every node in it, whatever its type) and the power links (transfer, bypass, parallel, tie,
-  infeed). The new view option `auxiliaries: true` draws the auxiliary devices and their links as before. Large
-  multi-line views are also drawn much faster.
-* Faster layout: large drawings, with many links, take about half the time they took (the slowest twice as
-  fast or more), with the same drawings: link routes costed on the obstacles near them, the
-  channels and stubs that cannot beat the best route found left out, the sheets of a view with no paper planned
-  once, and each text measured once.
-* Single-line drawings: links avoid closing round what they pass, and power links join conductors. A link leaves a
-  device by the side facing the other end when it can: a route turning three times the same way (round its own
-  device, round a group of devices back to the trunk it joins) is costed like a crossing, so a meter's lead to its
-  trunk goes the short way instead of drawing a dashed rectangle round the incomer that read as a board frame, and two
-  interlocked contactors one above the other are joined on one side, as a bracket, instead of the link running back
-  across the leads of the first one. A thin link routed on another line (another link, a conductor) is rerouted with
-  more corners when that is clearly better. A standby supply leaving a busbar for the side input of its transfer
-  switch (a UPS bypass) taps the busbar where its run crosses the fewest feeders, never beyond an end that a bus tie
-  continues; before, it left the far end of the busbar and crossed every feeder of the section. A power link leaving
-  a conductor that ends on an outgoing arrow (a generator feeding a busbar) starts on that conductor, with a junction
-  dot, level with the busbar; before, the busbar end turned down to the arrow beside the conductor. A device
-  connected in parallel after another (a surge arrester after its fuse) lands on the conductor below that device,
-  with a junction dot; before, its link ended on the side of the device's body and read as a bypass of it. A solid
-  power link pays more for each conductor it crosses, and no link label is written on the switch of a bus tie.
-* Frames and texts: a board, enclosure or view frame is no longer drawn through a text (a neighbour's label
-  running into it, the "Auxiliary devices" title, a bus coupler's text): its edge moves past the text, or the
-  coupler between two boards side by side gets the room its text needs. A board feeding sub-boards ends after its
-  own last way; before, its frame ran over the whole width of the sub-boards below it (large empty dashed boxes).
-  A board's name is no longer written across its incoming conductor when room left for texts or links moves the
-  conductor far from the frame's side. A title block value reduced to the exact width of its cell is written
-  whole (it was cut with an ellipsis by a rounding error), and one too long for one line goes on two lines. The
-  "Notes" title is left out when there is no note. In the PDF, every CJK character of a text is drawn with the CJK
-  font when some are (a mark the main font has was drawn in another type face inside a word). The drawing audit
-  of the tests finds frame edges drawn through a text.
-* Drawing conventions. Conductor-count marks: one phase and the neutral is always one stroke and "+N" ("L1+N"),
-  where a two-pole device wrote two strokes and "L1 N"; no "+N" on a line without a neutral (single-pole circuits of
-  a three-wire supply had one); below a two-pole device the circuits take its two conductors (they took the
-  installation's four). Transformers: the star point is earthed in TN-C, TN-C-S (on the PEN) and TT (by its own
-  electrode) multi-line drawings as it was in TN-S, never in IT; single-line drawings show an earth on a transformer
-  whose neutral is earthed. Outside the status colour mode a node of status `future`, and what inherits it, has
-  "(future)" added to its label (it was drawn as existing). The circuit table leaves out the column of a source with
-  nothing below it when that column would be empty. New info findings: no supply system declared, TN-C-S with no
-  board saying where the PEN is split (the drawings split it at the first board), and one listing the generic loads
-  and controllers without `symbol_text` (their boxes stay empty or generic).
-* Drawings: a generator whose line leads, through switches and protections only, to DC equipment (a DC/DC converter,
-  a battery, a DC board) is a DC machine, an alternator with its rectifier: drawn "G =" with L+ L- in both views. In
-  an AC installation it was drawn as an AC generator ("G 1~", L1 N) feeding the DC equipment.
-* Multi-line drawings with the conductor colours: the leads of a surge protector to its conductors and to the PE,
-  and the lead of an earth electrode, are drawn in the colour of their conductor; they were black, as if no
-  conductor reached the device.
-* Drawings: the designation the author gave a cable is written in the text of its device with its composition
-  ("XYZ-1 3G10" beside the feeder of a sub-board), as in the multi-line view; the single-line view left it out. The
-  multi-line view writes the socket type under a socket, after its number of points; it was drawn nowhere.
-* Drawing sets: installations side by side drawn one per sheet take the name of their board; one with no board takes
-  the title of the drawing, as the first sheet does. Its sheet was named after the label of its source ("Roof array"
-  as the title of the second sheet).
-* Drawings: an off-page reference whose `target` is the id of a node of the document prints that node's tag (else
-  its label): "→ -S9", in the single-line and multi-line views and in its annotation. It printed the bare id ("→
-  ts_main"). A target that is no id (another drawing, a sheet) is printed as written.
-* Single-line drawings: a protection relay, an instrument transformer or an earthing device alone at the end of a
-  way of its own (behind its own breaker) has its column in the circuit table, as a contactor there has; the circuit
-  was missing from the table. Beside the other devices of a way it still has none.
-* Drawings: a controller feeding a motor declared three-phase from fewer than three phases or from a DC line (an
-  electronic speed controller) gives it three conductors, as a drive does: U V W at the motor in the multi-line
-  view, and the motor drawn 3~ in the single-line view. It passed the two supply conductors on unchanged (L+ L- into
-  a three-phase motor) and the motor was drawn as a DC motor.
-* Single-line drawings: a power supply fed from a DC line is drawn as a DC/DC converter, "=" on its input as in the
-  multi-line view; it was drawn AC/DC ("~" in) in the single-line view and DC/DC in the multi-line one.
-* Drawing sets: a board drawn on its own sheet names its feeding device with its board ("from =SA, -Q1 (sheet 1)")
-  when the sheet it is on holds another device with the same tag. "from -Q1 (sheet 1)" did not say which of the -Q1
-  drawn there feeds it.
-* Multi-line drawings without a colour mode: the protective conductor (PE) is drawn dash-dot, in black like the rest
-  of the drawing. It was drawn as a solid black line like the phases, only its name at the
-  top telling it apart. With the conductor colours it stays green/yellow and solid.
-* Loading a document: a `symbol_text` longer than the six characters a symbol holds, which neither its spaces nor
-  its initials bring down to six, keeps its first whole words ("Pump P-200" as "Pump"); it was cut in the middle of
-  a word ("Pump P"). A single word too long is cut with a full stop marking the abbreviation ("Ventilation" as
-  "Venti.").
-* Drawings: a rating of 0 (a rating left unknown) prints nothing beside a switch, an RCD, a fuse, a breaker or an
-  overload relay (its range); it was printed "0 A", or "C0" after a curve. In multi-line drawings a breaker's curve
-  is kept beside a label holding its letter inside a word (a "C" curve beside "Socket circuit" was left out, the
-  breaker drawn without its curve when it has no rating). In the circuit table, the residual-current cell writes the
-  RCD type as "30 mA type A", as beside the symbol; "30 mA A" read as a second unit.
-* Format, without a version change (the specification is still a draft): the circuit schedule takes the rows
-  `status`, `manufacturer`, `part_number`, `icu_kA`, `icw_kA` and `socket_type`, with their titles in every
-  language; a `breaker` takes `dc`, like `switch_disconnector` and `spd` (its line is drawn as a DC line, L+ and L-);
-  an `instrument_transformer` takes `kind: "shunt"`, drawn as a resistor on the line, and in the multi-line view on
-  the one conductor it measures (its `phase`, else L+ on a DC line, else L1) instead of a ring on each phase. Before,
-  these documents were refused. A view `pitch_mm` under 10 is now read as 10 with a `core.normalized` note instead
-  of refusing the document, and residual-current fields written on a breaker (`residual_mA`, `idn_mA`, `rcd_type`...)
-  are still refused, with a message that points to an `rcbo` (or an `rcd`) with `idn_mA` and `rcd_type`.
-* PDF: the package ships a font, Liberation Sans (Regular and Bold, SIL Open Font License 1.1, see NOTICE), and every
-  PDF is written with it. Where Arial or Liberation Sans was not installed (the web editor, slim containers, many
-  systems), Cyrillic, Polish and Turkish letters came out as black boxes and "IΔn" as "IDn"; they are now drawn, and
-  a document gives the same PDF on every system. The font has the widths of Arial, so the layout does not change.
-  Chinese, Japanese and Korean text is drawn as before.
+* Multi-line views draw the power diagram only, as the specification says (§7.1): the power tree (every node in it,
+  whatever its type) and the power links (transfer, bypass, parallel, tie, infeed). They used to draw every
+  controller, terminal block, sensor and meter placed through links, with their control, measure, data, trip and
+  earth links, often shrinking a sheet to a third of its size. The new view option `auxiliaries: true` draws them as
+  before.
+* No sheet is drawn below scale 0.6 any more (`folio_split: auto`): a `min_scale` below 0.6 is read as 0.6, and a
+  way wider than a sheet (a long distribution below a device rather than a board) sends its branches to sheets of
+  their own, with off-page references at both ends, before its busbar is cut, in both views. It was squeezed on one
+  sheet at a third of its size (texts under 1 mm). `folio_split: none` still draws one sheet at whatever scale it
+  needs.
+* The scale of a sheet is written in a "Scale" cell of the title block, next to the sheet number, instead of in the
+  corner of the sheet (a sheet without a title block keeps it in its corner).
+* Sheet numbers of a drawing set: the views of a document are numbered one after the other, from the `first_folio`
+  of the first view and of a later view that gives one, the total being `total_folios` (never less than the last
+  sheet). A view drawn on its own (web editor, `render` tool, SVG export) now prints the numbers it has in the set,
+  in its title blocks and in its "→ sheet n", "from -Q1 (sheet n)" and "continued on sheet n" references, as in the
+  PDF of every view; it numbered its sheets from 1. The PDF bookmarks and references give the printed numbers too.
+* New info findings that many documents will now get: `core.system-missing` (no supply system declared: the
+  conductors drawn are inferred from the devices), `core.pen-split-missing` (TN-C-S with no board saying where the
+  PEN is split; the drawings split it at the first board) and `core.symbol-text` (generic loads and controllers
+  without `symbol_text`, whose boxes stay empty or generic).
+* Multi-line drawings with no system declared (neither on the installation nor on the supply) take their conductors
+  from what the devices and loads state: three phases only when one of them is on more than one phase or on L2 / L3,
+  a neutral when one needs it, else one phase and the neutral. They were drawn with L1 L2 L3 N and four-pole devices
+  whatever they held.
+* Multi-line drawings without a colour mode draw the protective conductor (PE) dash-dot, in black; it was a solid
+  line like the phases. With the conductor colours it stays solid green/yellow.
+* Powers are per item: with `count`, a load's `p_kW` is that of one item (`core.load-current`, `nfc15100.heating`,
+  the drawings). Six bundled examples gave the total and were corrected.
 
-* Single-line drawings: no conductor lead ends in nothing. A device outside the power path (a meter, a controller,
-  a surge arrester, a battery or PV unit reached only by links) was drawn with conductor tails above and below its
-  symbol; it is now drawn without them (a switching device keeps its fixed contacts, and a lead a power link lands
-  on stays). A busbar, a board or a device first in the document (no source above it) was drawn fed by a bare
-  line from above, as if from the edge of the sheet; it now starts at the busbar or at the symbol, with no
-  incoming lead. A node feeding nothing (a transformer with nothing below it) no longer shows an open output stub.
-  A way with no load ended on a filled arrow, which read as a reference to another sheet; it now ends on a small
-  free terminal, as a spare way.
-* Loading: more near-misses are read in canonical form, each reported by `core.normalized`: revision columns
-  `rev`, `by` and `note` (as `index`, `author`, `description`), PLC module kinds written in full (`digital_input`,
-  `analog-outputs`, `MIXED_IO`), a whole number written for a quoted choice (EV charger `mode: 3` as `"3"`), an
-  unknown field given `null` (left out). When a document is still refused, the list holds only the problems left: a
-  value that would have been read (a number for a text, a long `symbol_text`) was listed beside the real mistake.
-  The messages say what to write: a value outside a list names that value ("'colour' is not one of the values
-  allowed here; write one of: ..."), a value under a minimum names both ("8 is below the smallest value allowed
-  here; write 10 or more"), an unknown field names a close field of the node ("did you mean 'ib_A'?") or the node
-  types that have it ("'dc' is a field of switch_disconnector, spd, not of breaker"), a text written where an object
-  is expected says so (a link `device` given as an id), and a duplicate id gives the path of each node.
-* Single-line drawings: three measure or data links or more between one device and others on its sheet (a
-  multi-channel meter measuring every feeder, a meter reading every charger) are drawn as one trunk with a tee tap
-  to each other end, a junction dot at each tee. Before, each link was routed on its own: a stair of dashed runs
-  about 1 mm apart that read as one thick line, links looping round the incomer and small loops round each feeder.
-  The protocol or label shared by all the links is written once on the trunk, different ones on their taps; a
-  controller's or a PLC's links (their own points and channels), links naming their terminal on the shared
-  device (separate wires) and the links to another sheet (their stubs) are drawn as before. In the SVG, each link of a trunk carries `data-uw-trunk`.
-* Multi-line drawings: below an inverter/charger, a busbar or board with no system stated that feeds only DC ways
-  (a battery busbar and the breakers of its batteries) is on the DC side, drawn with L+ and L-. It was drawn with the
-  AC conductors of the supply (L1, N, PE on a battery). An inverter whose children are all on its DC side keeps its
-  AC output when a transfer, bypass, parallel or tie link leaves it, so that link is still drawn. A way that reaches
-  a battery or PV array through another inverter stays on the AC side.
+### Format
 
-* Web viewer: the drawing no longer jumps while the viewer starts. The loading card left in place grew into a
-  small note in a corner across the preview of the drawing, and the drawing toolbar gained a row when the document's
-  view and colour selects appeared; the sheet tabs now keep their own row (one row with the controls in a wide
-  pane) and the selects narrow to stay on the controls' row. The page carries its full title and a heading for
-  screen readers.
-* Single-line drawings: an earth bar or an earth electrode placed in the power tree is on the protective conductor
-  only, as in multi-line drawings. Under a busbar it is drawn beside it, with no conductor from the bars (a solid
-  line from the busbar to the earth bar read as the bars earthed); elsewhere the line reaching it, and the one from
-  an earth bar to its electrode, is an earth line. A neutral bar keeps its conductor.
-* Title block: the `core` profile is not a standard. With no standard stated and no other profile, the Standard
-  cell stays empty instead of reading "core".
-* Multi-line drawings: when no system is declared (neither in the installation nor on the supply), the conductors
-  come from what the devices and loads state, never from a default: three phases only when one of them is on more
-  than one phase (poles, cable cores, a three-phase motor, a board's system) or on L2 / L3, a neutral when one needs
-  it, and one phase and the neutral when nothing says more. Before, such a document was drawn with L1 L2 L3 N and
-  four-pole devices whatever it held. Documents that declare their system are drawn as before.
-* Multi-line drawings: a conductor is drawn starting at an earth symbol only when it is the protective conductor
-  (the PE at the main earthing terminal). When the first node of a document is not a source (a busbar, a board, a
-  DC converter, a power supply), its live conductors (L+ and L-, or the phases and the neutral) each hung from an
-  earth symbol, which read as earthed poles, and the names were drawn over each other; they now arrive on an open
-  lead from above, each with its name, as the incoming feed of a board drawn on its own sheet.
-* Single-line drawings: a link never takes the channel another link already runs on (the two dashed lines read as
-  one solid conductor). Under the loads, where the channels are taken by the links and the devices placed there,
-  it takes a channel of its own lower down, under what is drawn, and the table goes down under it.
-* Single-line drawings: a link to another sheet that leaves a PLC channel or a named terminal writes that channel or
-  terminal by the start of its stub, as a link drawn whole does (only the links drawn whole wrote it); where that
-  place is taken, in front of the stub's label, never on a symbol or a line.
-* Single-line drawings: the texts of the off-sheet stubs of a device (one under the other on its left) are no longer
-  written over the text of the device on its left: its column moves right by what they need. The room is taken
-  only where the sheet keeps its scale with it (never a smaller drawing, never one more sheet).
-* Multi-line drawings: a busbar too long for one sheet shares its ways evenly among as many sheets as it needs
-  (27 ways: 9 on each of three sheets, no longer 13, 13 and 1).
-* Single-line drawings: the label of a device keeps at least 0.4 mm from the symbol of a device beside it in the
-  next column, on more lines when needed (it ran up to the abbreviation written left of a UPS, or to the box of a
-  converter).
-* Single-line drawings: of two boards as wide that could go to a sheet of their own, the one later in the
-  document goes, so the sheets keep the order of the document (two identical boards could swap sheets on a small
-  change of their widths).
-* Drawings: every text cut to fit its place ends with an ellipsis and is cut by its width, by one rule. The
-  family of a PLC was cut to twelve characters in its head and the function of a protection relay to six in its
-  box, without an ellipsis; a title block value had its own cut. No space is left before the ellipsis.
-* Drawings: the width of a text is measured with the advance width of each character in Arial (the widths of
-  Liberation Sans, the font of the PDF on a server: a table in `uniwire.render.glyph_widths`, written by
-  `tools/glyph_widths.py` from the font file). The estimate by classes of characters was narrower than the text
-  for wide capitals ("W" by 0.14 em: six of them were drawn 1.4 mm wider than measured), Cyrillic letters and
-  arrows; boxes, columns and texts placed by their width now fit what is drawn. A text reduced to fit its room
-  exactly (a title block value, a device annotation) is no longer cut by a rounding error, and a label of a
-  multi-line drawing keeps off the triangle of a mechanical interlock.
-* Single-line drawings: a characteristic of a device (a rating, a curve, a type of meter) is left out beside its
-  label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
-  out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a
-  label with a word containing a C, a "C2" rating beside contacts named "C1-C2".
-* Single-line drawings: an earth link never ends on the power path. To a board it ended on the busbar end or on
-  the incoming conductor above the isolator (it read as a protective conductor tied to a phase, its label often on
-  the busbar); it now ends on an earth terminal drawn inside the board's frame, low on its side, one per link, clear
-  of the devices and texts, its off-sheet stub included. To a busbar drawn alone it ends on an earth terminal beside
-  the busbar's end; to a device whose left side carries conductors (an inverter/charger with its DC side and its
-  feeds there) on the top of its body, beside its conductor, instead of on its DC terminal.
-* Single-line drawings: an earth bar, main earthing terminal or electrode drawn inside a board's frame is that board's
-  earth point. The earth link between them is a short straight lead from it to the nearest side of the frame it
-  reaches without crossing anything (it ran across the whole board to a terminal on the far side), and the other
-  earth links of the board end on it when their route there is short and crosses nothing, its off-sheet stubs
-  included.
-* Drawings: off-sheet stubs stacked on the side of a device past its body (many links from one earth bar, a
-  controller or a drive to other sheets) are attached to it; their leads ended in empty space. Earth stubs (one
-  potential) start on a riser from the earth stub above, with a junction dot where they branch off; the stubs of
-  other thin links (control, data, trip...) each keep a lead of their own from the device, out of a point of its
-  side or of its bottom (clear of its conductor and of its PLC channel wires), never joined to another nor crossing
-  one, their arrows in one column. The two texts of a stub stay together on one side of its arrow, the sheet
-  reference on top.
+* Format 1.2: a document names the symbol set it is drawn with in `symbols` (`iec` by default, the built-in set). A
+  set is registered in Python (`uniwire.symbols.register_symbol_set`) or by a package (entry point group
+  `uniwire.symbol_sets`) and gives only the symbols it changes. A set that is not installed, a package that fails to
+  load or a symbol that fails to draw gives the IEC symbol, with the warning `core.symbol-set-unknown` or
+  `core.symbol-set-error`. `uniwire symbols --set NAME` draws every symbol of a set (example in
+  `examples/code/symbol_set.py`). In multi-line views, switching and protective devices are drawn pole by pole and
+  do not take the set's symbols. A 1.1 document is a valid 1.2 document, drawn as before.
+* Without a version change (the specification is still a draft), documents refused before are now read: the circuit
+  schedule rows `status`, `manufacturer`, `part_number`, `icu_kA`, `icw_kA` and `socket_type` (titles in every
+  language); `dc` on a `breaker`, as on `switch_disconnector` and `spd` (drawn as a DC line, L+ and L-); `kind:
+  "shunt"` on an `instrument_transformer`, drawn as a resistor on the line, and in the multi-line view on the one
+  conductor it measures (its `phase`, else L+ on a DC line, else L1); the cable `marks` keys `U2`, `V2`, `W2`; the
+  view option `auxiliaries`.
 
-* PDF: an arrow the font has no glyph for ("⇄", "⇒") is written in ASCII ("<->", "=>") instead of being left out
-  of the text; without a Unicode font, where a box was drawn, too.
-* Single-line symbols: a box widens for the text written in it. The coil of an impulse relay was 2.6 mm wide
-  whatever its abbreviation ("脉冲" and "STS" ran onto its sides), and a controller's box was sized by its number of
-  characters, so a short text in Chinese or Japanese, or of wide capitals, ran past it.
-* Single-line drawings with a PLC: an auxiliary device read or driven by a PLC channel (a sensor, an operator box)
-  is placed under the band of the channels, by the module it is wired to, and no auxiliary device is placed inside
-  that band (the channel wires ran through its box and over its texts) nor in the column of the off-sheet stubs
-  beside a device. The band goes down under a device hanging into it (a tall safety relay beside the PLC: the
-  channels ran through it). A device is placed inside the frame of its partner's board when there is room (it
-  widened the sheet), never above the band for one wired to a channel. The drawing audit used by the tests reports
-  a link drawn through the symbol of a device it does not reach.
-* Single-line drawings: an auxiliary device with links to devices on another sheet (a safety relay stopping
-  contactors drawn further on) keeps the texts of its off-sheet stubs clear: when something is already where
-  they go, the device is placed with room for them, and the next devices keep off them (they were written over the
-  text of a neighbour, or on the far side of their stub). Where they are already clear the device stays where it
-  was, the sheet as wide. A device read or driven by a PLC channel with no room inside its board's frame is still
-  placed under the band of the channels (it went above the PLC, its link through the modules).
-* Single-line drawings: the frame of a board goes down round the off-sheet stubs of its devices (a PLC whose links
-  reach ways drawn on the next sheet: one stub under the other beside it, they hung out of the bottom of the frame,
-  between the loads). The channels under a PLC module pass under a device hanging into their band (a tall safety
-  relay beside the PLC), all of them: the band reserved under it was one channel high, the other channels ran
-  below the band, where the field devices are placed (the links then went round the whole board). A board drawn
-  under a frame grown that way moves down with it.
-* A dashed signal link (control, interlock, trip, measure, key) is interrupted where it crosses a conductor (tree
-  conductor, busbar, multi-line conductor, solid power link), the conductor drawn whole: the crossing no longer reads
-  as a connection. Not where the link ends on what it reaches, and not across a bundle of conductors close together
-  (multi-line phases), where a gap per conductor would cut the link into dots. Earth, data and power links stay whole.
-  Each piece keeps the dash pattern of the whole line (SVG `stroke-dashoffset`, PDF dash phase).
-* Links to a device on another sheet: the sheet reference is placed first, beside its arrow rather than on it, and
-  the arrow is kept off the side of a frame (the stub is made longer); the link's label goes where room is left.
-  A link label is never left out for want of room (at an off-sheet stub, or along a link of the multi-line view): on
-  two or three lines, else in the nearest free space with a leader, else where it fits best.
-  Several such stubs beside one device no longer write their texts over one another's arrows.
-* Multi-line drawings: the motor terminal names (W2 U2 V2) written under a star-delta starter take room in its column.
-  They were written on the bottom line of the board frame when the starter was the last device of the board.
-* Drawings: the label of a breaker, fuse or RCD feeding one circuit is drawn beside it when nothing else says it.
-  Before, it was dropped when the load below had a label of its own (single-line: the table shows the load's), and
-  in multi-line drawings whenever the device fed one circuit: what the user wrote there ("temporary", the room) was
-  lost. It is still left out when the circuit table shows it, or when every word of it is in the labels below
-  (case, Unicode forms, numbers, ratings and a leading copy of the device's tag do not count: "Oven 12 kW 3P" over
-  a load "Bakery oven"; words of scripts without spaces are looked for inside the text). The column makes room for
-  it on two lines rather than one. The label of the device feeding a spare way ("Future kitchen") is now drawn in
-  multi-line drawings too, and beside the device in single-line ones (the table shows "Spare" for the way).
-* Single-line drawings with a PLC: every link leaving a PLC module gets its own channel below it. A module many links
-  leave is drawn wider, one wire about every 2.6 mm, and the loads go down far enough for as many channels as links
-  run side by side (they were spaced a fraction of a millimetre apart, and past eight links they ran on one
-  another). The same for the PLC's built-in I/O (slot 0) under its head. The channel of each link ("2.1") is
-  written up its wire under the module, where it is read on the panel, instead of near the device at the far end.
-  A board frame encloses a symbol wider than its column. Only the links drawn under a module widen it (not those
-  ending on an off-page stub), and when a busbar is split over sheets, the sheet of such a PLC takes the ways that
-  still fit once its modules are narrower.
-* Terminal numbers named on a device that is not a PLC module (`from_port` / `to_port` on a safety relay, a
-  controller) are drawn: inside the box of a controller many links reach, by each link's point, else by the link
-  near that end. Before, they were left out of the drawing.
-* Single-line link labels: a label with no room along its link is joined to it by a leader square to the link, from
-  the point of the link nearest the label (it ran slanting from the middle of the longest stretch and read as one
-  more link). The label of a link read by a PLC channel (a contactor's feedback to an input) goes near the device,
-  like the label of a link driven by a PLC channel (it went among the wires under the PLC).
-* Format 1.2: a document names the symbol set it is drawn with in `symbols` (`iec` by default, the built-in set).
-  A set is registered in Python (`uniwire.symbols.register_symbol_set`) or by a package (entry point group
-  `uniwire.symbol_sets`), and gives only the symbols it changes; the others are drawn as in `iec`. A set that is not
-  installed draws the IEC symbols, with the warning `core.symbol-set-unknown`. `uniwire symbols --set NAME` draws
-  every symbol of a set; example in `examples/code/symbol_set.py`. A 1.1 document is a valid 1.2 document and is
-  drawn as before. A package that fails to load, or a symbol that fails to draw, gives the IEC symbol and the
-  warning `core.symbol-set-error`. In multi-line views, switching and protective devices are drawn pole by pole and
-  do not take the set's symbols.
-* Drawing sets: a new warning, `core.folio-overlap`, says when a view is numbered after the views before it
-  because its sheets would take numbers already given to them (a `first_folio` inside their range, or a view of
-  several sheets running into the first sheet of the next). Before, only two views starting at the same number were
-  reported (`core.folio-duplicate`) and the other cases were renumbered silently. The number of sheets of a view is
-  known only once it is drawn, so `check` does not report it: the PDF of every view does, on its page "About this
-  document", and `uniwire render` prints it. API: `render_views(doc, views, counts)` gives each view with its
-  number of sheets, `drawing_set_findings(counts)` the findings, `render_pdf(..., findings=[])` both.
-* Single-line conductor marks: the line leaving the supply of the installation carries the system declared on that
-  line, else the installation's (before, a single-phase or DC board further down made it a two-conductor line); a
-  standby or lower-voltage source still takes the system declared below it. The secondary of a transformer
-  carries the system declared on its line, else its vector group (`coupling` "Dyn11": four conductors), instead of
-  the installation's.
-* Drawings on several sheets: a `tie` link between two devices or boards (not busbars) whose ends are on two sheets
-  is drawn at both ends, with a stub naming the other end and its sheet. Before, it was not drawn at all.
-* Drawings: a switch at the far end of an outgoing cable, in front of the equipment it serves (a local isolator
-  before a transformer, an inverter or a UPS), is drawn below the board frame with that equipment. Before, a
-  transformer joined by a cable left the frame while one behind its local isolator stayed inside.
-* `nfc15100.heating`: the heating power of a circuit counts every item (`p_kW` is per item, `count` items, as in the
-  SPEC and `core.load-current`). Before, three 1.25 kW heaters on 16 A were read as 1.25 kW.
-* Drawings with many links draw faster (about two times on the slowest documents seen): the router costs each
-  segment against the obstacles near it only, and costs a segment it meets again once. The drawings are the same.
-* Feeder table: the residual current of an RCBO or an RCD is written in the RCD row only, not also with the
-  protection ("C16", then "30 mA"; without an RCD row it stays "C16 30 mA"). The powers of one row share their
-  unit: "0.6 kW" beside "3 kW", not "600 W", below 1 kW to two significant digits ("0.83 kW"); a row below 1 kW
-  throughout stays in watts. A feeder with no protection of its own shows the rating of the device switching it
-  (contactor, impulse relay) in the rating row.
-* Drawings: the surge protector type ("Tipo 2", "Typ 2") and the split-phase system in the title block are written
-  in the language of the drawing (before, "Type 2" and "split-phase" in every language). An interlock declared
-  `electrical`, `mechanical` or `removable_link` is written "interlock K1", not "key K1", which stays for trapped
-  keys. Multi-line drawings no longer repeat the tag at the start of a device label ("-KM1" over "-KM1 water
-  heater"), as single-line drawings already did.
-* Drawings and rule messages in Serbian in Cyrillic (`meta.lang` "sr-Cyrl", "sr-Cyrl-RS"): the Serbian texts
-  transliterated letter for letter, Serbian abbreviations included (ФИД, ВН). References, field names, units,
-  symbols of quantities (Iz, Ik) and international abbreviations (IEC, PE, UPS) stay in Latin letters. Before, such
-  a document got the Latin texts.
-* SVG: each sheet states the language of the document (`lang` and `xml:lang`, from `meta.lang`), so a browser
-  draws the Japanese kanji in their Japanese forms rather than the Chinese ones (the PDF already did).
-* Web editor: the rule findings are in the language of the document (`meta.lang`) when uniwire has it, as its
-  drawing is; otherwise in the language of the interface. Before, they were in French or English only.
-* Drawings: a device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an
-  inverter is on its DC side. Before, a DC surge protector beside the PV arrays and the battery of an inverter fed
-  from the board was drawn on its AC side, and the inverter was drawn "=" over "~".
-* Multi-line drawings on a single-phase three-wire supply (`system` "split-phase", 100/200 V or 120/240 V): a `2P`
-  device feeds a phase-to-phase circuit, without the neutral, unless something below it uses the neutral (a device
-  or load on one leg, a load whose `un_V` is the phase-to-neutral voltage, a socket-outlet or lighting circuit). A
-  load's `un_V` also tells which of the two it is, against the voltages of its own supply. Before, a 200 V or 240 V
-  load under a `2P` breaker was drawn with a neutral, unless its `phase` said "L1L2". These rules apply below a
-  split-phase supply only (the nearest system declared above, a transformer taking the one declared below it):
-  before, anywhere in a document that had one, so a three-phase motor fed by a 4-core cable elsewhere was drawn on
-  two phases.
-* Title block: the voltage gives the phase-to-neutral and the phase-to-phase voltages when both are stated
-  (`uln_V`) and the system has a neutral: "3P+N 230/400 V", "split-phase 100/200 V".
-* Drawings: a spare way with no device (`spare` without `in_A` or `poles`) is a free space, drawn dashed (multi-line: grey
-  dashed, like an equipped spare way) and without a conductor mark. Before, it was drawn as a conductor leaving the
-  busbar with no protection.
-* Drawings: a board frame no longer encloses the equipment at the far end of its outgoing cables. An inverter, a
-  UPS, a transfer switch, a busbar (other than the board's own) or a transformer fed above 1000 V, with a `cable`
-  of its own or after a device with one, is drawn below the frame with what it feeds (SPEC §3.1).
-  Before, a PV inverter and its DC isolator, a UPS, the transformers fed by a ring main unit or a transfer switch at
-  a pump were drawn inside the board.
-* Drawings: a board in a standby supply drawn beside the changeover switch it feeds (`transfer` link) is framed
-  and named like the others, clear of the frame of the board holding the changeover. Before, it had no frame: its
-  devices seemed to hang straight from the source.
-* Drawings cut into continuation sheets: a busbar continued on another sheet keeps the frame of its board there
-  (single-line), and the continuation is named after the board in multi-line drawings too ("TD (cont.)"), not
-  after the device at the head of the busbar ("-F1 (cont.)"). The busbar of a row of the board (a group RCD among
-  others) is named after the board and the row in both: "TD, -ID2 (cont.)" (before, "TD" in single-line drawings).
-* Drawings: a link no longer runs on a busbar or right beside it, where it read as part of it. A transfer link
-  from a standby supply to a changeover switch was routed onto the end of the busbar above the switch, and links
-  between trains ran along their busbars: they looked connected to what the busbar feeds.
-* Single-line conductor marks: the phase of a single-phase line is also taken from the node above it that states
-  one (a group RCD on `L2` marks its circuits `L2+N`, before only `+N`), and is written on the line leaving a
-  single-phase device too. Two conductors on one phase are marked with both (`L1 N`, before `L1` alone). A mark
-  stops at a converter: the DC side of an inverter is no longer marked with the phase of its AC side, nor counted
-  with the poles or the cable above the inverter (a PV array behind a 4-pole device was marked `4`).
-* Drawings on several sheets: a board drawn on its own sheet names the sheet of the device that feeds it (before,
-  a board inside another board drawn apart named the first sheet). A transfer link whose two ends are on different
-  sheets is drawn at each end, as a stub naming the other end and its sheet (before, it was left out: the
-  changeover switch showed one supply).
-* New finding `core.view-direction` (info): a view whose `direction` is `right` or `left` is drawn top-down, which
-  the reader is now told. Before, it was drawn top-down without a word.
-* New finding `core.neutral-missing` (warning): a device with a neutral pole (`1P+N`, `3P+N`) on a network without
-  neutral (`system` `3P` or `2P`). Either the neutral is distributed and the system has one, or a circuit between
-  two phases is `2P`.
-* New finding `core.load-current` (warning): the current of a load is more than 10% above the rating of the
-  protection that feeds it alone. Powers are per item: 12 lamps of 0.1 kW (`count` 12) under one breaker draw
-  1.2 kW, and a breaker with `count` 24 stands for 24 circuits each feeding the load below it. The message says so
-  when `count` is the cause. Six examples gave the total power of `count` items: they give it per item now.
-* Drawing sets: two views starting at the same sheet number (`first_folio`) no longer give two sheets with one
-  number. The later view, and any view whose sheets would take numbers already given, is numbered after the highest
-  sheet before it, and the new warning `core.folio-duplicate` says so. Before, every reference "-> sheet n" to such
-  a number was ambiguous.
-* Drawings in Croatian, Serbian and Bosnian (`meta.lang` "hr", "sr", "bs", Latin script): title block, notes,
-  legends, table headings ("Oznaka", "Strujni krug" / "Strujno kolo"), type names, the short texts in symbols and the
-  rule findings, with the terms of each country's practice (ijekavian in Croatian and Bosnian, ekavian in Serbian).
-  Numbers take a decimal comma. Validation and command line messages stay in English.
-* Rule messages in Italian, Polish and Turkish (`UNIWIRE_LANG` "it", "pl", "tr"), as in the other drawing
-  languages. The catalog test also compares the format of each placeholder (`{ref!r}`, `{in_a:g}`) with English.
-* Drawings in Japanese (`meta.lang` "ja", "ja-JP"): title block, notes, legends, table headings ("記号", "こう長"),
-  type names, the short texts in symbols and the rule findings, with the usual terms of Japanese panel drawings
-  (漏電遮断器, 配線用遮断器, 電磁接触器, 熱動継電器, frames written "225 AF"). In PDF, the kanji of a Japanese document
-  take their Japanese forms. Validation and command line messages stay in English.
+### Validation
+
+* More near-misses are read in canonical form, each reported by `core.normalized`: revision columns `rev`, `by`,
+  `note` (as `index`, `author`, `description`), PLC module kinds written in full (`digital_input`, `analog-outputs`,
+  `MIXED_IO`), a whole number for a quoted choice (EV charger `mode: 3` as `"3"`), `phases` written as text (`"3"`),
+  an unknown field given `null` (left out), and a view `pitch_mm` under 10 (read as 10).
+* A `symbol_text` longer than the six characters a symbol holds, which neither its spaces nor its initials bring
+  down to six, keeps its first whole words ("Pump P-200" as "Pump", it was "Pump P"); a single word too long is cut
+  with a full stop ("Ventilation" as "Venti.").
+* Messages say what to write: a value outside a list names that value and the allowed ones, a value under a minimum
+  names both, an unknown field names a close field of the node ("did you mean 'ib_A'?") or the node types that have
+  it, a text written where an object is expected says so, a duplicate id gives the path of each node, and
+  residual-current fields written on a breaker (`residual_mA`, `idn_mA`, `rcd_type`...) point to an `rcbo` (or an
+  `rcd`). A document still refused lists only the problems left once the near-misses are read.
+
+### Rule checks
+
+* New warnings: `core.load-current`, the current of a load more than 10% above the rating of the protection that
+  feeds it alone (the message says when `count` is the cause); `core.neutral-missing`, a device with a neutral pole
+  (`1P+N`, `3P+N`) on a network without neutral (`system` `3P` or `2P`); `core.folio-duplicate`, two views starting
+  at the same sheet number, the later one numbered after the sheets before it (before, two sheets had one number);
+  `core.folio-overlap`, a view whose sheets would take numbers already given (a `first_folio` inside their range, or
+  a view running into the next one's), renumbered silently before. The number of sheets is known only once the views
+  are drawn, so `core.folio-overlap` is reported with the PDF of every view (page "About this document", `uniwire
+  render`), not by `check`.
+* New info `core.view-direction`: a view whose `direction` is `right` or `left` is drawn top-down, which the reader
+  is now told.
 * `core.scope` ("uniwire does not draw control schematics") also when the control devices are entered as
-  controllers: a relay, a push button, a sensor or a lock on a control power supply (`power_supply`), a reference
-  after a folio number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI",
-  "DO", "AI", "AO", "BI", "BO"). A time switch, a twilight switch or an emergency stop on a board stay part of the
-  distribution.
-* Multi-line drawings and conductor marks: a `1P` or `3P` device switches as many live conductors as it has poles,
-  the phases first. A 3-pole contactor on a phase and neutral circuit switches the neutral too (before, the neutral
-  went straight through); a `1P` device on a DC line has one pole, on the positive conductor (before, it was drawn
-  on both).
-* Drawings in Dutch (`meta.lang` "nl", "nl-NL", "nl-BE"): title block, notes, legends, table headings ("Codering",
-  "Groep"), type names, the short texts in symbols and the rule findings, with the terms of NEN 1010 practice. Dutch
-  numbers take a decimal comma. Validation and command line messages stay in English.
-* Reference card: `meta.lang` is the language of the labels written in the document, which the texts drawn by
-  uniwire follow.
-* MCP server: a tool accepts, as its document, the editor link a tool returned for it (`viewer_url`): a long
-  `#doc=` link carries the document, a short `#d=<id>` link reads it from the server's store (hosted server).
-  Before, an assistant that passed the link instead of the JSON was refused.
-* Documents: `phases` written as text (`"3"`) is read as a number, reported by `core.normalized` (before, the
-  document was refused).
-* Drawings: a three-pole device on a three-wire network (`system` `3P`) is no longer marked `+N`: a device
-  passes on the neutral of its supply, it never makes one.
-* Drawings: identical items drawn once (`count`) show how many: `x 12` under the tag of a device, `3 x 2.2 kW` under
-  a load in multi-line drawings, and a `count` row in the feeder table after the power, added when the document has
-  such items and the view does not list it. The SPEC says that ratings and powers are given per item.
-* Multi-line drawings: a drive fed in single phase gives three phases to what it feeds when anything below it is
-  three-phase (a three-pole device, a three-phase motor), not only a three-phase motor directly under it: a 3P
-  breaker between the drive and the motor was drawn with one pole, the motor with L1, N and PE.
-* Sheet numbers: a drawing set (several views) numbers its sheets from the `first_folio` of its first view, and
-  from the `first_folio` of a later view that gives one, else following on; the total is `total_folios` (never less
-  than the last sheet). Before, a drawing set printed 1/2 where the views said 3/6. The sheet numbers written in
-  cross-sheet references ("→ sheet 4") and in the PDF bookmarks are the printed ones (before, the position of the
-  sheet, also for a single view with `first_folio`).
-* Multi-line drawings: a thermal overload relay without `poles` acts on the phases only, like a fuse (before, it
-  was drawn with an element on the neutral too).
-* Multi-line drawings: devices connected in parallel are drawn beside the conductors, on taps, instead of as a
-  box in series across every conductor: a voltage transformer or a voltage indicator across the live conductors,
-  a surge limiter or a neutral impedance between the neutral and earth, an insulation monitor or an earthing switch
-  between the live conductors and earth (the PE, else an earth symbol). The conductors go on below them; one that
-  feeds nothing below takes only the conductors it uses. A residual-current toroid (`instrument_transformer`
-  `kind` `toroid`) is one ring around the live conductors.
-* Multi-line drawings: an inverter fed in DC (by a PV array, a battery) gives the AC conductors of the installation
-  at its output (before, its L+ and L- went on to the AC loads and devices below it). A converter's symbol shows
-  what it is fed with and what it gives: `= ~` for an inverter fed in DC, `= =` for a power supply fed in DC.
-* Single-line drawings: an inverter fed from the AC side (a battery or a PV array below it) is drawn `~` over `=`,
-  in the direction it converts, as in multi-line drawings.
+  controllers: a relay, a push button, a sensor or a lock on a control power supply, a reference after a folio
+  number ("-21K4"), one controller per PLC or building controller input or output (`function` "DI", "DO", "AI",
+  "AO", "BI", "BO"). A time switch, a twilight switch or an emergency stop on a board stay part of the distribution.
+* `nfc15100.heating` counts every item: three 1.25 kW heaters on 16 A were read as 1.25 kW.
+
+### Drawings: multi-line
+
+* Star-delta starters: the conductors W2 U2 V2 of the delta contactor go down to the motor, drawn with its six
+  terminals (U1 V1 W1, W2 U2 V2), are carried by its cable in the wire lists and take room in the starter's column.
+  They were drawn under the contactor, wired to nothing, with the motor on three terminals, and could be written on
+  the board frame.
+* Converters: an inverter fed in DC (PV array, battery) gives the AC conductors of the installation at its output
+  (its L+ and L- went on to the AC loads); below an inverter/charger, a busbar or board with no system stated that
+  feeds only DC ways (a battery busbar) is on its DC side, with L+ and L-; an inverter whose children are all on its
+  DC side keeps its AC output when a power link leaves it; a DC link to an inverter/charger or a UPS lands on its DC
+  pair instead of being left out. The converter symbol shows what it is fed with and what it gives (`= ~`, `= =`).
+* Devices connected in parallel are drawn on taps beside the conductors, not as a box across all of them: voltage
+  transformers and indicators, surge limiters, neutral impedances, insulation monitors and earthing switches (to the
+  PE, else an earth symbol). A residual-current toroid is one ring around the live conductors.
+* Poles: a `1P` or `3P` device switches as many live conductors as it has poles, the phases first (a 3-pole
+  contactor on a phase and neutral circuit switches the neutral too; a `1P` device on a DC line is on L+); a thermal
+  overload relay without `poles` acts on the phases only.
+* Drives and controllers feeding three-phase equipment give it three phases: a drive fed in single phase when
+  anything below it is three-phase, an electronic speed controller fed from fewer than three phases or from DC (U V
+  W at the motor, drawn 3~ in the single-line view).
+* Split-phase supplies (100/200 V, 120/240 V): a `2P` device feeds a phase-to-phase circuit without the neutral
+  unless something below it uses the neutral; a load's `un_V` tells which. These rules apply only below a
+  split-phase supply (a three-phase motor elsewhere in such a document was drawn on two phases).
+* A conductor starts at an earth symbol only when it is the PE at the main earthing terminal: the live conductors of
+  a document starting with a busbar, a board or a converter arrive on open leads from above, each with its name
+  (they hung from earth symbols). The transformer star point is earthed in TN-C, TN-C-S and TT drawings, as in TN-S,
+  never in IT.
+* With the conductor colours, the leads of a surge protector and of an earth electrode are drawn in the colour of
+  their conductor (they were black).
+* The socket type is written under a socket, after its number of points; the tag is no longer repeated at the start
+  of a device label ("-KM1" over "-KM1 water heater").
+
+### Drawings: single-line
+
+* Inverters/chargers and UPS have separate sides: the AC input on top, the DC terminal on the left, the AC output at
+  the bottom. The grid, PV array and battery of a hybrid inverter landed on one point of its left side, forming a
+  rectangle that read as a frame; now an AC infeed lands on top, battery, PV and DC board infeeds on the DC terminal
+  (joined there with a junction), a link toward a changeover switch or an AC board leaves the output, and control
+  and data links end on the right side or the top of the body. An inverter first in the tree with only batteries or
+  PV below it draws them on its DC side. An inverter fed from the AC side is drawn `~` over `=`; a power supply fed
+  from a DC line is drawn as a DC/DC converter.
+* Links: a link leaves a device by the side facing the other end, so a meter's lead no longer draws a dashed
+  rectangle round the incomer that read as a board frame, and two interlocked contactors are joined on one side as a
+  bracket; a link never takes the channel of another link (the two dashed lines read as one solid conductor), never
+  runs on a busbar or right beside it, and is rerouted with more corners when that is clearly better. A standby
+  supply reaching the side input of a transfer switch taps its busbar where it crosses the fewest feeders and is
+  drawn, with its text, beyond the feeders passing by (it crossed every feeder of the section).
+* Power links join conductors: a power link from a conductor ending on an outgoing arrow (a generator feeding a
+  busbar) starts on that conductor with a junction dot; a device in parallel after another (a surge arrester after
+  its fuse) lands on the conductor below it, not on the side of its body, where it read as a bypass.
+* Three measure or data links or more between one device and others on its sheet are drawn as one trunk with a tee
+  tap to each other end and a junction dot at each tee; they were a stair of dashed runs about 1 mm apart, loops
+  round the incomer and round each feeder. A label shared by all the links is written once on the trunk. The links
+  of a controller or a PLC, links naming a terminal and links to another sheet are drawn as before.
+* PLCs: every link leaving a module gets its own channel below it, the module widened for its wires (one about every
+  2.6 mm; past eight links they ran on one another), with the channel ("2.1") written up its wire under the module.
+  Where the widened modules would make the sheet smaller, the wires are drawn closer instead. A link to another
+  sheet leaving a channel writes that channel by its stub, and the leads to those stubs leave from under the modules
+  (they were drawn alone, joined to nothing); a safety relay with unlabelled links to other sheets is drawn about 3
+  mm per stub instead of 5 mm. Auxiliary devices read or driven by a channel are placed under the band of the
+  channels, never inside it, above the PLC or in the column of a device's off-sheet stubs; the band goes down under
+  a device hanging into it; an auxiliary device goes inside the frame of its partner's board when there is room. The
+  label of a link read by a channel goes near the device, not among the wires. Terminal numbers named on a device
+  that is not a PLC module (`from_port` / `to_port` on a safety relay, a controller) are drawn. In multi-line views
+  with `auxiliaries`, a link leaving a channel for another sheet no longer reserves a drop under its module.
+* Earth: an earth link never ends on the power path. To a board it ends on an earth terminal inside the board's
+  frame (it ended on the busbar or on the incoming conductor), to a busbar drawn alone beside its end, to an
+  inverter on the top of its body. An earth bar or electrode inside a board is that board's earth point, joined by a
+  short lead; one in the power tree is on the protective conductor only (no line from the busbar that read as the
+  bars earthed).
+* No conductor lead ends in nothing: a device outside the power path (a meter, a controller, a battery reached only
+  by links) has no conductor tails, the first node of a document no incoming lead, a node feeding nothing no open
+  output stub, and a way with no load ends on a small free terminal instead of a filled arrow that read as a
+  reference to another sheet.
+* Conductor marks: one phase and the neutral is always one stroke and "+N" ("L1+N", also below a two-pole device,
+  where the circuits take its two conductors); no "+N" on a line without a neutral (a three-pole device on a `3P`
+  network, single-pole circuits of a three-wire supply); the phase is taken from the node above that states one (a
+  group RCD on `L2` marks its circuits `L2+N`); a mark stops at a converter (a PV array behind a 4-pole device was
+  marked `4`); the supply line carries the system declared on it, else the installation's, and a transformer
+  secondary its own, else its vector group.
+* A transformer whose neutral is earthed shows an earth. A protection relay, an instrument transformer or an
+  earthing device alone on a way of its own has its column in the circuit table. The cable designation written by
+  the author is shown with its composition beside its device ("XYZ-1 3G10"), as in the multi-line view.
+
+### Drawings
+
+* Boards: the frame of a board no longer encloses the equipment at the far end of its outgoing cables (an inverter,
+  a UPS, a transfer switch, another busbar, a transformer fed above 1000 V, or a local isolator in front of them):
+  they are drawn below it with what they feed (SPEC §3.1). A board feeding sub-boards ends after its own last way
+  (its frame ran over the whole width below it), its frame encloses a symbol wider than its column and goes down
+  round the off-sheet stubs of its devices, and a board in a standby supply drawn beside its changeover switch is
+  framed and named.
+* A dashed signal link (control, interlock, trip, measure, key) is interrupted where it crosses a conductor, which
+  is drawn whole, so the crossing no longer reads as a connection (not across a bundle of multi-line phases).
+* A generator whose line leads only through switches and protections to DC equipment is a DC machine, drawn "G ="
+  with L+ L- in both views (it was "G 1~" feeding the DC equipment).
+* A device declared for direct current (`dc`: a surge protector, a switch-disconnector) directly under an inverter
+  is on its DC side (a DC surge protector beside the PV arrays was drawn on the AC side, the inverter "=" over "~").
+* A spare way with no device (`spare` without `in_A` or `poles`) is a free space, drawn dashed without a conductor
+  mark (it was a conductor leaving the busbar with no protection).
+* Identical items drawn once (`count`) show how many: `x 12` under the tag of a device, `3 x 2.2 kW` under a load in
+  multi-line drawings, and a `count` row in the feeder table when the document has such items.
+* Outside the status colour mode, a node of status `future`, and what inherits it, has "(future)" added to its label
+  (it was drawn as existing).
+* Device texts: the label of a breaker, fuse or RCD feeding one circuit is drawn when nothing else says it (what the
+  user wrote there was lost when the load had a label of its own, and always in multi-line drawings), including the
+  device feeding a spare way. In single-line drawings, a characteristic is left out beside a label only when the
+  label says it word for word ("16 A" was dropped beside "116 A"). A rating of 0 prints nothing (it printed "0 A" or
+  "C0"), and a breaker's curve is kept beside a label holding its letter inside a word.
+* Feeder table: the residual current of an RCBO or RCD goes in the RCD row only, written "30 mA type A"; the powers
+  of one row share their unit ("0.6 kW" beside "3 kW"); a feeder with no protection shows the rating of its
+  contactor or impulse relay; the column of a source with nothing below it is left out when empty.
+* Title block: the voltage gives both voltages when `uln_V` is stated and the system has a neutral ("3P+N 230/400
+  V"); the Standard cell stays empty instead of reading "core"; a value too long for one line goes on two lines, and
+  one reduced to the exact width of its cell is no longer cut by a rounding error. The "Notes" title is left out
+  when there is no note.
+* An interlock declared `electrical`, `mechanical` or `removable_link` is written "interlock K1", not "key K1".
+
+### Sheets and references
+
+* Drawing sets: a `tie` or `transfer` link whose ends are on two sheets is drawn at both ends, with a stub naming
+  the other end and its sheet (it was not drawn). A board drawn on its own sheet names the sheet of the device
+  feeding it, and that device with its board ("from =SA, -Q1 (sheet 1)") when its sheet holds another device with
+  the same tag. Installations side by side drawn one per sheet take the name of their board, else the title of the
+  drawing (not the label of their source). Of two boards as wide, the one later in the document goes to a sheet of
+  its own, so the sheets keep the order of the document.
+* In multi-line drawings, a busbar too long for one sheet shares its ways evenly (27 ways: 9 on each of three
+  sheets, not 13, 13 and 1). A busbar continued on another sheet keeps the frame of its board there, and the
+  continuation is named after the board ("TD (cont.)", "TD, -ID2 (cont.)") in both views.
+* An off-page reference whose `target` is a node id prints that node's tag ("→ -S9"), not the bare id. The sheet
+  reference of a link to another sheet is written first, beside its arrow, kept off frames; its label is never left
+  out (on two or three lines, else in a free place with a leader). Off-sheet stubs stacked beside a device are
+  attached to it, earth stubs on a riser with junction dots, the others each with its own lead, their arrows in one
+  column. A reference in the feeder table whose printed number is longer than planned is drawn a little smaller to
+  stay in its cell.
+* A long list of auxiliary devices linked to nothing, drawn in one column far taller than the sheet, is drawn in
+  several columns.
+
+### Readability
+
+* Texts are kept off conductors, symbols and one another: a link label with no free place along its link goes on up
+  to three lines, else in a free place with a leader square to the link; the text of an off-sheet stub with no free
+  place beside it goes near it with a leader; a device label keeps 0.4 mm from the symbol in the next column; the
+  off-sheet stub texts of a device push the next column right (only where the sheet keeps its scale); a device with
+  stubs to other sheets is placed with room for their texts; a multi-line label keeps off the triangle of a
+  mechanical interlock; no link label is written on the switch of a bus tie.
+* Frames are no longer drawn through a text: the edge of a board, enclosure or view frame moves past it, and the
+  coupler between two boards side by side gets the room its text needs. A view frame and an enclosure round the same
+  devices are one frame with both labels. A board's name is no longer written across its incoming conductor.
+* Text widths are measured with the advance width of each character (the widths of the PDF font), so boxes, columns
+  and texts fit what is drawn: wide capitals, Cyrillic letters and arrows were wider than measured. A box widens for
+  the text written in it (an impulse relay coil, a controller box with a short CJK text). Every text cut to fit ends
+  with an ellipsis, by one rule.
+
+### Languages
+
+* Drawings and rule findings in Dutch (`nl`), Japanese (`ja`, with the usual terms of Japanese panel drawings and
+  the Japanese forms of the kanji in PDF and SVG), Croatian, Serbian and Bosnian (`hr`, `sr`, `bs`, Latin script)
+  and Serbian in Cyrillic (`sr-Cyrl`), each with its practice's terms and decimal comma where used. Rule messages in
+  Italian, Polish and Turkish too. Validation and command line messages stay in English.
+* The surge protector type ("Tipo 2", "Typ 2") and the split-phase system in the title block are written in the
+  language of the drawing.
+
+### Speed
+
+* Large drawings are drawn several times faster, with the same drawings: the layout places labels and routes against
+  an index of what is already drawn, costs routes on the obstacles near them, plans the sheets once and measures
+  each text once. Multi-line views, drawn without the auxiliary devices, are much faster too.
+* Optional compiled link router: `pip install "uniwire[native]"` adds `uniwire-native` (Rust 1.83 or later to
+  build), which runs the search of the link router many times faster with exactly the same drawings. Without it,
+  when it cannot be loaded, or with `UNIWIRE_NATIVE=0`, the pure Python search is used, as before.
+
+### Exports, PDF and SVG
+
+* I/O list and terminal strip table: `uniwire io FILE` gives one row per channel of each PLC I/O module, connected
+  or spare (slot, `DI` / `DO` / `AI` / `AO`, address, label, the device linked and the terminal it passes through);
+  `uniwire terminals FILE [--view ID]` one row per terminal of each terminal block, with what arrives and leaves
+  (and the wire marks of the view). Also `io_rows`, `terminal_rows`, `io_csv`, `terminals_csv` in `uniwire.exports`,
+  and the `wiring` tool (`what='io'` or `'terminals'`).
+* PDF: the package ships a font, Liberation Sans (SIL Open Font License 1.1, see NOTICE), and every PDF is written
+  with it, the same on every system: Cyrillic, Polish and Turkish letters came out as black boxes and "IΔn" as "IDn"
+  where Arial was not installed (the web editor, slim containers). Every CJK character of a text is drawn with the
+  CJK font when some are, and an arrow the font lacks ("⇄") is written in ASCII ("<->").
+* SVG: each sheet states the language of the document (`lang`, `xml:lang`), the printed sheet number
+  (`data-uw-folio`), and each link drawn on a trunk `data-uw-trunk`. API: `render_views(doc, views, counts)`,
+  `drawing_set_findings(counts)`, `render_pdf(..., findings=[])`.
+
+### Web editor
+
+* Large drawings are drawn several times faster: the editor loads the compiled link router built for its Pyodide
+  release (`packages/uniwire-native/build-pyodide.sh`, served with `python viewer/build.py --native`), and draws in
+  pure Python as before when it cannot be loaded.
+* The sheet tabs show the sheet numbers of the drawing set, and the rule findings are in the language of the
+  document when uniwire has it (they were in French or English only).
+* The drawing no longer jumps while the editor starts: the sheet tabs keep their own row and the view and colour
+  selects stay on the controls' row. The page carries its full title and a heading for screen readers.
+
+### Assistants
+
+* MCP server: a tool accepts, as its document, the editor link a tool returned (`viewer_url`): a long `#doc=` link
+  carries the document, a short `#d=<id>` link reads it from the server's store. Such a call was refused.
+* Reference card: multi-line views are the power diagram (`auxiliaries: true` adds the auxiliary devices), and
+  `meta.lang` is the language of the labels written in the document, which the texts drawn by uniwire follow.
 
 ## 0.1.8 (2026-11-02)
 

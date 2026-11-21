@@ -13,7 +13,7 @@ passes them as flat arrays; the module runs the same search, with the same float
 order and the same tie order, and returns the route. Set `UNIWIRE_NATIVE=0` to use the pure Python search even when
 the module is installed (to compare the two).
 
-Build from source (Rust and [maturin](https://www.maturin.rs/)): `pip install ./packages/uniwire-native`.
+Build from source (Rust 1.83 or later and [maturin](https://www.maturin.rs/)): `pip install ./packages/uniwire-native`.
 
 ## In the web editor
 
