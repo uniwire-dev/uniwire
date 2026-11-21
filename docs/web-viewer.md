@@ -68,8 +68,9 @@ server; the live drawing replaces it as soon as the editor is ready.
 ## Limits
 
 - A recent browser is required (WebAssembly, Web Workers, `CompressionStream`).
-- PDF export downloads the PDF engine (reportlab) on first use and uses the built-in PDF fonts; for
-  the most faithful output use *All sheets (print / PDF)*, which prints the SVG sheets.
+- PDF export downloads the PDF engine (reportlab) on first use. The PDF is written with the font shipped
+  in the uniwire package (Liberation Sans), as on any other system, so it is the same PDF as the one the
+  library writes elsewhere. *All sheets (print / PDF)* prints the SVG sheets instead.
 - The optional data packages (such as `uniwire-data-iec81346`) are not loaded.
 
 ## Running it locally

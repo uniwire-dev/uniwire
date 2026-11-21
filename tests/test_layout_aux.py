@@ -152,3 +152,22 @@ def test_title_block_value_reduced_to_its_cell_is_not_cut():
     lines, size = _fit_lines(value, 2.2, 26.0, 1.5)
     assert len(lines) == 2 and value.startswith(lines[0]) and not lines[0].endswith("…") and size >= 1.2
     assert all(text_width(t, size) <= 26.0 + 1e-6 for t in lines)
+def test_texts_cut_with_an_ellipsis():
+    """A text too wide for its place is cut to its width and ends with an ellipsis, never cut silently: the family of
+    a PLC in its head, the function of a protection relay in its box, a title block value."""
+    from types import SimpleNamespace
+
+    from uniwire.render.scene import Text, cut_to_width, text_width
+    from uniwire.symbols import PLC_FAMILY_W, RELAY_TEXT_W, plc, protection_relay
+
+    def texts(sym):
+        return [i.text for i in sym.items if isinstance(i, Text)]
+
+    head = texts(plc(SimpleNamespace(family="Hyperautomationcontroller Line", modules=[])))[0]
+    assert head.endswith("…") and head.startswith("Hyperauto") and text_width(head, 1.5 * 1.1) <= PLC_FAMILY_W
+    assert texts(plc(SimpleNamespace(family="Mini 12", modules=[])))[0] == "Mini 12"
+    assert texts(plc(SimpleNamespace(family="Compact Series 9", modules=[])))[0] == "Compact"  # the first word
+    relay = texts(protection_relay(SimpleNamespace(functions=["I>> Io> U< f>"])))[0]
+    assert relay.endswith("…") and text_width(relay, 1.8) <= RELAY_TEXT_W
+    assert texts(protection_relay(SimpleNamespace(functions=["50/51N"])))[0] == "50/51N"
+    assert cut_to_width("Pump room east", 1.0, 4.0) == "Pump…"  # no space before the ellipsis
