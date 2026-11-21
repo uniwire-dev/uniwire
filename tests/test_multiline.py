@@ -9,7 +9,7 @@ from tests.conftest import ROOT
 from uniwire import load, render_pages, render_svg
 from uniwire.layout.multiline import conductors
 from uniwire.render import default_view
-from uniwire.render.scene import Group, Text, bbox
+from uniwire.render.scene import Group, Line, Text, bbox
 from uniwire.render.svg import page_to_svg
 
 EXAMPLES = sorted((ROOT / "examples").glob("*.uniwire.json"))
@@ -470,3 +470,138 @@ def test_converters_drawn_in_the_direction_they_convert():
     page = render_pages(doc, default_view(doc, kind="multi-line"))[0]
     marks = {g.id: [t.text for t in g.items if isinstance(t, Text)] for g in _groups(page.root) if g.id in ("U1", "T2", "T3")}
     assert marks == {"U1": ["=", "~"], "T2": ["=", "="], "T3": ["~", "="]}
+
+
+def test_protective_conductor_dash_dot_without_colours():
+    """Without a colour mode, the PE of a multi-line sheet is drawn dash-dot and black, the live conductors solid;
+    with the conductor colours it is green/yellow, solid."""
+    from uniwire.render.scene import Line, Polyline
+
+    def strokes(item, cond=None):
+        if isinstance(item, Group):
+            c = item.attrs.get("data-uw-cond", cond)
+            return [s for i in item.items for s in strokes(i, c)]
+        return [(cond, item)] if isinstance(item, (Line, Polyline)) and not getattr(item, "closed", False) else []
+
+    plain = strokes(render_pages(load(SMALL), load(SMALL).views[1])[0].root)
+    assert any(c == "PE" for c, _ in plain)
+    assert all(s.style.dash and s.style.color == "#000000" for c, s in plain if c == "PE")
+    assert not any(s.style.dash for c, s in plain if c in ("L1", "L2", "L3", "N"))
+    coloured = {**SMALL, "views": [{"id": "ml", "kind": "multi-line", "color": "conductors"}]}
+    assert not any(s.style.dash for c, s in strokes(render_pages(load(coloured))[0].root)
+                   if c == "PE" and s.style.color != "#f2c500")
+
+
+def test_controller_feeding_a_three_phase_motor_from_a_dc_line_makes_its_phases():
+    """An electronic speed controller on a DC line feeding a motor declared three-phase gives it three conductors
+    (U V W at the motor), as a drive does; the single-line view draws the motor 3~, not as a DC motor. A
+    controller feeding a DC motor keeps the DC pair."""
+    doc = load({"installation": {"system": "DC", "un_V": 48}, "sources": [{"type": "battery", "children": [
+        {"type": "fuse", "in_A": 40, "children": [
+            {"type": "controller", "id": "SC", "symbol_text": "SC", "children": [
+                {"type": "motor", "id": "M3", "phases": 3}]},
+            {"type": "controller", "id": "HB", "symbol_text": "HB", "children": [{"type": "motor", "id": "MD"}]}]}]}],
+        "views": [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]})
+    c = conductors(doc)
+    assert c["SC"].inp == ["L+", "L-"] and c["SC"].out == ["L1", "L2", "L3"]
+    assert c["M3"].inp == ["L1", "L2", "L3"]
+    assert c["MD"].inp == ["L+", "L-"]
+    ml = _texts(render_pages(doc, doc.views[1])[0].root)
+    assert all(t in ml for t in ("U", "V", "W", "3~"))
+    sld = next(g for g in _groups(render_pages(doc, doc.views[0])[0].root) if g.id == "M3")
+    assert "3~" in _texts(sld)
+
+
+def test_surge_protector_leads_keep_their_conductor_colour():
+    """With the conductor colours, the leads of a surge protector to its phases and to the PE are drawn in the
+    colour of their conductor (they were black); the surge elements themselves stay black."""
+    from uniwire.render.scene import Line
+
+    doc = load({"installation": {"system": "3P+N", "earthing": "TN-S", "un_V": 400}, "sources": [{"type": "grid", "children": [
+        {"type": "board", "children": [{"type": "spd", "id": "SPD", "spd_type": "2"},
+                                       {"type": "breaker", "in_A": 16, "poles": "3P+N", "children": [{"type": "load"}]}]}]}],
+        "views": [{"id": "ml", "kind": "multi-line", "color": "conductors"}]})
+    spd = next(g for g in _groups(render_pages(doc)[0].root) if g.id == "SPD" and (g.cls or "").startswith("ml-sym"))
+    leads = [i for g in _groups(spd) if g.attrs.get("data-uw-cond", "L2") != "L2"  # L2: black in the IEC colours
+             for i in g.items if isinstance(i, Line)]
+    assert len(leads) >= 7  # two per live conductor but L2, the PE and the bar
+    assert all(i.style.color != "#000000" for i in leads)
+
+
+def test_generator_feeding_dc_equipment_is_a_dc_machine():
+    """A generator whose line leads, through protections only, to a DC/DC converter (an alternator with its
+    rectifier) is a DC source in an AC installation: L+ L- and 'G =' in both views, not 'G 1~' with L1 N. A
+    generator feeding a board keeps the system of the installation."""
+    doc = load({"installation": {"system": "1P+N", "earthing": "TN-S", "un_V": 230}, "sources": [
+        {"type": "generator", "id": "ALT", "un_V": 12, "children": [{"type": "fuse", "in_A": 100, "children": [
+            {"type": "dc_converter", "children": [{"type": "battery", "un_V": 48}]}]}]},
+        {"type": "generator", "id": "GEN", "children": [{"type": "board", "children": [
+            {"type": "breaker", "in_A": 16, "children": [{"type": "socket"}]}]}]}],
+        "views": [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]})
+    c = conductors(doc)
+    assert c["ALT"].out == ["L+", "L-"] and c["GEN"].out[:2] == ["L1", "N"]
+    for view in doc.views:
+        groups = _groups(render_pages(doc, view)[0].root)
+        alt = next(g for g in groups if g.id == "ALT" and _texts(g))
+        gen = next(g for g in groups if g.id == "GEN" and _texts(g))
+        assert "=" in _texts(alt) and "1~" not in _texts(alt), view.kind
+        assert "1~" in _texts(gen), view.kind
+
+
+def _earthed(page) -> set[str]:
+    """Conductors drawn hooked to an earth symbol: three stacked bars, each two thirds as long as the one above."""
+    def earth(g):
+        w = [abs(i.a[0] - i.b[0]) for i in g.items if isinstance(i, Line) and abs(i.a[1] - i.b[1]) < 1e-6]
+        return any(abs(w[k + 1] - w[k] * 2 / 3) < 1e-3 and abs(w[k + 2] - w[k] / 3) < 1e-3 for k in range(len(w) - 2))
+    return {g.attrs["data-uw-cond"] for g in _groups(page.root) if "data-uw-cond" in g.attrs and earth(g)}
+
+
+@pytest.mark.parametrize("root, system, earthing", [("busbar", "DC", None), ("dc_converter", "DC", None),
+                                                    ("board", "3P+N", "TN-S"), ("busbar", "1P+N", "TT")])
+def test_live_conductors_of_an_unfed_root_are_never_earthed(root, system, earthing):
+    doc = load({"installation": {"system": system, "earthing": earthing}, "sources": [{"type": root, "id": "R", "children": [
+        {"type": "fuse", "id": "F1", "poles": "1P", "children": [{"type": "load", "id": "L1"}]},
+        {"type": "breaker", "id": "Q2", "children": [{"type": "load", "id": "L2"}]}]}]})
+    page = render_pages(doc, default_view(doc, kind="multi-line"))[0]
+    info = conductors(doc)
+    assert all(s is None for s in info["R"].src.values())  # every conductor starts at the root
+    assert _earthed(page) == ({"PE"} if earthing else set())  # the PE alone, where it starts
+    texts = _texts(page.root)
+    assert all(c in texts for c in info["R"].inp)  # each incoming conductor named
+
+
+@pytest.mark.parametrize("feeder, supply", [
+    ({"type": "breaker", "id": "Q", "children": [{"type": "socket", "id": "X"}]}, ["L1", "N", "PE"]),
+    ({"type": "breaker", "id": "Q", "children": [{"type": "load", "id": "X"}]}, ["L1", "N", "PE"]),
+    ({"type": "breaker", "id": "Q", "phase": "L2", "children": [{"type": "lighting", "id": "X"}]},
+     ["L1", "L2", "L3", "N", "PE"]),
+    ({"type": "breaker", "id": "Q", "poles": "3P", "children": [{"type": "motor", "id": "X", "phases": 3}]},
+     ["L1", "L2", "L3", "PE"]),
+    ({"type": "breaker", "id": "Q", "poles": "4P", "children": [{"type": "load", "id": "X"}]},
+     ["L1", "L2", "L3", "N", "PE"]),
+])
+def test_undeclared_system_drawn_from_what_the_devices_state(feeder, supply):
+    # no system anywhere: never three phases nobody asked for; nothing stated is one phase and the neutral
+    doc = load({"sources": [{"type": "grid", "id": "G", "children": [{"type": "board", "id": "B", "children": [feeder]}]}]})
+    info = conductors(doc)
+    assert info["G"].out == supply and info["B"].out == supply
+    page = render_pages(doc, default_view(doc, kind="multi-line"))[0]
+    assert _poles(page, "Q")[0] == len([c for c in info["Q"].inp if c != "PE"])
+
+
+def test_busbar_split_shares_its_ways_evenly_among_its_sheets():
+    """A busbar too long for one sheet: its ways shared out evenly among as many sheets as needed, not a last sheet
+    with a few ways left over."""
+    from uniwire.render.scene import Group, Text
+
+    def refs(item):
+        if isinstance(item, Group):
+            return sum((refs(i) for i in item.items), [])
+        return [item.text] if isinstance(item, Text) and item.text.startswith("-Q") else []
+
+    doc = load({"views": [{"id": "m", "kind": "multi-line", "paper": "A3"}], "sources": [{"type": "grid", "children": [
+        {"type": "board", "ref": "DB", "children": [
+            {"type": "breaker", "ref": f"-Q{k}", "in_A": 16, "poles": "3P", "label": "Workshop machine feeder",
+             "children": [{"type": "motor", "p_kW": 4}]} for k in range(1, 28)]}]}]})
+    counts = [len(refs(p.root)) for p in render_pages(doc, doc.views[0])]
+    assert len(counts) == 3 and sum(counts) == 27 and max(counts) - min(counts) <= 1  # not 13, 13 and 1
