@@ -8,6 +8,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* I/O list and terminal strip table from what a document already describes: the PLC channels and terminal
+  blocks were only drawn, with no list to wire or check a panel from. `uniwire io FILE` gives one row per channel
+  of each PLC I/O module, connected or spare (slot, `DI` / `DO` / `AI` / `AO`, address `slot.channel`, label, the
+  device linked to it and the terminal block terminal it passes through), and `uniwire terminals FILE [--view ID]`
+  one row per terminal of each terminal block, with what arrives on it and what leaves it (and the wire marks of
+  the view for a block in the power tree). Also in the library (`io_rows`, `terminal_rows`, `io_csv`,
+  `terminals_csv` in `uniwire.exports`) and in the `wiring` tool (`what='io'` or `'terminals'`).
 * Faster layout of large drawings, with or without the compiled router: link labels, leader texts and the legs of
   channel routes are placed against an index of what is already drawn (texts and symbols by area, lines by
   position) rather than by testing every obstacle at every position tried, with the same drawings. The slowest

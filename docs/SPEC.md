@@ -484,6 +484,15 @@ do not renumber printed ferrules (with `keep_manual`, the view then gives the sa
 
 Without `--view`, the rules of the first view that declares `wire_marking` apply (none: manual marks only).
 
+**Control side** (same CSV conventions), from the PLCs and terminal blocks of §3b:
+
+* I/O list `uniwire io FILE`: `plc, plc_display, slot, module, module_kind, io_type, channel, address, direction,
+  signal, un_V, label, device, device_display, device_port, terminal, link_kind, cable, status`, one row per
+  channel of each I/O module (connected or spare), then the other links that address the PLC;
+* terminal strip table `uniwire terminals FILE [--view ID]`: `strip, strip_display, terminal, function, from,
+  from_display, from_port, from_mark, from_cable, to, to_display, to_port, to_mark, to_cable, link_kind, label`, one
+  row per terminal of each terminal block (those listed in `terminals`, then those named by link ports).
+
 ### 7.3 Symbol sets
 
 `symbols` names the set of symbols the document is drawn with. `iec` (the default) is the set built into the

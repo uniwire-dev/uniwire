@@ -162,6 +162,42 @@ csv_text = wires_csv(doc, view)                   # also markers_csv(doc, view),
 `marked_wires(doc)` without a view gives the manual marks (`cable.marks`) only. `freeze(data, doc, wires)` writes
 the marks into the `cable.marks` of the parsed JSON `data` (what `uniwire marks --write` does).
 
+### I/O list and terminal strips
+
+The control side that the document already describes (SPEC §3b): the channels of the PLC modules, the links that
+address them (`from_port` / `to_port` = `slot.channel`) and the terminal blocks.
+
+```python
+from uniwire.exports import io_rows, terminal_rows, io_csv, terminals_csv, declared_terminals
+
+for r in io_rows(doc):          # one row per channel of each I/O module, connected or spare
+    print(r["plc_display"], r["address"], r["io_type"], r["label"], r["device_display"], r["terminal"])
+    # -A1 0.2 DI Pump on -S1 -X2:3
+for r in terminal_rows(doc, view):   # one row per terminal of each terminal block
+    print(r["strip_display"], r["terminal"], r["from_display"], r["to_display"], r["from_mark"])
+csv_text = io_csv(doc)               # also terminals_csv(doc, view)
+```
+
+I/O list columns: `plc, plc_display, slot, module, module_kind, io_type, channel, address, direction, signal, un_V,
+label, device, device_display, device_port, terminal, link_kind, cable, status`. Every channel of an I/O module
+(`di`, `do`, `relay_out`, `ai`, `ao`, `mixed_io`, `counter`, `temperature`, `safety`, `power_measurement`, `motor`)
+gets a row, connected or spare; links on other modules (`comm`...) and links without a channel follow. `io_type`
+comes from the module kind (`DI`, `DO`, `AI`, `AO`...; a `mixed_io` channel takes the direction of its link). When
+several modules share a slot (built-in I/O, slot 0), an output link (`control` from the PLC) goes to the output
+module and an input link (`measure`, or a link to the PLC) to the input module. `label` is the module's
+`channel_labels` entry, else the link `label`. When the link ends on a numbered terminal of a terminal block
+(`to_port`) and another link leaves that terminal, `device` is the device beyond the block and `terminal` names
+the terminal (`-X2:3`). Only `control`, `measure`, `data`, `trip`, `interlock` and `key` links are I/O.
+
+Terminal strip columns: `strip, strip_display, terminal, function, from, from_display, from_port, from_mark,
+from_cable, to, to_display, to_port, to_mark, to_cable, link_kind, label`. The terminals are those listed in the
+block's `terminals` field (`"X1.1-X1.12"`, `"1-12"`, `"1, 2, PE"`, `"1=L; 2=N; 3=PE"`, spare ones included;
+other text stays a description) and those named by the link ports on the block side, in natural order. A link
+arriving on the block (`to`) fills `from`, a link leaving it fills `to`; a link end without a terminal number gets
+a row of its own. A block in the power tree also lists the conductors of its cable and of its children's cables,
+with their wire marks; a function in `terminals` (`L1`, `N`, `PE`, `U`/`V`/`W` for the phases, `L` for the only
+line conductor) places each conductor on its terminal.
+
 ## Registry
 
 ```python
@@ -227,6 +263,8 @@ are drawn pole by pole by the renderer: a symbol set does not change them. `uniw
 | `uniwire wires FILE [--view ID] [-o FILE]` | Wire list as CSV: one row per conductor of the cables of the power tree, with its mark (`--all` accepted: in the current format every wire is an implicit power connection) |
 | `uniwire markers FILE [--view ID] [-o FILE]` | Wire marker list as CSV (one row per end of a marked wire, `quantity`) |
 | `uniwire cables FILE [-o FILE]` | Cable schedule as CSV |
+| `uniwire io FILE [-o FILE]` | I/O list of the PLCs as CSV: one row per channel, connected or spare, with the device linked to it |
+| `uniwire terminals FILE [--view ID] [-o FILE]` | Terminal strip table as CSV: one row per terminal of each terminal block, what arrives and what leaves (wire marks of the view) |
 | `uniwire marks FILE [--view ID] [--write] [-o FILE]` | Print the wire marks of a view; `--write` freezes them into the cables' `marks` (in place, or into `-o FILE`; the JSON is rewritten with 2-space indentation) |
 | `uniwire symbols [-o FILE] [--set NAME]` | SVG sheet of all symbols (of the symbol set `NAME`, `iec` by default) |
 | `uniwire normalize FILE` | Print the resolved document (templates applied, ids assigned, canonical units) |

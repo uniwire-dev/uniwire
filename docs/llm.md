@@ -59,7 +59,7 @@ Every `document` argument accepts a JSON object, a JSON string or the path of a 
 | `render` | `document`, `kind` (`single-line` / `multi-line`), `format` (`svg` / `pdf`), `sheet`?, `view`?, `path`?, `color`? (`none`/`conductors`/`phase`/`source`/`status`/`voltage`), `conductor_colors`? (`iec`/`us`) | SVG text of each sheet; PDF written to `path` or returned as base64 |
 | `viewer_link` | `document` | `{viewer_url, pdf_url}`: links that open the document in the web editor (drawing, findings, PDF and SVG downloads); `pdf_url` also downloads the PDF (on the hosted server, a plain PDF link: see [Short links](#short-links)) |
 | `bom` | `document` | bill-of-materials rows: referenced products, then equipment without a reference grouped by type and characteristics (`spec`), then cables |
-| `wiring` | `document`, `what` (`markers` / `wires` / `cables`), `view`? | wire marker list, wire list or cable schedule as rows (stable column names) |
+| `wiring` | `document`, `what` (`markers` / `wires` / `cables` / `io` / `terminals`), `view`? | wire marker list, wire list, cable schedule, I/O list of the PLCs or terminal strip table as rows (stable column names) |
 | `list_examples`, `get_example` | `name` (e.g. `02` or `02_house_3_bedrooms_tt`) | the 53 bundled examples |
 | `normalize` | `document` | resolved document (templates applied, ids assigned) |
 

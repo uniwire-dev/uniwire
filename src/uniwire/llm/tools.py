@@ -433,23 +433,29 @@ def pdf_file(document: Any, kind: Optional[str] = None, color: Optional[str] = N
 
 
 def wiring(document: Any, what: str = "markers", view: Optional[str] = None) -> dict[str, Any]:
-    """Wiring exports as rows: ``markers`` (one row per wire end, for label printers), ``wires`` (wire list)
-    or ``cables`` (cable schedule). Marks follow the ``wire_marking`` rules of ``view`` (id; default: the first
-    view that declares marking rules, else manual marks only)."""
+    """Wiring exports as rows: ``markers`` (one row per wire end, for label printers), ``wires`` (wire list),
+    ``cables`` (cable schedule), ``io`` (I/O list of the PLCs) or ``terminals`` (terminal strip table). Marks
+    follow the ``wire_marking`` rules of ``view`` (id; default: the first view that declares marking rules, else
+    manual marks only)."""
     from .. import exports
     from ..marks import marked_wires
 
     doc = _doc(document)
     if what == "cables":
         return {"columns": exports.CABLE_COLUMNS, "rows": exports.cable_rows(doc)}
-    if what not in ("markers", "wires"):
-        raise ToolError("what must be 'markers', 'wires' or 'cables'")
+    if what == "io":
+        return {"columns": exports.IO_COLUMNS, "rows": exports.io_rows(doc)}
+    if what not in ("markers", "wires", "terminals"):
+        raise ToolError("what must be 'markers', 'wires', 'cables', 'io' or 'terminals'")
     if view is not None:
         v = next((x for x in doc.views if x.id == view), None)
         if v is None:
             raise ToolError(f"unknown view {view!r}; views: {[x.id for x in doc.views]}")
     else:
         v = next((x for x in doc.views if x.wire_marking is not None), None)
+    if what == "terminals":
+        return {"view": v.id if v else None, "columns": exports.TERMINAL_COLUMNS,
+                "rows": exports.terminal_rows(doc, v)}
     wires = marked_wires(doc, v)
     if what == "wires":
         return {"view": v.id if v else None, "columns": exports.WIRE_COLUMNS, "rows": exports.wire_rows(wires)}
