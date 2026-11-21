@@ -6,9 +6,12 @@ internal link to the sheet it names."""
 
 from __future__ import annotations
 
+import io
 import unicodedata
 from collections.abc import Iterable
+from importlib import resources
 from pathlib import Path
+from typing import BinaryIO
 
 from ..i18n import t as _t
 from .scene import Circle, Ellipse, Group, Item, Line, Page, Polyline, Rect, Style, Text, bbox
@@ -16,6 +19,11 @@ from .scene import Path as Outline
 from .semantics import HIT_COLOR, has_cls
 from .svg import xml_safe
 
+# The font of every PDF: Liberation Sans 2.1.5 (SIL Open Font License 1.1, see fonts/LICENSE and NOTICE), shipped in
+# the package. It has the widths of Arial, which the layout estimates, and Latin, Greek and Cyrillic letters. Used
+# on every system, the browser included, so that a document gives the same PDF everywhere. The system fonts below
+# are a fallback for a copy of the package installed without its font files.
+_PACKAGED_FONTS = ("LiberationSans-Regular.ttf", "LiberationSans-Bold.ttf")
 _FONT_CANDIDATES = [
     ("/System/Library/Fonts/Supplemental/Arial.ttf", "/System/Library/Fonts/Supplemental/Arial Bold.ttf"),
     # Liberation Sans has the widths of Arial, which the layout estimates; DejaVu Sans is about 13 % wider
@@ -60,21 +68,32 @@ def _drawable(text: str, glyphs: frozenset[int]) -> str:
 _CJK_FONTS = {"zh": "STSong-Light", "ja": "HeiseiKakuGo-W5", "ko": "HYGothic-Medium"}
 
 
+def _packaged_fonts() -> list[tuple[BinaryIO, BinaryIO]]:
+    """The regular and bold font files shipped in the package, read from its data (importlib.resources: also from a
+    zip or the browser's file system); none when they are missing."""
+    try:
+        folder = resources.files(__package__).joinpath("fonts")
+        regular, bold = (folder.joinpath(name).read_bytes() for name in _PACKAGED_FONTS)
+    except OSError:  # pragma: no cover - package installed without its font files
+        return []
+    return [(io.BytesIO(regular), io.BytesIO(bold))]
+
+
 def _fonts() -> tuple[str, str, bool, frozenset[int] | None]:
     """Regular and bold font names, whether they cover Unicode, and the code points they have (None: Helvetica,
     whose code points are those of cp1252)."""
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
 
-    for regular, bold in _FONT_CANDIDATES:
-        if Path(regular).exists() and Path(bold).exists():
-            try:
-                font = TTFont("UW", regular)
-                pdfmetrics.registerFont(font)
-                pdfmetrics.registerFont(TTFont("UW-Bold", bold))
-                return "UW", "UW-Bold", True, frozenset(font.face.charToGlyph)
-            except Exception:  # pragma: no cover - unreadable font
-                continue
+    installed = [(r, b) for r, b in _FONT_CANDIDATES if Path(r).exists() and Path(b).exists()]
+    for regular, bold in [*_packaged_fonts(), *installed]:
+        try:
+            font = TTFont("UW", regular)
+            pdfmetrics.registerFont(font)
+            pdfmetrics.registerFont(TTFont("UW-Bold", bold))
+            return "UW", "UW-Bold", True, frozenset(font.face.charToGlyph)
+        except Exception:  # pragma: no cover - unreadable font
+            continue
     return "Helvetica", "Helvetica-Bold", False, None
 
 
@@ -105,7 +124,8 @@ def _cjk_font(text: str, lang: str | None = None) -> str:
 
 
 def _runs(text: str, font: str, glyphs: frozenset[int] | None, lang: str | None = None) -> list[tuple[str, str]]:
-    """``text`` cut into (font, part) runs: the CJK characters that ``font`` does not have go to a CID font."""
+    """``text`` cut into (font, part) runs: the CJK characters that ``font`` does not have go to a CID font, and
+    then every CJK character of the text with them (the few that ``font`` has would mix two type faces in a word)."""
     def has(ch: str) -> bool:
         if glyphs is not None:
             return ord(ch) in glyphs
@@ -116,10 +136,11 @@ def _runs(text: str, font: str, glyphs: frozenset[int] | None, lang: str | None 
             return False
 
     cjk = None
+    need = any(_cjk(ch) and not has(ch) for ch in text)
     runs: list[tuple[str, str]] = []
     for ch in text:
         f = font
-        if _cjk(ch) and not has(ch):
+        if _cjk(ch) and need:
             f = cjk = cjk or _cjk_font(text, lang)
         if runs and runs[-1][0] == f:
             runs[-1] = (f, runs[-1][1] + ch)

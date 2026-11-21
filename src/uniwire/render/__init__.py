@@ -12,7 +12,7 @@ from typing import Any, Optional
 
 from ..i18n import normalize_lang
 from ..i18n import t as _t
-from ..layout.engine import PAPER, drawing_area, feeding_sheet, layout_sheet, plan_sheets, sheet_node_ids
+from ..layout.engine import PAPER, drawing_area, incoming_text, layout_sheet, plan_sheets, sheet_node_ids
 from ..model import Document, View
 from ..resolve import build_index
 from ..symbols import ACTIVE_SET, known_set
@@ -75,9 +75,10 @@ def _view_pages(doc: Document, view: View) -> list[Page]:
         _PAGES.move_to_end(key)
         return copy.deepcopy(_PAGES[key])
     from ..i18n import RENDER_LANG
-    from ..labels import INTERLOCK_KINDS, NORTH_AMERICAN, north_american
+    from ..labels import INTERLOCK_KINDS, NODE_NAMES, NORTH_AMERICAN, node_names, north_american
     token, na_token = RENDER_LANG.set(lang), NORTH_AMERICAN.set(north_american(doc))
     ik_token = INTERLOCK_KINDS.set({i.key: i.kind for i in doc.interlocks if i.kind})
+    names_token = NODE_NAMES.set(node_names(doc))
     set_token = ACTIVE_SET.set(known_set(doc.symbols))
     try:
         pages = _render_pages(doc, view, lang)
@@ -85,6 +86,7 @@ def _view_pages(doc: Document, view: View) -> list[Page]:
         RENDER_LANG.reset(token)
         NORTH_AMERICAN.reset(na_token)
         INTERLOCK_KINDS.reset(ik_token)
+        NODE_NAMES.reset(names_token)
         ACTIVE_SET.reset(set_token)
     tag = _lang_tag(doc.meta.lang)  # the language of the texts: a browser picks the glyph forms (Japanese, Chinese) by it
     for i, page in enumerate(pages, 1):
@@ -248,7 +250,37 @@ def _enlargement(lays: list[Any], view: View, cap: float) -> Optional[float]:
     return min(cap, k) if k > 1.0 else None
 
 
+def _future_labels(doc: Document, view: View, lang: str) -> Document:
+    """Outside the ``status`` colour mode (where future is drawn blue and dashed), a node of status ``future``, and
+    what inherits that status below it (as the colour mode does: down to a node stating its own status, not below a
+    spare), has "(future)" added to its label, so that a proposed circuit is not read as an existing one. The strokes
+    are unchanged. Returns ``doc`` itself when nothing is future, else a copy."""
+    if view.color == "status":
+        return doc
+
+    def future(n: Any, up: Optional[str]) -> bool:
+        st = n.status or up
+        return st == "future" or any(future(c, st if st != "spare" else None) for c in n.children)
+
+    if not any(future(s, None) for s in doc.sources):
+        return doc
+    doc = doc.model_copy(deep=True)
+    word = _t("legend.status.future", lang)
+
+    def mark(n: Any, up: Optional[str]) -> None:
+        st = n.status or up
+        if st == "future" and word.casefold() not in (n.label or "").casefold():
+            n.label = f"{n.label} ({word})" if n.label else f"({word})"
+        for c in n.children:
+            mark(c, st if st != "spare" else None)
+
+    for s in doc.sources:
+        mark(s, None)
+    return doc
+
+
 def _render_pages(doc: Document, view: View, lang: str) -> list[Page]:
+    doc = _future_labels(doc, view, lang)
     if view.kind == "multi-line":
         return _render_multiline(doc, view, lang)
     if "paper" not in view.model_fields_set:
@@ -283,11 +315,7 @@ def _render_sheets(doc: Document, view: View, lang: str) -> tuple[list[Page], li
         incoming_ref: tuple[Optional[int], Optional[str]] = (None, None)
         if i > 1 and spec.roots and not spec.continuation and index.parent.get(spec.roots[0].id or ""):
             rid = spec.roots[0].id  # a board drawn on its own sheet (not a group of trees): fed from another one
-            src = feeding_sheet(specs, i, rid, index, folio_of_node)
-            incoming_ref = (src, index.parent.get(rid or ""))
-            feeder = next((a for a in index.ancestors(rid or "") if a.ref), None)
-            what = _t("render.incoming_from", lang, ref=feeder.ref) if feeder is not None else _t("render.incoming", lang)
-            incoming = _t("render.incoming_folio", lang, what=what, folio=src) if src else what
+            incoming, incoming_ref = incoming_text(specs, i, rid, index, folio_of_node, lang)
         lay = layout_sheet(doc, view, spec, index, folio_of=folio_by_root.get, continuation_folios=(prev_f, next_f),
                            incoming=incoming, node_folio=folio_of_node.get, incoming_ref=incoming_ref)
         title = spec.name or view.title or _t("render.default_title", lang)

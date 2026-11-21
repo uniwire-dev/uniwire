@@ -148,14 +148,17 @@ A template is an object of attributes, optionally typed. During resolution:
 
 ### Switchgear (all protection / switching types)
 `frame_A` (AF), `range`, `ue_V`, `icn_kA`, `icu_kA` (kAIC), `icw_kA`, `aux[]` (MX, MN, OF, SD, IOF, heating control-wire contact),
-`mounting` (`fixed`, `plug_in`, `withdrawable`), `lockable`. Circuit breaker: `ii_A`, `tsd_s`, `gf_A`, `selective`.
+`mounting` (`fixed`, `plug_in`, `withdrawable`), `lockable`. Circuit breaker: `ii_A`, `tsd_s`, `gf_A`, `selective`, `dc`
+(device for direct current, as on `switch_disconnector` and `spd`: the line it is on is drawn as a DC line). A
+breaker has no residual-current fields: a breaker with residual-current protection is an `rcbo` (`idn_mA`,
+`rcd_type`), or a `breaker` with an `rcd`.
 `rcbo.rcd_in_A` (Vigi add-on block with a different rating). `spd.poles`, `spd.uc_V`. `socket.in_A`. `spare.in_A/poles/frame_A`
 (prepared space). `transfer_switch.technology` (`static` = STS). `contactor.function`: `grid_relay`, `interface`.
 
 ### Boards, busbars, sources
 `board`: `in_A`, `ik1_kA`, `system`, `earthing` (local earthing system, IT downstream of a transformer), `ways`, `ip`, `form`,
 `kind`: `panelboard`, `pdu`, `substation`, `pen_split` (TN-C-S: PEN split into PE + N at this board; when no board
-sets it, a TN-C-S installation splits at the first board). `busbar`: `kind` (`busway` = busbar trunking system), `material`,
+sets it, a TN-C-S installation splits at the first board, and a check finding asks to declare it). `busbar`: `kind` (`busway` = busbar trunking system), `material`,
 `system`, `earthing`. `grid.scc_MVA`, `grid.system`. `transformer.kind` (`auto`, `earthing`, `isolation`, `bank`),
 `transformer.u1_alt_V` (dual voltage). `generator.prime_mover`. `inverter.protection` (built-in grid decoupling protection),
 `inverter.kind`: `charger`. Systems: `split-phase` (120/240 V); earthing system: `TN`. `rcd_type`: `G`.
@@ -163,7 +166,7 @@ sets it, a TN-C-S installation splits at the first board). `busbar`: `kind` (`bu
 ### Further types
 | Type | Use |
 |---|---|
-| `instrument_transformer` (`kind` ct/vt/toroid/combined, `ratio`, `accuracy`, `burden_VA`) | CTs, VTs, toroids |
+| `instrument_transformer` (`kind` ct/vt/toroid/combined/shunt, `ratio`, `accuracy`, `burden_VA`) | CTs, VTs, toroids, current shunts (`shunt`: a resistor in the conductor it measures, drawn as a resistor, not a CT ring; in the multi-line view on one conductor only: the one its `phase` names, else L+ on a DC line, else L1. On a shunt, `phase` names that conductor and does not make the circuit single-phase) |
 | `protection_relay` (`functions[]`, `settings`, `idn_mA`) | ANSI relays, Vigirex, grid decoupling |
 | `earthing_switch` | Earthing switch |
 | `voltage_indicator` | VPIS / capacitive dividers |
@@ -205,7 +208,9 @@ Further fields: `cable`, `normally_open`, `status` (`temporary`...).
 `meta.drawing_number`, `meta.scale`, `meta.contributors[]`; `installation.ik1_kA`, `uln_V`, `du_max_pct`.
 `views[].direction` accepts `up`, `right`, `left` (direction away from the source; the reference renderer draws downwards, `up` mirrored, and reports `right` and `left` with the `core.view-direction` finding).
 Additional circuit schedule rows: `circuit`, `ib_A`, `cos_phi`, `cable_type`, `cable_ref`, `install`, `frame_A`,
-`count`, `un_V`.
+`count`, `un_V`, and `status` (of the circuit, else of its protection), `manufacturer` and `part_number` (of the
+feeder's protection, else of its switching device, else of the final node; `product` first), `icu_kA` and `icw_kA`
+(of the protection, else of the switching device), `socket_type` (of the final node).
 
 ### Out of scope (planned for 2.0)
 Nodes with several parents / graph as the primary form (MV rings, double busbars), `board` reduced to an
@@ -341,7 +346,7 @@ licensed **CC BY-SA 4.0**, separately from the Apache-2.0 library); once install
 | Category | Types and specific attributes |
 |---|---|
 | **Sources** | `grid` (`supply`, `un_V`, `ik_kA`) · `transformer` (`sn_kVA`, `u1_V`, `u2_V`, `ucc_pct`, `coupling`, `insulation`) · `generator` (`sn_kVA`, `p_kW`, `un_V`, `fuel`) · `ups` (`sn_kVA`, `autonomy_min`, `bypass`) · `pv_array` (`modules`, `module_W`, `strings`, `p_kW`, `voc_V`, `isc_A`) · `battery` (`capacity_kWh`, `un_V`, `technology`) · `inverter` (`kind` string/central/micro/hybrid/battery, `p_kVA`, `count`, `mppt`) · `meter` (`kind`, `in_A`, `bidirectional`) |
-| **Protection / switching** (common `in_A`, `poles`) | `breaker` (`curve` B/C/D/K/Z/MA, `icn_kA`, `frame_A`, `range`, `trip_unit`, `ir_A`, `isd_A`, `aux[]`, e.g. heating control-wire contact) · `rcd` (`idn_mA`, `idn_range_mA`, `rcd_type` AC/A/F/B/A-SI/Hpi, `delay`) · `rcbo` (breaker + rcd) · `main_breaker` / AGCP (main incoming circuit breaker) (`range_A` "15-45", `idn_mA`, `idn_range_mA`, `rcd_type`, `selective`, `icn_kA`, `subscribed_kVA`) · `fuse` (`fuse_class`, `size`) · `fuse_switch` (`fuse_A`, `fuse_class`, `size`) · `switch_disconnector` (`dc`) · `disconnector` · `contactor` (`function` HC/power/lighting/load_shedding, `coil_V`, `manual`) · `impulse_relay` (`coil_V`) · `thermal_relay` (`range_A`, `setting_A`) · `motor_starter` (`method` dol/reversing/star_delta/soft_starter/vfd, `p_kW`) · `transfer_switch` (`mode`, `interlock`) · `spd` (`spd_type` 1/2/1+2/3, `imax_kA`, `in_kA`, `up_kV`, `dc`) · `controller` (`function`, `symbol_text`) |
+| **Protection / switching** (common `in_A`, `poles`) | `breaker` (`curve` B/C/D/K/Z/MA, `icn_kA`, `frame_A`, `range`, `trip_unit`, `ir_A`, `isd_A`, `aux[]`, e.g. heating control-wire contact, `dc`) · `rcd` (`idn_mA`, `idn_range_mA`, `rcd_type` AC/A/F/B/A-SI/Hpi, `delay`) · `rcbo` (breaker + rcd) · `main_breaker` / AGCP (main incoming circuit breaker) (`range_A` "15-45", `idn_mA`, `idn_range_mA`, `rcd_type`, `selective`, `icn_kA`, `subscribed_kVA`) · `fuse` (`fuse_class`, `size`) · `fuse_switch` (`fuse_A`, `fuse_class`, `size`) · `switch_disconnector` (`dc`) · `disconnector` · `contactor` (`function` HC/power/lighting/load_shedding, `coil_V`, `manual`) · `impulse_relay` (`coil_V`) · `thermal_relay` (`range_A`, `setting_A`) · `motor_starter` (`method` dol/reversing/star_delta/soft_starter/vfd, `p_kW`) · `transfer_switch` (`mode`, `interlock`) · `spd` (`spd_type` 1/2/1+2/3, `imax_kA`, `in_kA`, `up_kV`, `dc`) · `controller` (`function`, `symbol_text`) |
 | **Connections / containers** | `busbar` (`in_A`, `ik_kA`, `dimensions`) · `board` (`kind` main/distribution/sub/ac_box/dc_box/mcc/switchboard/enclosure, `ik_kA`, `own_sheet`) · `earth` (`resistance_ohm`) · `offpage` (`target`): cross-reference to another sheet or document |
 | **Loads** (common `p_kW`, `p_max_kW`, `room`) | `lighting` (`points`) · `socket` (`points`, `poles` 2P+T / 3P+N+T…, `socket_type`) · `heating` (`pilot_wire`) · `water_heater` (`volume_L`) · `cooking` (`kind` hob/oven/range) · `appliance` (`kind` washing_machine/dishwasher/dryer/freezer/fridge) · `motor` (`in_A`, `cos_phi`, `rpm`, `phases`) · `ev_charger` (`mode`) · `ventilation` · `shutter` · `load` (`symbol_text`) · `spare` |
 
@@ -366,18 +371,18 @@ Common enumerations: `poles` ∈ {1P, 1P+N, 2P, 3P, 3P+N, 4P}.
 | `root` | - | Draw only the subtree of this node |
 | `paper` / `orientation` | `A3` / `landscape` | Sheet format. When `paper` is absent, a renderer may choose the smallest format that holds the drawing at full size (the reference library: A4 landscape when it fits, else A3) |
 | `direction` | `down` | Direction of power flow (future values reserved) |
-| `pitch_mm` | 20 | Width of an outgoing feeder column |
+| `pitch_mm` | 20 | Width of an outgoing feeder column, 10 to 40 (a value under 10 is read as 10, with a `core.normalized` note) |
 | `cartouche` | `label, ref, protection, idn_mA, cable, p_kW` | Rows of the circuit schedule (among `label`, `ref`, `protection`, `in_A`, `curve`, `icn_kA`, `idn_mA`, `rcd_type`, `poles`, `cable`, `section_mm2`, `length_m`, `p_kW`, `phase`, `room`, `points`, and the 1.2 rows below, e.g. `cable_ref` "Cable tag"); an `idn_mA` value carried by a device upstream of the feeder (incomer, group RCD), not by its own protection, reads "30 mA (upstream)" |
 | `folio_split` | `auto` | `auto`: split across sheets if needed (several trees side by side: groups of whole trees first, then sub-distribution boards on their own sheet, then busbars cut into continuation sheets); `none`: everything on one sheet |
 | `min_scale` | 0.7 | Maximum reduction before splitting |
 | `annotations` | `true` | Reference designation and characteristics next to the symbols |
 | `tag_field` | `ref` | Displayed identifier: `ref` or `part_number` (diagrams that print only catalogue part numbers) |
-| `conductor_marks` | `true` | Conductor-count strokes (IEC 60617: one stroke per conductor, or one stroke and the number) and phase of single-phase circuits on each outgoing feeder, on the line leaving each source / transformer, and below each switching device whose `poles` change the conductors of the line above it (not repeated lower in the same column). A neutral the device does not cut is shown apart: `3P+N` → three strokes and `+N`, `4P` → one stroke and `4`; `3P` gets `+N` only when circuits below use the neutral and its supply has one (never below a three-wire `3P` network). PE is not counted |
+| `conductor_marks` | `true` | Conductor-count strokes (IEC 60617: one stroke per conductor, or one stroke and the number) and phase of single-phase circuits on each outgoing feeder, on the line leaving each source / transformer, and below each switching device whose `poles` change the conductors of the line above it (not repeated lower in the same column). A neutral the device does not cut is shown apart: `3P+N` → three strokes and `+N`, `4P` → one stroke and `4`; `3P` gets `+N` only when circuits below use the neutral and its supply has one (never below a three-wire `3P` network). One phase and the neutral is always one stroke and `+N` (`L1+N` when its phase is known), whatever the poles (`1P`, `1P+N`, `2P`); a line without a neutral (a `3P` network, below a device that passes none) gets no `+N`, its conductors are counted. What a cable does not state is that of the line it leaves (below a two-pole device: its two conductors). PE is not counted |
 | `frames` | `[]` | Enclosure frames `{label, nodes[]}` drawn around arbitrary nodes (cabinet, cubicle) when they do not form a `board` subtree |
 | `title_block` | `true` | Sheet border and title block |
 | `first_folio`, `total_folios` | 1, - | Numbering within a partial set of sheets ("sheet 1/3"). Drawn together, the views make one set: a view without `first_folio` follows the one before it, and so does a view whose sheets would take numbers already given |
 | `show_pe` | `true` | `multi-line` views: draw the protective conductor (PE) |
-| `color` | `none` | Colour mode: `conductors` (multi-line: every conductor in its colour; single-line: single-phase feeders in their phase colour), `phase` (single-phase feeders by phase, phase cell of the schedule tinted), `source` (what each source (tree root) feeds in normal operation; normally-open alternative supplies in the colour of the source they come from, dashed), `status` (`status` of nodes and links, inherited downstream: existing grey, new black, future blue dashed, temporary orange, removed red), `voltage` (MV > 1 kV AC, LV, ELV ≤ 50 V AC, DC). Strokes only: texts stay black, frames and earth / data links keep their colour; a legend of the colours used is drawn in a free corner of each sheet. Omitted: black drawing |
+| `color` | `none` | Colour mode: `conductors` (multi-line: every conductor in its colour; single-line: single-phase feeders in their phase colour), `phase` (single-phase feeders by phase, phase cell of the schedule tinted), `source` (what each source (tree root) feeds in normal operation; normally-open alternative supplies in the colour of the source they come from, dashed), `status` (`status` of nodes and links, inherited downstream: existing grey, new black, future blue dashed, temporary orange, removed red; outside this mode a node of status `future`, and what inherits it, has "(future)" added to its label), `voltage` (MV > 1 kV AC, LV, ELV ≤ 50 V AC, DC). Strokes only: texts stay black, frames and earth / data links keep their colour; a legend of the colours used is drawn in a free corner of each sheet. Omitted: black drawing |
 | `palette` | - | Colour overrides `{key: "#rrggbb"}` for the colour mode: conductor names (`L1` … `PE`, `PEN`, `L+`, `L-`), source ids, status values, `mv` / `lv` / `elv` / `dc` |
 | `conductor_colors` | - | Preset of the `conductors` mode: `iec` (IEC 60445: L1 brown, L2 black, L3 grey, N blue, PE green-yellow) or `us` (L1 black, L2 red, L3 blue (brown / orange / yellow from 480 V), N white drawn light grey, ground green). Omitted: `us` when `installation.standard` names the NEC / CEC, else `iec` |
 | `wire_marking` | - | Wire marking rules (§7.2): `scheme` (`manual`, `sequential`, `potential`, `pattern`), `pattern`, `start`, `step`, `prefix`, `suffix`, `per`, `power`, `keep_manual`, `order` |
@@ -406,7 +411,8 @@ A document may declare several views, of either kind, e.g.
 
   Rendering of the reference implementation: busbars as one rail per conductor (named at their end); circuit
   breakers with the breaker cross on each protected pole, the poles linked by a dashed mechanical link; RCDs with a
-  toroid around all live conductors; fuses on each phase; transformers as two windings with their vector group;
+  toroid around all live conductors; current transformers as a ring on each phase, a current shunt as a resistor in
+  the one conductor it measures; fuses on each phase; transformers as two windings with their vector group;
   motors as `M 3~` with terminals `U V W` and PE; loads as a box with one terminal per conductor; other types as a
   labelled box across their conductors. Ratings and tags are written as on the single-line diagram, load
   descriptions under the loads, outgoing cables above them. Large documents are split into sheets like the

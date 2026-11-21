@@ -1,5 +1,5 @@
 """Readability audit of a laid-out sheet: overlapping texts, texts written over a symbol, texts shrunk below a
-readable size, links drawn over one another, links running on a conductor. Used by the tests to keep these defects
+readable size, links drawn over one another, links running on a conductor, frame edges drawn through a text. Used by the tests to keep these defects
 from coming back."""
 
 from __future__ import annotations
@@ -19,7 +19,8 @@ Seg = tuple[tuple[float, float], tuple[float, float]]
 @dataclass
 class Finding:
     kind: str  # "text_overlap", "text_on_symbol", "text_crossed", "text_on_conductor", "small_text", "shared_run",
-    # "link_on_conductor", "link_along_frame", "link_across_conductor", "link_through_symbol", "truncated", "detour"
+    # "link_on_conductor", "link_along_frame", "link_across_conductor", "link_through_symbol", "truncated", "detour",
+    # "frame_crosses_text"
     what: str
     where: tuple[float, float]
 
@@ -236,6 +237,10 @@ def audit(root: Group, detours: bool = False) -> list[Finding]:
             crossing = next((la for la, segs in links.items() if any(_crosses(core, s) for s in segs)), None)
             if crossing is not None:
                 out.append(Finding("text_crossed", f"{t.text!r} crossed by link {crossing}", t.p))
+        # the dashed edge of a board, enclosure or view frame through a text (its own title included: above
+        # or below its edge, never on it)
+        if not (id(t) in own and any(_inside(core, b) for b in inner)) and any(_crosses(core, s) for s in frames):
+            out.append(Finding("frame_crosses_text", f"{t.text!r} cut by a frame edge", t.p))
         if id(t) in own or id(t) in marks:
             continue
         elif own_link is not None and any(_crosses(core, s) for s in wires):  # a link's text across a conductor

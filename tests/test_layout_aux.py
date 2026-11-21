@@ -137,3 +137,37 @@ def test_long_title_block_value_stays_in_its_cell():
     lines, size = _fit_lines("x" * 200, 2.2, 26.0, 1.5)  # no space to break on: cut
     assert lines[0].endswith("…") and text_width(lines[0], size) <= 26.0
     assert _fit_lines("Short", 2.2, 26.0, 1.5) == (["Short"], 2.2)
+
+
+def test_title_block_value_reduced_to_its_cell_is_not_cut():
+    """A value reduced to the exact width of its cell is written whole (no ellipsis from a rounding error); one
+    too long for one line even reduced goes on two lines rather than being cut."""
+    from uniwire.render.frame import _fit_lines
+    from uniwire.render.scene import text_width
+    for n in range(18, 60):
+        value = "Example standards, partly applied as a basis of the verification of this installation"[:n].rstrip()
+        lines, _size = _fit_lines(value, 2.2, 26.0, 1.5)
+        assert not any(t.endswith("…") for t in lines), (value, lines)
+    value = "Example standard A, example standard B and example standard C, partly applied, see the notes"
+    lines, size = _fit_lines(value, 2.2, 26.0, 1.5)
+    assert len(lines) == 2 and value.startswith(lines[0]) and not lines[0].endswith("…") and size >= 1.2
+    assert all(text_width(t, size) <= 26.0 + 1e-6 for t in lines)
+def test_texts_cut_with_an_ellipsis():
+    """A text too wide for its place is cut to its width and ends with an ellipsis, never cut silently: the family of
+    a PLC in its head, the function of a protection relay in its box, a title block value."""
+    from types import SimpleNamespace
+
+    from uniwire.render.scene import Text, cut_to_width, text_width
+    from uniwire.symbols import PLC_FAMILY_W, RELAY_TEXT_W, plc, protection_relay
+
+    def texts(sym):
+        return [i.text for i in sym.items if isinstance(i, Text)]
+
+    head = texts(plc(SimpleNamespace(family="Hyperautomationcontroller Line", modules=[])))[0]
+    assert head.endswith("…") and head.startswith("Hyperauto") and text_width(head, 1.5 * 1.1) <= PLC_FAMILY_W
+    assert texts(plc(SimpleNamespace(family="Mini 12", modules=[])))[0] == "Mini 12"
+    assert texts(plc(SimpleNamespace(family="Compact Series 9", modules=[])))[0] == "Compact"  # the first word
+    relay = texts(protection_relay(SimpleNamespace(functions=["I>> Io> U< f>"])))[0]
+    assert relay.endswith("…") and text_width(relay, 1.8) <= RELAY_TEXT_W
+    assert texts(protection_relay(SimpleNamespace(functions=["50/51N"])))[0] == "50/51N"
+    assert cut_to_width("Pump room east", 1.0, 4.0) == "Pump…"  # no space before the ellipsis

@@ -251,33 +251,26 @@ def _leg(obs: Obstacles, e: End, y: float, lane: float = LANE,
 
 def route(obs: Obstacles, a: End, b: End, y_min: Optional[float] = None, y_max: Optional[float] = None,
           step: float = 0.5, record: bool = True, lane: float = LANE, solid: bool = False,
-          cost_out: Optional[list[float]] = None, wrap: float = 0.0) -> list[Point]:
+          cost_out: Optional[list[float]] = None, deeper: bool = False, wrap: float = 0.0) -> list[Point]:
     """Orthogonal route from ``a`` to ``b`` through a horizontal channel that avoids texts and symbols.
     ``lane``: minimum spacing from parallel conductors (wider for a link that will carry a device symbol);
     ``solid``: a power link drawn as a plain line, kept off the busbars it would run along;
-    ``cost_out``: receives the cost of the route found (to compare the ends a link could use); ``wrap``: the cost of
-    each turn that closes the route round something (see ``wraps``)."""
+    ``cost_out``: receives the cost of the route found (to compare the ends a link could use);
+    ``deeper``: when the best channel runs on another line, a channel of its own lower down, under everything drawn
+    between the ends if need be (room is made there: what is drawn under the routes moves down); ``wrap``: the cost
+    of each turn that closes the route round something (see ``wraps``)."""
     lo = min(a.y, b.y) - 30.0 if y_min is None else y_min
     hi = max(a.y, b.y) + 30.0 if y_max is None else y_max
     sub = obs.window((min(a.x, b.x) - 12.0, lo - 2.0, max(a.x, b.x) + 12.0, hi + 2.0))
-    seg = _Costs(sub, lane)
-    best: tuple[float, list[Point]] = (1e18, [])
-    n = int((hi - lo) / step)
-    for i in range(n + 1):
-        y = lo + i * step
-        ca, pa = _leg(sub, a, y, lane, seg)
-        if ca >= 1e9:
-            continue
-        cb, pb = _leg(sub, b, y, lane, seg)
-        if cb >= 1e9:
-            continue
-        ch = seg(pa[-1], pb[-1], solid)
-        length = abs(y - a.y) + abs(y - b.y)
-        cost = ca + cb + ch + 0.08 * length
-        if wrap and cost < best[0]:
-            cost += wrap * wraps(pa + pb[::-1])
-        if cost < best[0]:
-            best = (cost, pa + pb[::-1])
+    best = _channel(sub, a, b, lo, hi, step, lane, solid, wrap=wrap)
+    if deeper and best[1] and _shared(sub, best[3], lane):
+        x0, x1 = min(a.x, b.x) - 12.0, max(a.x, b.x) + 12.0
+        floor = max([o[3] for o in obs.boxes if o[0] < x1 and x0 < o[2]]
+                    + [y for y, h0, h1 in obs.hlines if h0 < x1 and x0 < h1] + [hi]) + 2.0 * lane
+        low = obs.window((x0, lo - 2.0, x1, floor + 2.0))
+        alt = _channel(low, a, b, best[2], floor, step, lane, solid, unshared=True, wrap=wrap)
+        if alt[1]:
+            best = alt
     pts = _simplify(best[1])
     if cost_out is not None:
         cost_out.append(best[0])
@@ -327,6 +320,45 @@ def wraps(pts: list[Point], then: Optional[int] = None) -> int:
         w, k = _wind(w, d, d2)
         n += k
     return n
+
+
+def _channel(obs: Obstacles, a: End, b: End, lo: float, hi: float, step: float, lane: float, solid: bool,
+             unshared: bool = False, wrap: float = 0.0) -> tuple[float, list[Point], float, list[Point]]:
+    """Cheapest route through one channel between the heights ``lo`` and ``hi``: (cost, points, height of the
+    channel, the channel); ``unshared``: only channels running on no other line; ``wrap``: see ``route``."""
+    seg = _Costs(obs, lane)
+    best: tuple[float, list[Point], float, list[Point]] = (1e18, [], lo, [])
+    n = int((hi - lo) / step)
+    for i in range(n + 1):
+        y = lo + i * step
+        ca, pa = _leg(obs, a, y, lane, seg)
+        if ca >= 1e9:
+            continue
+        cb, pb = _leg(obs, b, y, lane, seg)
+        if cb >= 1e9:
+            continue
+        ch = seg(pa[-1], pb[-1], solid)
+        length = abs(y - a.y) + abs(y - b.y)
+        cost = ca + cb + ch + 0.08 * length
+        if wrap and cost < best[0]:
+            cost += wrap * wraps(pa + pb[::-1])
+        if cost < best[0] and not (unshared and _shared(obs, [pa[-1], pb[-1]], lane)):
+            best = (cost, pa + pb[::-1], y, [pa[-1], pb[-1]])
+    return best
+
+
+SHARED_RUN = 3.0  # mm: two lines running on one another longer than this read as one
+
+
+def _shared(obs: Obstacles, pts: list[Point], lane: float) -> bool:
+    """Whether the horizontal stretches of a route run on another line (the channel of a link already routed, a
+    busbar, the side of a frame) for longer than ``SHARED_RUN``."""
+    for p, q in zip(pts, pts[1:]):
+        if abs(p[1] - q[1]) < 1e-9:
+            x0, x1 = min(p[0], q[0]), max(p[0], q[0])
+            if any(abs(y - p[1]) < lane * 0.9 and min(h1, x1) - max(h0, x0) > SHARED_RUN for y, h0, h1 in obs.hlines):
+                return True
+    return False
 
 
 def _simplify(pts: list[Point]) -> list[Point]:
