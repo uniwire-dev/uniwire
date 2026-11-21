@@ -12,7 +12,7 @@ from typing import Any, Optional
 
 from ..i18n import normalize_lang
 from ..i18n import t as _t
-from ..layout.engine import PAPER, drawing_area, feeding_sheet, layout_sheet, plan_sheets, sheet_node_ids
+from ..layout.engine import PAPER, drawing_area, incoming_text, layout_sheet, plan_sheets, sheet_node_ids
 from ..model import Document, View
 from ..resolve import build_index
 from ..symbols import ACTIVE_SET, known_set
@@ -75,9 +75,10 @@ def _view_pages(doc: Document, view: View) -> list[Page]:
         _PAGES.move_to_end(key)
         return copy.deepcopy(_PAGES[key])
     from ..i18n import RENDER_LANG
-    from ..labels import INTERLOCK_KINDS, NORTH_AMERICAN, north_american
+    from ..labels import INTERLOCK_KINDS, NODE_NAMES, NORTH_AMERICAN, node_names, north_american
     token, na_token = RENDER_LANG.set(lang), NORTH_AMERICAN.set(north_american(doc))
     ik_token = INTERLOCK_KINDS.set({i.key: i.kind for i in doc.interlocks if i.kind})
+    names_token = NODE_NAMES.set(node_names(doc))
     set_token = ACTIVE_SET.set(known_set(doc.symbols))
     try:
         pages = _render_pages(doc, view, lang)
@@ -85,6 +86,7 @@ def _view_pages(doc: Document, view: View) -> list[Page]:
         RENDER_LANG.reset(token)
         NORTH_AMERICAN.reset(na_token)
         INTERLOCK_KINDS.reset(ik_token)
+        NODE_NAMES.reset(names_token)
         ACTIVE_SET.reset(set_token)
     tag = _lang_tag(doc.meta.lang)  # the language of the texts: a browser picks the glyph forms (Japanese, Chinese) by it
     for i, page in enumerate(pages, 1):
@@ -313,11 +315,7 @@ def _render_sheets(doc: Document, view: View, lang: str) -> tuple[list[Page], li
         incoming_ref: tuple[Optional[int], Optional[str]] = (None, None)
         if i > 1 and spec.roots and not spec.continuation and index.parent.get(spec.roots[0].id or ""):
             rid = spec.roots[0].id  # a board drawn on its own sheet (not a group of trees): fed from another one
-            src = feeding_sheet(specs, i, rid, index, folio_of_node)
-            incoming_ref = (src, index.parent.get(rid or ""))
-            feeder = next((a for a in index.ancestors(rid or "") if a.ref), None)
-            what = _t("render.incoming_from", lang, ref=feeder.ref) if feeder is not None else _t("render.incoming", lang)
-            incoming = _t("render.incoming_folio", lang, what=what, folio=src) if src else what
+            incoming, incoming_ref = incoming_text(specs, i, rid, index, folio_of_node, lang)
         lay = layout_sheet(doc, view, spec, index, folio_of=folio_by_root.get, continuation_folios=(prev_f, next_f),
                            incoming=incoming, node_folio=folio_of_node.get, incoming_ref=incoming_ref)
         title = spec.name or view.title or _t("render.default_title", lang)
