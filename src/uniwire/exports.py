@@ -166,6 +166,8 @@ TERMINAL_COLUMNS = ["strip", "strip_display", "terminal", "function", "from", "f
 # Signal type of a channel by module kind; a mixed module takes the direction of its link.
 _IO_TYPE = {"di": "DI", "do": "DO", "relay_out": "DO", "ai": "AI", "temperature": "AI", "ao": "AO",
             "counter": "CNT", "safety": "SAFETY", "comm": "COM", "power_measurement": "PM", "motor": "MOTOR"}
+# Tag drawn on a module (see uniwire.symbols.plc), for the address of a channel without a signal type.
+_MODULE_TAG = {"mixed_io": "IO", "cpu": "CPU", "coupler": "BC", "power_feed": "PW", "power_supply": "PS", "end": "END"}
 _INPUT_KINDS = {"di", "ai", "temperature", "counter", "safety", "power_measurement"}
 _OUTPUT_KINDS = {"do", "relay_out", "ao", "motor"}
 # Modules whose every channel is listed, connected or spare.
@@ -270,6 +272,48 @@ def _tb_links(doc: Document, index: Index) -> dict[tuple[str, str], list[tuple[i
     return out
 
 
+def _plc_modules(plc: Any) -> list[Any]:
+    return list(plc.onboard) + list(plc.modules)
+
+
+def _port_module(plc: Any, link: Any, port: str) -> tuple[Any, Optional[tuple[int, Optional[int]]]]:
+    """Module of ``plc`` that a link port ``slot.channel`` addresses, and the parsed (slot, channel); the module is
+    ``None`` when no module has that slot. When several modules share the slot (built-in I/O), an output link goes
+    to the output module and an input link to the input module, else to a mixed module."""
+    sc = _slot_channel(port) if port else None
+    cands = [m for m in _plc_modules(plc) if m.slot == sc[0]] if sc else []
+    if not cands:
+        return None, sc
+    want = _OUTPUT_KINDS if _link_direction(link, plc.id or "") == "out" else _INPUT_KINDS
+    return next((c for c in cands if c.kind in want), None) or next(
+        (c for c in cands if c.kind == "mixed_io"), cands[0]), sc
+
+
+def _io_type(kind: str, direction: str) -> str:
+    """Signal type of a channel: from the module kind; on a mixed module, from the direction of its link."""
+    if kind == "mixed_io":
+        return {"in": "DI", "out": "DO"}.get(direction, "")
+    return _IO_TYPE.get(kind, "")
+
+
+def _address(m: Any, direction: str, slot: int, ch: Optional[int]) -> str:
+    """Address of a channel in the I/O list: the signal type, then ``slot.channel`` as in the link ports
+    (``DI0.1``, ``DO0.1``, ``AI2.1``, ``COM3``), so that the inputs and the outputs of modules sharing a slot
+    (built-in I/O) are told apart. A module kind without a signal type takes the tag drawn on the module (``IO``
+    for a mixed module channel of unknown direction)."""
+    kind = m.kind if m is not None else ""
+    prefix = _io_type(kind, direction) or _MODULE_TAG.get(kind, "")
+    return f"{prefix}{slot}" + ("" if ch is None else f".{ch}")
+
+
+def plc_port_address(plc: Any, link: Any, port: str) -> str:
+    """Address (as in the I/O list) of a link port on ``plc``; the port itself when no module has its slot."""
+    m, sc = _port_module(plc, link, port)
+    if m is None or sc is None:
+        return port
+    return _address(m, _link_direction(link, plc.id or ""), sc[0], sc[1])
+
+
 def _io_row(doc: Document, index: Index, through: dict, plc: Any, m: Any, slot: Optional[int], ch: Optional[int],
             address: str, i: Optional[int]) -> list[dict[str, Any]]:
     """Rows of one channel of ``plc`` (several when its link reaches several devices through a terminal)."""
@@ -278,9 +322,9 @@ def _io_row(doc: Document, index: Index, through: dict, plc: Any, m: Any, slot: 
     kind = m.kind if m is not None else ""
     direction = _link_direction(link, pid) if link is not None else (
         "in" if kind in _INPUT_KINDS else "out" if kind in _OUTPUT_KINDS else "")
-    io_type = _IO_TYPE.get(kind, "")
-    if kind == "mixed_io":
-        io_type = {"in": "DI", "out": "DO"}.get(direction, "")
+    io_type = _io_type(kind, direction)
+    if m is not None and slot is not None:
+        address = _address(m, direction, slot, ch)
     labels = getattr(m, "channel_labels", None) or {}
     base = {
         "plc": pid, "plc_display": display(plc), "slot": "" if slot is None else slot,
@@ -323,7 +367,8 @@ def io_rows(doc: Document, index: Optional[Index] = None) -> list[dict[str, Any]
     """I/O list (columns :data:`IO_COLUMNS`): for each PLC, one row per channel of its I/O modules (connected or
     spare, in slot and channel order), then the links on its other modules and those without a channel.
 
-    A channel is addressed by a link port ``slot.channel`` (SPEC §3b). The connected device is the other end of
+    A channel is addressed by a link port ``slot.channel`` (SPEC §3b); its ``address`` adds the signal type in front
+    (``DI0.1``, ``DO0.1``: see :func:`plc_port_address`), unique per PLC. The connected device is the other end of
     the link; when that end is a terminal block terminal (``to_port``) that another link continues, the row names
     the device beyond the block and the terminal in ``terminal`` (``-X2:5``)."""
     index = index or build_index(doc)
@@ -331,10 +376,7 @@ def io_rows(doc: Document, index: Optional[Index] = None) -> list[dict[str, Any]
     rows: list[dict[str, Any]] = []
     for plc in [n for n in index.nodes.values() if n.type == "plc"]:  # type: ignore[attr-defined]
         pid = plc.id or ""
-        modules = list(plc.onboard) + list(plc.modules)  # type: ignore[attr-defined]
-        by_slot: dict[int, list[Any]] = {}
-        for m in modules:
-            by_slot.setdefault(m.slot, []).append(m)
+        modules = _plc_modules(plc)
         # (module position or None, channel or None) -> connections
         conn: dict[tuple[Optional[int], Optional[int]], list[tuple[int, str, Optional[int], str]]] = {}
         loose: list[tuple[int, str, Optional[int]]] = []  # (link index, port, slot) not tied to a module
@@ -345,14 +387,10 @@ def io_rows(doc: Document, index: Optional[Index] = None) -> list[dict[str, Any]
                 if here != pid:
                     continue
                 for p in _ports(port):
-                    sc = _slot_channel(p) if p else None
-                    cands = by_slot.get(sc[0], []) if sc else []
-                    if not cands:
+                    m, sc = _port_module(plc, link, p)
+                    if m is None:
                         loose.append((i, p, sc[0] if sc else None))
                         continue
-                    want = _OUTPUT_KINDS if _link_direction(link, pid) == "out" else _INPUT_KINDS
-                    m = next((c for c in cands if c.kind in want), None) or next(
-                        (c for c in cands if c.kind == "mixed_io"), cands[0])
                     conn.setdefault((modules.index(m), sc[1]), []).append((i, p, sc[0], here))  # type: ignore[index]
 
         for pos, m in enumerate(modules):
@@ -362,7 +400,7 @@ def io_rows(doc: Document, index: Optional[Index] = None) -> list[dict[str, Any]
                     [None] if None in chans else []):
                 links = conn.get((pos, ch), [])
                 if not links:
-                    rows += _io_row(doc, index, through, plc, m, m.slot, ch, f"{m.slot}.{ch}", None)
+                    rows += _io_row(doc, index, through, plc, m, m.slot, ch, "", None)
                 for i, p, _, _ in links:
                     rows += _io_row(doc, index, through, plc, m, m.slot, ch, p, i)
         for i, p, slot in loose:
@@ -400,8 +438,11 @@ def terminal_rows(doc: Document, view: Optional[View] = None, index: Optional[In
         outs: dict[Any, list[dict[str, Any]]] = {}
         loose = 0
 
-        def side(prefix: str, node_id: str, port: str, mark: str = "", cable: str = "") -> dict[str, Any]:
+        def side(prefix: str, node_id: str, port: str, mark: str = "", cable: str = "",
+                 link: Any = None) -> dict[str, Any]:
             n = index.nodes.get(node_id)
+            if link is not None and n is not None and n.type == "plc" and port:  # type: ignore[attr-defined]
+                port = ",".join(plc_port_address(n, link, p) for p in _ports(port))
             return {prefix: node_id, f"{prefix}_display": display(n) if n else node_id, f"{prefix}_port": port,
                     f"{prefix}_mark": mark, f"{prefix}_cable": cable}
 
@@ -439,7 +480,7 @@ def terminal_rows(doc: Document, view: Optional[View] = None, index: Optional[In
                 for p in _ports(port):
                     key: Any = _terminal(tb, p) if p else ("~~", loose := loose + 1)
                     bucket.setdefault(key, []).append(
-                        {**side(prefix, far, far_port or "", cable=_link_cable(doc, i)), "link_kind": link.kind,
+                        {**side(prefix, far, far_port or "", cable=_link_cable(doc, i), link=link), "link_kind": link.kind,
                          "label": link.label or ""})
 
         keys = [t for t, _ in declared]

@@ -281,6 +281,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   `uniwire terminals FILE [--view ID]` one row per terminal of each terminal block, with what arrives and leaves
   (and the wire marks of the view). Also `io_rows`, `terminal_rows`, `io_csv`, `terminals_csv` in `uniwire.exports`,
   and the `wiring` tool (`what='io'` or `'terminals'`).
+* I/O list: the inputs and the outputs of a PLC no longer share an address. The built-in inputs and outputs (both in
+  slot 0) were both listed as `0.1`, `0.2`...; the address now starts with the signal type (`DI0.1`, `DO0.1`,
+  `AI2.1`; `IO1.3`, the tag drawn on the module, for a spare channel of a mixed module), and the terminal strip
+  table gives the same address for a PLC end of a link.
 * PDF: the package ships a font, Liberation Sans (SIL Open Font License 1.1, see NOTICE), and every PDF is written
   with it, the same on every system: Cyrillic, Polish and Turkish letters came out as black boxes and "IΔn" as "IDn"
   where Arial was not installed (the web editor, slim containers). Every CJK character of a text is drawn with the
