@@ -8,6 +8,16 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Loading: more near-misses are read in canonical form, each reported by `core.normalized`: revision columns
+  `rev`, `by` and `note` (as `index`, `author`, `description`), PLC module kinds written in full (`digital_input`,
+  `analog-outputs`, `MIXED_IO`), a whole number written for a quoted choice (EV charger `mode: 3` as `"3"`), an
+  unknown field given `null` (left out). When a document is still refused, the list holds only the problems left: a
+  value that would have been read (a number for a text, a long `symbol_text`) was listed beside the real mistake.
+  The messages say what to write: a value outside a list names that value ("'colour' is not one of the values
+  allowed here; write one of: ..."), a value under a minimum names both ("8 is below the smallest value allowed
+  here; write 10 or more"), an unknown field names a close field of the node ("did you mean 'ib_A'?") or the node
+  types that have it ("'dc' is a field of switch_disconnector, spd, not of breaker"), a text written where an object
+  is expected says so (a link `device` given as an id), and a duplicate id gives the path of each node.
 * Single-line drawings: three measure or data links or more between one device and others on its sheet (a
   multi-channel meter measuring every feeder, a meter reading every charger) are drawn as one trunk with a tee tap
   to each other end, a junction dot at each tee. Before, each link was routed on its own: a stair of dashed runs
