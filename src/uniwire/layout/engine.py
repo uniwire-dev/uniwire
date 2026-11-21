@@ -4192,12 +4192,17 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                     bottom = [End(n.x - n.sym.left + w * (bottom_used.get(n.id, 0) + 1) / (count + 1),
                                   n.y + n.sym.extra.get("bottom_y", n.sym.height) + 0.5, "down")]
                 alts.append((moved[k] or [e]) + ([r] if r is not None else []) + bottom)
-            if not ml and link.kind not in POWER_LINKS:  # (never on the point of another link, see above: the
-                # ends free as they are first, a point moved off a taken one only when none is)
-                alts = [xs if port_label is not None and port_label[0] == k else [
-                    x for x in xs if not is_used(n.id, x, link.kind)] or list(
-                    {(f.x, f.y, f.side): f for x in xs for f in free_ends(n, x, link.kind)}.values()) or xs
+            orig = [list(xs) for xs in alts]  # (the ends before any is moved off a taken point)
+            moved_ids: set[int] = set()
+            if not ml and link.kind not in POWER_LINKS:  # (never on the point of another link, see above)
+                # ends free as they are first, then the points moved off taken ones (dearer: see MOVED)
+                alts = [xs if port_label is not None and port_label[0] == k else list(
+                    {(f.x, f.y, f.side): f for f in [x for x in xs if not is_used(n.id, x, link.kind)]
+                     + [f for x in xs for f in free_ends(n, x, link.kind)]}.values()) or xs
                     for k, (n, xs) in enumerate(zip((a, b), alts))]
+                moved_ids = {id(f) for k, n in ((0, a), (1, b)) for f in alts[k]
+                             if not any(abs(f.x - e.x) < 1e-6 and abs(f.y - e.y) < 1e-6 for e in orig[k])
+                             or any(f is m for m in moved[k])}
             if obs.grid and sides and i in sides:  # second drawing: each end on its side, in its slot
                 for k, (n, side) in enumerate(zip((a, b), sides[i])):
                     pick = next((e for e in alts[k] if e.side == side), alts[k][0])
@@ -4251,7 +4256,8 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                         if wrap and c[0] - wrap * wraps(p) >= obs.box_cross:  # through a text or a symbol anyway:
                             c[0] -= wrap * wraps(p)  # going round is not what to avoid first
                         away = sum(1 for e, o in ((ea, eb), (eb, ea)) if (e.side, o.x < e.x) in (("left", False), ("right", True)))
-                        scored.append((c[0] + OWN_CROSS * _round_own(p, (a, b)) + AWAY * away, [ea, eb]))
+                        moved_ = MOVED * ((id(ea) in moved_ids) + (id(eb) in moved_ids))
+                        scored.append((c[0] + OWN_CROSS * _round_own(p, (a, b)) + AWAY * away + moved_, [ea, eb]))
                 ends = min(scored, key=lambda t: t[0])[1]
                 cands = ([ends[0]] + [e for e in alts[0] if e is not ends[0]],
                          [ends[1]] + [e for e in alts[1] if e is not ends[1]])
@@ -4456,6 +4462,8 @@ def _transfer_tap(doc: Document, roots: list[LNode], a: LNode, sx: float, cy: fl
 
 OWN_CROSS = 10.0  # a link end chosen so that the route goes back across the axis of its own device (its leads)
 AWAY = 2.0  # ... an end on the side of its device away from the other end (when the routes cost about the same)
+MOVED = 40.0  # ... an end moved off the point another link ends on (squeezed beside it: the free ends first, unless
+# their route goes through a text or a symbol)
 END_WRAP = 30.0  # ... a route from that end going round what it passes (less than running on another link)
 
 
