@@ -851,14 +851,15 @@ _ARRIVE = {"left": 0, "right": 1, "down": 3, "up": 2}  # last move into an end (
 
 
 def _load_native():
-    """The compiled search of ``route_grid`` (the optional package ``uniwire-native``), or None: not installed, of
-    another interface, or turned off with the environment variable ``UNIWIRE_NATIVE=0``. Both searches find the same
-    routes (same costs, same floating-point operations, same tie order); the compiled one is many times faster."""
+    """The compiled search of ``route_grid`` (the optional package ``uniwire-native``), or None: not installed, not
+    loadable here, of another interface, or turned off with the environment variable ``UNIWIRE_NATIVE=0``. Both
+    searches find the same routes (same costs, same floating-point operations, same tie order); the compiled one is
+    many times faster. It is also built for the browser editor (Pyodide), where it is loaded when it can be."""
     if os.environ.get("UNIWIRE_NATIVE", "").strip() == "0":
         return None
     try:
         import uniwire_native
-    except ImportError:
+    except Exception:  # noqa: BLE001  (not installed, or a build that cannot be loaded here: draw in pure Python)
         return None
     if getattr(uniwire_native, "GRID_API", None) != 1:  # built for another version of this search
         return None

@@ -17,6 +17,10 @@ runtime (about 10 MB, then cached by the browser). Meanwhile the drawing is alre
 their first sheet drawn in advance, and the short links of the hosted server with the first sheet drawn by the
 server; the live drawing replaces it as soon as the editor is ready.
 
+Large drawings are drawn with the compiled link router of the library (`uniwire-native`, built for Pyodide, about
+65 kB more to download), as with `pip install "uniwire[native]"`: the same drawings, several times faster on
+large ones. If the browser cannot load it, the editor draws the same drawings in pure Python, only slower.
+
 ## Features
 
 - **Editor** with JSON syntax highlighting, error markers in the gutter and live re-rendering
@@ -81,4 +85,13 @@ directory of the repository:
 ```bash
 python viewer/build.py                # builds the wheel and copies the examples
 python -m http.server -d viewer 8000  # open http://localhost:8000/
+```
+
+The compiled link router is optional. To serve it too, build it for the Pyodide release of the viewer (needs
+Python 3.12 or later and rustup; the script installs the matching Emscripten SDK and Rust toolchain in user space),
+then pass it to the build:
+
+```bash
+packages/uniwire-native/build-pyodide.sh
+python viewer/build.py --native packages/uniwire-native/target/pyodide
 ```

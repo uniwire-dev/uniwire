@@ -2,7 +2,7 @@
 name = "uniwire-native"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.88"
+rust-version = "1.83"
 license = "Apache-2.0"
 description = "Optional compiled search of the uniwire grid link router"
 repository = "https://github.com/uniwire-dev/uniwire"

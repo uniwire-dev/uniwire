@@ -1,7 +1,8 @@
 name: Native wheels
 
-# Builds the wheels of the optional compiled link router (packages/uniwire-native) on each platform and checks that
-# it is used and draws the same routes as the pure Python search. No publishing: the wheels are kept as artifacts.
+# Builds the wheels of the optional compiled link router (packages/uniwire-native) on each platform, and for the
+# Pyodide release of the web editor, and checks that it is used and draws the same routes as the pure Python search.
+# No publishing: the wheels are kept as artifacts.
 
 on:
   pull_request:
@@ -9,6 +10,8 @@ on:
       - "packages/uniwire-native/**"
       - "src/uniwire/layout/routing.py"
       - "tests/test_route_native.py"
+      - "viewer/worker.js"
+      - "viewer/build.py"
       - ".github/workflows/native.yml"
   workflow_dispatch:
 
@@ -67,5 +70,32 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: uniwire-native-${{ matrix.os }}
+          path: dist/*.whl
+          if-no-files-found: error
+
+  pyodide:
+    name: Wheel for the web editor (Pyodide)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12" # pyodide-build needs 3.12 or later
+      - name: Build
+        # the Pyodide release pinned in viewer/worker.js, with its Emscripten SDK and Rust nightly
+        run: PYTHON=python packages/uniwire-native/build-pyodide.sh dist
+      - name: Same drawings in Pyodide
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip wheel --no-deps --wheel-dir lib .
+          npm install --no-save "pyodide@$(sed -n 's/^const PYODIDE_VERSION = "\(.*\)";.*/\1/p' viewer/worker.js)"
+          node packages/uniwire-native/pyodide-check.mjs lib/uniwire-*.whl dist/uniwire_native-*_wasm32.whl examples
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: uniwire-native-pyodide
           path: dist/*.whl
           if-no-files-found: error

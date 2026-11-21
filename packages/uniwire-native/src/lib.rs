@@ -61,7 +61,7 @@ impl<'a> Ragged<'a> {
 /// Running from a to b along a grid line whose terms are `lines` (weight, divisor, start, end): `run_cost`.
 fn run_cost(a: f64, b: f64, lines: &[f64]) -> f64 {
     let mut c = 0.0;
-    for t in lines.as_chunks::<4>().0 {
+    for t in lines.chunks_exact(4) {
         let (w, k, v0, v1) = (t[0], t[1], t[2], t[3]);
         if v0 < b && a < v1 {
             c += w * (py_min(v1, b) - py_max(v0, a)) / k;
@@ -92,7 +92,7 @@ fn py_max(a: f64, b: f64) -> f64 {
 /// first then added (the weights are whole numbers: the sum is exact, as Python's `sum`).
 fn crossings(spans: &[f64], pos: f64, weight: f64) -> f64 {
     let mut s = 0.0;
-    for t in spans.as_chunks::<2>().0 {
+    for t in spans.chunks_exact(2) {
         if t[0] < pos && pos < t[1] {
             s += weight;
         }
