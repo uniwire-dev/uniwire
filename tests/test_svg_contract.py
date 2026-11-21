@@ -284,3 +284,14 @@ def test_transfer_link_to_another_sheet_drawn_at_both_ends():
     for svg in ends:
         links = [g for g in _groups(svg, "uw-link") if g.get("data-uw-kind") == "transfer"]
         assert any("→" in (t.text or "") for g in links for t in g.iter(NS + "text"))
+
+
+def test_pdf_cjk_word_in_one_type_face():
+    """A Unicode font having a few CJK characters (a long-vowel mark, a fullwidth sign) does not draw them in
+    the middle of a word written with a CJK font: the whole word in one type face."""
+    pytest.importorskip("reportlab")
+    from uniwire.render import pdf
+
+    glyphs = frozenset(map(ord, "Q1 16A")) | {ord("ー")}  # the font has the long-vowel mark only
+    assert pdf._runs("モーター Q1", "UW", glyphs) == [("HeiseiKakuGo-W5", "モーター"), ("UW", " Q1")]
+    assert pdf._runs("Q1 16A", "UW", glyphs) == [("UW", "Q1 16A")]

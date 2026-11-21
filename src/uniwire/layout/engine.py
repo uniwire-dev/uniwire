@@ -155,6 +155,7 @@ class LNode:
     need: float = 0.0  # width the column needs for its annotation (or a board for its name), at full size
     dc_side: int = 0  # leading children on the DC side of an inverter/charger: fed from its DC terminal, not the bus
     left_room: float = 0.0  # room its links need on its left (the texts of a controller many links reach)
+    pitch: float = 20.0  # the column pitch of its sheet
 
     @property
     def id(self) -> str:
@@ -471,7 +472,7 @@ def _needs(ln: LNode, view: View, lang: str) -> None:
 
 
 def _place_x(ln: LNode, x_left: float, pitch: float = 20.0) -> None:
-    ln.x_left = x_left
+    ln.x_left, ln.pitch = x_left, pitch
     if not ln.children:
         ln.x = x_left + max(pitch / 2, ln.left_room) if ln.width > pitch else x_left + ln.width / 2
         return
@@ -994,6 +995,16 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
                 k = sum(1 for l in doc.links if l.kind not in SWITCHED_LINKS and (l.from_ in own or l.to in own))
                 p = sum(1 for l in doc.links if l.kind in POWER_LINKS and (l.from_ in own or l.to in own))
                 b.pad_bottom = SIGNAL_LANE * min(k, 8) + LANE * 2 * min(p, 4) + 1.5 if k or p else 0.0
+    # a bus coupler drawn between two trees side by side: its text between their frames
+    tie_gap: dict[int, float] = {}
+    for link in doc.links:
+        a, b = _find(main, link.from_), _find(main, link.to)
+        if link.kind != "tie" or link.device is None or a is None or b is None:
+            continue
+        ia, ib = sorted((main.index(_root_of(main, a)), main.index(_root_of(main, b))))
+        if ib == ia + 1:
+            tw = max((text_width(t, 1.9) for t in _device_text(link, link.device, lang)[:3]), default=0.0)
+            tie_gap[ia] = max(tie_gap.get(ia, 0.0), tw + 2 * (BOARD_PAD + 1.5))
     stub_widths = _stub_widths(doc, [], lang, here)
     moved = False
     for _ in range(2):  # once more when the texts of off-sheet stubs land on the text of the column on their left
@@ -1002,7 +1013,7 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
             _needs(r, view, lang)
             _measure(r, pitch)
             _place_x(r, x, pitch)
-            x += r.width + pitch * (ROOT_GAP_COLS + (1.0 if i in wide_gap else 0.0))
+            x += r.width + max(pitch * (ROOT_GAP_COLS + (1.0 if i in wide_gap else 0.0)), tie_gap.get(i, 0.0))
         xs = sorted({round(n.x - n.sym.left, 3) for r in main for n in r.walk()})
         for r in main:
             nxt = {id(a): b for n in r.walk() for a, b in zip(n.children, n.children[1:])}
@@ -1210,10 +1221,11 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
     g = Group(cls="diagram")
     for r in roots:
         _draw_tree(r, g, y_load, view, folio_of)
+    frames: list[Rect] = []
     for r in main + placed:  # placed: the supplies on a transfer switch, their boards framed too
         for n in r.walk():
             if n.is_board:
-                _draw_board_frame(n, g)
+                frames.append(_draw_board_frame(n, g))
     g.add(marks)
     # devices with no link to this sheet: "Auxiliary devices" row at the top right (once only, sheet 1)
     if unlinked and not spec.continuation and (not spec.roots or spec.roots == list(doc.sources) or view.root):
@@ -1235,8 +1247,8 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
             for i, t in enumerate(ln.ann):
                 g.add(Text((ab[0], ln.y + 0.3 + (i + 0.8) * ANN_LINE * ln.ann_size / ANN_SIZE), t, ln.ann_size,
                            bold=(i == 0 and ln.tagged)))
-    _draw_view_frames(view, everything + annex, g, obs)
-    _draw_enclosures(doc, everything + annex, g, obs)
+    frames += _draw_view_frames(view, everything + annex, g, obs)
+    frames += _draw_enclosures(doc, everything + annex, g, obs)
     _draw_links(doc, roots + annex, anchored, g, view, obs, y_load, lang, node_folio, band, far=far,
                 feed_taps=feed_taps)
 
@@ -1288,6 +1300,8 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
                 for k, line in enumerate(lines):
                     g.add(Text((n.x, y + k * 2.2), line, 1.8, "middle"))
                 bottom_end = max(bottom_end, y + 2.2 * (len(lines) - 1) + 0.5)
+    _clear_frame_edges(g, frames, [n.sym_box() for n in everything + annex
+                                   if n.kind != "bus_in" and not (n.is_board and n.sym.height == 0)])
     if view.cartouche and columns:
         # below everything drawn so far: auxiliary devices and link routes may go lower than the loads
         drawn_box = bbox(g)
@@ -1320,7 +1334,10 @@ def _board_texts(b: LNode) -> list[tuple[tuple[float, float], str, float, str]]:
     if name and b.children and b.children[0].kind == "bus_in":  # continued busbar: its text is on the left
         return [((x1 - 1.0, y0 + 3.6), name, 2.4, "end")]
     if name:
-        out.append(((b.x + 1.5 if b.x - x0 < 30 else x0 + 1.0, y0 + 3.6), name, 2.4, "start"))
+        # right of its incoming conductor; at the left of the frame when the conductor is far in and the name ends
+        # before it (never across it)
+        far_in = b.x - x0 >= 30 and x0 + 1.0 + text_width(name, 2.4) < b.x - 1.5
+        out.append(((x0 + 1.0 if far_in else b.x + 1.5, y0 + 3.6), name, 2.4, "start"))
     extra = [t for t in annotation(node) if t != node.label]
     if extra:
         out.append(((x1 - 1.0, y0 + 3.0), "  ".join(extra), 1.8, "end"))
@@ -2119,6 +2136,19 @@ def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callabl
 def _frame_box(b: LNode) -> tuple[float, float, float, float]:
     x0 = b.x_left + 0.8
     x1 = b.x_left + b.width - 0.8
+    if _sub_boards(b):  # its columns are as wide as what hangs below them (sub-boards, equipment beyond a cable):
+        # the frame ends after its own last way, as it would without them, not over the width of its descendants
+        own = [n for n in _owned(b) if n is not b]
+        if own:
+            node = b.node
+            assert node is not None
+            name = ref_label(node.ref, node.label)
+            extra = "  ".join(t for t in annotation(node) if t != node.label)
+            texts = (text_width(name, 2.4) + 3.0 if name else 0.0) + (text_width(extra, 1.8) + 2.0 if extra else 0.0)
+            last = max([n.x for n in own] + [n.bus_x1 for n in _owned(b) if n.bus_y is not None])  # (its busbar
+            # ends at the last way it feeds, a sub-board's too)
+            x1 = min(x1, max(last + b.pitch / 2 + BOARD_PAD + 0.3 * b.pitch - 0.8,
+                             b.x + 1.5 + texts))  # (its name and characteristics on its top edge)
     for n in _owned(b):
         ab = n.ann_box()
         if ab:
@@ -2145,7 +2175,7 @@ def _restyle(item: Any, style: Style) -> Any:
 
 
 def _framed(g: Group, obs: Obstacles, box: tuple[float, float, float, float], label: Optional[str], size: float,
-            style: Style, gap: float = 2.0) -> None:
+            style: Style, gap: float = 2.0) -> Rect:
     """Frame ``box`` (content + padding) with its label, kept clear of busbars and of the frames already drawn.
 
     The label goes above the content when there is room below the nearest busbar / frame edge, otherwise
@@ -2200,8 +2230,10 @@ def _framed(g: Group, obs: Obstacles, box: tuple[float, float, float, float], la
             g.add(Text((lx, base + i * s * 1.25), t, s, anchor, bold=True))
         for b in tbs:
             obs.add_box(b)
-    g.add(Rect(x0, y0, x1 - x0, y1 - y0, style))
+    rect = Rect(x0, y0, x1 - x0, y1 - y0, style)
+    g.add(rect)
     obs.add_frame((x0, y0, x1, y1))
+    return rect
 
 
 def _frame_label_tries(label: str, size: float, width: float) -> Iterator[tuple[float, list[str], bool]]:
@@ -2268,8 +2300,9 @@ def _cuts(m: int, n: int) -> Iterator[tuple[int, ...]]:
             yield (i,) + tuple(i + r for r in rest)
 
 
-def _draw_view_frames(view: View, everything: list[LNode], g: Group, obs: Obstacles) -> None:
+def _draw_view_frames(view: View, everything: list[LNode], g: Group, obs: Obstacles) -> list[Rect]:
     by_id = {n.node.id: n for n in everything if n.node is not None and n.kind == "node"}
+    out = []
     for fr in view.frames:
         boxes = []
         for nid in fr.nodes:
@@ -2283,8 +2316,9 @@ def _draw_view_frames(view: View, everything: list[LNode], g: Group, obs: Obstac
             continue
         u = boxes_union(boxes)
         assert u is not None
-        _framed(g, obs, (u[0] - 2.5, u[1] - 2.0, u[2] + 2.0, u[3] + 2.0), fr.label, 2.2,
-                Style(width=THIN, dash=(2.0, 1.0), color="#444444"))
+        out.append(_framed(g, obs, (u[0] - 2.5, u[1] - 2.0, u[2] + 2.0, u[3] + 2.0), fr.label, 2.2,
+                           Style(width=THIN, dash=(2.0, 1.0), color="#444444")))
+    return out
 
 
 def _mirror_up(item: Any, c: float) -> Any:
@@ -2316,7 +2350,7 @@ def _mirror_up(item: Any, c: float) -> Any:
     return it
 
 
-def _draw_enclosures(doc: Document, nodes: list[LNode], g: Group, obs: Obstacles) -> None:
+def _draw_enclosures(doc: Document, nodes: list[LNode], g: Group, obs: Obstacles) -> list[Rect]:
     """Addressable enclosures (enveloppes, 1.2): frame around the listed nodes present on the sheet."""
     by_id = {n.node.id: n for n in nodes if n.node is not None and n.kind == "node"}
     style = {"cell": Style(width=THIN, color="#444444"), "zone": Style(width=THIN, dash=(4.0, 1.5), color="#777777"),
@@ -2339,6 +2373,7 @@ def _draw_enclosures(doc: Document, nodes: list[LNode], g: Group, obs: Obstacles
                 n += 1
         return n
 
+    out: list[Rect] = []
     for enc in sorted(doc.enclosures, key=lambda e: -inner_count(e.id)):
         pad = 2.0 + 2.2 * min(inner_count(enc.id), 4)
         boxes = []
@@ -2361,17 +2396,101 @@ def _draw_enclosures(doc: Document, nodes: list[LNode], g: Group, obs: Obstacles
         label = " ".join(x for x in (enc.ref, enc.label or enc.cell_type) if x)
         u = boxes_union(boxes)
         assert u is not None
-        _framed(g, obs, (u[0] - pad, u[1] - pad, u[2] + pad, u[3] + pad), label or None, 2.0,
-                style.get(enc.kind, Style(width=THIN, dash=(2.0, 1.0), color="#444444")), gap=pad)
+        out.append(_framed(g, obs, (u[0] - pad, u[1] - pad, u[2] + pad, u[3] + pad), label or None, 2.0,
+                           style.get(enc.kind, Style(width=THIN, dash=(2.0, 1.0), color="#444444")), gap=pad))
+    return out
 
 
-def _draw_board_frame(b: LNode, g: Group) -> None:
+def _draw_board_frame(b: LNode, g: Group) -> Rect:
     x0, y0, x1, y1 = _frame_box(b)
     fg = Group(id=b.id, cls="board uw-node")
-    fg.add(Rect(x0, y0, x1 - x0, y1 - y0, Style(width=THIN, dash=(2.0, 1.0), color="#444444")))
+    rect = Rect(x0, y0, x1 - x0, y1 - y0, Style(width=THIN, dash=(2.0, 1.0), color="#444444"))
+    fg.add(rect)
     for pos, t, size, anchor in _board_texts(b):
         fg.add(Text(pos, t, size, anchor, bold=(size > 2.0)))
     g.add(fg)
+    return rect
+
+
+def _texts_of(item: Any) -> Iterator[Text]:
+    if isinstance(item, Group):
+        for i in item.items:
+            yield from _texts_of(i)
+    elif isinstance(item, Text) and item.text.strip():
+        yield item
+
+
+EDGE_CLEAR = 0.8  # a frame edge moved off a text keeps this far from it
+FRAME_GAP = 2.5  # and this far from the frames beside it
+
+
+def _clear_frame_edges(g: Group, frames: list[Rect], solids: list[Box]) -> None:
+    """Frame edges (boards, enclosures, view frames) moved off the texts they would be drawn through.
+
+    The frames are sized on what they enclose; a text placed beside them (a neighbour's label running into a
+    frame, a row title, a link text) may still be cut by an edge. Such an edge moves out past the texts mostly
+    inside the frame, or in past the ones mostly outside it, when its new place crosses no other text or symbol
+    (``solids``), leaves nothing it enclosed outside, and runs into no other frame."""
+    texts = [b for b in (bbox(t) for t in _texts_of(g)) if b is not None]
+
+    def core(b: Box) -> Box:  # the box of a text is approximate: its core
+        dx, dy = 0.04 * (b[2] - b[0]), 0.15 * (b[3] - b[1])
+        return b[0] + dx, b[1] + dy, b[2] - dx, b[3] - dy
+
+    cores = [core(b) for b in texts]
+
+    def cut(edge: int, r: Box, b: Box) -> bool:  # the edge ``edge`` (0 left, 1 top, 2 right, 3 bottom) of r through b
+        v = r[edge]
+        if edge in (0, 2):
+            return b[0] < v < b[2] and b[1] < r[3] and r[1] < b[3]
+        return b[1] < v < b[3] and b[0] < r[2] and r[0] < b[2]
+
+    def overlaps(a: Box, b: Box) -> bool:
+        return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
+
+    def inside(a: Box, b: Box) -> bool:
+        return b[0] <= a[0] and a[2] <= b[2] and b[1] <= a[1] and a[3] <= b[3]
+
+    def grow(b: Box) -> Box:
+        return b[0] - FRAME_GAP, b[1] - FRAME_GAP, b[2] + FRAME_GAP, b[3] + FRAME_GAP
+
+    boxes = [(r.x, r.y, r.x + r.w, r.y + r.h) for r in frames]
+    for _ in range(3):
+        moved = False
+        for i, r in enumerate(frames):
+            for edge in range(4):
+                box = boxes[i]
+                hit = [c for c in cores if cut(edge, box, c)]
+                if not hit:
+                    continue
+                full = [texts[cores.index(c)] for c in hit]  # cleared by its whole box
+                lo = edge in (0, 1)  # the edge on the low side: out is towards lower coordinates
+                k = edge % 2  # 0: x, 1: y
+                mid = (box[k] + box[k + 2]) / 2
+                # mostly inside: the edge goes out past it; mostly outside: in past it
+                outs = [c for c in hit if ((c[k] + c[k + 2]) / 2 > box[edge]) == lo]
+                out_v = (min(c[k] for c in full) - EDGE_CLEAR) if lo else (max(c[k + 2] for c in full) + EDGE_CLEAR)
+                in_v = (max(c[k + 2] for c in full) + EDGE_CLEAR) if lo else (min(c[k] for c in full) - EDGE_CLEAR)
+                tries = [out_v, in_v] if outs else [in_v, out_v]
+                for v in tries:
+                    if (v - mid) * (box[edge] - mid) <= 0 or abs(v - box[edge]) > 12.0:
+                        continue  # past the middle of the frame, or far: not a small move off a text
+                    new = tuple(v if j == edge else box[j] for j in range(4))
+                    inward = abs(v - mid) < abs(box[edge] - mid)
+                    if any(cut(edge, new, c) for c in cores) or any(cut(edge, new, b) for b in solids):
+                        continue
+                    if inward and any(inside(b, box) and not inside(b, new) for b in solids + cores
+                                      if b not in hit):
+                        continue  # it would leave out what it encloses
+                    if any(overlaps(grow(new), o) and not overlaps(grow(box), o) and not inside(o, new)
+                           and not inside(new, o) for j, o in enumerate(boxes) if j != i):
+                        continue  # into another frame, or against it
+                    boxes[i] = new  # type: ignore[assignment]
+                    r.x, r.y, r.w, r.h = new[0], new[1], new[2] - new[0], new[3] - new[1]
+                    moved = True
+                    break
+        if not moved:
+            break
 
 
 POWER_LINKS = ("bypass", "parallel", "infeed")

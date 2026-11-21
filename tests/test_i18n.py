@@ -44,7 +44,7 @@ def test_rule_messages_follow_the_language(monkeypatch):
 
 
 def test_russian_drawing_texts():
-    doc = load({**DOC, "meta": {"lang": "ru", "title": "Щит"}, "views": [{"id": "sld", "title_block": True,
+    doc = load({**DOC, "meta": {"notes": ["N1"], "lang": "ru", "title": "Щит"}, "views": [{"id": "sld", "title_block": True,
                                                                           "cartouche": ["ref", "cable"]}]})
     texts = [s for p in render_pages(doc) for s in _texts(p.root)]
     assert {"Примечания", "Обозначение", "Кабель (мм²)", "Лист"} <= set(texts)
@@ -55,59 +55,59 @@ def test_russian_drawing_texts():
 
 def test_chinese_and_spanish_drawing_texts():
     view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
-    zh = [s for p in render_pages(load({**DOC, "meta": {"lang": "zh-CN"}, "views": [view]})) for s in _texts(p.root)]
+    zh = [s for p in render_pages(load({**DOC, "meta": {"notes": ["N1"], "lang": "zh-CN"}, "views": [view]})) for s in _texts(p.root)]
     assert {"说明", "编号", "电缆（mm²）", "张次"} <= set(zh)
     assert "1.5" in " ".join(zh)
-    es = [s for p in render_pages(load({**DOC, "meta": {"lang": "es-AR"}, "views": [view]})) for s in _texts(p.root)]
+    es = [s for p in render_pages(load({**DOC, "meta": {"notes": ["N1"], "lang": "es-AR"}, "views": [view]})) for s in _texts(p.root)]
     assert {"Notas", "Designación", "Cable (mm²)", "Hoja"} <= set(es)
     assert "1,5" in " ".join(es)  # decimal comma
 
 
 def test_german_drawing_texts():
     view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
-    de = [s for p in render_pages(load({**DOC, "meta": {"lang": "de-AT"}, "views": [view]})) for s in _texts(p.root)]
+    de = [s for p in render_pages(load({**DOC, "meta": {"notes": ["N1"], "lang": "de-AT"}, "views": [view]})) for s in _texts(p.root)]
     assert {"Hinweise", "BMK", "Leitung (mm²)", "Blatt"} <= set(de)
     assert "1,5" in " ".join(de)  # decimal comma
 
 
 def test_portuguese_drawing_texts():
     view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
-    pt = [s for p in render_pages(load({**DOC, "meta": {"lang": "pt-BR"}, "views": [view]})) for s in _texts(p.root)]
+    pt = [s for p in render_pages(load({**DOC, "meta": {"notes": ["N1"], "lang": "pt-BR"}, "views": [view]})) for s in _texts(p.root)]
     assert {"Observações", "Ident.", "Cabo (mm²)", "Folha"} <= set(pt)
     assert "1,5" in " ".join(pt)  # decimal comma
 
 
 def test_italian_drawing_texts():
     view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
-    it = [s for p in render_pages(load({**DOC, "meta": {"lang": "it-IT"}, "views": [view]})) for s in _texts(p.root)]
+    it = [s for p in render_pages(load({**DOC, "meta": {"notes": ["N1"], "lang": "it-IT"}, "views": [view]})) for s in _texts(p.root)]
     assert {"Note", "Sigla", "Cavo (mm²)", "Foglio"} <= set(it)
     assert "1,5" in " ".join(it)  # decimal comma
 
 
 def test_polish_drawing_texts():
     view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
-    pl = [s for p in render_pages(load({**DOC, "meta": {"lang": "pl-PL"}, "views": [view]})) for s in _texts(p.root)]
+    pl = [s for p in render_pages(load({**DOC, "meta": {"notes": ["N1"], "lang": "pl-PL"}, "views": [view]})) for s in _texts(p.root)]
     assert {"Uwagi", "Oznaczenie", "Przewód (mm²)", "Arkusz"} <= set(pl)
     assert "1,5" in " ".join(pl)  # decimal comma
 
 
 def test_turkish_drawing_texts():
     view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
-    tr = [s for p in render_pages(load({**DOC, "meta": {"lang": "tr-TR"}, "views": [view]})) for s in _texts(p.root)]
+    tr = [s for p in render_pages(load({**DOC, "meta": {"notes": ["N1"], "lang": "tr-TR"}, "views": [view]})) for s in _texts(p.root)]
     assert {"Notlar", "Etiket", "Kablo (mm²)", "Pafta"} <= set(tr)
     assert "1,5" in " ".join(tr)  # decimal comma
 
 
 def test_dutch_drawing_texts():
     view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
-    nl = [s for p in render_pages(load({**DOC, "meta": {"lang": "nl-BE"}, "views": [view]})) for s in _texts(p.root)]
+    nl = [s for p in render_pages(load({**DOC, "meta": {"notes": ["N1"], "lang": "nl-BE"}, "views": [view]})) for s in _texts(p.root)]
     assert {"Opmerkingen", "Codering", "Kabel (mm²)", "Blad"} <= set(nl)
     assert "1,5" in " ".join(nl)  # decimal comma
 
 
 def test_japanese_drawing_texts():
     view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable"]}
-    ja = [s for p in render_pages(load({**DOC, "meta": {"lang": "ja-JP"}, "views": [view]})) for s in _texts(p.root)]
+    ja = [s for p in render_pages(load({**DOC, "meta": {"notes": ["N1"], "lang": "ja-JP"}, "views": [view]})) for s in _texts(p.root)]
     assert {"注記", "記号", "ケーブル（mm²）", "シート"} <= set(ja)
     assert "1.5" in " ".join(ja)  # decimal point
 
@@ -123,7 +123,7 @@ def test_croatian_serbian_bosnian_drawing_texts():
     view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable", "circuit"]}
 
     def texts(lang):
-        return [s for p in render_pages(load({**DOC, "meta": {"lang": lang}, "views": [view]})) for s in _texts(p.root)]
+        return [s for p in render_pages(load({**DOC, "meta": {"notes": ["N1"], "lang": lang}, "views": [view]})) for s in _texts(p.root)]
     hr, sr, bs = texts("hr-HR"), texts("sr-Latn-RS"), texts("bs-BA")
     assert {"Napomene", "Oznaka", "Kabel (mm²)", "Strujni krug", "List"} <= set(hr)
     assert {"Napomene", "Oznaka", "Kabl (mm²)", "Strujno kolo", "List"} <= set(sr)
@@ -152,7 +152,7 @@ def test_serbian_in_cyrillic():
     assert ABBREVIATIONS["sr-Cyrl"]["dishwasher"] == "МС" and ABBREVIATIONS["sr-Cyrl"]["ups"] == "UPS"
     assert type_label("rcd", "sr-Cyrl").endswith("(ФИД)")
     view = {"id": "sld", "title_block": True, "cartouche": ["ref", "cable", "circuit"]}
-    texts = [s for p in render_pages(load({**DOC, "meta": {"lang": "sr-Cyrl"}, "views": [view]})) for s in _texts(p.root)]
+    texts = [s for p in render_pages(load({**DOC, "meta": {"notes": ["N1"], "lang": "sr-Cyrl"}, "views": [view]})) for s in _texts(p.root)]
     assert {"Напомене", "Ознака", "Кабл (mm²)", "Струјно коло", "Лист"} <= set(texts)
     assert "1,5" in " ".join(texts)  # decimal comma
     message = t("core.rating_cascade", lang="sr-Cyrl", in_a=32.0, up="-Q1", up_in_a=16.0)
@@ -186,8 +186,8 @@ def test_rule_messages_follow_env(monkeypatch):
 
 
 def test_title_block_follows_meta_lang():
-    texts_fr = _texts(render_pages(load({**DOC, "meta": {"lang": "fr"}}))[0].root)
-    texts_en = _texts(render_pages(load({**DOC, "meta": {"lang": "en"}}))[0].root)
+    texts_fr = _texts(render_pages(load({**DOC, "meta": {"notes": ["N1"], "lang": "fr"}}))[0].root)
+    texts_en = _texts(render_pages(load({**DOC, "meta": {"notes": ["N1"], "lang": "en"}}))[0].root)
     assert "Régime de neutre" in texts_fr and "Earthing system" not in texts_fr
     assert "Earthing system" in texts_en and "Régime de neutre" not in texts_en
 
@@ -204,7 +204,7 @@ def test_drawn_words_follow_the_language():
                 "children": [{"type": "socket"}]}]}]}]}
 
     def texts(lang, kind="single-line"):
-        d = load({**doc, "meta": {"lang": lang}, "views": [{"id": "v", "kind": kind}]})
+        d = load({**doc, "meta": {"notes": ["N1"], "lang": lang}, "views": [{"id": "v", "kind": kind}]})
         return [s for p in render_pages(d) for s in _texts(p.root)]
 
     it = texts("it")
