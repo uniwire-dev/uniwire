@@ -184,6 +184,10 @@ class View(UWModel):
     first_folio: int = Field(1, ge=1, description="Number of the first sheet (partial sheet set)")
     total_folios: Optional[int] = Field(None, ge=1, description="Total number of sheets in the drawing set")
     show_pe: bool = Field(True, description="Multi-line view: draw the protective conductor (PE)")
+    auxiliaries: bool = Field(
+        False, description="Multi-line view: also draw the auxiliary devices (outside the power tree: controllers, "
+        "terminal blocks, sensors, meters placed through links) and the control, interlock, trip, measure, data, "
+        "key and earth links; false = the power tree and the power links (transfer, bypass, parallel, tie, infeed) only")
     color: Optional[Literal["none", "conductors", "phase", "source", "status", "voltage"]] = Field(
         None, description="Colour mode (1.3; omitted = 'none', black drawing): 'conductors' = conductor colours "
         "(multi-line: each conductor; single-line: single-phase feeders in their phase colour), 'phase' = "
