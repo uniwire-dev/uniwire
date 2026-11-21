@@ -8,6 +8,12 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* PDF: the package ships a font, Liberation Sans (Regular and Bold, SIL Open Font License 1.1, see NOTICE), and every
+  PDF is written with it. Where Arial or Liberation Sans was not installed (the web editor, slim containers, many
+  systems), Cyrillic, Polish and Turkish letters came out as black boxes and "IΔn" as "IDn"; they are now drawn, and
+  a document gives the same PDF on every system. The font has the widths of Arial, so the layout does not change.
+  Chinese, Japanese and Korean text is drawn as before.
+
 * Single-line drawings: no conductor lead ends in nothing. A device outside the power path (a meter, a controller,
   a surge arrester, a battery or PV unit reached only by links) was drawn with conductor tails above and below its
   symbol; it is now drawn without them (a switching device keeps its fixed contacts, and a lead a power link lands
