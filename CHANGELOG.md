@@ -8,6 +8,13 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Single-line drawings: three measure or data links or more between one device and others on its sheet (a
+  multi-channel meter measuring every feeder, a meter reading every charger) are drawn as one trunk with a tee tap
+  to each other end, a junction dot at each tee. Before, each link was routed on its own: a stair of dashed runs
+  about 1 mm apart that read as one thick line, links looping round the incomer and small loops round each feeder.
+  The protocol or label shared by all the links is written once on the trunk, different ones on their taps; a
+  controller's or a PLC's links (their own points and channels), links naming their terminal on the shared
+  device (separate wires) and the links to another sheet (their stubs) are drawn as before. In the SVG, each link of a trunk carries `data-uw-trunk`.
 * Single-line drawings: a characteristic of a device (a rating, a curve, a type of meter) is left out beside its
   label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
   out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a
