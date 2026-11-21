@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from .. import registry
+from ..graph import POWER_LINKS
 from ..i18n import normalize_lang, render_lang
 from ..i18n import t as _t
 from ..labels import annotation, cable_text, drawn_cable_text, part_number, without_ref
@@ -140,12 +141,13 @@ def _sorted(conds: list[str]) -> list[str]:
     return sorted(dict.fromkeys(conds), key=lambda c: ORDER.get(c, 99))
 
 
-def _dc_side(node: Any) -> list[Any]:
-    """Children on the DC side of an inverter/charger or UPS that also feeds an AC side (none otherwise)."""
+def _dc_side(node: Any, ac_out: frozenset[str] = frozenset()) -> list[Any]:
+    """Children on the DC side of an inverter/charger or UPS that also feeds an AC side (none otherwise): AC
+    children, or a power link leaving it (``ac_out``: its AC output on a transfer, bypass... link)."""
     if node.type not in DC_PORT_TYPES:
         return []
     dc = [c for c in node.children if _is_dc(c)]
-    return dc if len(dc) < len(node.children) else []
+    return dc if len(dc) < len(node.children) or (dc and node.id in ac_out) else []
 
 
 # ------------------------------------------------------------- conductors
@@ -162,6 +164,7 @@ class Conductors:
 class _Assigner:
     def __init__(self, doc: Document, show_pe: bool = True):
         self.doc = doc
+        self.ac_out = frozenset(l.from_ for l in doc.links if l.kind in POWER_LINKS)
         self.show_pe = show_pe
         self.info: dict[int, Conductors] = {}
         self._needs: dict[int, bool] = {}
@@ -372,9 +375,25 @@ class _Assigner:
             out.append("PE")
         return _sorted(out) or parent[:1]
 
-    def lv(self, system: Optional[str], earthing: Optional[str]) -> tuple[list[str], bool]:
-        """Conductors of a low-voltage supply, and whether the PE is still to be added (TT, IT)."""
-        system = system or "3P+N"
+    def _stated_system(self, node: Any) -> str:
+        """System of a supply declared nowhere: what the devices and loads it feeds state (three phases only when
+        one of them is on more than one phase or on L2 / L3; a neutral when one needs it), up to the next supply (a converter,
+        a transformer); nothing stated: one phase and the neutral."""
+        three, stack = False, list(node.children)
+        while stack and not three:
+            n = stack.pop()
+            names, k, _ = self.spec(n)
+            three = (k or 0) >= 2 or any(nm != "L1" for nm in names or [])
+            if n.type not in CONVERTERS | {"transformer"}:
+                stack.extend(n.children)
+        if three:
+            return "3P+N" if self.needs_n(node) else "3P"
+        return "1P+N"
+
+    def lv(self, system: Optional[str], earthing: Optional[str], node: Any = None) -> tuple[list[str], bool]:
+        """Conductors of a low-voltage supply, and whether the PE is still to be added (TT, IT). ``system``: the one
+        declared, else the one ``node`` (the supply) feeds (see ``_stated_system``)."""
+        system = system or (self._stated_system(node) if node is not None else "3P+N")
         if system == "DC":
             return list(DC), False
         k, n = SYSTEMS.get(system, (3, True))
@@ -440,7 +459,7 @@ class _Assigner:
         earthing = inst.earthing
         if t == "generator" and earthing == "TN-C-S":  # the PEN is the utility's: a genset has its N and PE
             earthing = "TN-S"
-        conds, pending = self.lv(getattr(node, "system", None) or inst.system, earthing)
+        conds, pending = self.lv(getattr(node, "system", None) or inst.system, earthing, node)
         return conds, conds, pending
 
     def _walk(self, node: Any, parent: Optional[list[str]], pending: bool, parent_node: Any = None) -> None:
@@ -456,8 +475,8 @@ class _Assigner:
                 out, pending = self._transformer_out(node, inp)
             elif t == "inverter" and any(c in DC for c in inp):  # fed in DC: the AC network starts at its output
                 inst = self.doc.installation
-                out, pending = self.lv(getattr(node, "system", None) or inst.system, inst.earthing)
-            elif t in CONVERTERS and not any(c in DC for c in inp) and not _dc_side(node):
+                out, pending = self.lv(getattr(node, "system", None) or inst.system, inst.earthing, node)
+            elif t in CONVERTERS and not any(c in DC for c in inp) and not _dc_side(node, self.ac_out):
                 out = list(DC)
             elif _vfd_to_three_phase(node, inp):  # a drive fed in single phase makes the motor's three phases
                 out = list(PHASES) + (["PE"] if "PE" in inp else [])
@@ -476,7 +495,7 @@ class _Assigner:
             src["PE"] = None
             out = _sorted(out + ["PE"]) if t not in CONVERTERS | {"transformer"} else out
             pending = False
-        dc_side = _dc_side(node) if not any(c in DC for c in inp) else []
+        dc_side = _dc_side(node, self.ac_out) if not any(c in DC for c in inp) else []
         if dc_side:  # AC side on the outputs, plus a DC pair for the batteries, PV...
             out = list(inp)
             self.info[id(node)] = Conductors(inp, _sorted(out + list(DC)), src)
@@ -782,7 +801,10 @@ def _build(node: NodeBase, spec: SheetSpec, info: dict[int, Conductors], is_root
         _, s, e = spec.bus_slice
         bus_out = e < len(children)
         children = children[s:e]
-    dc = [ch for ch in children if any(ch is d for d in _dc_side(node))]
+    # the DC side of an inverter/charger feeding an AC side too: the children the assigner fed from its DC pair
+    two_sides = (node.type in DC_PORT_TYPES and not any(x in DC for x in c.inp) and any(x in DC for x in c.out)
+                 and any(x not in DC and x != "PE" for x in c.out))
+    dc = [ch for ch in children if two_sides and any(x in DC for x in info[id(ch)].inp)]
     children = [ch for ch in children if not any(ch is d for d in dc)] + dc
     return MLNode(node, "node", list(c.inp), list(c.out), dict(c.src),
                   [_build(ch, spec, info, False) for ch in children], bus_out=bus_out, root=is_root, dc_side=len(dc))
@@ -1172,6 +1194,17 @@ def _earth(x: float, y: float) -> list[Item]:
 def _lane_label(x: float, y: float, text: str, size: float = 1.4) -> Text:
     """Conductor name written upwards just right of a conductor, its bottom at ``y``."""
     return Text((x + 0.35 + size * 0.75, y), text, size, "start", rotate=90, color="#333333")
+
+
+def _starts_here(c: str, x: float, y: float, pe_name: bool = True) -> list[Item]:
+    """A conductor with no upstream conductor, starting just above ``y``: the protective conductor at the main
+    earthing terminal (an earth symbol, and its name unless ``pe_name`` is false); any other conductor arrives from
+    outside the drawing (an open lead and its name, as an incoming feed): it is never shown earthed."""
+    ys = y - SPLIT_H + 1.0
+    if c != "PE":
+        return [cond_group(c, Line((x, ys - 3.0), (x, y))), _lane_label(x, ys, c)]
+    earth = cond_group(c, Line((x, ys), (x, y)), Line((x, ys), (x + 2.0, ys)), *_earth(x + 2.0, ys))
+    return [earth, Text((x - 0.5, ys + 2.6), c, 1.4, "end", color="#333333")] if pe_name else [earth]
 
 
 BLADE_A = math.radians(20)
@@ -1651,9 +1684,9 @@ def _draw_transition(ln: MLNode, ch: MLNode, g: Group) -> None:
         s = ch.src.get(c)
         xc = ch.xi(c)
         if s is None or s not in ln.off_out:
-            ys = y1 - SPLIT_H + 1.0
-            g.add(cond_group(c, Line((xc, ys), (xc, y1)), Line((xc, ys), (xc + 2.0, ys)), *_earth(xc + 2.0, ys)))
-            labels.append(Text((xc - 0.5, ys + 2.6), c, 1.4, "end", color="#333333"))
+            lead = _starts_here(c, xc, y1)
+            g.add(lead[0])
+            labels += lead[1:]
             continue
         xs = ln.xo(s)
         if abs(xs - xc) < 1e-6:
@@ -1756,10 +1789,7 @@ def _draw_rails(ln: MLNode, g: Group, sheet_left: float, folio_of: Callable[[str
         txt = _t("render.continued_from", lang, label=ln.label, folio=prev) if prev else ln.label
         g.add(ref_group(prev, ln.target, [Text((sheet_left, ln.rail_y0 - 1.8), txt, 1.8, "start")]))
     for ch, c in news:
-        x = ch.xi(c)
-        top = ch.y
-        ys = top - SPLIT_H + 1.0
-        edges[id(ch)].add(cond_group(c, Line((x, ys), (x, top)), Line((x, ys), (x + 2.0, ys)), *_earth(x + 2.0, ys)))
+        edges[id(ch)].add(*_starts_here(c, ch.xi(c), ch.y, pe_name=False))
 
 
 def _draw(ln: MLNode, g: Group, lang: str, view: View, sheet_left: float, folio_of: Callable[[str], Optional[int]],
@@ -1789,10 +1819,8 @@ def _draw(ln: MLNode, g: Group, lang: str, view: View, sheet_left: float, folio_
         rg = ref_group(*incoming_ref)
         for c in ln.inp:
             x = ln.xi(c)
-            if ln.src.get(c) is None:  # starts here (PE at the main earthing terminal of the board)
-                ys = ln.y - SPLIT_H + 1.0
-                g.add(cond_group(c, Line((x, ys), (x, ln.y)), Line((x, ys), (x + 2.0, ys)), *_earth(x + 2.0, ys)),
-                      Text((x - 0.5, ys + 2.6), c, 1.4, "end", color="#333333"))
+            if ln.src.get(c) is None and c == "PE":  # starts here: at the main earthing terminal of the board
+                g.add(*_starts_here(c, x, ln.y))
                 continue
             rg.add(cond_group(c, Line((x, top), (x, ln.y))), _lane_label(x, top + 3.0, c))
         if incoming:
@@ -2785,17 +2813,29 @@ def _split_bus(spec: SheetSpec, roots: list[MLNode], view: View, lang: str, inde
     _, _, aw, _ = drawing_area(view)
     cap = aw / view.min_scale - 20.0
     first_cap = cap - (bus.x_left + bus.lanes_max() + RAIL_IN)
-    chunks: list[tuple[int, int]] = []
-    start, acc = 0, 0.0
-    for i, c in enumerate(bus.children):
-        limit = first_cap if not chunks else cap - 30.0
-        if acc + c.width > limit and i > start:
-            chunks.append((start, i))
-            start, acc = i, 0.0
-        acc += c.width
-    chunks.append((start, len(bus.children)))
+
+    def cut(less: float) -> list[tuple[int, int]]:  # the ways in order, as many on each sheet as its room allows
+        chunks: list[tuple[int, int]] = []
+        start, acc = 0, 0.0
+        for i, c in enumerate(bus.children):
+            limit = (first_cap if not chunks else cap - 30.0) - less
+            if acc + c.width > limit and i > start:
+                chunks.append((start, i))
+                start, acc = i, 0.0
+            acc += c.width
+        chunks.append((start, len(bus.children)))
+        return chunks
+
+    chunks = cut(0.0)
     if len(chunks) == 1:
         return []
+    # as many sheets, the ways shared out evenly among them (not a last sheet with one way): the room of every
+    # sheet reduced as far as their number allows, found by halving
+    lo, hi = 0.0, cap
+    for _ in range(20):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if len(cut(mid)) == len(chunks) else (lo, mid)
+    chunks = cut(lo)
     spec.bus_slice = (node.id, *chunks[0])  # type: ignore[assignment]
     out = []
     prev = spec

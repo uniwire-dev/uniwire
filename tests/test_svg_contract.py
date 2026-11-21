@@ -186,6 +186,21 @@ def test_wire_marks_on_conductors():
     assert not any(g.get("data-uw-mark") for s in _svgs(doc, "multi-line") for g in s.iter(NS + "g"))
 
 
+def test_text_width_per_glyph():
+    """The layout measures a text with the advance widths of Arial: never narrower than the text drawn (six wide
+    capitals ran past the box sized for them), at most a hundredth of an em wider per character."""
+    pytest.importorskip("reportlab")
+    from reportlab.pdfbase.pdfmetrics import stringWidth  # the Helvetica metrics: the widths of Arial
+
+    from uniwire.render.scene import text_width
+
+    for text in ("WWWWWW", "MMm mm", "0123456789", "Pump P-12 (spare)", "QA1 4x25+PE16", "Éclairage îlot", "@%&*"):
+        real = stringWidth(text, "Helvetica", 2.0)
+        assert real <= text_width(text, 2.0) <= real + 0.01 * 2.0 * len(text), text
+    assert text_width("Ш", 1.0) > text_width("Ы", 1.0) > text_width("г", 1.0)  # Cyrillic, from the same font
+    assert text_width("\u2192", 1.0) == 1.0 and text_width("\u4e2d", 1.0) == 1.0  # an arrow, a CJK character
+
+
 def test_pdf_cjk_text(tmp_path, monkeypatch):
     pytest.importorskip("reportlab")
     from uniwire.render import pdf
@@ -196,11 +211,39 @@ def test_pdf_cjk_text(tmp_path, monkeypatch):
     assert pdf._runs("조명", "Helvetica", None)[0][0] == "HYGothic-Medium"
     assert pdf._runs("Q1 16 A", "Helvetica", None) == [("Helvetica", "Q1 16 A")]
     assert text_width("照明", 10) == 20
-    monkeypatch.setattr(pdf, "_FONT_CANDIDATES", [])  # a system without fonts, like a slim container
+    monkeypatch.setattr(pdf, "_packaged_fonts", list)  # no font at all: Helvetica, CJK still drawn
+    monkeypatch.setattr(pdf, "_FONT_CANDIDATES", [])
     page = Page(100, 30)
     page.root.add(Text((5, 10), "照明 客厅", 5))
     pdf.write_pdf([page], tmp_path / "t.pdf")
     assert b"STSong-Light" in (tmp_path / "t.pdf").read_bytes()
+
+
+def test_pdf_packaged_font_draws_every_european_letter(tmp_path, monkeypatch):
+    pytest.importorskip("reportlab")
+    from reportlab.pdfgen.canvas import Canvas
+
+    from uniwire.render import pdf
+    from uniwire.render.scene import Page, Text
+
+    monkeypatch.setattr(pdf, "_FONT_CANDIDATES", [])  # no system font, like the browser or a slim container
+    drawn: list[tuple[str, str]] = []
+    draw_string = Canvas.drawString
+
+    def spy(self, x, y, text, *args, **kwargs):
+        drawn.append((self._fontname, text))
+        return draw_string(self, x, y, text, *args, **kwargs)
+
+    monkeypatch.setattr(Canvas, "drawString", spy)
+    texts = ["Освещение кухни", "Gniazdka łazienka źródło", "Çamaşır makinesi İşık ğ", "IΔn 30 mA", "Rf ≥ 50 kΩ"]
+    page = Page(200, 60)
+    for i, text in enumerate(texts):
+        page.root.add(Text((5, 10 + 10 * i), text, 5, bold=i == 0))
+    pdf.write_pdf([page], tmp_path / "t.pdf")
+    data = (tmp_path / "t.pdf").read_bytes()
+    assert b"+LiberationSans" in data and b"+LiberationSans-Bold" in data and b"/FontFile2" in data  # embedded
+    assert sorted(text for _, text in drawn) == sorted(texts)  # whole: no letter replaced or left out
+    assert {font for font, _ in drawn} == {"UW", "UW-Bold"}  # never Helvetica, which has none of these letters
 
 
 def test_pdf_arrows_without_a_glyph_written_in_ascii():
