@@ -58,6 +58,7 @@
             {
               "type": "board",
               "id": "MDB",
+              "pen_split": true,
               "ref": "=MDB",
               "label": "Main LV board, meter room",
               "kind": "main",

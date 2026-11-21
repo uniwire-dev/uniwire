@@ -72,6 +72,7 @@
       {
        "type": "board",
        "id": "MP",
+       "pen_split": true,
        "ref": "MP",
        "label": "Main panel 200 A",
        "kind": "panelboard",

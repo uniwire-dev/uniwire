@@ -31,7 +31,7 @@
     {"type": "grid", "label": "From house main board", "un_V": 400, "children": [
       {"type": "breaker", "ref": "-F7", "label": "Workshop feeder (house board)", "in_A": 32, "curve": "C", "icn_kA": 6, "poles": "4P", "external": true,
        "children": [
-        {"type": "board", "id": "WSB", "ref": "=WS", "label": "Workshop sub-board", "kind": "sub", "system": "3P+N", "ways": 36, "ip": "IP65",
+        {"type": "board", "id": "WSB", "pen_split": true, "ref": "=WS", "label": "Workshop sub-board", "kind": "sub", "system": "3P+N", "ways": 36, "ip": "IP65",
          "cable": {"ref": "W7", "designation": "SWA XLPE/PVC", "cores": "5x", "section_mm2": 6, "material": "Cu", "length_m": 38,
                    "install": "D-duct", "insulation": "XLPE", "du_pct": 2.1},
          "children": [

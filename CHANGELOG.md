@@ -8,6 +8,17 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawing conventions. Conductor-count marks: one phase and the neutral is always one stroke and "+N" ("L1+N"),
+  where a two-pole device wrote two strokes and "L1 N"; no "+N" on a line without a neutral (single-pole circuits of
+  a three-wire supply had one); below a two-pole device the circuits take its two conductors (they took the
+  installation's four). The PEN split marker is drawn only at a board that sets `pen_split` or declares its own
+  TN-C-S earthing (it was guessed at the first board; the TN-C-S examples now set it). Transformers: the star
+  point is earthed in TN-C, TN-C-S (on the PEN) and TT (by its own electrode) multi-line drawings as it was in TN-S,
+  never in IT; single-line drawings show an earth on a transformer whose neutral is earthed. Outside the status
+  colour mode a node of status `future`, and what inherits it, has "(future)" added to its label (it was drawn
+  as existing). The circuit table leaves out the column of a source with nothing below it when that column would
+  be empty. New info findings: no supply system declared, TN-C-S with no board saying where the PEN is split, and
+  one listing the generic loads and controllers without `symbol_text` (their boxes stay empty or generic).
 * Single-line drawings: a characteristic of a device (a rating, a curve, a type of meter) is left out beside its
   label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
   out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a
