@@ -122,8 +122,8 @@ expires (`POST /doc/<id>/delete`, never a GET); the links of a deleted document 
 ## Reference card
 
 ```bash
-uniwire card                 # compact card, ~3,100 tokens
-uniwire card --full          # adds field descriptions, docstrings and every enum value (~5,000 tokens)
+uniwire card                 # compact card, ~3,400 tokens
+uniwire card --full          # adds field descriptions, docstrings and every enum value (~5,500 tokens)
 uniwire card --lang fr       # French prose and type labels
 ```
 

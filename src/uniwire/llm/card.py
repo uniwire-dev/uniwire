@@ -74,7 +74,7 @@ _TEXT: dict[str, dict[str, str]] = {
                       "Colours: `color`, `conductor_colors`. Control schematics (coils, contacts, current paths) "
                       "are not drawn: say so first, offer the power side.",
         "profiles": "Rule profiles (`profiles`; `core` always applies)",
-        "nfc_note": "French installations (NF C 15-100); set `installation.premises`: the rules of dwellings (part 7-771) "
+        "nfc_note": "French installations (NF C 15-100); set `installation.premises`: the rules of dwellings (part 10-1) "
                     "apply only to `dwelling` or when it is absent",
         "enedis_note": "connection to the French public network (Enedis, NF C 14-100): connection power, service "
                        "main breaker (AGCP) setting, PV injection limits; combine with `nfc15100`",
@@ -152,7 +152,7 @@ _TEXT: dict[str, dict[str, str]] = {
                       "commande (bobines, contacts) : le dire d'abord, proposer la partie puissance.",
         "profiles": "Profils de règles (`profiles` ; `core` s'applique toujours)",
         "nfc_note": "installations françaises (NF C 15-100) ; préciser `installation.premises` : les règles du logement "
-                    "(partie 7-771) ne s'appliquent qu'à `dwelling` ou en son absence",
+                    "(partie 10-1) ne s'appliquent qu'à `dwelling` ou en son absence",
         "enedis_note": "raccordement au réseau public français (Enedis, NF C 14-100) : puissance de raccordement, "
                        "réglage du disjoncteur de branchement (AGCP), limites d'injection photovoltaïque ; à combiner "
                        "avec `nfc15100`",

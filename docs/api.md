@@ -66,7 +66,24 @@ pages = uniwire.render_pages(doc)                            # in-memory pages (
 
 Both functions accept an optional `view` (a `View` from `doc.views`); by default the first view, or a
 default single-line view, is used. Large installations are split across sheets automatically
-(`folio_split`), with cross-references between sheets and a title block on each.
+(`folio_split`; no sheet is drawn below scale 0.6), with cross-references between sheets and a title block on
+each, the scale of the sheet written in it.
+
+The views of a document make one drawing set: their sheets are numbered one after the other (SPEC §7,
+`first_folio`). A declared view drawn on its own prints the numbers it has in the set, so its sheets match the PDF
+of every view.
+
+```python
+pdf = uniwire.render_pdf(doc, "out/set.pdf", all_views=True)   # every view of the document, one drawing set
+
+from uniwire.render import drawing_set_findings, render_views
+counts = []
+pages = render_views(doc, counts=counts)        # the sheets of every view; counts: each view and its sheets
+for f in drawing_set_findings(counts):          # core.folio-overlap: known only once the views are drawn
+    print(f.level, f.rule, f.message)
+```
+
+`render_pdf(..., findings=[])` fills the list with the same findings.
 
 The multi-line power diagram (one line per conductor, see SPEC §7.1) is a view of kind `multi-line`:
 
@@ -103,7 +120,7 @@ new classes / attributes may be added.
 
 | Element | Class / attributes | What it holds |
 |---|---|---|
-| root `<svg>` | `data-uw-sheet="n"` (1-based position in the rendered set), `data-uw-view-kind="single-line"` or `"multi-line"` | one sheet |
+| root `<svg>` | `data-uw-sheet="n"` (1-based position in the rendered set), `data-uw-folio="n"` (the sheet number printed in its title block, its number in the drawing set), `data-uw-view-kind="single-line"` or `"multi-line"` | one sheet |
 | node | `<g class="sym sym-… uw-node" data-uw-id="ID">` (multi-line: `ml-sym …`); a board is its frame and name: `<g class="board uw-node" data-uw-id="ID">` | symbol of a node of the tree, of an auxiliary device (`devices`), of a device carried by a link (then also `data-uw-link="KEY"`, and `data-uw-id` only if the device has an `id`) |
 | tree edge | `<g class="uw-edge" data-uw-edge="CHILD" data-uw-parent="PARENT">` | the conductor(s) feeding `CHILD` from its parent or from the busbar tap; multi-line: one sub-group per conductor (`data-uw-cond`) |
 | busbar | `<g class="uw-busbar" data-uw-id="OWNER">`; multi-line: one per rail, with `data-uw-cond` | busbar of the node with several outgoing feeders (riser from its output included) |
@@ -128,6 +145,15 @@ svg = ET.parse("out/house/house.svg").getroot()
 feeders = {g.get("data-uw-edge"): g.get("data-uw-parent") for g in svg.iter(NS + "g")
            if "uw-edge" in (g.get("class") or "").split()}
 ```
+
+## Compiled link router
+
+`pip install "uniwire[native]"` adds the package `uniwire-native`, a compiled (Rust) version of the search of the
+link router. The library uses it when it is installed and loads; the drawings are exactly the same as without it,
+large drawings with many links are drawn several times faster. Without it, when it cannot be loaded or was built
+for another version, or with the environment variable `UNIWIRE_NATIVE=0`, the pure Python search is used, with
+no message. The web editor loads a build of it for the browser when one is served
+([Web viewer](web-viewer.md)).
 
 ## Bill of materials and graph
 
@@ -256,7 +282,7 @@ are drawn pole by pole by the renderer: a symbol set does not change them. `uniw
 |---|---|
 | `uniwire validate FILE...` | Validate one or more documents (schema + integrity) |
 | `uniwire check FILE... [--profile P]` | Validate, then apply the rule profiles; exit code 1 if any error |
-| `uniwire render FILE [-f svg\|pdf] [-o OUT] [--view ID] [--kind single-line\|multi-line]` | Draw the sheets (SVG directory by default, `out/<name>/`). `--view` picks a view by id; `--kind multi-line` draws the multi-line power diagram even if the document declares no such view (files named `<name>-multiline`) |
+| `uniwire render FILE [-f svg\|pdf] [-o OUT] [--view ID] [--kind single-line\|multi-line] [--about] [--doc-id ID]` | Draw the sheets (SVG directory by default, `out/<name>/`). `--view` picks a view by id; `--kind multi-line` draws the multi-line power diagram even if the document declares no such view (files named `<name>-multiline`). The PDF of a document with several views holds every view, unless `--view` or `--kind` picks one, and the drawing set findings are printed (`core.folio-overlap`). `--about` adds the page "About this document" (checks, contact), `--doc-id` names the online copy there |
 | `uniwire schema [-o FILE]` | Write the JSON Schema |
 | `uniwire graph FILE` | Print the derived terminal / connectivity-node graph (JSON) |
 | `uniwire bom FILE [-o FILE]` | Bill of materials as CSV (semicolon-separated) |
@@ -268,6 +294,7 @@ are drawn pole by pole by the renderer: a symbol set does not change them. `uniw
 | `uniwire marks FILE [--view ID] [--write] [-o FILE]` | Print the wire marks of a view; `--write` freezes them into the cables' `marks` (in place, or into `-o FILE`; the JSON is rewritten with 2-space indentation) |
 | `uniwire symbols [-o FILE] [--set NAME]` | SVG sheet of all symbols (of the symbol set `NAME`, `iec` by default) |
 | `uniwire normalize FILE` | Print the resolved document (templates applied, ids assigned, canonical units) |
+| `uniwire card`, `describe`, `link`, `patch` | Tools for assistants: reference card, outline with stable ids, web editor link, edits by id ([LLM tools](llm.md)) |
 
 ```bash
 uniwire validate examples/*.uniwire.json
@@ -281,8 +308,8 @@ uniwire marks mcc.uniwire.json --view marks --write              # freeze the ge
 
 CLI output, validation errors and rule findings follow the `UNIWIRE_LANG` environment variable
 (`en` by default). French covers everything; German, Spanish, Portuguese, Italian, Dutch, Polish, Turkish,
-Croatian, Serbian, Bosnian, Russian and Chinese cover the rule findings, the CLI and validation messages staying in
-English:
+Croatian, Serbian (`sr`, and `sr-Cyrl` in Cyrillic), Bosnian, Russian, Chinese and Japanese cover the rule findings,
+the CLI and validation messages staying in English:
 
 ```bash
 UNIWIRE_LANG=fr uniwire check house.uniwire.json

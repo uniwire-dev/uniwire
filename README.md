@@ -23,7 +23,7 @@ review and diff.
 ## Features
 
 * **Single-line and multi-line diagrams** from the same document: the multi-line view derives every
-  conductor (L1, L2, L3, N, PE, PEN) from the single-line data, with no extra input.
+  conductor (L1, L2, L3, N, PE, PEN, L+, L-) from the single-line data, with no extra input.
 * **53 node types**: utility grid, transformers, generators, UPS, PV, batteries, inverters; breakers,
   RCDs, RCBOs, fuses, switch-disconnectors, contactors, motor starters, transfer switches, SPDs,
   protection relays, instrument transformers, insulation monitors; busbars, boards, terminal blocks;
@@ -33,17 +33,19 @@ review and diff.
   derived automatically, with CIM, IFC and IEC 61850 SCL mappings.
 * **Closed typing and unit-suffixed fields**: `in_A`, `idn_mA`, `section_mm2`, `p_kW`; unknown fields are
   errors (`calibre` instead of `in_A` is caught), extensions live in `ext`. Templates declare a device once.
-* **Rule profiles**: `core` (always), `nfc15100` (French dwellings), `vde0100` (German installations),
-  `iec60364` (cable current-carrying capacity), `enedis` (connection to the French public network), plus PLC
+* **Rule profiles**: `core` (always), `nfc15100` (French low-voltage installations), `vde0100` (German
+  installations), `iec60364` (cable current-carrying capacity, 30 mA RCDs), `enedis` (connection to the French public network), plus PLC
   consistency checks.
 * **Bill of materials**: structured `product` references (manufacturer, part number, range, accessories)
   on any node or PLC module, aggregated to CSV (`uniwire bom`).
 * **Wire and cable marking**: marking rules per view (manual, sequential, per potential, pattern), marks
   drawn on the multi-line diagram, and CSV exports: wire list (`uniwire wires`), wire marker list
-  (`uniwire markers`), cable schedule (`uniwire cables`); `uniwire marks --write` freezes the marks.
+  (`uniwire markers`), cable schedule (`uniwire cables`), I/O list of the PLCs (`uniwire io`) and terminal strip
+  table (`uniwire terminals`); `uniwire marks --write` freezes the marks.
 * **Colour modes**: conductors in their IEC 60445 or North-American colours, or colouring by phase,
   source, status or voltage level.
-* **Sheets**: paper size, sub-tree views, automatic sheet splitting with cross-references, circuit schedule,
+* **Sheets**: paper size, sub-tree views, automatic sheet splitting with cross-references (no sheet drawn below
+  scale 0.6), sheet numbering across the views of a drawing set, circuit schedule,
   enclosure frames, title block, revisions and notes. **SVG** output is deterministic and diff-friendly;
   the multi-sheet **PDF** has clickable links between sheets.
 * **Drawings in English, French, German, Spanish, Portuguese, Italian, Dutch, Polish, Turkish, Croatian, Serbian,

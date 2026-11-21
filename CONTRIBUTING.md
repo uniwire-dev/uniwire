@@ -26,6 +26,8 @@ privately, see [SECURITY.md](https://github.com/uniwire-dev/uniwire/blob/main/SE
 | `viewer/` | the web viewer (static site running the library with Pyodide) |
 | `docker/mcp/` | the official MCP server image |
 | `packages/uniwire-data-iec81346/` | the optional CC BY-SA 4.0 data package |
+| `packages/uniwire-native/` | the optional compiled link router (Rust), also built for the web viewer |
+| `tools/` | maintenance scripts (`glyph_widths.py`: the text width table from the font file) |
 | `evals/llm/` | evaluation tasks for model-written documents |
 
 ## Development setup
@@ -38,6 +40,9 @@ cd uniwire
 uv venv
 uv pip install -e ".[dev]" -e packages/uniwire-data-iec81346
 ```
+
+The compiled link router is optional (`uv pip install ./packages/uniwire-native`, Rust 1.83 or later): the
+drawings are the same without it, and `UNIWIRE_NATIVE=0` turns it off to compare.
 
 Python 3.10 or later is required. The `dev` extra installs pytest, jsonschema, reportlab (PDF output), the
 MCP SDK and ruff. No lock file is committed: the commands below run the tools of `.venv` directly, so they
@@ -86,13 +91,15 @@ there.
 
 ## Translations
 
-uniwire renders in English by default and supports French. To improve or add a language:
+uniwire renders in English by default and in the languages of its catalog (French, German, Spanish, Portuguese,
+Italian, Dutch, Polish, Turkish, Croatian, Serbian in Latin and Cyrillic script, Bosnian, Russian, Chinese,
+Japanese). To improve or add a language:
 
 * **Messages** (CLI, validation errors, rule findings, title block and sheet texts) live in the catalog
-  [`src/uniwire/i18n.py`](https://github.com/uniwire-dev/uniwire/blob/main/src/uniwire/i18n.py): `EN` is the reference, other languages (`FR`) mirror its
+  [`src/uniwire/i18n.py`](https://github.com/uniwire-dev/uniwire/blob/main/src/uniwire/i18n.py): `EN` is the reference, other languages (`FR`, `DE`...) mirror its
   keys. A missing key falls back to English. `tests/test_i18n.py` checks that the catalogs stay in sync.
 * **Type labels** (shown on drawings and in the bill of materials) live in the `label` object of each type
-  in [`src/uniwire/registry/core.json`](https://github.com/uniwire-dev/uniwire/blob/main/src/uniwire/registry/core.json) (`{"en": …, "fr": …}`).
+  in [`src/uniwire/registry/core.json`](https://github.com/uniwire-dev/uniwire/blob/main/src/uniwire/registry/core.json) (`{"en": …, "fr": …, "de": …}`).
 * **Viewer interface**: the strings of the web viewer live in `viewer/i18n.js` (English, French).
 
 Rendering follows `meta.lang` of the document; the CLI follows the `UNIWIRE_LANG` environment variable.

@@ -41,7 +41,7 @@ house.uniwire.json: 2 finding(s)
 
 In Python, a `Finding` has the attributes `level`, `rule`, `message`, `node` and `source`. Rules based on a
 standard carry a `source` (the document and clause the rule relies on) and a `confidence` (`high` or
-`medium`), available in `uniwire.rules.RULE_INFO`. Messages are translated: set `UNIWIRE_LANG` to `fr`, `de`, `es`, `pt`, `it`, `nl`, `pl`, `tr`, `hr`, `sr`, `bs`, `ru` or `zh`.
+`medium`), available in `uniwire.rules.RULE_INFO`. Messages are translated: set `UNIWIRE_LANG` to `fr`, `de`, `es`, `pt`, `it`, `nl`, `pl`, `tr`, `hr`, `sr`, `sr-Cyrl`, `bs`, `ru`, `zh` or `ja`.
 
 An unknown profile name produces a `profile` warning.
 
@@ -69,6 +69,7 @@ An unknown profile name produces a `profile` warning.
 | `core.terminal-node` | PV arrays, batteries, SPDs and earth electrodes feed nothing (a battery root of `sources`, the only source of a DC system, may) | warning |
 | `core.normalized` | A near-miss value was read in its canonical form on load: `poles: 2` as `"2P"`, `cable.cores: 3` as `"3G"`, `"3G2.5"` as `"3G"` plus `section_mm2: 2.5`, a `[15, 45]` range as `"15-45"`, a view `type`/`single_line` as `kind`/`single-line`, `meta.description` as a note, revision columns `rev`, `by`, `note` as `index`, `author`, `description`, PLC module kinds written in full (`digital_input` as `di`, `analog_output` as `ao`), a whole number written for a quoted choice as that choice (EV charger `mode: 3` as `"3"`), an unknown field given `null` left out, a number written for a text as that text, a text too long for `symbol_text` without its spaces, else as its initials (`"Air conditioner"` as `"AC"`), else as its first whole words that fit, never cut in the middle of a word (a single word too long is cut with a full stop: `"Ventilation"` as `"Venti."`), and in an object a single unknown field beside a single missing required one under the missing name. Ambiguous values are not guessed: validation rejects them, and lists only the problems left once the values above are read (a misnamed field is read under the missing name only when the whole document is then valid). `uniwire normalize` writes the canonical form | warning |
 | `core.interlock` | Nodes and links sharing a `locks` key: no more members closed in normal operation than the interlock has `keys` (SPEC §4.1); a declared interlock is used by at least 2 members; an undeclared lock is not alone | error / warning |
+| `core.no-profile` | Only the `core` rules ran (no rule profile applied, or `installation.standard` names a standard no profile covers): the protections, cables and RCDs were not checked, so an empty result does not mean the installation is right | info |
 | `core.no-cables` | A profile that checks cables is active (`nfc15100`, `vde0100`, `iec60364`) but no circuit gives its cable size: the cables were not checked, so an empty result does not mean they are right | info |
 
 ## PLC rules (part of `core`)

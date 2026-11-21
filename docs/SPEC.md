@@ -97,7 +97,8 @@ Every node has the following common fields (all optional except `type`):
   1000 V (`u1_V`) that has a `cable`, or is fed by a device that has one, is at the far end of that cable: it is
   drawn below the frame, with what it feeds.
 * Loads (category `load`), `pv_array` and `battery` are **leaves**.
-* A protective device without children represents an outgoing circuit whose load is not described (drawn as an arrow).
+* A protective device without children represents an outgoing circuit whose load is not described (drawn ending
+  on a small free terminal, as a spare way; a feeder continued elsewhere ends on an `offpage` node).
 
 ### 3.2 Cable
 
@@ -161,7 +162,7 @@ breaker has no residual-current fields: a breaker with residual-current protecti
 sets it, a TN-C-S installation splits at the first board, and a check finding asks to declare it). `busbar`: `kind` (`busway` = busbar trunking system), `material`,
 `system`, `earthing`. `grid.scc_MVA`, `grid.system`. `transformer.kind` (`auto`, `earthing`, `isolation`, `bank`),
 `transformer.u1_alt_V` (dual voltage). `generator.prime_mover`. `inverter.protection` (built-in grid decoupling protection),
-`inverter.kind`: `charger`. Systems: `split-phase` (120/240 V); earthing system: `TN`. `rcd_type`: `G`.
+`inverter.kind`: `charger`. Systems: `split-phase` (120/240 V, 100/200 V); earthing system: `TN`. `rcd_type`: `G`.
 
 ### Further types
 | Type | Use |
@@ -370,11 +371,11 @@ Common enumerations: `poles` ∈ {1P, 1P+N, 2P, 3P, 3P+N, 4P}.
 | `title` | - | Sheet title |
 | `root` | - | Draw only the subtree of this node |
 | `paper` / `orientation` | `A3` / `landscape` | Sheet format. When `paper` is absent, a renderer may choose the smallest format that holds the drawing at full size (the reference library: A4 landscape when it fits, else A3) |
-| `direction` | `down` | Direction of power flow (future values reserved) |
+| `direction` | `down` | Direction of power flow: `down`, `up` (mirrored), `right`, `left` (the reference renderer draws `right` and `left` downwards and says so with the `core.view-direction` finding) |
 | `pitch_mm` | 20 | Width of an outgoing feeder column, 10 to 40 (a value under 10 is read as 10, with a `core.normalized` note) |
 | `cartouche` | `label, ref, protection, idn_mA, cable, p_kW` | Rows of the circuit schedule (among `label`, `ref`, `protection`, `in_A`, `curve`, `icn_kA`, `idn_mA`, `rcd_type`, `poles`, `cable`, `section_mm2`, `length_m`, `p_kW`, `phase`, `room`, `points`, and the 1.2 rows below, e.g. `cable_ref` "Cable tag"); an `idn_mA` value carried by a device upstream of the feeder (incomer, group RCD), not by its own protection, reads "30 mA (upstream)" |
 | `folio_split` | `auto` | `auto`: split across sheets if needed (several trees side by side: groups of whole trees first, then sub-distribution boards on their own sheet, then busbars cut into continuation sheets; a way wider than a sheet, such as a distribution below a device rather than a board, has its branches drawn on sheets of their own, with off-page references at both ends); `none`: everything on one sheet, at whatever scale it needs |
-| `min_scale` | 0.7 | Maximum reduction before splitting. With `folio_split: auto` no sheet is drawn below 0.6 (a smaller value is read as 0.6): below it the texts are too small to read on paper. The scale of each sheet is written in its title block |
+| `min_scale` | 0.7 | Maximum reduction before splitting. With `folio_split: auto` no sheet is drawn below 0.6 (a smaller value is read as 0.6): below it the texts are too small to read on paper. The scale of each sheet is written in its title block (in a corner of the sheet when it has no title block) |
 | `annotations` | `true` | Reference designation and characteristics next to the symbols |
 | `tag_field` | `ref` | Displayed identifier: `ref` or `part_number` (diagrams that print only catalogue part numbers) |
 | `conductor_marks` | `true` | Conductor-count strokes (IEC 60617: one stroke per conductor, or one stroke and the number) and phase of single-phase circuits on each outgoing feeder, on the line leaving each source / transformer, and below each switching device whose `poles` change the conductors of the line above it (not repeated lower in the same column). A neutral the device does not cut is shown apart: `3P+N` → three strokes and `+N`, `4P` → one stroke and `4`; `3P` gets `+N` only when circuits below use the neutral and its supply has one (never below a three-wire `3P` network). One phase and the neutral is always one stroke and `+N` (`L1+N` when its phase is known), whatever the poles (`1P`, `1P+N`, `2P`); a line without a neutral (a `3P` network, below a device that passes none) gets no `+N`, its conductors are counted. What a cable does not state is that of the line it leaves (below a two-pole device: its two conductors). PE is not counted |
@@ -408,7 +409,10 @@ A document may declare several views, of either kind, e.g.
   follows `installation.system` / `grid.system` and the earthing system: TN-C and TN-C-S carry a PEN, split into
   PE + N at the board flagged `pen_split` (by default the first board in TN-C-S); TN-S carries a PE from the source;
   TT and IT get their PE at the first board. A transformer starts a new system (neutral from the vector group,
-  `Dyn11` → N); inverters and power supplies feed a DC pair. A `star_delta` motor starter on three phases adds
+  `Dyn11` → N); a power supply feeds a DC pair (`L+`, `L-`). An inverter (or a UPS) has an AC side and a DC side:
+  fed in AC, the batteries, PV arrays and DC boards below it are on its DC pair and its other children on its AC
+  output; fed in DC (a PV array, a battery), it gives the AC conductors of the installation at its output. A DC
+  link to an inverter/charger or a UPS lands on its DC pair. A `star_delta` motor starter on three phases adds
   the other ends of the motor windings, `W2`, `U2`, `V2`, from its delta contactor: they go down with the phases
   to the motor, drawn with its six terminals (`U1` `V1` `W1`, `W2` `U2` `V2`), and are carried by its cable
   (their wire marks under the cable `marks` keys `U2`, `V2`, `W2`).
@@ -417,8 +421,11 @@ A document may declare several views, of either kind, e.g.
   breakers with the breaker cross on each protected pole, the poles linked by a dashed mechanical link; RCDs with a
   toroid around all live conductors; current transformers as a ring on each phase, a current shunt as a resistor in
   the one conductor it measures; fuses on each phase; transformers as two windings with their vector group;
-  motors as `M 3~` with terminals `U V W` and PE; loads as a box with one terminal per conductor; other types as a
-  labelled box across their conductors. Ratings and tags are written as on the single-line diagram, load
+  motors as `M 3~` with terminals `U V W` and PE; loads as a box with one terminal per conductor; devices connected
+  in parallel (voltage transformers and indicators, surge limiters, neutral impedances, insulation monitors,
+  earthing switches) on taps beside the conductors they use; other types as a labelled box across their
+  conductors. Without a colour mode the protective conductor is drawn dash-dot (with the conductor colours, solid
+  green/yellow). Ratings and tags are written as on the single-line diagram, load
   descriptions under the loads, outgoing cables above them. Large documents are split into sheets like the
   single-line diagram. The power links outside the tree (`transfer`, `bypass`, `parallel`, `tie`, `infeed`) are
   drawn conductor by conductor, with an off-sheet reference when their other end is on another sheet. Every node

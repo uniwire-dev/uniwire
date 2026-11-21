@@ -68,8 +68,8 @@ A web server is required (Web Workers and `fetch` do not work from `file://`).
 The viewer relies on the data attributes of the SVG sheets (`data-uw-id` on node groups, `.uw-edge`
 `data-uw-edge`/`data-uw-parent` on tree edges, `.uw-link` with `data-uw-from`/`data-uw-to` and an
 invisible `.uw-hit` path, `data-uw-cond` on multi-line conductors, `.uw-ref` with
-`data-uw-target-sheet`/`data-uw-target-id` on off-page references, `data-uw-sheet` and
-`data-uw-view-kind` on the `<svg>`). Every feature is detected: with sheets that lack an attribute the
+`data-uw-target-sheet`/`data-uw-target-id` on off-page references, `data-uw-sheet`, `data-uw-folio`
+(the printed sheet number, shown on the sheet tabs) and `data-uw-view-kind` on the `<svg>`). Every feature is detected: with sheets that lack an attribute the
 corresponding highlight is simply not shown. Highlighting toggles CSS classes (`uw-hl-self`,
 `uw-hl-up`, `uw-hl-down`, `uw-hl-link`, `uw-hl-end`, `uw-hl-cond`, and `uw-dim` on the `<svg>`) on
 elements found through a per-sheet index, so it stays fast on large sheets. The tree (parent,
