@@ -184,8 +184,9 @@ class LNode:
         return len(kids) >= 2 or self.bus_out or (self.type == "busbar" and len(kids) >= 1)
 
     def dc_terminal(self) -> tuple[float, float]:
-        """Side terminal of the DC side (left of the symbol, at the height of its "=" mark)."""
-        return (self.x - self.sym.left, self.y + self.sym.height * 0.3)
+        """Side terminal of the DC side (left of the symbol's body, at the height of its "=" mark)."""
+        body = min((i.x for i in self.sym.items if isinstance(i, Rect)), default=-self.sym.left)
+        return (self.x + body, self.y + self.sym.height * 0.3)
 
     @property
     def out_y(self) -> float:
@@ -280,6 +281,19 @@ def _build(node: NodeBase, spec: SheetSpec, is_root: bool) -> LNode:
             ln.children = dc + [c for c in ln.children if c not in dc]
             ln.dc_side = len(dc)
     return ln
+
+
+PORT_LANE = 2.0  # room on the left of an inverter/charger for each of its power links beyond the first
+
+
+def _port_room(doc: Document, n: LNode, here: set[str], index: Index, pitch: float) -> float:
+    """An inverter/charger or a UPS several power links reach (on its input, its DC terminal, its output): room on its
+    left for one lane each, so that they come down side by side instead of on one another."""
+    if n.type not in DC_PORT_TYPES or n.node is None or not n.node.id:
+        return 0.0
+    count = sum(1 for l in doc.links for k, nid in enumerate((l.from_, l.to))
+                if nid == n.node.id and (l.to, l.from_)[k] in here and _port_where(l, k, index) is not None)
+    return pitch / 2 + PORT_LANE * (count - 1) if count >= 2 else 0.0
 
 
 SPREAD_STEP = 1.5  # single-line: spacing of the link ends on the side of a controller many links reach
@@ -423,6 +437,17 @@ def _build_sheet_roots(spec: SheetSpec, index: Index) -> list[LNode]:
     return [_build(r, spec, True) for r in spec.roots if r.id not in spec.moved]
 
 
+def _dc_side_left(doc: Document, roots: list[LNode], index: Index) -> None:
+    """An inverter/charger first in the tree with only a DC side below it, that power links reach: its DC side on its
+    left, its AC input on top and its AC output at the bottom free for those links."""
+    ac = {(l.from_, l.to)[k] for l in doc.links for k in (0, 1) if _port_where(l, k, index) is not None}
+    for ln in roots:
+        if (ln.type in DC_PORT_TYPES and ln.node is not None and ln.node.id in ac
+                and index.parent.get(ln.node.id or "") is None and ln.children and not ln.dc_side
+                and all(c.node is not None and _is_dc(c.node) for c in ln.children)):
+            ln.dc_side = len(ln.children)
+
+
 # ---------------------------------------------------------------- computation
 def _measure(ln: LNode, pitch: float, left_room: float = 0.0) -> float:
     """``left_room``: room on the left asked by a device above in the same column (see ``LNode.left_room``)."""
@@ -436,7 +461,8 @@ def _measure(ln: LNode, pitch: float, left_room: float = 0.0) -> float:
         ln.width = max(pitch, own, ln.need) + max(room - pitch / 2, 0.0)
     else:  # its text keeps the room it needs right of the axis, moved right by the room on the left
         shift = max(room - pitch / 2, 0.0) if len(ln.children) == 1 else 0.0
-        ln.width = max(sum(c.width for c in ln.children), own + shift, ln.need + shift)
+        own_col = own if not ln.bus_children else 0.0  # (only a DC side: its own column right of it)
+        ln.width = max(sum(c.width for c in ln.children) + own_col, own + shift, ln.need + shift)
     if ln.is_board:
         ln.width += 2 * BOARD_PAD + pitch * 0.3  # right margin: annotations of the last column
         short = ln.need - ln.width
@@ -483,6 +509,9 @@ def _place_x(ln: LNode, x_left: float, pitch: float = 20.0) -> None:
         _place_x(c, cx, pitch)
         cx += c.width
     out = ln.bus_children
+    if not out:  # only a DC side (an inverter/charger first in the tree): a column of its own right of it
+        ln.x = cx + pitch / 2
+        return
     ln.x = out[0].x
     if ln.has_bus:
         ln.bus_x0 = min(ln.x, out[0].x) - (6.0 if ln.kind == "bus_in" else 0.0)
@@ -916,6 +945,7 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
     lang = normalize_lang(doc.meta.lang)
     pitch = view.pitch_mm
     roots = _build_sheet_roots(spec, index)
+    _dc_side_left(doc, roots, index)
     for r in roots:
         for n in r.walk():
             n.bottom = _is_bottom(n)
@@ -938,13 +968,13 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
                 # phases not stated: those of its feeder (a motor on a single-phase circuit is drawn 1~)
                 live = conductor_count(_feeder_chain(n, index), _supply_system(n, index, doc))
                 n.sym = symbol("motor", n.node, live)
-            elif (n.type == "inverter" and n.node is not None and n.node.id and n.node.children
+            elif (n.type == "inverter" and n.node is not None and n.node.id and n.node.children and not n.dc_side
                   and all(_is_dc(c) for c in n.node.children) and not _fed_dc(n.node, index)):
                 n.sym = symbol("inverter", n.node, ac_fed=True)  # fed by the board, its DC side below it
             elif n.type == "power_supply" and n.node is not None and _fed_dc(n.node, index):
                 n.sym = symbol("power_supply", n.node, dc_in=True)  # fed from a DC line: '=' in, as in multi-line
             n.sym = _spread_symbol(doc, n.node, n.sym, here)
-            n.left_room = _left_room(doc, n, here, lang)
+            n.left_room = max(_left_room(doc, n, here, lang), _port_room(doc, n, here, index, pitch))
 
     # feeders continued by a power link (transfer source, parallel / bypass / infeed connection): no open arrow
     connected = {l.from_ for l in doc.links if l.kind == "transfer"}
@@ -1120,7 +1150,8 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
         obstacles = [b for b in boxes if b[3] > top - 1 and b[1] < sy - 2 and b[2] > target.x - 3]
         right = max([b[2] for b in obstacles] + [sx])
         own = _boxes(r) + [_frame_box(n) for n in r.walk() if n.is_board]  # its board frame too, left of it
-        new_x = max(sx, right + 3.0 + max(r.sym.left, last.x - min(b[0] for b in own)))
+        lanes = max([_port_room(doc, n, here, index, pitch) - pitch / 2 for n in r.walk()] + [0.0])  # (its links)
+        new_x = max(sx, right + 3.0 + lanes + max(r.sym.left, last.x - min(b[0] for b in own)))
         _translate(r, new_x - last.x, top)
         placed.append(r)
 
@@ -1629,6 +1660,47 @@ def _fed_dc(node: NodeBase, index: Index) -> bool:
     return bool(up) and _dc_line(up[0], index)
 
 
+def _ac_fed(node: NodeBase, index: Index) -> bool:
+    """An inverter fed from the AC side by its parent, its children all on its DC side (batteries, PV arrays): drawn
+    "~" then "=" top-down, its DC side at its output."""
+    return (node.type == "inverter" and bool(node.id) and bool(node.children)  # type: ignore[attr-defined]
+            and index.parent.get(node.id or "") is not None  # (first in the tree: see _dc_side_left)
+            and all(_is_dc(c) for c in node.children) and not _fed_dc(node, index))
+
+
+def _carries_dc(node: Optional[NodeBase], index: Index) -> bool:
+    """Whether a power link from or to ``node`` carries direct current: ``node`` sits on a DC line (a battery, a PV
+    array, a DC board or a device on one), or is on the DC side of an inverter/charger by nature."""
+    return node is not None and node.type not in DC_PORT_TYPES and (_dc_line(node, index) or _is_dc(node))
+
+
+def _port_sides(node: NodeBase, index: Index) -> tuple[str, str, bool]:
+    """The sides of an inverter/charger or a UPS: what its top and its bottom carry ('ac' or 'dc'), and whether its
+    left side is its DC terminal. Fed from its parent in the tree (or a root): AC input on top, AC output at the
+    bottom, DC on the left; fed from a DC line: DC on top; fed from the AC side with only a DC side below it: DC at
+    the bottom (its left side then free)."""
+    if _ac_fed(node, index):
+        return "ac", "dc", False
+    return ("dc" if _fed_dc(node, index) else "ac"), "ac", True
+
+
+def _port_where(link: Any, k: int, index: Index) -> Optional[str]:
+    """Where the end ``k`` (0: ``from``, 1: ``to``) of a power link lands on an inverter/charger or a UPS: 'top',
+    'left' (its DC terminal) or 'bottom', the side that carries what the link carries (a grid or generator feeding
+    it: its AC input; a battery or a PV array: its DC side; a link leaving it toward an AC board or a changeover
+    switch: its AC output); None: that end is not on one."""
+    nid, oid = (link.from_, link.to) if k == 0 else (link.to, link.from_)
+    node = index.nodes.get(nid)
+    if link.kind not in SWITCHED_LINKS or link.kind == "tie" or node is None or node.type not in DC_PORT_TYPES:
+        return None
+    top, bottom, left = _port_sides(node, index)
+    c = "dc" if _carries_dc(index.nodes.get(oid), index) else "ac"
+    order = (("top", top), ("left", "dc" if left else ""), ("bottom", bottom))  # an infeed: into its input first
+    if not (k == 1 and link.kind == "infeed"):
+        order = order[::-1]  # leaving it (or a parallel, a bypass, a transfer): from its output first
+    return next((w for w, carried in order if carried == c), None)
+
+
 def _needs_neutral(node: NodeBase) -> bool:
     """Whether a circuit below ``node`` (up to a transformer) uses the neutral."""
     stack = list(node.children)
@@ -2034,7 +2106,8 @@ def _mark_open_ends(doc: Document, roots: list[LNode], index: Index) -> None:
     it that is neither a load nor a free way (a transformer, a meter or a controller feeding nothing, no power link
     leaving it). Drawn without them, they do not read as fed from the edge of the sheet or as wired to something
     not drawn."""
-    landed = {l.to for l in doc.links if l.kind in SWITCHED_LINKS}
+    landed = {l.to for l in doc.links if l.kind in SWITCHED_LINKS  # (an inverter/charger: on its input on top)
+              and _port_where(l, 1, index) in (None, "top")}
     linked = {e for l in doc.links if l.kind in SWITCHED_LINKS for e in (l.from_, l.to)}
     for r in roots:
         nid = r.node.id if r.node is not None else None
@@ -3303,6 +3376,57 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
     nodes = {n.id: n for n, _, _ in iter_nodes(doc)}
     fed_ok = _fed_ok(roots)
     y_max = y_load - 1.5
+    # an inverter/charger or a UPS: each power link on the side that carries what it carries (AC input on top, DC
+    # terminal on the left, AC output at the bottom), never two of them on one point (see _port_where)
+    index = build_index(doc)
+    port_side: dict[tuple[int, int], str] = {}
+    for i, link in enumerate(doc.links):
+        for k, nid in enumerate((link.from_, link.to)):
+            w = _port_where(link, k, index)
+            if w is not None and _find(roots, nid) is not None:
+                port_side[(i, k)] = w
+    # ... the ones whose left side carries DC (its DC side drawn, or a DC link landing there): signal links elsewhere
+    port_left = {n.id for r in roots for n in r.walk() if n.dc_side > 0} | {
+        (doc.links[i].from_, doc.links[i].to)[k] for (i, k), w in port_side.items() if w == "left"}
+
+    def port_end(i: int, k: int, n: LNode, toward: float, stub: bool = False
+                 ) -> tuple[End, Optional[tuple[float, float]]]:
+        """The end ``k`` of the power link ``i`` on the inverter/charger ``n`` (``toward``: x of its other end), and
+        the free span of the conductor it joins (a junction dot), if any. ``stub``: the start of an off-sheet stub."""
+        w = port_side[(i, k)]
+        if w == "left" and n.dc_side and not stub:  # its DC side drawn: on that side's conductor, halfway to it
+            tx, ty = n.dc_terminal()
+            near = max(c.x for c in n.children[:n.dc_side])
+            if tx - near >= 6.0:
+                return End((near + tx) / 2, ty, "down"), None
+        if w == "left":
+            return End(*n.dc_terminal(), "left"), None
+        if w == "top":
+            if n.node is not None and n.node.id not in fed_ok:  # nothing above it: on the top of its input lead, from
+                # the left (its text is on its right), well clear of its body and of a DC side leaving it there
+                clear = n.x - n.dc_terminal()[0] + 4.0
+                return End(n.x, n.y, "left", tuple(s for s in End.stubs if s >= clear) or (clear,)), None
+            return _end(n, doc.links[i].kind, fed=True), None
+        if n.bus_y is not None and n.bus_children:  # its AC output is a busbar: a tap on it
+            return _end(n, "infeed", toward=toward), None
+        below = [c for c in n.bus_children if abs(c.x - n.x) < 1e-6]
+        top = (below[0].frame_top if below[0].is_board else below[0].y) if below else 0.0
+        if below and top - n.out_y >= 3.0:  # on its output conductor, out of the side facing the other end, clear of
+            side = "left" if toward < n.x else "right"  # the conductor marks on it
+            lo, hi = n.out_y + 1.0, top - 1.5
+            ys = sorted((lo + 0.25 * j for j in range(int((hi - lo) / 0.25) + 1)),
+                        key=lambda y: abs(y - n.out_y - min(2.5, (top - n.out_y) / 2)))
+            y = next((y for y in ys if not any(o[0] < n.x + 1.2 and n.x - 1.2 < o[2] and o[1] < y + 0.8
+                                               and y - 0.8 < o[3] for o in obs.boxes)), ys[0] if ys else lo)
+            return End(n.x, y, side), (n.out_y + 0.5, top - 1.0)
+        return End(n.x, n.out_y, "down"), None  # (nothing below it: its output lead goes on as the link)
+
+    def free_sides(n: LNode) -> list[End]:
+        """Where a control, data or measure link may end on an inverter/charger whose left side is its DC terminal:
+        its right side below its text, the top of its body beside its input."""
+        top = min((it.y for it in n.sym.items if isinstance(it, Rect)), default=None)
+        return [e for e in (_right_end(n), End(n.x + n.sym.right / 2, n.y + top, "up") if top is not None else None)
+                if e is not None]
     # power links leaving a busbar: one tap each, the busbar extended to the taps beyond its ends (drawn and
     # recorded before any route, so that no other link runs along the extension)
     # busbar side -> power links already tapped there
@@ -3311,7 +3435,8 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
     for i in order:
         link = doc.links[i]
         a, b = _find(roots, link.from_), _find(roots, link.to)
-        if a is None or b is None or link.kind not in POWER_LINKS:
+        if a is None or b is None or link.kind not in POWER_LINKS or port_side.get((i, 0), "bottom") != "bottom" or (
+                (i, 0) in port_side and not a.bus_children):  # (an inverter/charger with only a DC side: no busbar)
             continue
         side = (a.id, b.x > a.bus_x1, b.x < a.bus_x0)
         e = _end(a, link.kind, toward=b.x, taken=taps.get(side, 0))
@@ -3348,14 +3473,16 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
     offpage: dict[str, float] = {}  # offset taken by the off-sheet stubs of each node
     landings: dict[str, list[int]] = {}  # infeeds landing on the input conductor of each node, in drawing order
     for i in order:
-        if doc.links[i].kind == "infeed" and doc.links[i].to in fed_ok:
+        if doc.links[i].kind == "infeed" and (port_side.get((i, 1)) == "top" or (
+                (i, 1) not in port_side and doc.links[i].to in fed_ok)):
             landings.setdefault(doc.links[i].to, []).append(i)
     parent_of = {id(c): n for r in roots for n in r.walk() for c in n.children}
     earth_taken: dict[tuple[str, float], list[float]] = {}  # earth terminals already on each side of a board frame
     # devices whose left side carries conductors (a DC terminal, power links landing there): earth elsewhere
-    live_left = {n.id for r in roots for n in r.walk() if n.dc_side > 0} | {
-        e for l in doc.links if l.kind in SWITCHED_LINKS for e in (l.from_, l.to)
-        if not (l.kind == "infeed" and e == l.to and e in fed_ok)}  # (a feed landing on the input conductor)
+    live_left = port_left | {
+        e for i, l in enumerate(doc.links) if l.kind in SWITCHED_LINKS for k, e in enumerate((l.from_, l.to))
+        if (i, k) not in port_side and not (l.kind == "infeed" and e == l.to and e in fed_ok)}  # (a feed landing on the
+    # input conductor; an inverter/charger: its DC terminal only)
     spread = {} if obs.min_lane > 0 else _spread_ends(doc, roots, order)
 
     # an earth device (earth bar, main earthing terminal, electrode) drawn inside a board's frame: the board's earth
@@ -3405,8 +3532,12 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
     own = {i for i in order if doc.links[i].kind == "earth" and any(
         (p := earth_point.get(x)) is not None and p.id == y for x, y in ((doc.links[i].from_, doc.links[i].to),
                                                                          (doc.links[i].to, doc.links[i].from_)))}
+    # the links of an inverter/charger from its output up to its input (AC output, DC terminal, AC input): each one
+    # outside the ones before, none across another
+    dc_landed: set[str] = set()  # inverters/chargers with a link drawn on their DC terminal already
+    rank = {i: min(("bottom", "left", "top").index(w) for (j, _k), w in port_side.items() if j == i) for i, _k in port_side}
     rest = sorted((i for i in order if i not in first), key=lambda i: (
-        i not in own, i not in side_runs, side_runs[i][2] - side_runs[i][1] if i in side_runs else 0.0,
+        i not in own, i not in side_runs, rank.get(i, 3), side_runs[i][2] - side_runs[i][1] if i in side_runs else 0.0,
         i in bus_land, not (far and i in far), -abs(
         bus_land[i].x - (_find(roots, doc.links[i].to) or roots[0]).x) if i in bus_land else 0.0))
     # single-line: the links of one kind sharing one end, three or more: one trunk with a tee tap to each other end
@@ -3427,10 +3558,13 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
     def draw_trunk(t: Trunk) -> None:
         style = _link_style(t.kind)
         # the ends, one point per kind on the left side of a node (as for the links routed one by one)
-        hub = [kind_point(t.hub, _end(t.hub, t.kind), t.kind)] + [r for r in [_right_end(t.hub)] if r is not None]
+        def ends_of(n: LNode) -> list[End]:
+            if n.id in port_left:
+                return free_sides(n)
+            return [kind_point(n, _end(n, t.kind), t.kind)] + [r for r in [_right_end(n)] if r is not None]
+        hub = ends_of(t.hub)
         taps = list(t.taps)
-        alts = {i: [kind_point(o, _end(o, t.kind), t.kind)] + [r for r in [_right_end(o)] if r is not None]
-                for i, o in taps}
+        alts = {i: ends_of(o) for i, o in taps}
         best: Optional[tuple[float, float, list[tuple[float, float]], list[list[tuple[float, float]]]]] = None
         while len(taps) >= TRUNK_FROM:
             ys = [e.y for i, _o in taps for e in alts[i]]
@@ -3567,7 +3701,14 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 if link.kind == "earth":
                     n = earth_point.get(n.id, n)
                     at = earth_stub(n, lg)
-                if b is not None and link.kind == "infeed" and link.to in fed_ok:  # on its input conductor
+                kh = 0 if b is None else 1
+                if (i, kh) in port_side:  # an inverter/charger: on the side that carries what the link carries
+                    at = port_end(i, kh, n, n.x - 30.0, stub=True)[0]
+                    if port_side[(i, kh)] == "top":
+                        at = landing(i, n, at)
+                elif n.id in port_left and link.kind not in SWITCHED_LINKS and link.kind != "earth":
+                    at = _right_end(n) or at  # (a control or data link: never on its DC terminal)
+                elif b is not None and link.kind == "infeed" and link.to in fed_ok:  # on its input conductor
                     at = landing(i, b, _end(b, link.kind, fed=True))
                 elif link.kind == "transfer":  # the standby supply: out of its output, into the side input
                     if b is not None and b.sym.side_input is not None:
@@ -3581,6 +3722,16 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             at = bus_land.get(i) or (landing(i, b, _end(b, link.kind, fed=True))
                                      if link.kind == "infeed" and link.to in fed_ok else None)
             at_a = None
+            for k, n in ((0, a), (1, b)):  # a control or data link: never on the DC terminal of an inverter/charger
+                if n.id in port_left and link.kind not in SWITCHED_LINKS and link.kind != "earth":
+                    r = _right_end(n)
+                    if r is not None:
+                        at_a, at = (r, at) if k == 0 else (at_a, r)
+            if (i, 0) in port_side:
+                at_a = port_end(i, 0, a, b.x, stub=True)[0]
+            if (i, 1) in port_side:
+                at = port_end(i, 1, b, a.x, stub=True)[0]
+                at = landing(i, b, at) if port_side[(i, 1)] == "top" else at
             if link.kind == "earth":
                 a, b = earth_point.get(a.id, a), earth_point.get(b.id, b)
                 at_a, at = earth_stub(a, lg), earth_stub(b, lg)
@@ -3590,7 +3741,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                                same_sheet=True, stubs=stub_count.get(b.id, 0), drops=tuple(drops.get(b.id, ())))
             continue
         style = _link_style(link.kind, link.normally_open)
-        if link.kind == "transfer" and b.sym.side_input is not None:
+        if link.kind == "transfer" and b.sym.side_input is not None and (i, 0) not in port_side:
             sx = b.x + b.sym.side_input[0]
             sy = b.y + b.sym.side_input[1]
             ay = a.out_y if a.sym.has_output else a.y + a.sym.height
@@ -3640,15 +3791,25 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 lg.add(Line((x0, y), (x1, y), style if link.normally_open else Style(width=BUS)))
             continue
         # an inverter/charger at the head of the tree takes its AC input on top: its side is the DC terminal
-        fed = link.kind == "infeed" and (link.to in fed_ok or (b in roots and b.dc_side > 0))
+        # (an inverter/charger: on its input on top only when the link carries what its input does)
+        fed = link.kind == "infeed" and (port_side.get((i, 1)) == "top" or ((i, 1) not in port_side and link.to in fed_ok))
         ml = obs.min_lane > 0  # multi-line: also beside a PLC port and for earth links, right ends spread
         start = tap_end.get(i) or _end(a, link.kind)
         ends = [start, _end(b, link.kind, fed=fed, near=start.x)]
         dots: dict[int, tuple[float, float]] = {}  # the ends of the link on a conductor (a junction dot), its free span
+        for k, n in ((0, a), (1, b)):
+            if (i, k) in port_side and not (k == 0 and i in tap_end):
+                ends[k], span = port_end(i, k, n, (b, a)[k].x)
+                if span is not None:
+                    dots[k] = span
+        if (i, 0) in port_side and link.kind == "transfer" and b.sym.side_input is not None:  # into the side input
+            ends[1] = End(b.x + b.sym.side_input[0], b.y + b.sym.side_input[1], "up")
         if link.kind in POWER_LINKS and not ml and i not in tap_end and i not in bus_land:
             # a power link joining a conductor (an output a parallel device is connected to, the input conductor of a
             # final load feeding on): a junction on it, never on the body of the device (reads as a bypass of it)
             for k, n in ((1, b), (0, a)):
+                if (i, k) in port_side:
+                    continue
                 o = ends[1 - k]
                 tap = _conductor_end(n, parent_of.get(id(n)), link.kind, o.x, o.y)
                 if tap is not None:
@@ -3691,7 +3852,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                     ends[k] = End(e.x, e.y + 1.5 * shift)
         if i in bus_land:
             ends[1] = bus_land[i]
-        elif fed and link.to in fed_ok:
+        elif fed:
             ends[1] = landing(i, b, ends[1])
         port_label: Optional[tuple[int, str]] = None
         if i in channel:
@@ -3726,6 +3887,9 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             for k, (n, e) in enumerate(zip((a, b), ends) if not earth else ()):
                 if (i, k) in spread:  # a controller many links reach: its own point, on the side facing the other end
                     alts.append([spread[(i, k)]])
+                    continue
+                if not ml and n.id in port_left and e.side == "left" and (port_label is None or port_label[0] != k):
+                    alts.append(free_sides(n) or [e])  # an inverter/charger: never on its DC terminal
                     continue
                 if ml and link.kind == "earth" and "pe_end" in n.sym.extra:  # on the PE conductor of the feeder
                     alts.append([End(*n.sym.extra["pe_end"], "right")])
@@ -3829,10 +3993,16 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             pts = route(obs, ends[0], ends[1], lo, hi, **{**opts, "record": False}, deeper=not ml and hi > y_load)
             if pts and not obs.grid and i not in bus_lane and not on_conductor:
                 # through a text or a symbol, or far round: with more corners when that is clearly better
+                on_port = (i, 0) in port_side or (i, 1) in port_side
+                if on_port and cands is None:  # an inverter/charger with nothing above it: its input also from above
+                    cands = ([ends[0]], [ends[1]])
+                    for k, n in ((0, a), (1, b)):
+                        if port_side.get((i, k)) == "top" and n.node is not None and n.node.id not in fed_ok:
+                            cands[k].append(End(n.x, n.y, "up"))
                 pts = improve_route(obs, ends[0], ends[1], pts, opts["lane"], opts["solid"],
                                     min_run=14.0 if carries else 0.0,
                                     starts=cands[0] if cands else None, goals=cands[1] if cands else None,
-                                    on_lines=not opts["solid"])
+                                    on_lines=not opts["solid"] or on_port)  # (on its other links: one line)
             if opts["record"]:
                 record_route(obs, pts)
         if not pts and on_conductor:  # e.g. a feeder leaving downwards: the channel must go below it after all
@@ -3865,6 +4035,14 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             lg.add(Circle(pts[-1], 0.45, Style(width=THIN, fill="#000000")))
         for k in dots:
             lg.add(Circle(pts[-1] if k else pts[0], 0.45, Style(width=THIN, fill="#000000")))
+        for k, n in ((0, a), (1, b)):  # on the DC side's conductor of an inverter/charger: a junction there
+            if port_side.get((i, k)) != "left":
+                continue
+            if ends[k].side == "down":
+                lg.add(Circle(pts[-1] if k else pts[0], 0.45, Style(width=THIN, fill="#000000")))
+            elif n.id in dc_landed and len(pts) >= 3:  # several on its DC terminal: a junction where this one joins
+                lg.add(Circle(pts[-2] if k else pts[1], 0.45, Style(width=THIN, fill="#000000")))  # the one before
+            dc_landed.add(n.id)
         seq = pts if port_label is None or port_label[0] == 0 else pts[::-1]  # oriented PLC -> other end
         heads[i] = (link.from_, link.to) if seq is pts else (link.to, link.from_)
         if i in bus_land and len(pts) > 2:  # on its channel, not on the short drop crowded with the other taps

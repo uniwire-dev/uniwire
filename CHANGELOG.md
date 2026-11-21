@@ -8,6 +8,16 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Inverters/chargers and UPS have separate sides for what reaches them, derived from the document (no format
+  change): the AC input on top, the DC terminal on the left, the AC output at the bottom. The grid feeding a hybrid
+  inverter, its PV array and its battery used to land all on one point on its left side (a battery feeding a UPS
+  even on its AC input conductor), forming a rectangle that read as a frame, and the AC input on top was left
+  unconnected; now an AC infeed lands on the input on top, a battery, PV or DC board infeed on the DC terminal
+  (several of them joined there with a junction), a link leaving it toward a changeover switch or an AC board
+  leaves its output conductor with a junction, and its control and data links end on its right side or on the top
+  of its body, never on its DC terminal. An inverter first in the tree with only batteries or PV below it draws
+  them on its DC side. In multi-line views, a DC link to an inverter/charger or a UPS lands on its DC pair (L+, L-)
+  instead of being left out.
 * Faster layout of large drawings, with or without the compiled router: link labels, leader texts and the legs of
   channel routes are placed against an index of what is already drawn (texts and symbols by area, lines by
   position) rather than by testing every obstacle at every position tried, with the same drawings. The slowest
