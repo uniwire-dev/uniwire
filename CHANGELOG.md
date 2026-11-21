@@ -127,6 +127,16 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ### Drawings: single-line
 
+* Each link starts and ends at its own device. Two thin links (earth, measure, control, data) could end on one point
+  of a device: a second earth link left an earth bar from the very point where the first one arrived, and the stub
+  of a link to another sheet started on the first segment of another link, so that one wire read as branching off
+  the other. Now a link of another kind, or the second link of a kind on that device, takes a free point nearby (1.5
+  mm along the same side, the other end of a busbar), and an earth bar or an earth electrode with one or two earth
+  links takes one on its top, straight down onto its bar (three or more links of a kind from one point still leave
+  it as a bus). The text of an inverter/charger whose DC side is drawn on its left was cut short and drawn smaller
+  ("Hybrid inverter…") when its output was an off-sheet stub: its output column now widens for it. The label of a
+  link to another sheet could be written on one side of a vertical stub and its sheet reference on the other, the
+  wire passing between them: both now go on the same side, the reference on top.
 * Links between two views (each view drawn from its own `root`, such as the grid side and the inverter side of an
   installation) are drawn at both ends as a cross-sheet reference, as within one view split over several sheets:
   "-T1 → sheet 2" with the link's label under the feeder breaker, "-Q2 → sheet 1" at the inverter, numbered as in

@@ -1,5 +1,6 @@
 """Readability audit of a laid-out sheet: overlapping texts, texts written over a symbol, texts shrunk below a
-readable size, links drawn over one another, links running on a conductor, frame edges drawn through a text. Used by the tests to keep these defects
+readable size, links drawn over one another or ending on one point, links running on a conductor, frame edges drawn
+through a text. Used by the tests to keep these defects
 from coming back."""
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ Seg = tuple[tuple[float, float], tuple[float, float]]
 class Finding:
     kind: str  # "text_overlap", "text_on_symbol", "text_crossed", "text_on_conductor", "small_text", "shared_run",
     # "link_on_conductor", "link_along_frame", "link_across_conductor", "link_through_symbol", "truncated", "detour",
-    # "frame_crosses_text"
+    # "frame_crosses_text", "shared_end", "split_reference"
     what: str
     where: tuple[float, float]
 
@@ -262,6 +263,33 @@ def audit(root: Group, detours: bool = False) -> list[Finding]:
             if run > 3.0:
                 out.append(Finding("shared_run", f"links {la} and {lb} share {run:.0f} mm", links[la][0][0]))
     hover = {la: pl.points for la, pl in _hover_paths(root)}  # a link's whole route (drawn in pieces at crossings)
+    # thin links ending on one point: one reads as branching off the other (links of one kind, three or more of that
+    # kind on the device they share: a bus leaving that point, by design)
+    kind: dict[str, str] = {}
+    at_node: dict[str, set[str]] = {}
+    for g in _groups(root):
+        if has_cls(g, "uw-link") and "data-uw-link" in g.attrs:
+            la = g.attrs["data-uw-link"]
+            kind[la] = g.attrs.get("data-uw-kind", "")
+            for nid in (g.attrs.get("data-uw-from"), g.attrs.get("data-uw-to")):
+                if nid:
+                    at_node.setdefault(nid, set()).add(la)
+    meets: list[tuple[tuple[float, float], set[str]]] = []
+    for la in sorted({la for la, _pl in _dashed_links(root) if la in hover}):
+        for p in dict.fromkeys((hover[la][0], hover[la][-1])):
+            m = next((m for m in meets if abs(m[0][0] - p[0]) < 0.3 and abs(m[0][1] - p[1]) < 0.3), None)
+            if m is None:
+                meets.append((p, {la}))
+            else:
+                m[1].add(la)
+    for p, at in meets:
+        if len(at) < 2 or len({trunk.get(la, la) for la in at}) < 2:  # (the links of one trunk share it by design)
+            continue
+        kinds = {kind.get(la) for la in at}
+        if len(kinds) == 1 and any(at <= links_ and sum(1 for lb in links_ if kind.get(lb) in kinds) >= 3
+                                   for links_ in at_node.values()):
+            continue
+        out.append(Finding("shared_end", f"links {', '.join(sorted(at))} end on one point", p))
     for la in ids:
         pts = hover.get(la) or paths.get(la, [])
         if detours and len(pts) > 1:
@@ -290,6 +318,21 @@ def audit(root: Group, detours: bool = False) -> list[Finding]:
                     and any(_crosses(core, s) for s in zip(pts, pts[1:])):
                 out.append(Finding("link_through_symbol", f"link {la} through the symbol of {nid}", pts[0]))
                 break
+    for g in _groups(root):  # the lines of a sheet reference on both sides of its arrow: its line runs between them
+        head = next((i for i in g.items if isinstance(i, Polyline) and i.closed and len(i.points) == 3), None)
+        if not has_cls(g, "uw-ref") or head is None:
+            continue
+        (bx, by), (tx, ty), (cx, cy) = head.points
+        lines = [text_box(t) for t in g.items if isinstance(t, Text) and t.text.strip()]
+        if abs(by - cy) < 1e-6:  # a vertical arrow: texts left and right of its line (beside it, not past its point)
+            lines = [b for b in lines if (b[3] > ty + 0.3 if by > ty else b[1] < ty - 0.3)]
+            split = any(b[2] < tx for b in lines) and any(b[0] > tx for b in lines)
+        else:  # a horizontal one: texts above and below its line
+            lines = [b for b in lines if (b[2] > tx + 0.3 if bx > tx else b[0] < tx - 0.3)]
+            split = any(b[3] < ty for b in lines) and any(b[1] > ty for b in lines)
+        if split:
+            out.append(Finding("split_reference", "the lines of a sheet reference on both sides of its arrow",
+                               (tx, ty)))
     conductors = _conductor_segments(root)
     signal = {g.attrs["data-uw-link"] for g in _groups(root) if has_cls(g, "uw-link")
               and g.attrs.get("data-uw-kind") in SIGNAL_KINDS and "data-uw-link" in g.attrs}
