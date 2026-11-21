@@ -38,7 +38,7 @@ from .. import registry
 from ..graph import POWER_LINKS
 from ..i18n import normalize_lang, render_lang
 from ..i18n import t as _t
-from ..labels import annotation, cable_text, drawn_cable_text, part_number, target_text, without_ref
+from ..labels import annotation, cable_caption, cable_text, drawn_cable_text, part_number, target_text, without_ref
 from ..marks import marked_wires, marks_shown
 from ..model import Document, NodeBase, View
 from ..render.scene import (
@@ -1043,9 +1043,7 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
             holder = _feeder_cable(ln, parent)
             if holder is not None and holder.node is not None and holder.node.cable is not None:
                 cab = holder.node.cable
-                ln.cable_lines = [x for x in (" ".join(x for x in (cab.ref, cab.designation) if x), drawn_cable_text(cab)) if x]
-                if cab.length_m:
-                    ln.cable_lines[-1] += f" {fmt(cab.length_m)} m"
+                ln.cable_lines = _cable_lines(cab)
                 shown_cable.add(id(holder))
     for r in roots:
         for ln in r.walk():
@@ -1071,8 +1069,19 @@ def _annotate(roots: list[MLNode], view: View, lang: str) -> None:
             ln.tagged = bool(tag)
             lines = lines[:5]
             if node.cable is not None and id(ln) not in shown_cable and cable_text(node.cable):
-                lines.append(" ".join(x for x in (node.cable.ref, node.cable.designation, drawn_cable_text(node.cable)) if x))
+                lines.append(cable_caption(node.cable, length=False))
             ln.ann, ln.ann_size = _fit_lines(lines, ANN_SIZE, ANN_MAX_W, keep=1 if tag else 0)
+
+
+def _cable_lines(cab: Any) -> list[str]:
+    """The cable of a load on two lines: tag and designation, then composition and length, each said once (see
+    :func:`cable_caption`); the length on the last line."""
+    head, comp = cable_caption(cab, length=False), drawn_cable_text(cab)
+    lines = [head[:-len(comp)].rstrip(), comp] if comp and head.endswith(comp) else [head]
+    lines = [x for x in lines if x]
+    if lines and cab.length_m:
+        lines[-1] += f" {fmt(cab.length_m)} m"
+    return lines
 
 
 def _assign_offsets(ln: MLNode, parent: Optional[MLNode]) -> None:

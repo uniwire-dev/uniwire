@@ -4,8 +4,9 @@ import pytest
 
 from tests.conftest import ROOT
 from uniwire import load, render_pages
-from uniwire.labels import annotation, cable_text, cell
+from uniwire.labels import annotation, cable_caption, cable_text, cell
 from uniwire.layout import layout_sheet, plan_sheets
+from uniwire.llm.describe import cable_text as describe_cable
 from uniwire.model.base import Cable
 from uniwire.render import default_view
 from uniwire.render.scene import BUS, Group, Line, Polyline, Text, text_width
@@ -1068,3 +1069,26 @@ def test_cable_designation_and_socket_type_are_drawn():
     assert "XYZ-1 3G10" in sld
     ml = _texts(render_pages(doc, doc.views[1])[0].root)
     assert any("Type Z" in t for t in ml)
+
+
+def test_cable_caption_says_each_part_once():
+    """A composition that already counts its runs in parallel is not wrapped in the count again, and the caption
+    does not repeat the composition its designation already gives, in either view."""
+    assert cable_text(Cable(cores="4x(4x1x240)", section_mm2=240, parallel=4)) == "4x(4x1x240)"
+    assert cable_text(Cable(cores="2 x (5G16)", section_mm2=16, parallel=2)) == "2 x (5G16)"
+    assert cable_text(Cable(cores="4x1x240", section_mm2=240, parallel=4)) == "4x(4x1x240)"
+    assert cable_caption(Cable(designation="1 kV single-core", cores="4x(4x1x240)", section_mm2=240, parallel=4,
+                               length_m=6)) == "1 kV single-core 4x(4x1x240) 6 m"
+    assert cable_caption(Cable(ref="W1", designation="XYZ-1 5G6", cores="5G", section_mm2=6, length_m=12)) \
+        == "W1 XYZ-1 5G6 12 m"
+    assert cable_caption(Cable(designation="5G6", cores="5G", section_mm2=6)) == "5G6"
+    assert describe_cable(Cable(cores="4x(4x1x240)", section_mm2=240, parallel=4)) == "4x(4x1x240)"
+    doc = load({"installation": {"system": "3P+N"}, "sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 1000, "poles": "4P",
+         "cable": {"designation": "XYZ-1", "cores": "4x(4x1x240)", "section_mm2": 240, "parallel": 4, "length_m": 6},
+         "children": [{"type": "board", "ref": "TD2", "children": [
+             {"type": "breaker", "ref": "-Q11", "in_A": 16, "children": [{"type": "socket"}]}]}]}]}]}],
+        "views": [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]})
+    for view in doc.views:
+        texts = " | ".join(_texts(render_pages(doc, view)[0].root))
+        assert "4x(4x1x240)" in texts and "4x(4x(" not in texts, texts

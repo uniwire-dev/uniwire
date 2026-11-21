@@ -8,6 +8,14 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Cable captions say each part once: a cable whose composition already counts its runs in parallel
+  (`"cores": "4x(4x1x240)"` with `"parallel": 4`) was written `4x(4x(4x1x240))` beside its device, in both views
+  and in the document outline; it is now written `4x(4x1x240)`. A designation that already gives the composition
+  (`"designation": "XYZ-1 5G6"`) no longer has it written a second time after it.
+* Single-line drawings: a dashed link from a device above a board to one inside it (a meter's tariff contact to a
+  contactor under a feeder) ran down beside the board and across it just below the breakers, crossing every
+  feeder; it now comes down into the board across its busbars, drawn with a gap there, and crosses no feeder. A
+  solid power link still keeps off the busbars it would read as a tap of.
 * Web editor: large drawings took many seconds to draw in the browser, where the link router always ran in pure
   Python; the editor now also loads the compiled link router (`uniwire-native`, built for its Pyodide release by
   `packages/uniwire-native/build-pyodide.sh` and served with `python viewer/build.py --native`), so they are drawn

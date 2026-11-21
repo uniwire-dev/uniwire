@@ -298,9 +298,47 @@ def cable_text(c: Optional[Cable]) -> str:
             s = f"{cores}{size}" if cores[-1] in "-x×" else f"{cores} {size}"
     elif cores:
         return cores
-    if s and c.parallel and c.parallel > 1:
+    if s and c.parallel and c.parallel > 1 and not states_runs(s):
         s = f"{c.parallel}x({s})"
     return s
+
+
+def states_runs(composition: str) -> bool:
+    """Whether a cable composition already counts its runs in parallel: '4x(4x1x240)', '2 x (5G16)',
+    '3x(4-600 kcmil)', as :func:`cable_text` would write them (the count is not repeated around it)."""
+    return bool(re.match(r"\s*\d+\s*[x×]\s*\(", composition or ""))
+
+
+def words(text: str) -> list[str]:
+    """The words of ``text`` as written between spaces, case aside, without the punctuation around them
+    ('(night' -> 'night'; 'C1-C2' and '1P+N' stay whole)."""
+    return [w for w in (re.sub(r"^[\W_]+|[\W_]+$", "", w) for w in text.casefold().split()) if w]
+
+
+def says(label: str, line: str) -> bool:
+    """Whether ``label`` already says ``line``: it holds its words, one after the other ('Type 2' in 'SPD type 2';
+    not '16 A' in '116 A', 'C' in a word starting with C, nor 'C2' in 'C1-C2')."""
+    want, have = words(line), words(label)
+    return bool(want) and any(have[i:i + len(want)] == want for i in range(len(have) - len(want) + 1))
+
+
+def cable_caption(c: Optional[Cable], length: bool = True) -> str:
+    """'W7 U1000R2V 5G6 38 m': tag, designation, composition (:func:`drawn_cable_text`) and length of a cable,
+    each said once: a composition the designation already gives is not written again, nor a designation that is
+    only the composition ('' without a composition nor a designation: a bare length says nothing)."""
+    if c is None:
+        return ""
+    comp = drawn_cable_text(c)
+    name = c.designation or ""
+    if not (comp or name):
+        return ""
+    if comp and name and says(name, comp):
+        comp = ""  # 'U1000R2V 3G2.5' already gives its composition
+    elif comp and name and says(comp, name):
+        name = ""  # a designation that only repeats the composition
+    if c.ref and name and says(name, c.ref):
+        name = ""
+    return " ".join(x for x in (c.ref, name, comp, fmt(c.length_m, " m") if length and c.length_m else "") if x)
 
 
 def drawn_cable_text(c: Optional[Cable]) -> str:

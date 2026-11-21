@@ -2,9 +2,20 @@
 a power link joins a conductor rather than the body of a device (it reads as a bypass of it) and crosses as few
 conductors as it can, a link between two stacked devices stays on the side facing the other one. Invented boards."""
 
+import pytest
+
 from tests.drawing_audit import _groups, _hover_paths, _symbol_boxes
 from uniwire import load
-from uniwire.layout.routing import End, Obstacles, route_grid, wraps
+from uniwire.layout.routing import (
+    BUS_CROSS,
+    DASHED_BUS_CROSS,
+    WIRE_CROSS,
+    End,
+    Obstacles,
+    path_cost,
+    route_grid,
+    wraps,
+)
 from uniwire.render import render_views
 from uniwire.render.scene import Circle, Group
 from uniwire.render.semantics import _conductor_segments, _crossings, has_cls
@@ -141,3 +152,48 @@ def test_parallel_device_lands_on_the_output_of_the_device_it_follows():
     end = pts[-1]
     assert abs(end[0] - x) < 1e-6 and end[1] > box[3], (end, x, box)
     assert any(abs(d[0] - end[0]) < 1e-6 and abs(d[1] - end[1]) < 1e-6 for d in _dots(_links(page.root)[k]))
+
+
+# ---------------------------------------------------------------- a signal link into a board
+def _group(g: int, n: int, contactor: bool = False) -> dict:
+    feeders = [{"type": "breaker", "id": f"Q{g}{i}", "ref": f"-Q{g}{i}", "in_A": 16, "curve": "C", "poles": "1P+N",
+                "children": [{"type": "load", "ref": f"-E{g}{i}", "label": f"Circuit {g}.{i}"}]} for i in range(1, n + 1)]
+    if contactor:  # a contactor under one feeder in the middle of the board
+        feeders[-2]["children"] = [{"type": "contactor", "id": "KM1", "ref": "-KM1", "in_A": 20,
+                                    "children": feeders[-2]["children"]}]
+    return {"type": "rcd", "id": f"F{g}", "ref": f"-F{g}", "in_A": 40, "idn_mA": 30, "poles": "2P", "children": feeders}
+
+
+def test_signal_link_into_a_board_crosses_its_busbars_rather_than_every_feeder():
+    """A control link from the meter above a board to a contactor under one of its feeders: down into the board
+    across its busbars (drawn with a gap there), not along the board below the breakers across every feeder."""
+    doc = {"uniwire": "1.0.0", "meta": {"title": "Meter signal"},
+           "installation": {"earthing": "TT", "system": "1P+N", "un_V": 230},
+           "views": [{"kind": "single-line", "paper": "A3"}],
+           "sources": [{"type": "grid", "id": "S", "label": "Public network", "supply": "Example tariff", "un_V": 230,
+                        "children": [
+               {"type": "meter", "id": "M", "ref": "-P1", "label": "Smart meter", "kind": "Example model", "in_A": 90,
+                "children": [
+                   {"type": "main_breaker", "id": "Q0", "ref": "-Q0", "label": "Main switch", "range_A": "15-45",
+                    "in_A": 45, "idn_mA": 500, "selective": True, "poles": "2P",
+                    "cable": {"cores": "3G", "section_mm2": 16, "length_m": 20}, "children": [
+                       {"type": "board", "id": "DB", "ref": "=DB", "label": "Distribution board", "children": [
+                           _group(1, 7), _group(2, 6, contactor=True), _group(3, 6)]}]}]}]}],
+           "links": [{"kind": "control", "from": "M", "to": "KM1", "label": "Tariff contact"}]}
+    page = render_views(load(doc))[0]
+    k, pts = _route(page, "control")
+    own = set(_conductor_segments(_links(page.root)[k], True))
+    feeders = [s for s in _conductor_segments(page.root) if s not in own and abs(s[0][0] - s[1][0]) < 1e-6]
+    assert not _crossings(pts, feeders, 0.3), pts
+    assert _crossed(page, k, pts) <= 2, pts  # the board's busbar and that of the group
+
+
+def test_a_busbar_costs_a_dashed_link_a_crossing_and_a_solid_one_a_tap():
+    """A solid link across a busbar reads as a tap; a dashed one, drawn with a gap there, is a crossing like that of a
+    few feeders: cheaper than running along a board across every feeder."""
+    obs = Obstacles()
+    obs.buses.append((10.0, 0.0, 100.0))
+    obs.hlines.append((10.0, 0.0, 100.0))
+    across = [(50.0, 0.0), (50.0, 20.0)]
+    assert path_cost(obs, across, solid=True) - path_cost(obs, across) == pytest.approx(BUS_CROSS - DASHED_BUS_CROSS)
+    assert DASHED_BUS_CROSS < 10 * WIRE_CROSS < BUS_CROSS
