@@ -30,6 +30,7 @@ from ..render.scene import (
     Style,
     Text,
     arc_points,
+    cut_to_width,
     text_width,
 )
 
@@ -612,9 +613,12 @@ def instrument_transformer(node: Any = None) -> Symbol:
     return Symbol("instrument_transformer", items, 3 * M, r, r)
 
 
+RELAY_TEXT_W = 7.4  # the widest function text in the box of a protection relay
+
+
 def protection_relay(node: Any = None) -> Symbol:
     fns = getattr(node, "functions", None) or []
-    label = (fns[0] if fns else "I>")[:6]
+    label = cut_to_width(fns[0] if fns else "I>", 1.8, RELAY_TEXT_W)
     return _box("protection_relay", label, 4 * M, max(6.0, 1.1 * len(label) + 2))
 
 
@@ -682,6 +686,7 @@ def earth_bar(node: Any = None) -> Symbol:
 # ------------------------------------------------------------ PLCs, power supplies
 PLC_SLOT_W = 3.4
 PORT_STEP = 2.6  # spacing of the wired channels of a module: room for each channel number beside its wire
+PLC_FAMILY_W = 11.0  # the widest family name in the head of a PLC (some twelve characters)
 PORT_EDGE = 1.8  # ... and between the outer wires and the sides of the module: their numbers inside its width
 
 
@@ -692,7 +697,8 @@ def plc(node: Any = None, wired: Optional[dict[int, int]] = None) -> Symbol:
     h = 4.0 * M
     label = getattr(node, "family", None) or _abbr("plc")
     if len(label) > 10:  # 'Automation Series 7' -> 'Automation': the head shows the family, the annotation the rest
-        label = label.split()[0][:12]
+        label = label.split()[0]
+    label = cut_to_width(label, 1.5 * 1.1, PLC_FAMILY_W)  # bold: about a tenth wider
     head_w = max(7.0, text_width(label, 1.5) * 1.1 + 1.2)  # wide enough for the family name (bold)
     built_in = (wired or {}).get(0, 1)  # links leaving the built-in I/O (slot 0): under the head
     if built_in > 1:
