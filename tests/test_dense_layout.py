@@ -17,7 +17,7 @@ KNOWN = {"hub4": 0, "hub8": 0, "hub12": 2, "long_labels": 1, "spread": 0, "mixed
 def test_dense_drawing_readable(name):
     doc = load(DENSE[name])
     findings = [f for pg in render_views(doc) for f in audit(pg.root)]
-    findings += [f for pg in render_pages(doc, default_view(doc, kind="multi-line")) for f in audit(pg.root)]
+    findings += [f for pg in render_pages(doc, default_view(doc, kind="multi-line").model_copy(update={"auxiliaries": True})) for f in audit(pg.root)]
     assert len(findings) <= KNOWN[name], "\n".join(map(str, findings))
 
 
@@ -76,7 +76,7 @@ def test_label_of_a_controller_at_the_end_of_a_row_is_not_cut():
 
 
 def _multiline(doc):
-    return render_pages(load(doc), default_view(load(doc), kind="multi-line"))
+    return render_pages(load(doc), default_view(load(doc), kind="multi-line").model_copy(update={"auxiliaries": True}))
 
 
 def test_controller_many_links_reach_is_drawn_taller_in_the_multi_line_view():

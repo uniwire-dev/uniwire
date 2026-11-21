@@ -69,8 +69,9 @@ _TEXT: dict[str, dict[str, str]] = {
         "views": "Views (optional; rendering preferences)",
         "views_note": "Single-line for a distribution overview. For a panel or cabinet to build or wire (machine, PLC or "
                       "pump control panel), declare two views: multi-line first (`kind: \"multi-line\"`, power "
-                      "conductors only), then single-line (also auxiliary devices and links); pdf_url holds every "
-                      "view. Colours: `color`, `conductor_colors`. Control schematics (coils, contacts, current paths) "
+                      "conductors and power links only; `auxiliaries: true` adds the auxiliary devices and their "
+                      "links), then single-line (also auxiliary devices and links); pdf_url holds every view. "
+                      "Colours: `color`, `conductor_colors`. Control schematics (coils, contacts, current paths) "
                       "are not drawn: say so first, offer the power side.",
         "profiles": "Rule profiles (`profiles`; `core` always applies)",
         "nfc_note": "French installations (NF C 15-100); set `installation.premises`: the rules of dwellings (part 7-771) "
@@ -83,7 +84,8 @@ _TEXT: dict[str, dict[str, str]] = {
             "- Never write units in values (`\"16 A\"`): use the suffixed field (`in_A: 16`); "
             "RCD sensitivity is `idn_mA` (30, not 0.03).",
             "- `curve` belongs to breaker/rcbo, `rcd_type` to rcd/rcbo/main_breaker, `idn_mA` to residual-current "
-            "devices; `poles` uses the Poles enum (\"1P+N\", not \"2 poles\").",
+            "devices (a breaker with residual-current protection is an `rcbo`); `poles` uses the Poles enum "
+            "(\"1P+N\", not \"2 poles\").",
             "- Single-phase circuits on a three-phase network: set `phase` (L1/L2/L3).",
             "- Cable cross-section goes in `cable.section_mm2`, cores in `cable.cores` without the section "
             "(\"3G\", \"5G\", \"4x\").",
@@ -144,7 +146,8 @@ _TEXT: dict[str, dict[str, str]] = {
         "views": "Vues (facultatives ; préférences de rendu)",
         "views_note": "Unifilaire pour une vue d'ensemble. Pour un tableau ou une armoire à fabriquer ou câbler "
                       "(machine, automate, pompes), déclarer deux vues : multifilaire d'abord (`kind: "
-                      "\"multi-line\"`, conducteurs de puissance), puis unifilaire (appareils annexes et liaisons) ; "
+                      "\"multi-line\"`, puissance seule ; `auxiliaries: true` ajoute les annexes), puis "
+                      "unifilaire (appareils annexes et liaisons) ; "
                       "pdf_url contient toutes les vues. Couleurs : `color`, `conductor_colors`. Pas de schéma de "
                       "commande (bobines, contacts) : le dire d'abord, proposer la partie puissance.",
         "profiles": "Profils de règles (`profiles` ; `core` s'applique toujours)",
@@ -160,7 +163,8 @@ _TEXT: dict[str, dict[str, str]] = {
             "- Jamais d'unité dans les valeurs (`\"16 A\"`) : utiliser le champ suffixé (`in_A: 16`) ; la "
             "sensibilité différentielle est `idn_mA` (30, pas 0.03).",
             "- `curve` concerne breaker/rcbo, `rcd_type` rcd/rcbo/main_breaker, `idn_mA` les dispositifs "
-            "différentiels ; `poles` suit l'énumération Poles (\"1P+N\", pas \"bipolaire\").",
+            "différentiels (un disjoncteur différentiel est un `rcbo`) ; `poles` suit l'énumération Poles "
+            "(\"1P+N\", pas \"bipolaire\").",
             "- Circuits monophasés sur réseau triphasé : renseigner `phase` (L1/L2/L3).",
             "- La section va dans `cable.section_mm2`, la composition dans `cable.cores` sans la section "
             "(\"3G\", \"5G\", \"4x\").",

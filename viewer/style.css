@@ -156,7 +156,8 @@ select.control { padding-right: 28px; appearance: none; max-width: 100%;
 .editor-host .cm-editor { height: 100%; }
 .splitter { flex: 0 0 6px; cursor: col-resize; background: var(--border); position: relative; }
 .splitter:hover, .splitter:focus-visible, .splitter.dragging { background: var(--accent); }
-.drawing-pane { flex: 1; display: flex; flex-direction: column; }
+/* the drawing pane sizes its toolbar from its own width (container queries below) */
+.drawing-pane { flex: 1; display: flex; flex-direction: column; container-type: inline-size; }
 
 .plain-editor { display: flex; height: 100%; font: 13px/1.5 var(--mono); }
 .plain-gutter { flex: none; width: 48px; overflow: hidden; text-align: right; padding: 4px 8px 4px 0; color: var(--muted);
@@ -172,12 +173,20 @@ select.control { padding-right: 28px; appearance: none; max-width: 100%;
 /* drawing */
 .drawing-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; flex-wrap: wrap;
   background: var(--surface); border-bottom: 1px solid var(--border); }
-.sheet-tabs { display: flex; gap: 4px; flex: 1 1 180px; min-width: 140px; overflow-x: auto; scrollbar-width: thin; }
+/* The toolbar keeps the same rows whatever the document shows: the sheet tabs have their own row (one row in a wide
+   pane) and the drawing controls one row where the selects narrow, so the drawing never moves when a document loads. */
+.sheet-tabs { display: flex; gap: 4px; flex: 1 1 100%; min-width: 0; min-height: 30px; overflow-x: auto; scrollbar-width: thin; }
 .sheet-tabs button { border: 1px solid transparent; background: none; border-radius: 6px; padding: 4px 10px; cursor: pointer;
   white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
 .sheet-tabs button:hover { background: var(--surface-2); }
 .sheet-tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-.drawing-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.drawing-controls { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.drawing-controls > * { flex: none; white-space: nowrap; }
+.drawing-controls > select { flex: 0 1 auto; min-width: 6em; }
+@container (min-width: 1100px) {
+  .drawing-toolbar { flex-wrap: nowrap; }
+  .sheet-tabs { flex: 1 1 180px; min-width: 140px; }
+}
 .zoom { display: inline-flex; gap: 4px; }
 
 .viewport { flex: 1; min-height: 0; position: relative; overflow: hidden; background: var(--canvas); touch-action: none;
@@ -336,7 +345,7 @@ select.control.small { padding-right: 26px; }
   .workspace[data-pane="issues"] .issues { flex: 1; max-height: none; }
   .issues-toggle { display: none; }
   .menu-list { max-width: calc(100vw - 32px); }
-  .drawing-controls { width: 100%; justify-content: space-between; }
+  .drawing-controls { width: 100%; justify-content: space-between; flex-wrap: wrap; }
 }
 
 @media print {
