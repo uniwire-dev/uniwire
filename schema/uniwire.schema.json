@@ -2088,6 +2088,19 @@
           "default": null,
           "description": "Selective circuit breaker (SLS)",
           "title": "Selective"
+        },
+        "dc": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Device for direct current",
+          "title": "Dc"
         }
       },
       "required": [
@@ -11109,7 +11122,7 @@
     },
     "InstrumentTransformer": {
       "additionalProperties": false,
-      "description": "Instrument transformer: CT, VT, toroid. In series in the tree or as an auxiliary device (``devices``).",
+      "description": "Instrument transformer: CT, VT, toroid, or a current-measuring shunt (``kind: \"shunt\"``, a resistor on the\nconductor it measures). In series in the tree or as an auxiliary device (``devices``).",
       "properties": {
         "ext": {
           "anyOf": [
@@ -11501,7 +11514,8 @@
                 "ct",
                 "vt",
                 "toroid",
-                "combined"
+                "combined",
+                "shunt"
               ],
               "type": "string"
             },
@@ -26995,7 +27009,13 @@
               "install",
               "frame_A",
               "count",
-              "un_V"
+              "un_V",
+              "status",
+              "manufacturer",
+              "part_number",
+              "icu_kA",
+              "icw_kA",
+              "socket_type"
             ],
             "type": "string"
           },

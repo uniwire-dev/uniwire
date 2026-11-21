@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>uniwire Viewer</title>
+<title>uniwire Viewer: Electrical diagrams, rendered in your browser</title>
 <meta name="description" content="Open, edit and render uniwire electrical diagrams (single-line and multi-line) in the browser: validation, rule checks, SVG sheets, bill of materials. Runs locally, nothing is uploaded.">
 <meta name="color-scheme" content="light dark">
 <script>(function(){try{var t=localStorage.getItem("uniwire-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
@@ -99,6 +99,7 @@
 </nav>
 
 <main class="workspace" data-pane="drawing">
+<h1 class="visually-hidden" data-i18n="app.title">uniwire Viewer</h1>
   <section class="pane editor-pane" id="pane-editor" aria-labelledby="editor-title">
     <h2 class="visually-hidden" id="editor-title" data-i18n="pane.editor">Editor</h2>
     <div id="editor" class="editor-host"></div>

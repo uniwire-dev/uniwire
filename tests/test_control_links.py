@@ -3,12 +3,12 @@ naming its terminals, drives on a fieldbus. Invented machine panels."""
 
 import pytest
 
-from tests.drawing_audit import _walk, audit
+from tests.drawing_audit import _crosses, _overlap, _segments, _symbol_boxes, _walk, audit, text_box
 from uniwire import load
 from uniwire.layout.engine import _leader_label
 from uniwire.layout.routing import Obstacles
 from uniwire.render import render_views
-from uniwire.render.scene import Group, Line, Rect, Text
+from uniwire.render.scene import Group, Line, Polyline, Rect, Text
 
 
 def panel(motors: int, drives: int, feedback: bool = True, out_slot: int = 2) -> dict:
@@ -433,3 +433,100 @@ def test_an_auxiliary_device_keeps_room_for_its_off_sheet_stubs():
     refs = [t for t in texts if "sheet" in t.text and any(0 < s.p[1] - t.p[1] < 3 * t.size for s in labels)]
     assert len(labels) == len(refs) == 4
     assert all(t.anchor == "end" and abs(t.p[0] - labels[0].p[0]) < 1e-6 for t in labels + refs), labels + refs
+
+
+def test_a_link_never_takes_a_channel_another_link_runs_on():
+    """Under the loads, every channel within reach crosses many feeders but one, taken by a link routed before: the
+    next link takes a channel of its own lower down rather than run on it (the two read as one solid line)."""
+    from uniwire.layout.routing import End, _shared, route
+
+    def obstacles() -> Obstacles:
+        obs = Obstacles()
+        for k in range(1, 40):  # feeders down to the loads, crossed by every channel above them
+            obs.add_vline(2.5 * k, -5.0, 19.6)
+        obs.add_hline(20.0, -5.0, 105.0)  # the channel of a link routed before
+        return obs
+
+    a, b = End(0.0, 0.0, "down"), End(100.0, 0.0, "down")
+    shared = route(obstacles(), a, b, 0.0, 20.0, record=False)
+    assert shared[1][1] == 20.0  # (the way it went before)
+    obs = obstacles()
+    pts = route(obs, a, b, 0.0, 20.0, record=False, deeper=True)
+    assert pts[0] == (0.0, 0.0) and pts[-1] == (100.0, 0.0)
+    assert pts[1][1] > 20.0 and not _shared(obs, pts, 1.2)
+
+
+def test_every_off_sheet_stub_names_the_channel_it_leaves_by():
+    """A PLC and a safety relay whose links reach contactors drawn on the next sheet: each stub beside them writes the
+    PLC channel or the relay terminal it leaves by, as a link drawn whole does (only the links drawn whole did)."""
+    d = panel(14, 0)
+    d["views"] = [{"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    doc = load(d)
+    page = render_views(doc)[0]
+    stubs = 0
+    for g in (g for g in _groups(page.root) if g.cls == "uw-link"):
+        if not any(isinstance(i, Group) and i.cls == "uw-ref" for i in g.items):
+            continue
+        link = next(l for l in doc.links if (l.from_, l.to) == (g.attrs["data-uw-from"], g.attrs["data-uw-to"]))
+        port = link.from_port if link.from_ in ("PLC", "SR") else link.to_port
+        texts = [i.text for i in g.items if isinstance(i, Text)]
+        assert str(port) in texts, (link.from_, link.to, texts)
+        stubs += 1
+    assert stubs >= 10
+
+
+def _groups(item):
+    if isinstance(item, Group):
+        yield item
+        for i in item.items:
+            yield from _groups(i)
+
+
+def test_off_sheet_stubs_of_a_feeder_keep_off_the_text_of_the_feeder_before():
+    """Contactors with a long text, each stopped by a safety relay and driven by a PLC drawn on a sheet of its own:
+    the stubs of their links (one under the other on the left of each contactor, their sheet
+    reference and label beside the arrow) keep clear of the text of the contactor on their left (they were
+    written over it: the column kept no room for them)."""
+    d = panel(5, 0)
+    ways = d["sources"][0]["children"][0]["children"][0]["children"]
+    ways[0] = {"type": "board", "ref": "CP2", "own_sheet": True, "children": [ways[0]]}  # the PLC on its own sheet
+    for f in ways[1:]:
+        f["children"][0]["label"] = "Reversing starter, conveyor"
+    pages = render_views(load(d))
+    assert len(pages) >= 2
+    for page in pages:
+        bad = [f for f in audit(page.root) if f.kind in ("text_overlap", "text_crossed")]
+        assert bad == [], "\n".join(map(str, bad))
+
+
+def test_the_terminal_of_an_off_sheet_stub_is_never_written_on_a_symbol_or_a_line():
+    """Contactors whose links to a PLC and a safety relay drawn on a sheet of their own name long terminals at the
+    contactor: the starts of their stubs are crowded (one stub under the other, beside the contactor). Each terminal
+    name is written by its stub where the place is free, else in front of the stub's label, never on a symbol or a
+    line, and none is left out."""
+    d = panel(5, 0)
+    ways = d["sources"][0]["children"][0]["children"][0]["children"]
+    ways[0] = {"type": "board", "ref": "CP2", "own_sheet": True, "children": [ways[0]]}  # the PLC on its own sheet
+    for link in d["links"]:
+        if link.get("from") == "SR":
+            link["to_port"] = "stop input A1 (pair)"
+        if link["kind"] == "measure":
+            link["from_port"] = "aux contact 13-14 (NO)"
+    named = 0
+    for page in render_views(load(d)):
+        bodies = [b for _n, boxes, _g in _symbol_boxes(page.root) for b in boxes]
+        links = [g for g in _groups(page.root) if g.cls and "uw-link" in g.cls.split()]
+        strokes = [s for g in links for i in g.items if isinstance(i, (Line, Polyline)) for s in _segments(i)]
+        for g in links:
+            refs = [i for i in g.items if isinstance(i, Group) and i.cls == "uw-ref"]
+            if not refs or refs[0].attrs["data-uw-target-id"] not in ("SR", "PLC") \
+                    or g.attrs["data-uw-kind"] not in ("measure", "trip"):
+                continue  # (the stubs beside the contactors naming a terminal there)
+            texts = [t for t, _l, _o in _walk(g) if isinstance(t, Text)]
+            assert any("stop input" in t.text or "aux contact" in t.text for t in texts), [t.text for t in texts]
+            named += 1
+            for t in texts:
+                if t.color != "#000000":  # the terminal written apart, in the colour of the channel numbers
+                    assert not any(_overlap(text_box(t), b) > 0 for b in bodies), t
+                    assert not any(_crosses(text_box(t), s) for s in strokes), t
+    assert named >= 8

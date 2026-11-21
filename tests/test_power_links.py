@@ -152,7 +152,8 @@ def test_multiline_link_conductors_and_poles():
     dev = next(g for g in _groups(link) if g.id == "X21")
     poles = [g for g in _groups(dev) if (g.cls or "").split()[:1] == ["pole"]]
     assert len(poles) == 4  # 4P removable links: one open contact per conductor (L1 L2 L3 N)
-    dashed = [i for i in _items(link) if isinstance(i, Polyline) and i.style.dash and len(i.points) >= 2]
+    dashed = [i for i in _items(link) if isinstance(i, Polyline) and i.style.dash and len(i.points) >= 2
+              and len(i.style.dash) != 4]  # the PE: dash-dot, whatever the state
     assert not dashed  # the open contacts show the normal state: the conductors stay solid
     dots = [i for i in _items(link) if isinstance(i, Circle)]
     assert len(dots) == 2 * 5  # taps on the source rails + junctions on the target input conductors (PE too)
