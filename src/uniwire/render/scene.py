@@ -5,6 +5,7 @@ The SVG and PDF writers only know these primitives.
 
 from __future__ import annotations
 
+import functools
 import math
 import re
 import unicodedata
@@ -151,7 +152,13 @@ def _advance(ch: str) -> float:
 
 def text_width(text: str, size: float) -> float:
     """Width estimate (Arial, Liberation Sans) for layout."""
-    return size * sum(map(_advance, text))
+    return size * _ems(text)
+
+
+@functools.lru_cache(maxsize=4096)
+def _ems(text: str) -> float:
+    """Width of ``text`` in ems (measured once: the layout asks for the same texts many times)."""
+    return sum(map(_advance, text))
 
 
 def cut_to_width(text: str, size: float, avail: float, keep: int = 3) -> str:

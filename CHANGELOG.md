@@ -8,6 +8,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Faster layout: large drawings, with many links, take about half the time they took (the slowest twice as
+  fast or more), with the same drawings: link routes costed on the obstacles near them, the
+  channels and stubs that cannot beat the best route found left out, the sheets of a view with no paper planned
+  once, and each text measured once.
 * Single-line drawings: links avoid closing round what they pass, and power links join conductors. A link leaves a
   device by the side facing the other end when it can: a route turning three times the same way (round its own
   device, round a group of devices back to the trunk it joins) is costed like a crossing, so a meter's lead to its

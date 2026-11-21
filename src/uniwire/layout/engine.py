@@ -4641,8 +4641,20 @@ def _sheet_roots(doc: Document, view: View, index: Index) -> list[NodeBase]:
     return list(doc.sources)
 
 
-def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[SheetSpec]:
+def plan_sheets(doc: Document, view: View, index: Index | None = None,
+                trials: Optional[dict[tuple, SheetLayout]] = None) -> list[SheetSpec]:
+    """The sheets of a view. ``trials``: the layouts tried while planning, shared by the plans of one view on several
+    papers (a layout does not depend on the paper, only the choices made from it do)."""
     index = index or build_index(doc)
+    trials = {} if trials is None else trials
+    vkey = (id(doc), id(index), view.model_dump_json(exclude={"paper", "orientation"}))
+
+    def trial(spec: SheetSpec) -> SheetLayout:
+        key = (vkey, tuple(id(r) for r in spec.roots), frozenset(spec.detached), frozenset(spec.moved),
+               spec.bus_slice, spec.continuation)
+        if key not in trials:
+            trials[key] = layout_sheet(doc, view, spec, index)
+        return trials[key]
     forced = {n.id for n in index.nodes.values() if n.type == "board" and getattr(n, "own_sheet", False)}  # type: ignore[attr-defined]
 
     def name_of(n: NodeBase) -> str:
@@ -4655,7 +4667,7 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
         groups: list[list[NodeBase]] = []
         for _ in range(50):
             spec.moved = {s.id for nid in spec.detached for s in standby(nid) if s.id and s in spec.roots}
-            lay = layout_sheet(doc, view, spec, index)
+            lay = trial(spec)
             if view.folio_split == "none" or fit_scale(lay, view) >= view.min_scale:
                 break
             if allow_bus_split and not groups and spec.continuation is None:
