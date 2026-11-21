@@ -29,7 +29,7 @@
         {"type": "meter", "ref": "-P1", "label": "Smart meter", "kind": "SMETS2", "in_A": 100, "external": true,
          "cable": {"designation": "6181Y meter tails", "cores": "2x", "section_mm2": 25, "material": "Cu", "length_m": 2},
          "children": [
-          {"type": "board", "ref": "CU1", "label": "Consumer unit", "kind": "distribution", "in_A": 100, "ways": 12, "ik_kA": 16,
+          {"type": "board", "ref": "CU1", "pen_split": true, "label": "Consumer unit", "kind": "distribution", "in_A": 100, "ways": 12, "ik_kA": 16,
            "note": "Metal enclosure, conditional rating 16 kA (BS EN 61439-3 Annex ZB)", "children": [
             {"type": "switch_disconnector", "ref": "-Q0", "label": "Main switch", "in_A": 100, "poles": "2P", "children": [
               {"type": "rcbo", "ref": "-F1", "use": "RCBO", "in_A": 6, "circuit": "1",

@@ -27,7 +27,7 @@
       "id": "GRID", "type": "grid", "label": "Utility LV service", "supply": "250 kVA", "un_V": 400, "ik_kA": 16,
       "children": [
         {
-          "id": "MSB", "type": "board", "ref": "MSB", "label": "Main switchboard", "kind": "main", "in_A": 400,
+          "id": "MSB", "pen_split": true, "type": "board", "ref": "MSB", "label": "Main switchboard", "kind": "main", "in_A": 400,
           "ik_kA": 16, "ip": "IP31",
           "children": [
             {

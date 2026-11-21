@@ -31,6 +31,7 @@ from ..render.scene import (
     Text,
     arc_points,
     text_width,
+    transform,
 )
 
 M = 2.5  # IEC 60617 module
@@ -347,7 +348,19 @@ def transformer(node: Any = None) -> Symbol:
     r = 1.3 * M
     c1, c2 = (0, 0.6 * M + r), (0, 0.6 * M + r * 2.5)
     h = c2[1] + r + 0.6 * M
-    return Symbol("transformer", [_lead(0, 0.6 * M), Circle(c1, r), Circle(c2, r), _lead(c2[1] + r, h)], h, r, r)
+    return Symbol("transformer", [_lead(0, 0.6 * M), Circle(c1, r), Circle(c2, r), _lead(c2[1] + r, h)], h, r, r,
+                  extra={"star_y": c2[1]})
+
+
+def with_earthed_star_point(sym: Symbol) -> Symbol:
+    """``sym`` (a transformer, of any symbol set) with its star point earthed: a lead from the right of its
+    secondary winding (``extra["star_y"]``, else two thirds down) to an earth symbol; its footprint grows to the
+    right."""
+    y = sym.extra.get("star_y", sym.height * 2 / 3)
+    x = sym.right + 2.5
+    items = [Line((sym.right, y), (x, y)), Line((x, y), (x, y + 1.6)), *[transform(i, x, 0) for i in _earth_items(y + 1.6)]]
+    return Symbol(sym.name, [*sym.items, Group(items, cls="star-point-earth")], sym.height, sym.left, x + 2.4,
+                  sym.has_output, sym.side_input, dict(sym.extra))
 
 
 def _machine(name: str, letter: str, sub: str | None, has_output: bool) -> Symbol:
