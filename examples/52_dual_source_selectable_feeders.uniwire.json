@@ -1,5 +1,5 @@
 {
-  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0-draft",
   "profiles": ["iec60364"],
   "meta": {
     "title": "Example workshop: dual supply, feeders selectable by removable links",

@@ -39,7 +39,7 @@ def panel(motors: int, drives: int, feedback: bool = True, out_slot: int = 2) ->
         {"type": "power_supply", "ref": "-T1", "u1_V": 230, "u2_V": 24, "output": "DC", "in_A": 10, "children": [
             {"type": "plc", "id": "PLC", "ref": "-A1", "role": "controller", "modules": modules},
             {"type": "controller", "id": "SR", "ref": "-A2", "label": "Safety relay", "symbol_text": "SR"}]}]}
-    return {"uniwire": "1.0.0", "meta": {"title": "Machine panel"},
+    return {"uniwire": "1.0.0-draft", "meta": {"title": "Machine panel"},
             "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
             "sources": [{"type": "grid", "un_V": 400, "children": [
                 {"type": "board", "ref": "CP1", "in_A": 100, "system": "3P+N", "children": [

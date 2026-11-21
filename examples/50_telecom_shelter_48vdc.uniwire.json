@@ -1,6 +1,6 @@
 {
  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
- "uniwire": "1.0.0",
+ "uniwire": "1.0.0-draft",
  "profiles": [],
  "meta": {
   "title": "Example telecom shelter: -48 V DC power plant with battery backup and genset inlet",

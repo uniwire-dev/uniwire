@@ -54,8 +54,9 @@ EN: dict[str, str] = {
     "validation.invalid_json": "invalid JSON: {error}",
     "validation.too_deep": "document nested too deeply (more than {max} levels of objects and lists)",
     "validation.too_deep_validator": "document nested too deeply for the validator on this platform (power tree too deep)",
-    "validation.newer_minor": "the document declares format {declared}, newer than the format {supported} "
-                              "supported by this version of uniwire: upgrade uniwire to read the fields it does not know",
+    "validation.format_version": "the document declares format {declared}, but the uniwire format is now the draft "
+                                  "{version}: set \"uniwire\": \"{version}\" (or upgrade uniwire if the document "
+                                  "comes from a newer version)",
     "validation.residual_on_breaker": "a {type} has no residual-current protection: use an 'rcbo' (or an 'rcd') "
                                       "with 'idn_mA' and 'rcd_type'",
     "units.unreadable": "unreadable quantity: {value!r}",
@@ -413,9 +414,9 @@ FR: dict[str, str] = {
     "validation.invalid_json": "JSON invalide : {error}",
     "validation.too_deep": "document trop profondément imbriqué (plus de {max} niveaux d'objets et de listes)",
     "validation.too_deep_validator": "document trop profondément imbriqué pour le validateur sur cette plateforme (arbre trop profond)",
-    "validation.newer_minor": "le document déclare le format {declared}, plus récent que le format {supported} "
-                              "pris en charge par cette version d'uniwire : mettez uniwire à jour pour lire les champs "
-                              "qu'il ne connaît pas",
+    "validation.format_version": "le document déclare le format {declared}, mais le format uniwire est désormais le "
+                                  "brouillon {version} : indiquez \"uniwire\": \"{version}\" (ou mettez uniwire à "
+                                  "jour si le document vient d'une version plus récente)",
     "validation.residual_on_breaker": "un {type} n'a pas de protection différentielle : utiliser un 'rcbo' (ou un "
                                       "'rcd') avec 'idn_mA' et 'rcd_type'",
     "units.unreadable": "grandeur illisible : {value!r}",

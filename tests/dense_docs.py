@@ -53,7 +53,7 @@ def dense_doc(sensors: int = 8, local: int = 3, remote: int = 2, words: int = 6,
         links.append({"kind": "control", "from": f"S{k}", "to": f"K{(k - 1) % max(local, 1) + 1}",
                       "label": _label(40 + k, words)})
     return {
-        "uniwire": "1.0.0",
+        "uniwire": "1.0.0-draft",
         "profiles": ["iec60364"],
         "meta": {"title": "Dense test document", "lang": "en"},
         "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50},
@@ -100,7 +100,7 @@ def split_main_doc(ways: int = 28) -> dict[str, Any]:
         {"id": "Q4", "type": "breaker", "ref": "-Q4", "in_A": 63, "poles": "4P",
          "children": [{"id": "X4", "type": "offpage", "label": "Plant room"}]}]
     return {
-        "uniwire": "1.0.0",
+        "uniwire": "1.0.0-draft",
         "meta": {"title": "Split main board test document", "lang": "en"},
         "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50},
         "sources": [{"id": "T", "type": "transformer", "ref": "TR1", "sn_kVA": 630, "children": [
@@ -119,7 +119,7 @@ def long_way_doc(ways: int = 30) -> dict[str, Any]:
                 {"id": "W3", "type": "busbar", "ref": "W3", "children": [final(100 + k) for k in range(ways)]}]},
             final(4), final(5)]
     return {
-        "uniwire": "1.0.0",
+        "uniwire": "1.0.0-draft",
         "meta": {"title": "Long way test document", "lang": "en"},
         "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400, "uln_V": 230, "f_Hz": 50},
         "sources": [{"id": "G", "type": "grid", "ref": "G", "label": "Supply", "children": [

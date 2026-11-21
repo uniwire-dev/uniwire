@@ -903,7 +903,7 @@ def test_link_label_too_long_for_its_run_goes_on_two_lines_clear_of_the_symbols(
 
 
 def _identical_circuits():
-    return load({"uniwire": "1.1.0", "installation": {"earthing": "TN-S", "un_V": 400, "system": "3P+N"},
+    return load({"uniwire": "1.0.0-draft", "installation": {"earthing": "TN-S", "un_V": 400, "system": "3P+N"},
                  "sources": [{"id": "g", "type": "grid", "children": [{"id": "b", "type": "board", "children": [
                      {"id": "f1", "type": "rcbo", "ref": "-F1", "in_A": 10, "curve": "C", "idn_mA": 30,
                       "poles": "1P+N", "count": 12, "children": [{"id": "l1", "type": "lighting", "p_kW": 0.4}]},

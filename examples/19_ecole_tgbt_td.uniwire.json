@@ -1,5 +1,5 @@
 {
-  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0-draft",
   "profiles": ["nfc15100"],
   "meta": {
     "title": "École élémentaire : TGBT et tableaux divisionnaires", "project": "EX-19",

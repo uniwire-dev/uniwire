@@ -1,6 +1,6 @@
 {
  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
- "uniwire": "1.0.0",
+ "uniwire": "1.0.0-draft",
  "meta": {
   "title": "Example office: hybrid inverter with rooftop PV, battery and essential loads board",
   "project": "EX-53",

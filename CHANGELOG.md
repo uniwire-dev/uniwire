@@ -10,6 +10,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ### Changes to know
 
+* The format is a draft, version `1.0.0-draft` (SPEC: "version 1.0 (draft)"): it may still change until it is
+  adopted. Documents must declare `"uniwire": "1.0.0-draft"` or leave the field out; a document declaring another
+  version (1.0.0, 1.1.0, 1.2.0...) is rejected with a message giving the value to write, so change the field to
+  `1.0.0-draft`. Libraries 0.1.8 and earlier reject documents declaring `1.0.0-draft`: upgrade them.
 * Multi-line views draw the power diagram only, as the specification says (§7.1): the power tree (every node in it,
   whatever its type) and the power links (transfer, bypass, parallel, tie, infeed). They used to draw every
   controller, terminal block, sensor and meter placed through links, with their control, measure, data, trip and

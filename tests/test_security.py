@@ -23,7 +23,7 @@ EXAMPLE = ROOT / "examples" / "01_studio_apartment.uniwire.json"
 
 
 def _doc(children, **extra):
-    return {"uniwire": "1.0.0", "installation": {"earthing": "TT", "system": "1P+N", "un_V": 230},
+    return {"uniwire": "1.0.0-draft", "installation": {"earthing": "TT", "system": "1P+N", "un_V": 230},
             "sources": [{"type": "grid", "id": "S", "children": children}], **extra}
 
 

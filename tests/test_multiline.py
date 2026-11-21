@@ -393,7 +393,7 @@ def test_long_device_text_wrapped_whole_in_the_multi_line_view():
     from tests.drawing_audit import audit
 
     long = "Electronic reverse current blocking module with dual transistors"
-    d = {"uniwire": "1.0.0", "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
+    d = {"uniwire": "1.0.0-draft", "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
          "views": [{"kind": "multi-line"}],
          "sources": [{"type": "grid", "id": "G", "children": [
              {"type": "switch_disconnector", "id": "Q1", "ref": "-Q1", "label": long, "in_A": 32, "poles": "4P",

@@ -17,7 +17,7 @@ def json_schema() -> dict[str, Any]:
         "title": "uniwire: electrical installation",
         "description": f"uniwire {FORMAT_VERSION} exchange format for describing electrical installations, drawn as "
                        "single-line and multi-line diagrams (tree topology + links, characteristics, rendering "
-                       "preferences).",
+                       "preferences). Draft: the format may still change until it is adopted.",
     }
     schema.pop("title", None)
     schema.pop("description", None)  # the Document docstring: the description above is used instead

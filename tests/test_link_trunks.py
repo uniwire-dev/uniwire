@@ -37,7 +37,7 @@ def board(feeders: int = 10, kind: str = "measure", label: str | None = None, pr
             link["label"] = label
         if protocol:
             link["protocol"] = protocol
-    return {"uniwire": "1.0.0", "meta": {"title": "Metered board"},
+    return {"uniwire": "1.0.0-draft", "meta": {"title": "Metered board"},
             "installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
             "views": [{"kind": "single-line", "paper": paper}],
             "sources": [{"type": "grid", "un_V": 400, "children": [

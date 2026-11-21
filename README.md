@@ -14,7 +14,7 @@ You describe the **installation** (sources, protective devices, cables, loads, P
 file or in Python, and uniwire computes the drawings. No coordinates, no CAD file: a text file you can
 review and diff.
 
-* **Format**: `*.uniwire.json`, format 1.2, defined by the [specification](https://uniwire.sh/docs/SPEC/)
+* **Format**: `*.uniwire.json`, format 1.0.0-draft (a draft: it may still change until it is adopted), defined by the [specification](https://uniwire.sh/docs/SPEC/)
   and validated by a published JSON Schema: <https://uniwire.sh/schema/v1/uniwire.schema.json>.
 * **Library**: `pip install uniwire`: Python API, code-first builder and the `uniwire` command line.
 * **Documentation**: <https://uniwire.sh/docs/>
@@ -98,7 +98,7 @@ A document in JSON:
 ```json
 {
   "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
-  "uniwire": "1.0.0",
+  "uniwire": "1.0.0-draft",
   "profiles": ["nfc15100"],
   "meta": { "title": "Small house", "lang": "en" },
   "installation": { "earthing": "TT", "system": "1P+N", "un_V": 230 },

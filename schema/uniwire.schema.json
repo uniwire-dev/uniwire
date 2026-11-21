@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uniwire.sh/schema/v1/uniwire.schema.json",
   "title": "uniwire: electrical installation",
-  "description": "uniwire 1.2.0 exchange format for describing electrical installations, drawn as single-line and multi-line diagrams (tree topology + links, characteristics, rendering preferences).",
+  "description": "uniwire 1.0.0-draft exchange format for describing electrical installations, drawn as single-line and multi-line diagrams (tree topology + links, characteristics, rendering preferences). Draft: the format may still change until it is adopted.",
   "$defs": {
     "Appliance": {
       "additionalProperties": false,
@@ -28170,9 +28170,9 @@
       "title": "$Schema"
     },
     "uniwire": {
-      "default": "1.2.0",
-      "description": "Format version (semver)",
-      "pattern": "^1\\.\\d+\\.\\d+$",
+      "default": "1.0.0-draft",
+      "description": "Format version: '1.0.0-draft' (the format is a draft)",
+      "pattern": "^1\\.0\\.0-draft$",
       "title": "uniwire",
       "type": "string"
     },

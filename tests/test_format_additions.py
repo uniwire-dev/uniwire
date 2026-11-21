@@ -21,7 +21,7 @@ NEW_ROWS = ["status", "manufacturer", "part_number", "icu_kA", "icw_kA", "socket
 
 
 def _doc(*children, system="3P+N", views=None):
-    d = {"uniwire": "1.2.0", "installation": {"system": system, "earthing": "TN-S"},
+    d = {"uniwire": "1.0.0-draft", "installation": {"system": system, "earthing": "TN-S"},
          "sources": [{"type": "grid", "id": "G", "children": list(children)}]}
     if views is not None:
         d["views"] = views

@@ -1,6 +1,6 @@
 {
  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json",
- "uniwire": "1.0.0",
+ "uniwire": "1.0.0-draft",
  "meta": {
   "title": "Example House: hybrid inverter, battery and protected loads panel (120/240 V)",
   "project": "EX-39",

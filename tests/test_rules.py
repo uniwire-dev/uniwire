@@ -259,7 +259,7 @@ def test_iz_profile_not_active_by_default():
 
 def test_rating_cascade_stops_at_voltage_converter():
     from uniwire import check, load
-    doc = load({"uniwire": "1.0.0", "sources": [{"type": "grid", "children": [
+    doc = load({"uniwire": "1.0.0-draft", "sources": [{"type": "grid", "children": [
         {"type": "breaker", "id": "QA", "in_A": 20, "children": [
             {"type": "power_supply", "u1_V": 230, "u2_V": 48, "output": "DC", "children": [
                 {"type": "breaker", "id": "QD", "in_A": 63}]}]},
@@ -271,7 +271,7 @@ def test_rating_cascade_stops_at_voltage_converter():
 def test_bom_ignores_pv_module_count():
     from uniwire import load
     from uniwire.bom import bom
-    doc = load({"uniwire": "1.0.0", "sources": [{"type": "pv_array", "modules": 12,
+    doc = load({"uniwire": "1.0.0-draft", "sources": [{"type": "pv_array", "modules": 12,
                                                   "product": {"manufacturer": "X", "part_number": "PV-400"}}]})
     assert [r["part_number"] for r in bom(doc)] == ["PV-400"]
 

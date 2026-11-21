@@ -1,5 +1,5 @@
 {
-  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0",
+  "$schema": "https://uniwire.sh/schema/v1/uniwire.schema.json", "uniwire": "1.0.0-draft",
   "profiles": ["nfc15100"],
   "meta": {
     "title": "Chantier de construction : branchement provisoire et distribution de chantier", "project": "EX-34",
