@@ -9,14 +9,14 @@
 #
 # Base image: python:3.15-slim, pinned by digest (update both FROM lines together).
 
-FROM python:3.15-slim@sha256:2da676046630d7bf14c6764ae1143dc7fa0377a53f94bf5a642f0b214aca5bce AS build
+FROM python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS build
 WORKDIR /src
 COPY pyproject.toml README.md LICENSE NOTICE CHANGELOG.md ./
 COPY src/ src/
 COPY examples/ examples/
 RUN pip install --no-cache-dir "build>=1.2" && python -m build --wheel --outdir /dist
 
-FROM python:3.15-slim@sha256:2da676046630d7bf14c6764ae1143dc7fa0377a53f94bf5a642f0b214aca5bce
+FROM python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928
 LABEL org.opencontainers.image.title="uniwire-mcp" \
       org.opencontainers.image.description="MCP server for uniwire documents (electrical installations)" \
       org.opencontainers.image.source="https://github.com/uniwire-dev/uniwire" \
