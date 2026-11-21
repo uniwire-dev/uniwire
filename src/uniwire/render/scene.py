@@ -5,6 +5,7 @@ The SVG and PDF writers only know these primitives.
 
 from __future__ import annotations
 
+import functools
 import math
 import re
 import unicodedata
@@ -138,12 +139,18 @@ class Page:
 
 def text_width(text: str, size: float) -> float:
     """Width estimate (Helvetica/Arial) for layout."""
+    return size * _ems(text)
+
+
+@functools.lru_cache(maxsize=4096)
+def _ems(text: str) -> float:
+    """Width of ``text`` in ems (measured once: the layout asks for the same texts many times)."""
     narrow = sum(1 for ch in text if ch in "il.,:;'|! ()-/fjtrI")  # digits are all one width in Arial
     wide = sum(1 for ch in text if ch in "mwMWQGOD@%→←↔")
     full = sum(1 for ch in text if unicodedata.east_asian_width(ch) in "WF")  # CJK: one em each
     upper = sum(1 for ch in text if ch.isupper() and ch not in "IJMWQGOD")  # capitals, Latin or Cyrillic
-    return size * (0.55 * (len(text) - narrow - wide - full - upper) + 0.3 * narrow + 0.8 * wide + 1.0 * full
-                   + 0.68 * upper)
+    return (0.55 * (len(text) - narrow - wide - full - upper) + 0.3 * narrow + 0.8 * wide + 1.0 * full
+            + 0.68 * upper)
 
 
 def cut_to_width(text: str, size: float, avail: float, keep: int = 3) -> str:
