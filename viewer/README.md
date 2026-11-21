@@ -18,6 +18,20 @@ fetch the `hatchling` build backend). `python viewer/build.py --out DIR` also co
 site to `DIR` (the uniwire.sh build uses `--out <site>/viewer`). After editing only the viewer files, use
 `--skip-wheel` to reuse the existing wheel.
 
+The compiled link router (`packages/uniwire-native`) can be served with the site, built for the Pyodide release of
+`worker.js`:
+
+```bash
+packages/uniwire-native/build-pyodide.sh                          # -> packages/uniwire-native/target/pyodide/
+python viewer/build.py --native packages/uniwire-native/target/pyodide
+```
+
+`--native` copies the `uniwire_native-*_wasm32.whl` wheel to `dist/` and names it in `version.json`; the worker
+installs it after the uniwire wheel, and the library uses it when it loads and has the interface it expects. It is
+optional: built without `--native`, or when it cannot be downloaded or loaded (a warning in the console), the same
+drawings are drawn in pure Python, only slower on large drawings. When `PYODIDE_VERSION` changes, build it again:
+a wheel built for another Pyodide release is refused by `micropip` (and the editor draws in pure Python).
+
 A web server is required (Web Workers and `fetch` do not work from `file://`).
 
 ## Files
@@ -28,11 +42,11 @@ A web server is required (Web Workers and `fetch` do not work from `file://`).
 | `app.js` | UI: documents, sharing, drawing viewport (zoom/pan), sheet navigation and history, colour modes, issues panel, downloads |
 | `interact.js` | drawing interaction: hover / sticky highlighting (upstream, downstream, links, conductors), tooltips |
 | `editor.js` | CodeMirror 6 editor with lint markers (falls back to a plain textarea), JSON path locator |
-| `worker.js` | Web Worker: loads Pyodide, pydantic and the uniwire wheel; answers render/export requests |
+| `worker.js` | Web Worker: loads Pyodide, pydantic, the uniwire wheel and, when served, the compiled link router; answers render/export requests |
 | `viewer.py` | Python glue run in Pyodide (validate, check, node and link index, view overrides, render pages to SVG strings, BOM, PDF) |
 | `i18n.js` | interface strings (English, French) |
 | `style.css` | styles (light/dark, narrow screens) |
-| `build.py` | build script (generated files are git-ignored: `dist/`, `examples/`, `version.json`, and the favicons copied from `docs/brand/assets/`) |
+| `build.py` | build script (generated files are git-ignored: `dist/`, `examples/`, `version.json`, and the favicons copied from `docs/brand/assets/`); `--native` adds the compiled link router |
 
 ## URLs
 
@@ -68,7 +82,9 @@ conductor colour preset); `viewer.py` lists them (`options`) and applies the cho
 
 ## Pinned third-party code
 
-- Pyodide `0.27.7` from `cdn.jsdelivr.net` (`PYODIDE_VERSION` in `worker.js`).
+- Pyodide `0.27.7` from `cdn.jsdelivr.net` (`PYODIDE_VERSION` in `worker.js`). The compiled link router is built
+  for it by `packages/uniwire-native/build-pyodide.sh` (its Emscripten SDK and Rust nightly, read with
+  `pyodide-build`).
 - CodeMirror 6 modules from `esm.sh` (import map in `index.html`). If they cannot be loaded, the
   viewer falls back to a plain textarea editor with line numbers.
 - PDF export installs `reportlab` (pinned, `REPORTLAB` in `worker.js`) from PyPI with `micropip` on first use; the

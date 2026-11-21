@@ -6,8 +6,10 @@ Steps:
 1. build the ``uniwire`` wheel into ``viewer/dist/`` (``uv build`` when available, else ``pip wheel``);
 2. copy ``examples/*.uniwire.json`` into ``viewer/examples/``, draw the first sheet of each one as
    ``<name>.svg`` (shown at once while the in-browser engine starts) and write ``viewer/examples/index.json``;
-3. write ``viewer/version.json`` (library version + wheel file name, read by the worker);
-4. copy the favicons from ``docs/brand/assets/`` (the single source of the brand files) into ``viewer/``.
+3. with ``--native WHEEL``: copy the compiled link router built for the browser (``uniwire-native`` for Pyodide, a
+   ``*_wasm32.whl`` wheel; see ``packages/uniwire-native/README.md``) into ``viewer/dist/`` as well;
+4. write ``viewer/version.json`` (library version + wheel file names, read by the worker);
+5. copy the favicons from ``docs/brand/assets/`` (the single source of the brand files) into ``viewer/``.
 
 With ``--out DIR`` the complete static site (page, scripts, wheel, examples) is also copied to DIR,
 e.g. ``python viewer/build.py --out site/viewer`` when assembling a site that serves it under /viewer/.
@@ -16,6 +18,9 @@ Local development::
 
     python viewer/build.py
     python -m http.server -d viewer 8000     # then open http://localhost:8000/
+
+The compiled router is optional: without it (or when the browser cannot load it) the editor draws the same drawings
+with the pure Python search, only slower on large drawings.
 """
 
 from __future__ import annotations
@@ -58,6 +63,29 @@ def build_wheel() -> Path:
         if extra != wheels[-1]:
             extra.unlink() if extra.is_file() else shutil.rmtree(extra)
     return wheels[-1]
+
+
+def native_wheel(path: Path) -> Path:
+    """The ``uniwire-native`` wheel built for Pyodide: ``path`` itself, or the newest one in the directory ``path``."""
+    if path.is_dir():
+        found = sorted(path.glob("uniwire_native-*_wasm32.whl"))
+        if not found:
+            sys.exit(f"no uniwire_native-*_wasm32.whl wheel in {path}")
+        path = found[-1]
+    if not (path.is_file() and path.name.startswith("uniwire_native-") and path.name.endswith("_wasm32.whl")):
+        sys.exit(f"{path} is not a uniwire-native wheel built for Pyodide (uniwire_native-*_wasm32.whl)")
+    return path
+
+
+def copy_native(path: Path | None) -> Path | None:
+    """Put the browser build of ``uniwire-native`` in ``viewer/dist/`` (and drop one left by an earlier build)."""
+    for old in DIST.glob("uniwire_native-*.whl"):
+        old.unlink()
+    if path is None:
+        return None
+    wheel = native_wheel(path)
+    shutil.copy2(wheel, DIST / wheel.name)
+    return DIST / wheel.name
 
 
 def preview_svg(path: Path) -> str | None:
@@ -127,18 +155,23 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", help="also copy the complete static site to this directory")
     ap.add_argument("--skip-wheel", action="store_true", help="reuse the wheel already in viewer/dist/")
+    ap.add_argument("--native", metavar="WHEEL", type=Path,
+                    help="the uniwire-native wheel built for Pyodide (or a directory holding it), served with the site")
     a = ap.parse_args(argv)
 
     if a.skip_wheel and list(DIST.glob("uniwire-*.whl")):
         wheel = sorted(DIST.glob("uniwire-*.whl"))[-1]
     else:
         wheel = build_wheel()
+    native = copy_native(a.native)
     examples = copy_examples()
     for name in FAVICONS:
         shutil.copy2(BRAND / name, VIEWER / name)
     version = {"uniwire": library_version(), "wheel": f"dist/{wheel.name}"}
+    if native:
+        version["native"] = f"dist/{native.name}"
     (VIEWER / "version.json").write_text(json.dumps(version, indent=1) + "\n", "utf-8")
-    print(f"wheel: {wheel.name}; {len(examples)} examples")
+    print(f"wheel: {wheel.name}; native: {native.name if native else 'none'}; {len(examples)} examples")
 
     if a.out:
         out = Path(a.out).resolve()

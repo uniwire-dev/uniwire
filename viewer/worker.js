@@ -35,13 +35,31 @@ async function init() {
   const wheelPath = "/tmp/" + version.wheel.split("/").pop();
   py.FS.writeFile(wheelPath, new Uint8Array(await wheelResp.arrayBuffer()));
   await micropip.install.callKwargs("emfs:" + wheelPath, { deps: false });
+  await installNative(micropip, version.native);
   progress("glue", 90);
   const glue = await (await fetch("viewer.py", { cache: "no-cache" })).text();
   py.FS.writeFile("/home/pyodide/uniwire_viewer.py", glue);
   py.runPython("import sys; sys.path.insert(0, '/home/pyodide')");
   api = py.pyimport("uniwire_viewer");
+  const native = py.runPython("from uniwire.layout import routing; routing._grid_search is not None");
   progress("ready", 100);
-  self.postMessage({ type: "ready", version: version.uniwire, pyodide: PYODIDE_VERSION });
+  self.postMessage({ type: "ready", version: version.uniwire, pyodide: PYODIDE_VERSION, native });
+}
+
+// The compiled link router built for Pyodide (optional, listed in version.json when the site serves it). The
+// library uses it when it loads and its interface matches, else draws the same drawings in pure Python: any failure
+// here (download, a wheel built for another Pyodide release) only costs speed, never the editor.
+async function installNative(micropip, wheel) {
+  if (!wheel) return;
+  try {
+    const resp = await fetch(wheel, { cache: "no-cache" });
+    if (!resp.ok) throw new Error(`cannot download ${wheel} (${resp.status})`);
+    const path = "/tmp/" + wheel.split("/").pop();
+    py.FS.writeFile(path, new Uint8Array(await resp.arrayBuffer()));
+    await micropip.install.callKwargs("emfs:" + path, { deps: false });
+  } catch (err) {
+    console.warn("uniwire: compiled link router not loaded, drawing in pure Python:", (err && err.message) || err);
+  }
 }
 
 const ready = init().catch((err) => {

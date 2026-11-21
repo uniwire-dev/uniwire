@@ -8,6 +8,12 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Web editor: large drawings took many seconds to draw in the browser, where the link router always ran in pure
+  Python; the editor now also loads the compiled link router (`uniwire-native`, built for its Pyodide release by
+  `packages/uniwire-native/build-pyodide.sh` and served with `python viewer/build.py --native`), so they are drawn
+  several times faster, exactly the same. When it cannot be loaded the editor draws in pure Python as before, and
+  the library falls back to pure Python as well when the module is installed but cannot be loaded. The module now
+  builds with Rust 1.83 or later (was 1.88).
 * Texts kept off conductors and off one another. Single-line drawings: a standby source on a transfer switch was
   drawn, with its text, across the feeders passing by from the busbar to their loads; it now goes beyond them. A
   view frame and an enclosure round the same devices were two frames drawn on one another, their labels written

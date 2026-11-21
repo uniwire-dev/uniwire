@@ -1,7 +1,6 @@
 """The compiled search of the grid router (optional package uniwire-native) finds exactly the routes of the pure
 Python one: same points, same ends, same cost, hence the same drawings. Skipped when the package is not installed
-(the pure Python search is then the one used everywhere, as in the browser editor). Invented obstacles and documents,
-and bundled examples."""
+(the pure Python search is then the one used everywhere). Invented obstacles and documents, and bundled examples."""
 
 import json
 import random
@@ -21,6 +20,23 @@ EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 
 def test_native_search_can_be_turned_off(monkeypatch):
     monkeypatch.setenv("UNIWIRE_NATIVE", "0")
+    assert routing._load_native() is None
+
+
+def test_a_module_that_cannot_be_loaded_falls_back_to_python(monkeypatch):
+    """A build that is present but cannot be loaded (another platform, a failed dynamic link in the browser) must
+    not break drawing: the pure Python search is used."""
+    import builtins
+    real = builtins.__import__
+
+    def failing(name, *args, **kwargs):
+        if name == "uniwire_native":
+            raise OSError("cannot load the compiled module")
+        return real(name, *args, **kwargs)
+
+    monkeypatch.delenv("UNIWIRE_NATIVE", raising=False)
+    monkeypatch.delitem(__import__("sys").modules, "uniwire_native", raising=False)
+    monkeypatch.setattr(builtins, "__import__", failing)
     assert routing._load_native() is None
 
 
