@@ -153,3 +153,15 @@ def test_stub_under_a_busbar_stops_short_of_it():
              if isinstance(i, Line) and i.style.width == BUS and abs(i.a[1] - i.b[1]) < 1e-9]  # the busbars
     top = min(p[1] for p in head.points)
     assert lines and not [y for y, x0, x1 in lines if x0 - 0.5 <= x <= x1 + 0.5 and top - 1.0 < y < stub[0][1]]
+
+
+def test_stub_continues_the_output_of_the_device():
+    """The stub under a device whose only continuation is the link starts where the device's output ends: no gap
+    between them."""
+    first, _ = render_views(load(copy.deepcopy(DOC)))
+    for frm, to in (("Q2", "T1"), ("Q3", "Q8")):
+        stub = next(p for p in _link(first, frm, to).items if isinstance(p, Polyline) and not p.closed).points
+        sym = next(g for g in _walk(first.root) if isinstance(g, Group) and g.id == frm and "uw-node" in (g.cls or ""))
+        ends = [p for item in _walk(sym) for p in (getattr(item, "points", None) or
+                ([item.a, item.b] if isinstance(item, Line) else [])) if abs(p[0] - stub[0][0]) < 1e-6]
+        assert ends and min(abs(stub[0][1] - y) for _, y in ends) < 1e-6, (frm, stub[0], max(y for _, y in ends))

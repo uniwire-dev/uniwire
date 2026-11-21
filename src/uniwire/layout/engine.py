@@ -4574,6 +4574,8 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
     txts = ([link.label] if link.label else []) + [on + (_t("render.to_folio", lang, folio=shown) if shown else "")]
     incoming = link.kind in DIRECTED_LINKS and link.to == n.id and link.from_ != n.id  # the arrow toward the device
     e = at or _end(n, link.kind)
+    if at is None and e.side == "down" and n.sym.has_output and abs(e.x - n.x) < 1e-9 and e.y > n.out_y:
+        e = End(n.x, n.out_y, "down")  # (out of a device's output: the stub goes on from it, no gap below the device)
     key = here = n.id or ""
     if at is None and e.side == "left":  # no room on the left for its texts (a neighbour there): by the right side
         need = max(text_width(t, 1.6) for t in txts) + 9.0

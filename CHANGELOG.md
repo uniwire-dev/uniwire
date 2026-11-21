@@ -135,7 +135,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   switch showed a bare stub. On a power link with a way (`infeed`, `transfer`), whether between views or between
   sheets, the arrow at the receiving end now points at the device; and a power link leaving the side of a device
   that feeds on below it gets room for its texts, which were squeezed between the device and its neighbour's. An
-  off-page stub right under a busbar is drawn shorter rather than with its arrow on the busbar.
+  off-page stub right under a busbar is drawn shorter rather than with its arrow on the busbar. An off-page stub
+  below a device starts at the end of its output (it began about 1 mm lower, leaving a break in the wire).
 * Inverters/chargers and UPS have separate sides: the AC input on top, the DC terminal on the left, the AC output at
   the bottom. The grid, PV array and battery of a hybrid inverter landed on one point of its left side, forming a
   rectangle that read as a frame; now an AC infeed lands on top, battery, PV and DC board infeeds on the DC terminal
