@@ -480,7 +480,7 @@ def test_no_neutral_made_below_a_three_wire_supply():
 
 
 def test_pen_split_marker():
-    assert "PEN" not in _texts(render_pages(_sld(earthing="TN-C-S"))[0].root)  # where it splits is never guessed
+    assert "PEN" in _texts(render_pages(_sld(earthing="TN-C-S"))[0].root)  # default: first board
     assert "PEN" not in _texts(render_pages(_sld(earthing="TN-S"))[0].root)
     doc = load({"installation": {"earthing": "TN-C-S"}, "sources": [{"type": "grid", "children": [
         {"type": "board", "children": [{"type": "breaker", "children": [

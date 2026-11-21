@@ -34,7 +34,7 @@
       {"type": "meter", "ref": "M1", "label": "Utility meter", "kind": "Form 2S", "in_A": 200, "external": true,
        "cable": {"designation": "Triplex service drop", "kind": "overhead", "size_awg": "2/0", "material": "Al", "length_m": 30},
        "children": [
-        {"type": "board", "ref": "LC1", "pen_split": true, "label": "Main load center", "kind": "panelboard", "system": "split-phase", "in_A": 200,
+        {"type": "board", "ref": "LC1", "label": "Main load center", "kind": "panelboard", "system": "split-phase", "in_A": 200,
          "ways": 42, "ik_kA": 22,
          "product": {"manufacturer": "Eaton", "range": "Type BR", "description": "Load center 200 A, 42 spaces, main breaker"},
          "cable": {"designation": "SER", "size_awg": "4/0", "material": "Al", "length_m": 3, "conductors": "L1, L2, N"},

@@ -48,7 +48,7 @@
           "external": true,
           "children": [
             {
-              "id": "MSB", "pen_split": true, "type": "board", "ref": "MSB", "label": "Main LV switchboard", "kind": "main", "in_A": 630,
+              "id": "MSB", "type": "board", "ref": "MSB", "label": "Main LV switchboard", "kind": "main", "in_A": 630,
               "ik_kA": 22, "form": "2b", "ip": "IP31", "location": "Ground-floor LV room",
               "children": [
                 {

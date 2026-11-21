@@ -39,7 +39,7 @@
       {"type": "meter", "id": "PM0", "ref": "-P0", "label": "Utility import/export meter", "kind": "CT", "bidirectional": true,
        "cable": {"designation": "XLPE/SWA", "cores": "4x", "section_mm2": 185, "material": "Al", "length_m": 15, "pen": true},
        "children": [
-        {"type": "board", "id": "MSB", "pen_split": true, "ref": "MSB", "label": "Main switchboard", "kind": "main", "in_A": 400, "ik_kA": 20, "form": "2b", "children": [
+        {"type": "board", "id": "MSB", "ref": "MSB", "label": "Main switchboard", "kind": "main", "in_A": 400, "ik_kA": 20, "form": "2b", "children": [
           {"type": "breaker", "id": "Q0", "ref": "-Q0", "label": "Main incomer", "in_A": 400, "ir_A": 360, "poles": "4P", "icu_kA": 36,
            "trip_unit": "Micrologic 2.3", "product": {"manufacturer": "Schneider Electric", "range": "ComPacT NSX400F"},
            "children": [

@@ -154,9 +154,8 @@ A template is an object of attributes, optionally typed. During resolution:
 
 ### Boards, busbars, sources
 `board`: `in_A`, `ik1_kA`, `system`, `earthing` (local earthing system, IT downstream of a transformer), `ways`, `ip`, `form`,
-`kind`: `panelboard`, `pdu`, `substation`, `pen_split` (TN-C-S: PEN split into PE + N at this board; the single-line
-drawing marks the split only at a board that sets it or declares its own `earthing` TN-C-S; when no board says where,
-a check finding asks for it and the multi-line drawing splits the PEN at the first board). `busbar`: `kind` (`busway` = busbar trunking system), `material`,
+`kind`: `panelboard`, `pdu`, `substation`, `pen_split` (TN-C-S: PEN split into PE + N at this board; when no board
+sets it, a TN-C-S installation splits at the first board, and a check finding asks to declare it). `busbar`: `kind` (`busway` = busbar trunking system), `material`,
 `system`, `earthing`. `grid.scc_MVA`, `grid.system`. `transformer.kind` (`auto`, `earthing`, `isolation`, `bank`),
 `transformer.u1_alt_V` (dual voltage). `generator.prime_mover`. `inverter.protection` (built-in grid decoupling protection),
 `inverter.kind`: `charger`. Systems: `split-phase` (120/240 V); earthing system: `TN`. `rcd_type`: `G`.
