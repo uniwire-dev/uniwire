@@ -2395,10 +2395,12 @@ ML_FRAME_CLEAR = 6.0  # a link beside a frame: the multi-line sheet is often dra
 ML_LANE = 3.0  # between two parallel links (same reason; room for a label between them)
 
 
-def _signal_band(doc: Document, roots: list[MLNode]) -> float:
+def _signal_band(doc: Document, view: View, roots: list[MLNode]) -> float:
     """Room above the feeder cables for the channels of the links drawn by ``_draw_annex``."""
     from .engine import _device_homes
 
+    if not getattr(view, "auxiliaries", False):  # links other than the power ones are not drawn
+        return 0.0
     ids = {n.node.id for r in roots for n in r.walk() if n.node is not None and n.node.id}
     ids |= {d for d, h in _device_homes(doc).items() if h in ids}
     n = sum(1 for link in doc.links if link.kind not in ML_LINKS and link.from_ in ids and link.to in ids)
@@ -2491,14 +2493,23 @@ def _proxy(n: MLNode, box: Box) -> LNode:
 
 def _draw_annex(doc: Document, roots: list[MLNode], g: Group, view: View, spec: SheetSpec, lang: str,
                 node_folio: Callable[[str], Optional[int]] | None) -> None:
-    """Auxiliary devices (``devices``) beside the node they are linked to, and the links the power drawing
-    leaves out (control, interlock, trip, measure, data, key, earth, and the ends of links whose other end
-    is on another sheet), routed as in the single-line diagram."""
+    """The ends of the power links whose other end is on another sheet and, with ``view.auxiliaries``, the
+    auxiliary devices (``devices``) beside the node they are linked to and the links the power drawing leaves
+    out (control, interlock, trip, measure, data, key, earth), routed as in the single-line diagram."""
     from .engine import ANN_LINE as SL_LINE
     from .engine import ANN_SIZE as SL_SIZE
     from .engine import _annotate as sl_annotate
     from .engine import _device_homes, _draw_links, _place_devices
 
+    aux = getattr(view, "auxiliaries", False)
+    devices = {d.id for d in doc.devices}
+    if not aux:
+        # the power drawing only (SPEC 7.1): of the links, the ends of the power links whose other end, a node
+        # of the tree, is on another sheet
+        here = {n.node.id for r in roots for n in r.walk() if n.kind == "node" and n.node is not None and n.node.id}
+        if not any(link.kind in ML_LINKS and (link.from_ in here) != (link.to in here)
+                   and link.from_ not in devices and link.to not in devices for link in doc.links):
+            return
     obs, boxes = _scene_obstacles(g)
     obs.box_cross = obs.run_along = 1000.0  # a bundle of conductors is crossed freely, a symbol never, nor a line run on
     obs.frame_clear, obs.frame_along = ML_FRAME_CLEAR, 3 * FRAME_CROSS  # out of a frame and back: better
@@ -2519,7 +2530,8 @@ def _draw_annex(doc: Document, roots: list[MLNode], g: Group, view: View, spec: 
 
     # a node whose right side is all text takes its links on the left: its devices are put there
     annex = _place_devices(doc, proxies, proxies, view, lang, obs, view.pitch_mm,
-                           lambda n: n.sym.name == "ml-proxy" and _right_end(n) is None and not n.sym.extra.get("free_below"))
+                           lambda n: n.sym.name == "ml-proxy" and _right_end(n) is None
+                           and not n.sym.extra.get("free_below")) if aux else []
     obs.boxes = [b for b in obs.boxes if b not in edges]
     by_id = {p.node.id: p for p in proxies if p.node is not None}
     for ln in annex:  # an earth electrode level with the PE its link leaves from: no jog in a short link
@@ -2532,7 +2544,7 @@ def _draw_annex(doc: Document, roots: list[MLNode], g: Group, view: View, spec: 
             obs.boxes = [b for b in obs.boxes if b not in old] + [b for b in (ln.sym_box(), ln.ann_box()) if b]
     homes = _device_homes(doc)
     unlinked = [d for d in doc.devices if homes.get(d.id or "") is None]
-    if unlinked and not spec.continuation and (not spec.roots or spec.roots == list(doc.sources) or view.root):
+    if aux and unlinked and not spec.continuation and (not spec.roots or spec.roots == list(doc.sources) or view.root):
         box = boxes_union(obs.boxes)
         ax0 = (box[2] if box else 0) + 12.0
         g.add(Text((ax0 - 2.0, -3.0), _t("render.auxiliary_devices", lang), 2.0, bold=True))
@@ -2560,7 +2572,8 @@ def _draw_annex(doc: Document, roots: list[MLNode], g: Group, view: View, spec: 
                            bold=(i == 0 and ln.tagged)))
     drawn = {ln.node.id for ln in proxies + annex if ln.node is not None}
     only = {i for i, link in enumerate(doc.links)
-            if link.kind not in ML_LINKS or not (link.from_ in drawn and link.to in drawn)}
+            if (link.kind not in ML_LINKS and aux) or link.kind in ML_LINKS and not (link.from_ in drawn and link.to in drawn)
+            and (aux or link.from_ not in devices and link.to not in devices)}
     if not only:
         return
     tops = [ln.y for ln in proxies if ln.bottom]
@@ -2591,7 +2604,8 @@ def _layout(doc: Document, view: View, spec: SheetSpec, index: Index, info: dict
             n.h = _height(n)
             n.under = STAR_TAGS + 0.4 if n.type == "motor_starter" and _starter_sets(n.node) == 2 else 0.0
     links = _plan_links(doc, roots, lang)
-    _pad_boards(doc, roots)
+    if getattr(view, "auxiliaries", False):  # (no room for links that are not drawn)
+        _pad_boards(doc, roots)
     x = 0.0
     for r in roots:
         _measure(r)
@@ -2608,7 +2622,7 @@ def _layout(doc: Document, view: View, spec: SheetSpec, index: Index, info: dict
     bottoms = [n for n in everything if n.bottom]
     others = [n for n in everything if not n.bottom]
     y_base = max([n.content_bottom() for n in others] + [_frame_bottom(n) for n in others if n.is_board] + [0.0])
-    y_load = y_base + CABLE_BAND + _signal_band(doc, roots)
+    y_load = y_base + CABLE_BAND + _signal_band(doc, view, roots)
     for n in bottoms:
         n.y = max(n.y, y_load)
     g = Group(cls="multiline")

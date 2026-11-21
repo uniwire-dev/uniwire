@@ -180,7 +180,7 @@ def test_a_dashed_link_is_interrupted_where_it_crosses_a_conductor():
     """A control link crossing a feeder is not connected to it: the link stops on each side, the conductor stays
     whole (single-line and multi-line views)."""
     doc = panel(6, 2)
-    doc["views"] = [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]
+    doc["views"] = [{"id": "sld"}, {"id": "ml", "kind": "multi-line", "auxiliaries": True}]
     for page in render_views(load(doc)):
         crossings = [f for f in audit(page.root) if f.kind == "link_across_conductor"]
         assert crossings == [], "\n".join(map(str, crossings))
@@ -288,7 +288,7 @@ def test_sheet_references_point_to_a_sheet_of_their_own_view_holding_the_other_e
     import re
 
     doc = panel(14, 0)
-    doc["views"] = [{"id": "ml", "kind": "multi-line"}, {"id": "sld", "paper": "A4", "min_scale": 1.0}]
+    doc["views"] = [{"id": "ml", "kind": "multi-line", "auxiliaries": True}, {"id": "sld", "paper": "A4", "min_scale": 1.0}]
     pages = render_views(load(doc))
     kinds = [p.root.items and next((g.cls for g in p.root.items if isinstance(g, Group) and g.cls in
                                     ("diagram", "multiline")), None) for p in pages]
@@ -345,7 +345,7 @@ def test_the_pdf_of_interrupted_links_has_no_number_in_exponent_notation(tmp_pat
     from uniwire.render import render_pdf
 
     doc = panel(10, 3)
-    doc["views"] = [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]
+    doc["views"] = [{"id": "sld"}, {"id": "ml", "kind": "multi-line", "auxiliaries": True}]
     path = render_pdf(load(doc), tmp_path / "panel.pdf", all_views=True)
     data = path.read_bytes()
     streams = []
