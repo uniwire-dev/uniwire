@@ -1843,6 +1843,13 @@ def _free_way(ln: LNode, parent: Optional[LNode]) -> bool:
             and ln.node.type == "spare" and not (getattr(ln.node, "in_A", None) or getattr(ln.node, "poles", None)))
 
 
+def _on_pe(ln: LNode) -> bool:
+    """An earth electrode or an earth / equipotential bar in the tree: it is on the protective conductor only,
+    drawn on an earth line, never on a live conductor (a solid lead from a busbar reads as the bars earthed).
+    Same rule as multi-line drawings. A neutral bar stays on its conductor."""
+    return ln.node is not None and ln.type in ("earth", "earth_bar") and getattr(ln.node, "kind", None) != "neutral_bar"
+
+
 def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callable[[str], Optional[int]] | None = None,
                parent_id: Optional[str] = None) -> None:
     trunk = BUSWAY_H / 2 if ln.bus_y is not None and symbol_kind(ln.sym) == "busway" else 0.0
@@ -1884,6 +1891,9 @@ def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callabl
             bg.add(Line((ln.bus_x0, ln.bus_y), (x1, ln.bus_y), Style(width=BUS)))
         g.add(bg)
         for c in ln.bus_children:
+            if _on_pe(c):  # beside the busbar, not on it (its earth links reach it): the edge without a line
+                g.add(edge_group(c.id, me))
+                continue
             eg = edge_group(c.id, me, [Line((c.x, ln.bus_y + trunk), (c.x, c.frame_top if c.is_board else c.y),
                                             DASH if _free_way(c, ln) else Style())])
             if c.is_board:
@@ -1893,7 +1903,7 @@ def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callabl
         for c in ln.bus_children:
             top = c.frame_top if c.is_board else c.y
             eg = edge_group(c.id, me)
-            style = DASH if _free_way(c, ln) else Style()
+            style = DASH if _free_way(c, ln) else _link_style("earth") if _on_pe(c) else Style()
             if ln.x == c.x:
                 eg.add(Line((ln.x, ln.out_y), (c.x, top), style))
             else:
