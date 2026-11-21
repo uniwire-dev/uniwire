@@ -8,6 +8,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Faster layout of large drawings, with or without the compiled router: link labels, leader texts and the legs of
+  channel routes are placed against an index of what is already drawn (texts and symbols by area, lines by
+  position) rather than by testing every obstacle at every position tried, with the same drawings. The slowest
+  large drawings are drawn two to four times faster.
 * Optional compiled link router: `pip install "uniwire[native]"` adds the package `uniwire-native` (Rust), which
   runs the search of the grid link router many times faster; the drawings are exactly the same as without it (same
   costs, same order of operations, same choice between equal routes). Without the package, or with
