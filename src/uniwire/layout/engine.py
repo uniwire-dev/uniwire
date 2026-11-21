@@ -603,6 +603,8 @@ def _shift(ln: LNode, dy: float) -> None:
             n.bus_y += dy
 
 
+LABEL_GAP = 0.4  # the least room between a device label and the symbol of a device beside it
+
 # equipment that is not a way of the board feeding it when a cable joins them: drawn below the board frame
 REMOTE_EQUIPMENT = {"inverter", "transformer", "ups", "transfer_switch", "busbar"}
 # beside a board's incoming chain, with nothing below them, they do not make it a branch: accessories,
@@ -913,6 +915,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
     xs = sorted({round(n.x - n.sym.left, 3) for r in main for n in r.walk()})
     for r in main:
         nxt = {id(a): b for n in r.walk() for a, b in zip(n.children, n.children[1:])}
+        limits: dict[int, tuple[Optional[float], Optional[float]]] = {}
         for n in r.walk():  # a label stops before the next symbol, as wide as it is (a converter)
             b = nxt.get(id(n))
             # the last device of a row with nothing drawn to its right (a controller at the end of a feeder):
@@ -920,9 +923,25 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
             right = next((x for x in xs if x > n.x + n.sym.right + 1.0), None)
             room = None if b is not None or n.children else \
                 min(OPEN_ROOM, (right - 1.0 if right is not None else 1e9) - (n.x + n.sym.right + 1.0))
-            _annotate(n, view, lang, right_limit=b.x - b.sym.left - 1.0 if b is not None else None, room=room)
+            limits[id(n)] = (b.x - b.sym.left - 1.0 if b is not None else None, room)
+            _annotate(n, view, lang, right_limit=limits[id(n)][0], room=room)
         _place_y(r, 0.0)
         _separate_boards(r)
+        # a label running into the symbol of a device beside it, in the next column (a UPS, its abbreviation on
+        # its left): it stops before that symbol too, and the tree is placed again
+        again = False
+        for n in r.walk():
+            ab = n.ann_box()
+            stops = [left - LABEL_GAP for m in r.walk() if m.sym.height > 0 and m.x > n.x
+                     for left in [m.x - m.sym.left] if ab and ab[0] < left - LABEL_GAP < ab[2]
+                     and m.y < ab[3] and ab[1] < m.y + m.sym.height]
+            if stops:
+                lim, room = limits[id(n)]
+                _annotate(n, view, lang, right_limit=min(stops + ([lim] if lim is not None else [])), room=room)
+                again = True
+        if again:
+            _place_y(r, 0.0)
+            _separate_boards(r)
 
     # ties (bus couplers): align the connected busbars
     for link in doc.links:
@@ -3178,7 +3197,9 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                                                                 -abs(s[0][0] - s[1][0]) - abs(s[0][1] - s[1][1])))
                 (p, q) = segs[0]
                 mx, my = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
-                lg.add(interlock_mark(mx, my, abs(p[1] - q[1]) < 1e-6))
+                mark = interlock_mark(mx, my, abs(p[1] - q[1]) < 1e-6)
+                lg.add(mark)
+                obs.add_box(bbox(mark))  # no label written over it
         if on_conductor:  # infeed landing on the input conductor: junction dot
             lg.add(Circle(pts[-1], 0.45, Style(width=THIN, fill="#000000")))
         seq = pts if port_label is None or port_label[0] == 0 else pts[::-1]  # oriented PLC -> other end
@@ -3917,16 +3938,21 @@ def _board_to_detach(boards: list[LNode], lay: SheetLayout, view: View, keep_who
     together rather than being cut way by way."""
     _, _, aw, _ = drawing_area(view)
     excess = lay.width - aw / view.min_scale
+    boards = boards[::-1]  # of boards as wide, the last one goes: the sheets keep the order of the document
+
+    def width(n: LNode) -> float:
+        return round(n.width, 3)
+
     part = [n for n in boards if n.width < 0.85 * lay.width]
     enough = [n for n in part if n.width - view.pitch_mm >= excess]
     if enough:
-        return min(enough, key=lambda n: n.width)
+        return min(enough, key=width)
     if part:
-        return max(part, key=lambda n: n.width)
+        return max(part, key=width)
     below = [n for n in boards if n.node is not None and n.node.id in nested]
     if below:
-        return max(below, key=lambda n: n.width)
-    return None if keep_whole or not boards else max(boards, key=lambda n: n.width)
+        return max(below, key=width)
+    return None if keep_whole or not boards else max(boards, key=width)
 
 
 def _walk_nodes(n: NodeBase) -> Iterator[NodeBase]:

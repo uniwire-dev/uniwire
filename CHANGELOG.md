@@ -8,6 +8,24 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Multi-line drawings: a busbar too long for one sheet shares its ways evenly among as many sheets as it needs
+  (27 ways: 9 on each of three sheets, no longer 13, 13 and 1).
+* Single-line drawings: the label of a device keeps at least 0.4 mm from the symbol of a device beside it in the
+  next column, on more lines when needed (it ran up to the abbreviation written left of a UPS, or to the box of a
+  converter).
+* Single-line drawings: of two boards as wide that could go to a sheet of their own, the one later in the
+  document goes, so the sheets keep the order of the document (two identical boards could swap sheets on a small
+  change of their widths).
+* Drawings: every text cut to fit its place ends with an ellipsis and is cut by its width, by one rule. The
+  family of a PLC was cut to twelve characters in its head and the function of a protection relay to six in its
+  box, without an ellipsis; a title block value had its own cut. No space is left before the ellipsis.
+* Drawings: the width of a text is measured with the advance width of each character in Arial (the widths of
+  Liberation Sans, the font of the PDF on a server: a table in `uniwire.render.glyph_widths`, written by
+  `tools/glyph_widths.py` from the font file). The estimate by classes of characters was narrower than the text
+  for wide capitals ("W" by 0.14 em: six of them were drawn 1.4 mm wider than measured), Cyrillic letters and
+  arrows; boxes, columns and texts placed by their width now fit what is drawn. A text reduced to fit its room
+  exactly (a title block value, a device annotation) is no longer cut by a rounding error, and a label of a
+  multi-line drawing keeps off the triangle of a mechanical interlock.
 * Single-line drawings: a characteristic of a device (a rating, a curve, a type of meter) is left out beside its
   label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
   out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a
