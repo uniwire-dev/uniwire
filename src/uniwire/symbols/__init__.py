@@ -631,8 +631,11 @@ def offpage(label: Any = "") -> Symbol:
 
 # ------------------------------------------------------------ instrument transformers, MV equipment, auxiliaries
 def instrument_transformer(node: Any = None) -> Symbol:
-    """CT: circle crossed by the conductor; VT: two circles."""
+    """CT: circle crossed by the conductor; VT: two circles; shunt: a resistor in the conductor."""
     kind = getattr(node, "kind", None)
+    if kind == "shunt":
+        return Symbol("instrument_transformer", [_lead(0, 0.6 * M), Rect(-0.8, 0.6 * M, 1.6, 1.8 * M),
+                                                 _lead(2.4 * M, 3 * M)], 3 * M, 0.8, 0.8)
     if kind == "vt":
         r = 1.2 * M
         items: list[Item] = [_lead(0, 0.6 * M), Circle((0, 0.6 * M + r), r), Circle((0, 0.6 * M + 2.4 * r), r),

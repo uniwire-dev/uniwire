@@ -92,6 +92,7 @@ from .engine import (
     feeding_sheet,
     interlock_mark,
     label_drawn_below,
+    line_phase,
     sheet_node_ids,
 )
 from .routing import FRAME_CROSS, Box, Obstacles, boxes_union
@@ -212,7 +213,7 @@ class _Assigner:
         ks: list[Optional[int]] = []
         ns: list[Optional[bool]] = []
         guess: Optional[tuple[Optional[int], Optional[bool]]] = None
-        ph = getattr(node, "phase", None)
+        ph = line_phase(node)
         if ph:
             names = re.findall(r"L[123]", ph)
             ns.append(True if len(names) == 1 else False if len(names) == 2 else None)
@@ -316,7 +317,7 @@ class _Assigner:
     def _preferred_phase(self, node: Any) -> Optional[str]:
         n = node
         while n is not None:
-            ph = getattr(n, "phase", None)
+            ph = line_phase(n)
             if ph:
                 return re.findall(r"L[123]", ph)[0] if re.findall(r"L[123]", ph) else None
             n = n.children[0] if len(n.children) == 1 else None
@@ -565,6 +566,16 @@ def conductors(doc: Document, show_pe: bool = True) -> dict[str, Conductors]:
     """Conductors of every node of the power tree, by node id (see the module docstring)."""
     a = _Assigner(doc, show_pe)
     return {n.id: a.info[id(n)] for n, _, _ in iter_nodes(doc) if n.id and id(n) in a.info}
+
+
+def _measured(node: Any, live: list[str]) -> Optional[str]:
+    """The conductor a device on one conductor (a current shunt) is in: the one its ``phase`` names, else L+ on a DC
+    line, else L1, else the first live conductor."""
+    ph = getattr(node, "phase", None)
+    for c in ([ph] if ph else []) + ["L+", "L1"]:
+        if c in live:
+            return c
+    return live[0] if live else None
 
 
 #: Devices with no element on the neutral when their ``poles`` are not given.
@@ -1473,6 +1484,16 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
         rl = [xs[c] for c in live if c != "PEN"] or [xs[c] for c in live]
         if rl:
             g.add(*_toroid(rl, y, y + h / 2)[:1])
+        return g
+
+    if t == "instrument_transformer" and getattr(node, "kind", None) == "shunt":  # a resistor in the measured conductor
+        c = _measured(node, live)
+        if c is not None:
+            x, ym = xs[c], y + h / 2
+            g.add(cond_group(c, Line((x, y), (x, ym - 2.2)), Rect(x - 0.8, ym - 2.2, 1.6, 4.4),
+                             Line((x, ym + 2.2), (x, y + h))))
+            drawn.add(c)
+        through()
         return g
 
     if t == "instrument_transformer" and getattr(node, "kind", None) in (None, "ct", "combined"):  # a ring on each phase

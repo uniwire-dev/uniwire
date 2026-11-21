@@ -108,6 +108,7 @@ def _format_validation_error(err: ValidationError) -> list[str]:
         ctx = e.get("ctx") or {}
         if e["type"] == "extra_forbidden":
             msg = _t("validation.extra_forbidden")
+            msg += _residual_hint(e["loc"])
             model = _model_at(e["loc"][:-1])
             if model is not None:  # the fields that can be written here, so that any misnamed one is fixed at once
                 hint = _field_hint(str(e["loc"][-1]), model)
@@ -487,3 +488,16 @@ def dump(doc: Document, *, indent: int = 2) -> str:
     """Serialise a document to canonical JSON text (templates applied, ids present, ``None`` fields left out)."""
     return json.dumps(doc.model_dump(mode="json", by_alias=True, exclude_none=True, exclude_defaults=False),
                       ensure_ascii=False, indent=indent)
+
+
+#: Residual-current fields, and the node types that have none of them (a residual-current breaker is an 'rcbo')
+_RESIDUAL_FIELDS = {"residual_mA", "residual_type", "idn_mA", "idn_range_mA", "rcd_type"}
+_RESIDUAL_FREE = {"breaker"}
+
+
+def _residual_hint(loc: tuple) -> str:
+    """How to give the residual-current protection written on a node type that has none (``loc``: the error location
+    of the unknown field): an ``rcbo`` (or an ``rcd``) with ``idn_mA`` and ``rcd_type``."""
+    if len(loc) >= 2 and loc[-1] in _RESIDUAL_FIELDS and loc[-2] in _RESIDUAL_FREE:
+        return "; " + _t("validation.residual_on_breaker", type=loc[-2])
+    return ""

@@ -168,6 +168,10 @@ class _Tolerance:
                 if new != k and new in ("single-line", "multi-line"):
                     self.note(where, "kind", k, new)
                     v["kind"] = new
+            p = v.get("pitch_mm")
+            if isinstance(p, (int, float)) and not isinstance(p, bool) and 0 < p < _pitch_min():
+                self.note(where, "pitch_mm", p, _pitch_min())  # narrower than a feeder column can be: the narrowest
+                v["pitch_mm"] = _pitch_min()
 
 
 def _meta_fields() -> set[str]:
@@ -198,3 +202,10 @@ def tolerate(data: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     tol = _Tolerance()
     tol.document(out)
     return out, tol.notes
+
+
+def _pitch_min() -> int:
+    """Narrowest feeder column of a view (``pitch_mm``): a narrower one is read as this."""
+    from .model.document import View
+
+    return int(next(m.ge for m in View.model_fields["pitch_mm"].metadata if getattr(m, "ge", None) is not None))

@@ -20,6 +20,7 @@ CartoucheField = Literal[
     "label", "ref", "protection", "in_A", "curve", "icn_kA", "idn_mA", "rcd_type", "poles",
     "cable", "section_mm2", "length_m", "p_kW", "phase", "room", "points",
     "circuit", "ib_A", "cos_phi", "cable_type", "cable_ref", "install", "frame_A", "count", "un_V",
+    "status", "manufacturer", "part_number", "icu_kA", "icw_kA", "socket_type",
 ]
 
 DEFAULT_CARTOUCHE: list[str] = ["label", "ref", "protection", "idn_mA", "cable", "p_kW"]
