@@ -734,13 +734,14 @@ def earth_bar(node: Any = None) -> Symbol:
 # ------------------------------------------------------------ PLCs, power supplies
 PLC_SLOT_W = 3.4
 PORT_STEP = 2.6  # spacing of the wired channels of a module: room for each channel number beside its wire
+PORT_STEP_TIGHT = 1.95  # ... closer, on a sheet the PLC would otherwise draw at a smaller scale (numbers nearly touch)
 PLC_FAMILY_W = 11.0  # the widest family name in the head of a PLC (some twelve characters)
 PORT_EDGE = 1.8  # ... and between the outer wires and the sides of the module: their numbers inside its width
 
 
-def plc(node: Any = None, wired: Optional[dict[int, int]] = None) -> Symbol:
+def plc(node: Any = None, wired: Optional[dict[int, int]] = None, step: float = PORT_STEP) -> Symbol:
     """PLC (automate): head + strip of modules (one rectangle per slot), ports addressed by slot. ``wired``: the
-    number of links leaving each slot; a module with many is drawn wider, one wire every ``PORT_STEP``."""
+    number of links leaving each slot; a module with many is drawn wider, one wire every ``step``."""
     modules = list(getattr(node, "modules", None) or [])
     h = 4.0 * M
     label = getattr(node, "family", None) or _abbr("plc")
@@ -750,8 +751,8 @@ def plc(node: Any = None, wired: Optional[dict[int, int]] = None) -> Symbol:
     head_w = max(7.0, text_width(label, 1.5) * 1.1 + 1.2)  # wide enough for the family name (bold)
     built_in = (wired or {}).get(0, 1)  # links leaving the built-in I/O (slot 0): under the head
     if built_in > 1:
-        head_w = max(head_w, 2 * PORT_EDGE + (built_in - 1) * PORT_STEP)
-    widths = [max(PLC_SLOT_W, 2 * PORT_EDGE + (c - 1) * PORT_STEP) if c > 1 else PLC_SLOT_W
+        head_w = max(head_w, 2 * PORT_EDGE + (built_in - 1) * step)
+    widths = [max(PLC_SLOT_W, 2 * PORT_EDGE + (c - 1) * step) if c > 1 else PLC_SLOT_W
               for m in modules for c in [(wired or {}).get(m.slot, 1)]]
     w = head_w + sum(widths)
     x0 = -head_w / 2  # the supply axis arrives at the centre of the head
@@ -779,7 +780,8 @@ def plc(node: Any = None, wired: Optional[dict[int, int]] = None) -> Symbol:
     if has_out:
         items.append(_lead(y0 + body, h))
     return Symbol("plc", items, h if has_out else y0 + body, head_w / 2 + 0.2, w - head_w / 2 + 0.2,
-                  has_output=has_out, extra={"ports": ports, "port_y": y0 + body, "slot_w": slot_w})
+                  has_output=has_out, extra={"ports": ports, "port_y": y0 + body, "slot_w": slot_w, "step": step,
+                                             "wired": dict(wired or {})})
 
 
 def power_supply(node: Any = None, dc_in: bool = False) -> Symbol:

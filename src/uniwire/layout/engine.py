@@ -70,6 +70,7 @@ from ..symbols import (
     BUSWAY_H,
     DASH,
     PORT_STEP,
+    PORT_STEP_TIGHT,
     Symbol,
     symbol,
     symbol_for,
@@ -233,6 +234,8 @@ class SheetSpec:
     prev: Optional[SheetSpec] = field(default=None, repr=False)  # previous sheet of a continuation
     next: Optional[SheetSpec] = field(default=None, repr=False)  # next sheet of a continuation
     moved: set[str] = field(default_factory=set)  # roots drawn on the sheet of a detached board (standby sources)
+    # the spacing of the PLC wires chosen when the sheet was planned, with what it held then (see layout_sheet)
+    port_steps: dict[tuple, float] = field(default_factory=dict, repr=False, compare=False)
 
 
 @dataclass
@@ -245,6 +248,8 @@ class SheetLayout:
     columns: list[LNode]
     annex: list[LNode] = field(default_factory=list)  # auxiliary devices drawn beside the tree
     stub_room: bool = False  # columns moved right for the texts of off-sheet stubs (see _stub_room)
+    port_step: float = 0.0  # spacing of the wires under the PLC modules widened for them (0: none widened)
+    port_gain: float = 0.0  # ... the width between those modules with the usual spacing and closer, at most
 
 
 # ------------------------------------------------------------- construction
@@ -319,6 +324,13 @@ def _signal_links(doc: Document, nid: Optional[str]) -> list[int]:
 
 
 SPREAD_OFF = 5.0  # ... for a link to another sheet: its stub carries two lines of text
+SPREAD_OFF_ONE = 3.0  # ... one line only (a link with no label: its sheet reference)
+
+
+def _off_pitch(link: Any) -> float:
+    """Room a stub to another sheet takes on the side of a controller, down to the next one: two lines of text
+    (its label under it), or only its sheet reference over it."""
+    return SPREAD_OFF if link.label else SPREAD_OFF_ONE
 
 
 LEFT_ROOM_MAX = 45.0
@@ -343,10 +355,11 @@ def _left_room(doc: Document, n: LNode, here: set[str], lang: str) -> float:
     return min(LEFT_ROOM_MAX, max(widths) + n.sym.left + 4.0) if max(widths) else 0.0
 
 
-def _spread_symbol(doc: Document, node: Optional[NodeBase], sym: Symbol, here: Optional[set[str]] = None) -> Symbol:
+def _spread_symbol(doc: Document, node: Optional[NodeBase], sym: Symbol, here: Optional[set[str]] = None,
+                   port_step: float = PORT_STEP) -> Symbol:
     """A controller many links reach: drawn taller, room for one link end each on its sides (``here``: the nodes
     drawn on the sheet; a link to another one ends on an off-page stub, which takes more room). A PLC: its modules
-    wide enough for the links leaving them."""
+    wide enough for the links leaving them, one wire every ``port_step``."""
     if node is not None and symbol_kind(sym) == "plc" and node.id:  # a module many links leave: wider, one wire each
         plcs = {n.id: symbol_for(n) for n, _, _ in iter_nodes(doc) if n.type == "plc" and n.id}
         plcs[node.id] = sym
@@ -357,13 +370,17 @@ def _spread_symbol(doc: Document, node: Optional[NodeBase], sym: Symbol, here: O
                 continue
             if here is None or (link.to, link.from_)[ce[0]] in here:
                 wired[ce[1]] += 1
-        return symbol("plc", node, dict(wired)) if any(c > 1 for c in wired.values()) else sym
+        if not any(c > 1 for c in wired.values()):
+            return sym  # (the usual spacing asked as before: a symbol set's own PLC need not take a spacing)
+        return symbol("plc", node, dict(wired)) if port_step == PORT_STEP else \
+            symbol("plc", node, dict(wired), port_step)
     if node is None or symbol_kind(sym) != "controller" or not node.id:
         return sym
     ids = _signal_links(doc, node.id)
     count = len(ids)
     others = [doc.links[i].to if doc.links[i].from_ == node.id else doc.links[i].from_ for i in ids]
-    body = sum(SPREAD_OFF if here is not None and o not in here else SPREAD_STEP for o in others) + 1.5
+    body = sum(_off_pitch(doc.links[i]) if here is not None and o not in here else SPREAD_STEP
+               for i, o in zip(ids, others)) + 1.5
     terms = [p for i in ids for nid, p in ((doc.links[i].from_, doc.links[i].from_port),
                                            (doc.links[i].to, doc.links[i].to_port)) if nid == node.id and p]
     inner = max((text_width(p, PORT_SIZE) + TERM_PAD for p in terms), default=0.0)
@@ -924,11 +941,37 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
     of a detached board comes from. The room for the texts of the off-sheet stubs (see _stub_room) is taken only
     where the sheet keeps its scale with it (and so its devices: never one more sheet)."""
     args = (doc, view, spec, index, folio_of, continuation_folios, incoming, node_folio, incoming_ref)
-    lay = _layout_sheet(*args)
-    if lay.stub_room:
-        bare = _layout_sheet(*args, stub_room=False)
-        if round(fit_scale(lay, view), 2) < round(fit_scale(bare, view), 2):
-            return bare
+
+    def best(port_step: float) -> SheetLayout:
+        lay = _layout_sheet(*args, port_step=port_step)
+        if lay.stub_room:
+            bare = _layout_sheet(*args, stub_room=False, port_step=port_step)
+            if round(fit_scale(lay, view), 2) < round(fit_scale(bare, view), 2):
+                return bare
+        return lay
+    held = (tuple(id(r) for r in spec.roots), frozenset(spec.detached), frozenset(spec.moved), spec.bus_slice,
+            spec.continuation, view.model_dump_json(exclude={"paper", "orientation"}), view.paper, view.orientation)
+    if held in spec.port_steps:  # (decided when the sheet was planned: laid out once)
+        return best(spec.port_steps[held])
+    _, _, aw, ah = drawing_area(view)
+    if PORT_STEP_TIGHT in spec.port_steps.values():  # closer on this sheet before it took more or fewer ways: most
+        # likely again, kept when the usual spacing would draw the sheet smaller (that layout estimated, not made)
+        tight = best(PORT_STEP_TIGHT)
+        if tight.port_gain and round(fit_scale(tight, view), 2) > round(min(
+                1.0, aw / max(tight.width + tight.port_gain, 1e-6), ah / max(tight.height, 1e-6)), 2):
+            spec.port_steps[held] = PORT_STEP_TIGHT
+            return tight
+    spec.port_steps[held] = PORT_STEP
+    lay = best(PORT_STEP)
+    closer = min(1.0, aw / max(lay.width - lay.port_gain, 1e-6), ah / max(lay.height, 1e-6))
+    if lay.port_gain and width_bound(lay, view) and round(fit_scale(lay, view), 2) < round(closer, 2) \
+            and (closer >= min_scale(view) or view.folio_split == "none"):
+        # PLC modules widened for their wires make the sheet smaller: their wires closer (only there, and not on
+        # a sheet too wide either way, about to be split)
+        tight = best(PORT_STEP_TIGHT)
+        if round(fit_scale(tight, view), 2) > round(fit_scale(lay, view), 2):
+            spec.port_steps[held] = PORT_STEP_TIGHT
+            return tight
     return lay
 
 
@@ -936,7 +979,8 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
                   folio_of: Callable[[str], Optional[int]] | None,
                   continuation_folios: tuple[Optional[int], Optional[int]], incoming: Optional[str],
                   node_folio: Callable[[str], Optional[int]] | None,
-                  incoming_ref: tuple[Optional[int], Optional[str]], stub_room: bool = True) -> SheetLayout:
+                  incoming_ref: tuple[Optional[int], Optional[str]], stub_room: bool = True,
+                  port_step: float = PORT_STEP) -> SheetLayout:
     index = index or build_index(doc)
     lang = normalize_lang(doc.meta.lang)
     pitch = view.pitch_mm
@@ -968,7 +1012,7 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
                 n.sym = symbol("inverter", n.node, ac_fed=True)  # fed by the board, its DC side below it
             elif n.type == "power_supply" and n.node is not None and _fed_dc(n.node, index):
                 n.sym = symbol("power_supply", n.node, dc_in=True)  # fed from a DC line: '=' in, as in multi-line
-            n.sym = _spread_symbol(doc, n.node, n.sym, here)
+            n.sym = _spread_symbol(doc, n.node, n.sym, here, port_step)
             n.left_room = _left_room(doc, n, here, lang)
 
     # feeders continued by a power link (transfer source, parallel / bypass / infeed connection): no open arrow
@@ -1236,7 +1280,7 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
     band_boxes = list(bands.values()) + list(_stub_columns(doc, everything, lang).values())
     obs.boxes.extend(band_boxes)
     annex = _place_devices(doc, roots, everything, view, lang, obs, pitch, below={p: b[3] for p, b in bands.items()},
-                           stubs=_stub_widths(doc, everything, lang))
+                           stubs=_stub_widths(doc, everything, lang), port_step=port_step)
     for kind, line in lanes:
         (obs.hlines if kind == "h" else obs.vwires).remove(line)
     for b in band_boxes:
@@ -1355,7 +1399,11 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
         g = _mirror_up(g, b0[1] + b0[3])  # type: ignore[assignment]
     box = bbox(g) or (0, 0, 1, 1)
     g = transform(g, -box[0], -box[1])  # type: ignore[assignment]
-    return SheetLayout(spec, g, box[2] - box[0], box[3] - box[1], everything, columns, annex, moved)
+    # (how much narrower the PLC modules widened for their wires would be with the wires closer)
+    spread = sum((c - 1) * (PORT_STEP - PORT_STEP_TIGHT) for n in everything + annex if symbol_kind(n.sym) == "plc"
+                 for c in n.sym.extra.get("wired", {}).values() if c > 1)
+    return SheetLayout(spec, g, box[2] - box[0], box[3] - box[1], everything, columns, annex, moved,
+                       port_step if spread else 0.0, spread)
 
 
 # ------------------------------------------------- obstacles / auxiliary devices
@@ -1504,7 +1552,8 @@ DEVICE_AXIS_MM = 30.0  # length of the reserved axis below a load
 def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], view: View, lang: str,
                    obs: Obstacles, pitch: float, left_of: Callable[[LNode], bool] | None = None,
                    below: Optional[dict[str, float]] = None,
-                   stubs: Optional[dict[str, list[tuple[float, float]]]] = None) -> list[LNode]:
+                   stubs: Optional[dict[str, list[tuple[float, float]]]] = None,
+                   port_step: float = PORT_STEP) -> list[LNode]:
     """Auxiliary devices whose home node is on this sheet, each in the free space nearest its partner
     (``left_of(partner)``: on its left, the side its links can reach; ``below``: the bottom of the channel band of
     each PLC, a device read or driven by one of its channels goes under it; ``stubs``: the widths of the texts of
@@ -1530,7 +1579,7 @@ def _place_devices(doc: Document, roots: list[LNode], everything: list[LNode], v
                 continue
             todo.remove(dev)
             progress = True
-            ln = LNode(dev, "node", _spread_symbol(doc, dev, symbol_for(dev)))
+            ln = LNode(dev, "node", _spread_symbol(doc, dev, symbol_for(dev), port_step=port_step))
             ln.width = pitch
             _annotate(ln, view, lang, avail_override=60.0)
             ln.x, ln.y = 0.0, 0.0
@@ -2869,7 +2918,8 @@ def _port_point(n: LNode, slot: int, j: int, count: int, obs: Obstacles) -> tupl
     """Where the ``j``-th of the ``count`` links leaving a PLC module leaves it: spread under the module, one wire
     every ``PORT_STEP`` when it has the width for it (multi-line: drawn reduced, closer)."""
     room = n.sym.extra.get("slot_w", {}).get(slot, 7.0 if slot == 0 else 3.4) - 1.2
-    gap = min(max(PORT_STEP if obs.min_lane == 0 else 1.0, 0.9 * obs.min_lane), room / max(count - 1, 1))
+    step = n.sym.extra.get("step", PORT_STEP)
+    gap = min(max(step if obs.min_lane == 0 else 1.0, 0.9 * obs.min_lane), room / max(count - 1, 1))
     return (n.x + n.sym.extra["ports"][slot] + (j - (count - 1) / 2) * gap,
             n.y + n.sym.extra.get("port_y", n.sym.height))
 
@@ -3320,18 +3370,18 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             x = px - PORT_GAP - 0.05 * PORT_SIZE if dist >= 0 else px + PORT_GAP + 0.75 * PORT_SIZE
             port_texts[i] = Text((x, py + 0.5 + w), port, PORT_SIZE, rotate=90, color=PORT_COLOR)
             obs.add_box((x - 0.75 * PORT_SIZE, py + 0.5, x + 0.05 * PORT_SIZE, py + 0.5 + w))
-    if obs.grid:  # the straight drop under every PLC port is kept for its own link
+    if obs.grid:  # the straight drop under every PLC port is kept for its own link (none for a link to another sheet)
         for i in order:
-            if i in channel:
+            if i in channel and i in lane_of:
                 k, slot = channel[i]
                 n = _find(roots, (doc.links[i].from_, doc.links[i].to)[k])
                 px, py = _port_point(n, slot, *lane_of.get(i, (0, 1)), obs)  # type: ignore[arg-type]
                 obs.add_vline(px, py, py + 3.0)
-    drops: dict[str, list[float]] = {}  # the x of the PLC channel wires leaving each device from below
-    for i, (k, slot) in channel.items():
+    drops: dict[str, list[float]] = {}  # the x of the PLC channel wires leaving each device from below (a link to
+    for i, (k, slot) in channel.items():  # another sheet leaves no wire there: its stub is beside the device)
         nid = (doc.links[i].from_, doc.links[i].to)[k]
         pn = _find(roots, nid)
-        if pn is not None:
+        if pn is not None and i in lane_of:
             drops.setdefault(nid, []).append(_port_point(pn, slot, *lane_of.get(i, (0, 1)), obs)[0])
     nodes = {n.id: n for n, _, _ in iter_nodes(doc)}
     fed_ok = _fed_ok(roots)
@@ -4100,10 +4150,12 @@ def _spread_ends(doc: Document, roots: list[LNode], order: list[int]) -> dict[tu
                 oy = o.y + o.sym.height / 2
                 sides["right" if o.x > n.x + n.sym.right else "left"].append((oy, i, k))
             if off:  # the stubs take the bottom of the left side
-                bottom_left = bottom - SPREAD_OFF * (len(off) - 1) - 1.0
-                x = n.x - n.sym.left - 0.8
-                for j, (i, k) in enumerate(off):
-                    out[(i, k)] = End(x, bottom_left + 0.5 + SPREAD_OFF * j, "left")
+                pitches = [_off_pitch(doc.links[i]) for i, _k in off[:-1]]
+                bottom_left = bottom - sum(pitches) - 1.0
+                x, y = n.x - n.sym.left - 0.8, bottom_left + 0.5
+                for (i, k), dy in zip(off, pitches + [0.0]):
+                    out[(i, k)] = End(x, y, "left")
+                    y += dy
             room = int((bottom - right_top) / SPREAD_STEP) + 1
             if len(sides["right"]) > room:  # no room under the text: the farthest down go round by the left
                 sides["right"].sort()
@@ -4278,11 +4330,18 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
                 lo, hi = n.x - n.sym.left, n.x + n.sym.right  # it (its conductor, a PLC channel)
                 busy = [x for x, v0, _ in obs.vwires if lo < x < hi and abs(v0 - bottom) < 1.5] + list(drops) + (
                     [n.x] if n.children else [])
-                xs = []
-                xb = (lo if sgn > 0 else hi) + sgn * 0.8
-                while len(xs) < count and not any(abs(xb - x) < 1.0 or (x - xb) * sgn < 0 for x in busy):
-                    xs.append(xb)
-                    xb += sgn * STUB_LEAD
+                plc = symbol_kind(n.sym) == "plc"
+                for lead_step in (STUB_LEAD, 1.25, 1.0):  # closer when the bottom has not room for them all
+                    xs = []
+                    xb = (lo if sgn > 0 else hi) + sgn * 0.8
+                    while len(xs) < count and lo + 0.8 - 1e-6 <= xb <= hi - 0.8 + 1e-6 \
+                            and not any(abs(xb - x) < 1.0 or (x - xb) * sgn < 0 for x in busy) \
+                            and (not plc or obs.box_free((xb - 0.2, bottom + 0.2, xb + 0.2, bottom + 3.0))):
+                        # (under a PLC, off the numbers of its channels)
+                        xs.append(xb)
+                        xb += sgn * lead_step
+                    if len(xs) + int(max(side_bottom - top, 0.0)) + 1 >= count:
+                        break
                 room = max(side_bottom - top, 0.0)  # (the side takes what the bottom cannot, 1 mm apart at least)
                 on_side = min(max(count - len(xs), min(count, int(room / STUB_LEAD) + 1)), int(room / 1.0) + 1)
                 taken[key + "|on"] = float(on_side)

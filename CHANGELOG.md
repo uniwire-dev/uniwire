@@ -8,6 +8,15 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* PLCs with many wired channels: where the modules widened for their wires set the width of a sheet and made it
+  smaller, the wires are drawn closer under them (the channel numbers nearly touch) and the sheet keeps a larger
+  scale; elsewhere the usual spacing stays. The stubs of a busy PLC's links to other sheets were drawn alone below
+  the first ten or so, joined to nothing: the leads to them now leave from under every module that has room, closer
+  when needed, and never from a point beyond the side of the device. A safety relay whose links to other sheets
+  carry no label was drawn some 5 mm taller per stub; one line of text each, it is now drawn about 3 mm per stub.
+  In the multi-line view, a link leaving a PLC channel for another sheet no longer reserves a drop under its module,
+  where another link ran along it for its whole length.
+
 * Use of the sheet: no sheet is drawn below scale 0.6 any more (`folio_split: auto`). A way wider than a sheet,
   such as a long distribution below a device rather than a board, used to be squeezed on one sheet at a third of
   its size (texts under 1 mm) while the busbar around it was cut into sheets holding two feeders; its branches go to sheets of their own, with off-page references at both ends, before the
