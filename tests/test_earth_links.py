@@ -221,3 +221,34 @@ def test_stubs_of_other_kinds_keep_a_lead_each():
                 assert all(_dist(a, s) > 0.3 and _dist(b, s) > 0.3 for s in others)
             leads += sum(1 for i in g.items if isinstance(i, Polyline) and len(i.points) == 3)
     assert leads >= 3  # stubs past the body, each on its own lead
+
+
+def _bar_doc(parent_bus=True):
+    bar = {"type": "earth_bar", "id": "MET", "ref": "-PE", "children": [{"type": "earth", "id": "E1"}]}
+    ways = [{"type": "breaker", "id": "F1", "in_A": 16, "children": [{"type": "socket"}]},
+            {"type": "breaker", "id": "F2", "in_A": 10, "children": [{"type": "lighting"}]}]
+    return {"installation": {"earthing": "TT", "system": "1P+N", "un_V": 230},
+            "sources": [{"type": "grid", "children": [
+                {"type": "board", "id": "DB", "ref": "DB1", "children": [
+                    {"type": "switch_disconnector", "id": "Q0", "in_A": 63,
+                     "children": [bar, *ways] if parent_bus else [bar]}]}]}]}
+
+
+def _edge(page, child):
+    return next(g for g in _walk(page.root) if isinstance(g, Group) and g.attrs.get("data-uw-edge") == child)
+
+
+def test_earth_bar_in_the_tree_is_not_on_the_busbar():
+    """An earth bar placed under a device of the power tree: no solid conductor from the busbar to it (that reads
+    as the bars earthed); what is below it (an electrode) hangs on an earth line."""
+    page = uniwire.render_pages(uniwire.load(_bar_doc()))[0]
+    assert not list(_segments(_edge(page, "MET")))
+    below = [i for i in _edge(page, "E1").items if isinstance(i, (Line, Polyline))]
+    assert below and all(i.style.dash and i.style.color == "#2e7d32" for i in below)
+
+
+def test_title_block_standard_not_core():
+    """The core profile is not a standard: with no other profile and no standard stated, the cell stays empty."""
+    doc = uniwire.load({**_bar_doc(), "profiles": ["core"]})
+    texts = [t.text for g in _walk(uniwire.render_pages(doc)[0].root) for t in g.items if isinstance(t, Text)]
+    assert "DB1" in texts and "core" not in texts

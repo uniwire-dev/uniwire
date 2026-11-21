@@ -16,6 +16,7 @@ from ..labels import (
     CARTOUCHE_TITLES,
     PROTECTIVE,
     SWITCHING,
+    SYSTEM_NEUTRAL,
     Mark,
     annotation,
     cable_in_awg,
@@ -29,6 +30,7 @@ from ..labels import (
     ref_label,
     state_text,
     system_mark,
+    target_text,
     without_ref,
 )
 from ..model import NODE_TYPES, Document, NodeBase, View
@@ -64,7 +66,16 @@ from ..render.semantics import (
     ref_group,
 )
 from ..resolve import Index, build_index, iter_nodes
-from ..symbols import BUSWAY_H, DASH, PORT_STEP, Symbol, symbol, symbol_for
+from ..symbols import (
+    BUSWAY_H,
+    DASH,
+    PORT_STEP,
+    Symbol,
+    symbol,
+    symbol_for,
+    with_earthed_star_point,
+    without_leads,
+)
 from ..symbols import kind as symbol_kind
 from ..units import fmt
 from .routing import (
@@ -73,6 +84,7 @@ from .routing import (
     LANE,
     RUN_ALONG,
     WIRE_CROSS,
+    WRAP,
     Box,
     End,
     Obstacles,
@@ -89,6 +101,7 @@ from .routing import (
     route,
     route_grid,
     text_box,
+    wraps,
 )
 
 GAP = 5.0  # vertical gap between two symbols in series
@@ -135,7 +148,9 @@ class LNode:
     bus_x0: float = 0.0
     bus_x1: float = 0.0
     bottom: bool = False  # load placed on the common baseline
-    open_feeder: bool = False  # feeder with no described load: arrow down to the common baseline
+    open_feeder: bool = False  # feeder with no described load: a free way, down to the common baseline
+    no_in: bool = False  # nothing feeds it (a busbar, a board, a device first in the document): no input lead
+    no_out: bool = False  # nothing below it and no conductor leaving it (a transformer feeding nothing): no output lead
     ann: list[str] = field(default_factory=list)
     ann_size: float = ANN_SIZE
     tagged: bool = False
@@ -143,7 +158,6 @@ class LNode:
     dc_side: int = 0  # leading children on the DC side of an inverter/charger: fed from its DC terminal, not the bus
     left_room: float = 0.0  # room its links need on its left (the texts of a controller many links reach)
     pitch: float = 20.0  # the column pitch of its sheet
-    axis_shift: float = 0.0  # how far right of its usual place its column's axis is (room left for texts, links)
 
     @property
     def id(self) -> str:
@@ -230,6 +244,7 @@ class SheetLayout:
     lnodes: list[LNode]
     columns: list[LNode]
     annex: list[LNode] = field(default_factory=list)  # auxiliary devices drawn beside the tree
+    stub_room: bool = False  # columns moved right for the texts of off-sheet stubs (see _stub_room)
 
 
 # ------------------------------------------------------------- construction
@@ -303,15 +318,6 @@ def _left_room(doc: Document, n: LNode, here: set[str], lang: str) -> float:
     return min(LEFT_ROOM_MAX, max(widths) + n.sym.left + 4.0) if max(widths) else 0.0
 
 
-def _stub_room(n: LNode, stubs: dict[str, list[tuple[float, float]]]) -> float:
-    """A node with links to other sheets: room on its left for its off-sheet stubs and their texts (see
-    _stub_column), so that they do not run into the texts of the column before."""
-    widths = stubs.get(n.node.id or "", []) if n.node is not None and n.kind == "node" else []
-    if not widths or n.sym.height == 0 or n.type == "plc" or symbol_kind(n.sym) == "controller":
-        return 0.0  # (a busbar: its stubs leave its end; a PLC, a controller: their own points, see _left_room)
-    return min(LEFT_ROOM_MAX, n.sym.left + n.sym.extra.get("end_gap", 0.8) + 9.5 + max(max(w) for w in widths))
-
-
 def _spread_symbol(doc: Document, node: Optional[NodeBase], sym: Symbol, here: Optional[set[str]] = None) -> Symbol:
     """A controller many links reach: drawn taller, room for one link end each on its sides (``here``: the nodes
     drawn on the sheet; a link to another one ends on an off-page stub, which takes more room). A PLC: its modules
@@ -346,6 +352,14 @@ OVERCURRENT = {"breaker", "rcbo", "main_breaker", "fuse", "fuse_switch"}  # what
 DC_ACCESSORIES = {"spd", "meter", "insulation_monitor"}  # beside a DC way, they do not make it an AC feeder
 
 
+def line_phase(node: Any) -> Optional[str]:
+    """The phase(s) ``node`` connects its line to (its ``phase``), or None. A current shunt names with ``phase`` the
+    conductor it is in, among those of the line: it does not narrow the line."""
+    if node.type == "instrument_transformer" and getattr(node, "kind", None) == "shunt":
+        return None
+    return getattr(node, "phase", None)
+
+
 def _is_dc(node: NodeBase) -> bool:
     """A child on the DC side of an inverter/charger: batteries, PV, DC converters, DC boards, or a device
     (fuse, disconnector...) feeding one of them alone, or a device declared for direct current (``dc``)."""
@@ -354,7 +368,13 @@ def _is_dc(node: NodeBase) -> bool:
         if n.type in ("battery", "pv_array", "dc_converter") or getattr(n, "dc", None):
             return True
         if n.type in ("board", "busbar"):
-            return getattr(n, "kind", None) == "dc_box" or getattr(n, "system", None) == "DC"
+            if getattr(n, "kind", None) == "dc_box" or getattr(n, "system", None) == "DC":
+                return True
+            # a board or busbar with no system stated that feeds only DC ways (a battery busbar) is on the DC side
+            kids = [c for c in n.children if c.type not in DC_ACCESSORIES]
+            return getattr(n, "system", None) is None and bool(kids) and all(_is_dc(c) for c in kids)
+        if n is not node and n.type in DC_PORT_TYPES:  # its AC side is what feeds it: the way is not DC
+            return False
         if len(n.children) != 1:
             # a string or battery way with its own surge protector / meter is still on the DC side
             kids = [c for c in n.children if c.type not in DC_ACCESSORIES]
@@ -413,12 +433,9 @@ def _measure(ln: LNode, pitch: float, left_room: float = 0.0) -> float:
     own = pitch / 2 + ln.sym.right + 16.0 if ln.sym.right > pitch / 2 - 2 else pitch  # + room for the annotation
     if not ln.children:
         ln.left_room = room  # the column moves its axis right by that much
-        ln.axis_shift = max(room - pitch / 2, 0.0)
-        ln.width = max(pitch, own, ln.need) + ln.axis_shift
-    else:  # its text keeps the room it needs right of the axis, moved right by the room on the left (its own, or
-        # the room a device below it in the same column asks for)
-        shift = max(room - pitch / 2, ln.children[0].axis_shift, 0.0) if len(ln.children) == 1 else 0.0
-        ln.axis_shift = shift
+        ln.width = max(pitch, own, ln.need) + max(room - pitch / 2, 0.0)
+    else:  # its text keeps the room it needs right of the axis, moved right by the room on the left
+        shift = max(room - pitch / 2, 0.0) if len(ln.children) == 1 else 0.0
         ln.width = max(sum(c.width for c in ln.children), own + shift, ln.need + shift)
     if ln.is_board:
         ln.width += 2 * BOARD_PAD + pitch * 0.3  # right margin: annotations of the last column
@@ -625,6 +642,8 @@ def _shift(ln: LNode, dy: float) -> None:
             n.bus_y += dy
 
 
+LABEL_GAP = 0.4  # the least room between a device label and the symbol of a device beside it
+
 # equipment that is not a way of the board feeding it when a cable joins them: drawn below the board frame
 REMOTE_EQUIPMENT = {"inverter", "transformer", "ups", "transfer_switch", "busbar"}
 # beside a board's incoming chain, with nothing below them, they do not make it a branch: accessories,
@@ -829,6 +848,8 @@ def _system_of(node: NodeBase, doc: Document) -> Optional[str]:
     m = _VECTOR.match(getattr(node, "coupling", None) or "")
     if m:
         return "3P+N" if m[2].endswith("n") else "3P"
+    if node.type == "generator" and feeds_dc_input(node):  # type: ignore[attr-defined]
+        return "DC"
     stack = list(node.children)
     while stack:
         n = stack.pop(0)
@@ -836,6 +857,34 @@ def _system_of(node: NodeBase, doc: Document) -> Optional[str]:
             return n.system  # type: ignore[attr-defined]
         stack.extend(n.children)
     return doc.installation.system
+
+
+def _earthed_star_points(doc: Document) -> set[str]:
+    """Ids of the transformers whose star point is earthed (TN, TT: see the multi-line conductors)."""
+    from .multiline import conductors
+
+    return {nid for nid, c in conductors(doc).items() if c.star}
+
+
+def feeds_dc_input(node: NodeBase) -> bool:
+    """Whether what ``node`` feeds, through switches and protections only, takes direct current by nature: a DC/DC
+    converter, a battery, a DC board or a device declared ``dc``. A generator feeding that is a DC machine (an
+    alternator with its rectifier), whatever the system of the installation."""
+    ways = list(node.children)
+    if not ways:
+        return False
+    while ways:
+        n = ways.pop()
+        if n.type in SWITCHING and not getattr(n, "dc", None):  # type: ignore[attr-defined]
+            if not n.children:
+                return False
+            ways.extend(n.children)
+            continue
+        if not (n.type in ("dc_converter", "battery") or getattr(n, "dc", None) is True  # type: ignore[attr-defined]
+                or getattr(n, "system", None) == "DC"
+                or (n.type == "board" and getattr(n, "kind", None) == "dc_box")):  # type: ignore[attr-defined]
+            return False
+    return True
 
 
 # -------------------------------------------------------------- sheet layout
@@ -847,7 +896,22 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                  incoming_ref: tuple[Optional[int], Optional[str]] = (None, None)) -> SheetLayout:
     """Lay out one sheet. ``node_folio`` (node id -> sheet number) lets links to nodes drawn on other
     sheets end on an off-page reference; ``incoming_ref`` (sheet, node id) is where the incoming feed
-    of a detached board comes from."""
+    of a detached board comes from. The room for the texts of the off-sheet stubs (see _stub_room) is taken only
+    where the sheet keeps its scale with it (and so its devices: never one more sheet)."""
+    args = (doc, view, spec, index, folio_of, continuation_folios, incoming, node_folio, incoming_ref)
+    lay = _layout_sheet(*args)
+    if lay.stub_room:
+        bare = _layout_sheet(*args, stub_room=False)
+        if round(fit_scale(lay, view), 2) < round(fit_scale(bare, view), 2):
+            return bare
+    return lay
+
+
+def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None,
+                  folio_of: Callable[[str], Optional[int]] | None,
+                  continuation_folios: tuple[Optional[int], Optional[int]], incoming: Optional[str],
+                  node_folio: Callable[[str], Optional[int]] | None,
+                  incoming_ref: tuple[Optional[int], Optional[str]], stub_room: bool = True) -> SheetLayout:
     index = index or build_index(doc)
     lang = normalize_lang(doc.meta.lang)
     pitch = view.pitch_mm
@@ -860,12 +924,15 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                              and registry.category(n.type) != "source")
 
     here = sheet_node_ids(doc, spec, index)
-    stub_texts = _stub_widths(doc, [n for r in roots for n in r.walk()], lang)
+    stars = _earthed_star_points(doc) if any(n.type == "transformer" for r in roots for n in r.walk()) else set()
     for r in roots:
         for n in r.walk():
-            if n.type == "generator" and n.node is not None:
+            if n.type == "transformer" and n.node is not None and n.node.id in stars:
+                n.sym = with_earthed_star_point(n.sym)  # its neutral earthed there, as the multi-line view draws it
+            elif n.type == "generator" and n.node is not None:
                 n.sym = symbol_for(n.node, _system_of(n.node, doc))
-            elif n.type == "motor" and n.node is not None and n.node.id and _dc_line(n.node, index):
+            elif n.type == "motor" and n.node is not None and n.node.id and _dc_line(n.node, index) \
+                    and getattr(n.node, "phases", None) != 3:  # three phases declared: made by the drive above it
                 n.sym = symbol("motor", n.node, dc=True)  # on a DC line: a DC motor, whatever its feeder's poles
             elif n.type == "motor" and n.node is not None and getattr(n.node, "phases", None) is None:
                 # phases not stated: those of its feeder (a motor on a single-phase circuit is drawn 1~)
@@ -874,8 +941,10 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
             elif (n.type == "inverter" and n.node is not None and n.node.id and n.node.children
                   and all(_is_dc(c) for c in n.node.children) and not _fed_dc(n.node, index)):
                 n.sym = symbol("inverter", n.node, ac_fed=True)  # fed by the board, its DC side below it
+            elif n.type == "power_supply" and n.node is not None and _fed_dc(n.node, index):
+                n.sym = symbol("power_supply", n.node, dc_in=True)  # fed from a DC line: '=' in, as in multi-line
             n.sym = _spread_symbol(doc, n.node, n.sym, here)
-            n.left_room = max(_left_room(doc, n, here, lang), _stub_room(n, stub_texts))
+            n.left_room = _left_room(doc, n, here, lang)
 
     # feeders continued by a power link (transfer source, parallel / bypass / infeed connection): no open arrow
     connected = {l.from_ for l in doc.links if l.kind == "transfer"}
@@ -884,6 +953,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         for n in r.walk():
             if n.node is not None and n.node.id in connected:
                 n.open_feeder = False
+    _mark_open_ends(doc, roots, index)
 
     # 'transfer' links: roots anchored on a transfer switch of another root
     anchored: dict[int, tuple[LNode, Any]] = {}
@@ -907,22 +977,6 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         if a is not None and b is not None:
             ia, ib = sorted((main.index(_root_of(main, a)), main.index(_root_of(main, b))))
             wide_gap |= set(range(ia, ib))
-    # a bus coupler drawn between two trees side by side: its text between their frames
-    tie_gap: dict[int, float] = {}
-    for link in doc.links:
-        a, b = _find(main, link.from_), _find(main, link.to)
-        if link.kind != "tie" or link.device is None or a is None or b is None:
-            continue
-        ia, ib = sorted((main.index(_root_of(main, a)), main.index(_root_of(main, b))))
-        if ib == ia + 1:
-            tw = max((text_width(t, 1.9) for t in _device_text(link, link.device, lang)[:3]), default=0.0)
-            tie_gap[ia] = max(tie_gap.get(ia, 0.0), tw + 2 * (BOARD_PAD + 1.5))
-    x = 0.0
-    for i, r in enumerate(main):
-        _needs(r, view, lang)
-        _measure(r, pitch)
-        _place_x(r, x, pitch)
-        x += r.width + max(pitch * (ROOT_GAP_COLS + (1.0 if i in wide_gap else 0.0)), tie_gap.get(i, 0.0))
     for r in roots:  # the feeders of a safety board are safety circuits by themselves: not marked one by one
         for b in r.walk():
             if b.is_board and b.node is not None and getattr(b.node, "priority", None) == "safety":
@@ -943,19 +997,61 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                 k = sum(1 for l in doc.links if l.kind not in SWITCHED_LINKS and (l.from_ in own or l.to in own))
                 p = sum(1 for l in doc.links if l.kind in POWER_LINKS and (l.from_ in own or l.to in own))
                 b.pad_bottom = SIGNAL_LANE * min(k, 8) + LANE * 2 * min(p, 4) + 1.5 if k or p else 0.0
-    xs = sorted({round(n.x - n.sym.left, 3) for r in main for n in r.walk()})
-    for r in main:
-        nxt = {id(a): b for n in r.walk() for a, b in zip(n.children, n.children[1:])}
-        for n in r.walk():  # a label stops before the next symbol, as wide as it is (a converter)
-            b = nxt.get(id(n))
-            # the last device of a row with nothing drawn to its right (a controller at the end of a feeder):
-            # its label runs on rather than shrinks, up to the next column of the sheet
-            right = next((x for x in xs if x > n.x + n.sym.right + 1.0), None)
-            room = None if b is not None or n.children else \
-                min(OPEN_ROOM, (right - 1.0 if right is not None else 1e9) - (n.x + n.sym.right + 1.0))
-            _annotate(n, view, lang, right_limit=b.x - b.sym.left - 1.0 if b is not None else None, room=room)
-        _place_y(r, 0.0)
-        _separate_boards(r)
+    # a bus coupler drawn between two trees side by side: its text between their frames
+    tie_gap: dict[int, float] = {}
+    for link in doc.links:
+        a, b = _find(main, link.from_), _find(main, link.to)
+        if link.kind != "tie" or link.device is None or a is None or b is None:
+            continue
+        ia, ib = sorted((main.index(_root_of(main, a)), main.index(_root_of(main, b))))
+        if ib == ia + 1:
+            tw = max((text_width(t, 1.9) for t in _device_text(link, link.device, lang)[:3]), default=0.0)
+            tie_gap[ia] = max(tie_gap.get(ia, 0.0), tw + 2 * (BOARD_PAD + 1.5))
+    stub_widths = _stub_widths(doc, [], lang, here)
+    moved = False
+    for _ in range(2):  # once more when the texts of off-sheet stubs land on the text of the column on their left
+        x = 0.0
+        for i, r in enumerate(main):
+            _needs(r, view, lang)
+            _measure(r, pitch)
+            _place_x(r, x, pitch)
+            x += r.width + max(pitch * (ROOT_GAP_COLS + (1.0 if i in wide_gap else 0.0)), tie_gap.get(i, 0.0))
+        xs = sorted({round(n.x - n.sym.left, 3) for r in main for n in r.walk()})
+        for r in main:
+            nxt = {id(a): b for n in r.walk() for a, b in zip(n.children, n.children[1:])}
+            limits: dict[int, tuple[Optional[float], Optional[float]]] = {}
+            for n in r.walk():  # a label stops before the next symbol, as wide as it is (a converter)
+                b = nxt.get(id(n))
+                # the last device of a row with nothing drawn to its right (a controller at the end of a feeder):
+                # its label runs on rather than shrinks, up to the next column of the sheet
+                right = next((x for x in xs if x > n.x + n.sym.right + 1.0), None)
+                room = None if b is not None or n.children else \
+                    min(OPEN_ROOM, (right - 1.0 if right is not None else 1e9) - (n.x + n.sym.right + 1.0))
+                limits[id(n)] = (b.x - b.sym.left - 1.0 if b is not None else None, room)
+                _annotate(n, view, lang, right_limit=limits[id(n)][0], room=room)
+            _place_y(r, 0.0)
+            _separate_boards(r)
+            # a label running into the symbol of a device beside it, in the next column (a UPS, its abbreviation on
+            # its left): it stops before that symbol too, and the tree is placed again
+            again = False
+            for n in r.walk():
+                ab = n.ann_box()
+                stops = [left - LABEL_GAP for m in r.walk() if m.sym.height > 0 and m.x > n.x
+                         for left in [m.x - m.sym.left] if ab and ab[0] < left - LABEL_GAP < ab[2]
+                         and m.y < ab[3] and ab[1] < m.y + m.sym.height]
+                if stops:
+                    lim, room = limits[id(n)]
+                    _annotate(n, view, lang, right_limit=min(stops + ([lim] if lim is not None else [])), room=room)
+                    again = True
+            if again:
+                _place_y(r, 0.0)
+                _separate_boards(r)
+        roomy = _stub_room(main, stub_widths) if stub_room else []
+        if not roomy:
+            break
+        moved = True
+        for n, room in roomy:
+            n.left_room = room
 
     # ties (bus couplers): align the connected busbars
     for link in doc.links:
@@ -1082,8 +1178,12 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
     NO_COLUMN = {"earth", "earth_bar", "earthing_switch", "voltage_indicator", "neutral_impedance",
                  "surge_limiter", "insulation_monitor", "protection_relay", "instrument_transformer"}
     on_bus = {id(c) for n in everything if n.has_bus for c in n.bus_children}
+    # a device of these types alone at the end of a way of its own (a relay behind its own breaker) is a circuit
+    own_way = {id(n.children[0]) for n in everything if id(n) in on_bus and len(n.children) == 1 and not n.is_board
+               and n.kind == "node" and n.type not in NO_COLUMN}
     columns = [n for n in everything if not n.children and n.kind != "bus_in" and not
-               (n.type in NO_COLUMN and not (n.type == "insulation_monitor" and id(n) in on_bus)) and not
+               (n.type in NO_COLUMN and id(n) not in own_way
+                and not (n.type == "insulation_monitor" and id(n) in on_bus)) and not
                (n.node is not None and any(n.node.id == l.from_ for l in doc.links if l.kind == "transfer"))]
     columns.sort(key=lambda n: n.x)
 
@@ -1091,9 +1191,10 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
     marks = Group(cls="conductors")
     _draw_pen_splits(main, doc, marks, obs)
     if view.conductor_marks:
-        drawn = _draw_line_marks(main, everything, doc, marks, obs, incoming, index)
+        line_marks = _line_marks(doc)
+        drawn = _draw_line_marks(main, everything, doc, marks, obs, incoming, index, line_marks)
         parent = {id(c): n for n in everything for c in n.children}
-        _draw_conductor_marks(columns, index, doc, marks, obs, y_load, drawn, parent)
+        _draw_conductor_marks(columns, index, doc, marks, obs, y_load, drawn, parent, line_marks)
 
     # auxiliary devices: on the sheet of the tree node they are linked to, in free space near their partner (and off
     # the channels already given to the feeds tapping a busbar, which are routed later)
@@ -1140,8 +1241,9 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
             annex.append(ln)
             obs.add_box(ln.sym_box())
             obs.add_box(ln.ann_box())
-    for ln in annex:
-        g.add(node_group(ln.sym.group(ln.x, ln.y, ln.id)))
+    for ln in annex:  # in the power path of nothing: no conductor leads, unless a power link uses its output
+        out = ln.node is not None and any(l.kind in SWITCHED_LINKS and ln.node.id in (l.from_, l.to) for l in doc.links)
+        g.add(node_group(without_leads(ln.sym, True, not out).group(ln.x, ln.y, ln.id)))
         if ln.ann:
             ab = ln.ann_box()
             for i, t in enumerate(ln.ann):
@@ -1190,7 +1292,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                 g.add(ref_group(n.target_folio, n.target, [Text((n.x, y), t, 1.8, "middle")]))
                 bottom_end = max(bottom_end, y + 0.5)
             elif n.node is not None and n.node.type == "offpage" and getattr(n.node, "target", None):
-                t = str(n.node.target)  # type: ignore[attr-defined]  # another drawing: on up to 3 lines
+                t = target_text(n.node.target)  # type: ignore[attr-defined]  # another drawing: on up to 3 lines
                 words, room = text_units(t), view.pitch_mm * 0.95
                 lines = next((ls for k in (1, 2, 3) if len(words) >= k
                               for ls in [_wrap_words(words, k, lambda u: text_width(u, 1.8))]
@@ -1205,7 +1307,9 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
     if view.cartouche and columns:
         # below everything drawn so far: auxiliary devices and link routes may go lower than the loads
         drawn_box = bbox(g)
-        _draw_table(g, columns, index, view, lang, max(bottom_end, drawn_box[3] if drawn_box else 0.0) + 6.0)
+        table = [c for c in columns if not _empty_source_column(c, index, view, lang)]
+        if table:
+            _draw_table(g, table, index, view, lang, max(bottom_end, drawn_box[3] if drawn_box else 0.0) + 6.0)
     elif columns:
         for n in columns:
             if n.label or (n.node is not None and n.node.label):
@@ -1218,7 +1322,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         g = _mirror_up(g, b0[1] + b0[3])  # type: ignore[assignment]
     box = bbox(g) or (0, 0, 1, 1)
     g = transform(g, -box[0], -box[1])  # type: ignore[assignment]
-    return SheetLayout(spec, g, box[2] - box[0], box[3] - box[1], everything, columns, annex)
+    return SheetLayout(spec, g, box[2] - box[0], box[3] - box[1], everything, columns, annex, moved)
 
 
 # ------------------------------------------------- obstacles / auxiliary devices
@@ -1336,6 +1440,28 @@ def feeding_sheet(specs: list[SheetSpec], i: int, rid: Optional[str], index: Ind
     holders = [j for j, s in enumerate(specs, 1) if rid in s.detached and j != i]
     j = sheet_of.get(index.parent.get(rid or "") or "")
     return j if j in holders else next(iter(holders), None)
+
+
+def incoming_text(specs: list[SheetSpec], i: int, rid: Optional[str], index: Index, sheet_of: dict[str, int],
+                  lang: str) -> tuple[str, tuple[Optional[int], Optional[str]]]:
+    """Where the board ``rid`` drawn from sheet ``i`` on is fed from: 'from -Q1 (folio 1)', and the sheet and the
+    node it is fed by. The tag of the feeding device is qualified with its board ('from =SA, -Q1') when another
+    device of the sheet it is on (of the drawing, when not drawn) carries the same tag."""
+    src = feeding_sheet(specs, i, rid, index, sheet_of)
+    feeder = next((a for a in index.ancestors(rid or "") if a.ref), None)
+    if feeder is None:
+        what = _t("render.incoming", lang)
+    else:
+        ref = feeder.ref
+        twins = [n for n in index.nodes.values() if n is not feeder and n.ref == ref
+                 and (src is None or sheet_of.get(n.id or "") == src)]
+        board = next((a for a in index.ancestors(feeder.id or "") if a.type == "board"  # type: ignore[attr-defined]
+                      and (a.ref or a.label)), None)
+        if twins and board is not None:
+            ref = f"{board.ref or board.label}, {ref}"
+        what = _t("render.incoming_from", lang, ref=ref)
+    text = _t("render.incoming_folio", lang, what=what, folio=src) if src else what
+    return text, (src, index.parent.get(rid or ""))
 
 
 DEVICE_PAD_MM = 2.5  # free margin around an auxiliary device (symbol and text)
@@ -1468,9 +1594,9 @@ def _supply_system(ln: LNode, index: Index, doc: Document) -> Optional[str]:
         if getattr(n, "system", None):
             return n.system  # type: ignore[attr-defined]
         if k and n.type in CONVERTER_TYPES:  # type: ignore[attr-defined]
-            fed = next((a for a in up[k + 1:] if getattr(a, "poles", None) or getattr(a, "phase", None)), None)
+            fed = next((a for a in up[k + 1:] if getattr(a, "poles", None) or line_phase(a)), None)
             two = fed is not None and (getattr(fed, "poles", None) in ("1P", "1P+N", "2P")
-                                       or getattr(fed, "phase", None) in ("L1", "L2", "L3", "L1L2", "L2L3", "L1L3"))
+                                       or line_phase(fed) in ("L1", "L2", "L3", "L1L2", "L2L3", "L1L3"))
             if two:
                 return "2P"
     return doc.installation.system
@@ -1511,7 +1637,7 @@ def _needs_neutral(node: NodeBase) -> bool:
         if n.type == "transformer":  # type: ignore[attr-defined]
             continue
         cores = (n.cable.cores or "") if n.cable is not None else ""
-        if (getattr(n, "poles", None) in ("1P", "1P+N", "3P+N", "4P") or getattr(n, "phase", None) in ("L1", "L2", "L3")
+        if (getattr(n, "poles", None) in ("1P", "1P+N", "3P+N", "4P") or line_phase(n) in ("L1", "L2", "L3")
                 or getattr(n, "system", None) in ("1P+N", "3P+N", "split-phase")
                 or (len(cores) == 2 and cores[0] in "35" and cores[1] in "Gg")):
             return True
@@ -1519,17 +1645,17 @@ def _needs_neutral(node: NodeBase) -> bool:
     return False
 
 
-def _source_mark(src: NodeBase, doc: Document) -> Optional[Mark]:
-    """Line leaving a source: its own system, else one declared on that line before it branches (a busbar right
-    below it). Then, for the supply of the installation (a grid not below its voltage), the installation's system
-    before any declared further down (a single-phase or DC board further down does not make the supply
+def _source_system(src: NodeBase, doc: Document) -> Optional[str]:
+    """System of the line leaving a source: its own, else one declared on that line before it branches (a busbar
+    right below it). Then, for the supply of the installation (a grid not below its voltage), the installation's
+    system before any declared further down (a single-phase or DC board further down does not make the supply
     single-phase); for another source (a generator, an inverter, a lower-voltage supply), the first declared below
     first. The high-voltage side of a transformer is a three-conductor line."""
     if getattr(src, "system", None):
-        return system_mark(src.system)  # type: ignore[attr-defined]
+        return src.system  # type: ignore[attr-defined]
     hv = (src.un_V or 0) > 1000
     if not hv and _line_system(src):
-        return system_mark(_line_system(src))
+        return _line_system(src)
     below = None
     stack = list(src.children)
     while stack:
@@ -1543,39 +1669,85 @@ def _source_mark(src: NodeBase, doc: Document) -> Optional[Mark]:
         below = below or getattr(n, "system", None)
         stack.extend(n.children)
     if hv:
-        return system_mark("3P")
+        return "3P"
     inst = doc.installation
     main = src.type == "grid" and not (src.un_V and inst.un_V and src.un_V < inst.un_V)  # type: ignore[attr-defined]
-    return system_mark((inst.system or below) if main else (below or inst.system))
+    return (inst.system or below) if main else (below or inst.system)
 
 
-def _line_marks(doc: Document) -> tuple[dict[int, Optional[Mark]], dict[int, Optional[Mark]]]:
-    """Conductor mark of the line entering and leaving every node (keyed by ``id(node)``)."""
-    m_in: dict[int, Optional[Mark]] = {}
-    m_out: dict[int, Optional[Mark]] = {}
+LineMarks = dict[int, Optional[Mark]]
 
-    def walk(n: NodeBase, up: Optional[Mark], dc: bool = False) -> None:
+
+def _ac_declared_below(node: NodeBase) -> Optional[str]:
+    """The AC system a converter gives: the first one declared below it, not across another converter (its DC
+    side states DC, not what it gives); None when none is."""
+    stack = list(node.children)
+    while stack:
+        n = stack.pop(0)
+        system = getattr(n, "system", None)
+        if system and system != "DC":
+            return system
+        if n.type not in CONVERTER_TYPES:  # type: ignore[attr-defined]
+            stack.extend(n.children)
+    return None
+
+
+def _line_marks(doc: Document) -> tuple[LineMarks, LineMarks, dict[int, Optional[bool]], set[int]]:
+    """Conductor mark of the line entering and leaving every node, whether the line leaving it carries a neutral
+    (None: not known, no system declared), keyed by ``id(node)``, and the nodes whose incoming line was set below
+    its source (by a device, a transformer, a declared system), not by the source alone. A device passes on the neutral of its
+    supply and never makes one: no '+N' below a three-wire supply, nor below a device that leaves no neutral."""
+    m_in: LineMarks = {}
+    m_out: LineMarks = {}
+    n_out: dict[int, Optional[bool]] = {}
+    below: set[int] = set()  # nodes whose line was set below the source (a device, a transformer, a declared system)
+
+    def walk(n: NodeBase, up: Optional[Mark], neutral: Optional[bool], system: Optional[str], dc: bool = False,
+             stated: bool = False) -> None:
         dc = _dc_node(n) or (dc and n.type != "inverter")  # type: ignore[attr-defined]
         m_in[id(n)] = up
         out = up
+        own = getattr(n, "system", None)
         if n.type == "transformer":  # type: ignore[attr-defined]
-            out = system_mark(_system_of(n, doc)) or up
+            two = up is not None and sum(up) == 2 and not _line_system(n) and not _VECTOR.match(
+                getattr(n, "coupling", None) or "")  # fed by two wires, nothing stated: two wires out
+            system = "2P" if two else _system_of(n, doc)
+            out = system_mark(system)
+            neutral = SYSTEM_NEUTRAL.get(system or "")
         elif dc:  # a DC line has two poles and no neutral, whatever the devices cut
-            out = (2, False)
+            out, neutral, system = (2, False), False, "DC"
+        elif own and own != system:  # a system declared on the line (a single-phase board on a 3P+N supply)
+            system = own
+            out = system_mark(own) or up
+            neutral = SYSTEM_NEUTRAL.get(own, neutral)
+        elif n.type in CONVERTER_TYPES:  # type: ignore[attr-defined]  # its output: the AC system declared below it
+            system = _ac_declared_below(n)
+            out, neutral = system_mark(system), SYSTEM_NEUTRAL.get(system or "")
         elif n.type in SWITCHING and getattr(n, "poles", None):  # type: ignore[attr-defined]
-            # a device passes on the neutral of its supply, it never makes one: three phases in, no "+N" out
-            neutral_in = up != (3, False)
-            out = poles_mark(n.poles, neutral_in and _needs_neutral(n)) or up  # type: ignore[attr-defined]
+            poles = n.poles  # type: ignore[attr-defined]
+            needs = neutral is not False and _needs_neutral(n)
+            if system == "split-phase" and poles == "2P":  # both lines (240 V), and the neutral when used below
+                out = (3 if needs else 2, False)
+            else:
+                out = poles_mark(poles, needs, neutral, getattr(n, "phase", None)) or up
+            if out is not None and neutral is not None and system != "split-phase":  # split-phase: N passes uncut
+                neutral = bool(out[1] or out[0] == 4)
         m_out[id(n)] = out
+        n_out[id(n)] = neutral
+        if stated:
+            below.add(id(n))
         for c in n.children:
-            walk(c, out, dc)
+            walk(c, out, neutral, system, dc, stated or out is not up)
 
     for src in doc.sources:
-        walk(src, None)
-        m_out[id(src)] = (2, False) if _dc_node(src) and not getattr(src, "system", None) else _source_mark(src, doc)
+        dc = _dc_node(src) and not getattr(src, "system", None)
+        system = "DC" if dc else _source_system(src, doc)
+        m_in[id(src)] = None
+        m_out[id(src)] = (2, False) if dc else system_mark(system)
+        n_out[id(src)] = SYSTEM_NEUTRAL.get(system or "")
         for c in src.children:
-            walk(c, m_out[id(src)], _dc_node(src))
-    return m_in, m_out
+            walk(c, m_out[id(src)], n_out[id(src)], system, _dc_node(src))
+    return m_in, m_out, n_out, below
 
 
 CONVERTER_TYPES = ("transformer", "power_supply", "inverter", "dc_converter")  # what they give differs from their input
@@ -1587,20 +1759,20 @@ def _phase_above(node: NodeBase, index: Index) -> Optional[str]:
     for n in [node] + (index.ancestors(node.id) if node.id else []):
         if n is not node and n.type in CONVERTER_TYPES:  # type: ignore[attr-defined]
             return None
-        if getattr(n, "phase", None):
-            return n.phase  # type: ignore[attr-defined]
+        if line_phase(n):
+            return line_phase(n)
     return None
 
 
 def _mark_text(mark: Mark, phase: Optional[str] = None) -> str:
+    """Text of a conductor mark: the number of conductors beyond three ('4'), '+N' for a neutral shown apart, then
+    the phase of a two-wire line ('L1+N': one phase and the neutral, always written so; 'L1L2': two phases)."""
     n, neutral = mark
     parts = [str(n)] if n > 3 else []
     ph = phase if phase and phase != "L1L2L3" and n + neutral == 2 else ""  # a phase names a two-wire line only
     if neutral:
         parts.append(f"{ph}+N")
-    elif ph and n == 2 and ph in ("L1", "L2", "L3"):
-        parts.append(f"{ph} N")  # two conductors on one phase: the phase and the neutral
-    elif ph:
+    elif ph and not (n == 2 and ph in ("L1", "L2", "L3")):  # two conductors, one of them not on that phase
         parts.append(ph)
     return " ".join(parts)
 
@@ -1651,11 +1823,12 @@ def _put_mark(g: Group, obs: Obstacles, x: float, y0: float, y1: float, pref: fl
 
 
 def _draw_line_marks(roots: list[LNode], everything: list[LNode], doc: Document, g: Group, obs: Obstacles,
-                     incoming: Optional[str], index: Index) -> dict[int, tuple[Mark, str]]:
+                     incoming: Optional[str], index: Index, line_marks: Optional[tuple[Any, ...]] = None
+                     ) -> dict[int, tuple[Mark, str]]:
     """Marks on the line leaving each source / transformer and each switching device whose conductors differ
     from the line above it (outgoing cables are marked by :func:`_draw_conductor_marks`). Returns the marks
     drawn and their texts, keyed by ``id(node)``."""
-    m_in, m_out = _line_marks(doc)
+    m_in, m_out, _, _ = line_marks or _line_marks(doc)
     drawn: dict[int, tuple[Mark, str]] = {}
     sources = {id(n) for n in doc.sources}
     for ln in everything:
@@ -1753,17 +1926,23 @@ def _in_column(n: LNode) -> bool:
 
 
 def _cable_caption(c: Any) -> str:
-    """'W7 5x6 38 m': tag, composition and length of a cable written in the text of its device ('' without a
-    composition: a bare length says nothing)."""
+    """'W7 U1000R2V 5x6 38 m': tag, designation, composition and length of a cable written in the text of its
+    device, as the multi-line view writes them ('' without a composition nor a designation: a bare length says
+    nothing)."""
     comp = drawn_cable_text(c)
-    return " ".join(x for x in (c.ref, comp, fmt(c.length_m, " m") if c.length_m else "") if x) if comp else ""
+    if not (comp or c.designation):
+        return ""
+    return " ".join(x for x in (c.ref, c.designation, comp, fmt(c.length_m, " m") if c.length_m else "") if x)
 
 
 def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: Group, obs: Obstacles,
                           y_load: float, drawn: dict[int, tuple[Mark, str]] | None = None,
-                          parent: dict[int, LNode] | None = None) -> None:
+                          parent: dict[int, LNode] | None = None,
+                          line_marks: Optional[tuple[Any, ...]] = None) -> None:
     """Conductor-count mark on each outgoing cable (see :func:`_put_mark`), unless the same mark was already
-    drawn higher up in the column."""
+    drawn higher up in the column. What the cable does not state is that of the line it leaves (below a two-pole
+    device: its two conductors, not the installation's); a '+N' only where that line has a neutral."""
+    m_in, _, n_out, below = line_marks or _line_marks(doc)
     drawn = drawn or {}
     parent = parent or {}
     for ln in columns:
@@ -1774,7 +1953,10 @@ def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: 
             continue
         # the conductors of what a converter gives: not those of its input (the poles, the cable above it)
         chain = chain[:next((k for k, c in enumerate(chain) if k and c.type in CONVERTER_TYPES), len(chain))]
-        mark = feeder_mark(chain, "DC" if _dc_line(chain[0], index) else _supply_system(ln, index, doc))
+        top = chain[-1]
+        up = index.ancestors(top.id or "")
+        mark = feeder_mark(chain, "DC" if _dc_line(chain[0], index) else _supply_system(ln, index, doc),
+                           n_out.get(id(up[0])) if up and id(top) in below else None, _line_above(chain, m_in, below))
         phase = None if _dc_line(chain[0], index) else _phase_above(chain[0], index)
         if ln.open_feeder and ln.node is not None and ln.type in ("power_supply", "dc_converter"):
             mark, phase = (2, False), None  # what leaves a power supply: its two output poles (L+ L-), not its input
@@ -1789,11 +1971,24 @@ def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: 
         _put_mark(g, obs, ln.x, y0, y_load - 0.3, y_load - 2.8, mark, ln.id, phase)
 
 
+def _line_above(chain: list[NodeBase], m_in: LineMarks, below: set[int]) -> Optional[Mark]:
+    """Mark of the line a feeder leaves (``chain``: the feeder from its end up to the busbar), when a device, a
+    transformer or a declared system above it set its conductors; None when only the source does (they are then
+    those of the nearest system declared, see :func:`_supply_system`). Never across a converter, whose output it
+    is not."""
+    if any(c.type in CONVERTER_TYPES for c in chain) or id(chain[-1]) not in below:  # type: ignore[attr-defined]
+        return None
+    return m_in.get(id(chain[-1]))
+
+
 def _draw_pen_splits(main: list[LNode], doc: Document, g: Group, obs: Obstacles) -> None:
-    """TN-C-S: PEN -> PE + N split at the board flagged ``pen_split`` (default: the first board of the drawing)."""
+    """TN-C-S: PEN -> PE + N split at the boards flagged ``pen_split`` or declaring their own earthing TN-C-S; when
+    none does in a TN-C-S installation, at the first board of the drawing (as the multi-line view splits it; a check
+    finding asks to declare it)."""
     boards = [n for r in main for n in r.walk() if n.is_board and n.node is not None]
-    if any(getattr(n, "pen_split", None) is not None for n, _, _ in iter_nodes(doc)):
-        flagged = [b for b in boards if getattr(b.node, "pen_split", None)]
+    if any(getattr(n, "pen_split", None) is not None or (n.type == "board" and getattr(n, "earthing", None) == "TN-C-S")
+           for n, _, _ in iter_nodes(doc)):
+        flagged = [b for b in boards if getattr(b.node, "pen_split", None) or getattr(b.node, "earthing", None) == "TN-C-S"]
     elif doc.installation.earthing == "TN-C-S":
         first = _first_boards(doc)[:1]
         flagged = [b for b in boards if first and b.node is first[0]]
@@ -1830,6 +2025,28 @@ def _first_boards(doc: Document) -> list[NodeBase]:
 
 
 # ---------------------------------------------------------------- strokes
+FREE_END_R = 0.7  # free terminal at the end of a way with nothing on it (as the spare symbol)
+
+
+def _mark_open_ends(doc: Document, roots: list[LNode], index: Index) -> None:
+    """Leads that would end in nothing: the input of a node first in the document (no source above it, no power
+    link landing on it: a busbar, a board, a device declared as a root) and the output of a node with nothing below
+    it that is neither a load nor a free way (a transformer, a meter or a controller feeding nothing, no power link
+    leaving it). Drawn without them, they do not read as fed from the edge of the sheet or as wired to something
+    not drawn."""
+    landed = {l.to for l in doc.links if l.kind in SWITCHED_LINKS}
+    linked = {e for l in doc.links if l.kind in SWITCHED_LINKS for e in (l.from_, l.to)}
+    for r in roots:
+        nid = r.node.id if r.node is not None else None
+        if (r.kind == "node" and nid and nid in index.nodes and index.parent.get(nid) is None
+                and r.type != "offpage" and not (nid in landed and r.sym.height > 0)):
+            r.no_in = True
+        for n in r.walk():
+            if (n.kind == "node" and not n.children and not n.bottom and not n.open_feeder and n.node is not None
+                    and n.node.id not in linked):
+                n.no_out = True
+
+
 def _free_way(ln: LNode, parent: Optional[LNode]) -> bool:
     """A spare way with no device (no rating, no poles) straight on a busbar or in a board: a free space, drawn
     dashed and without a conductor mark, not a conductor leaving the busbar (below a device, it is that device's
@@ -1838,12 +2055,19 @@ def _free_way(ln: LNode, parent: Optional[LNode]) -> bool:
             and ln.node.type == "spare" and not (getattr(ln.node, "in_A", None) or getattr(ln.node, "poles", None)))
 
 
+def _on_pe(ln: LNode) -> bool:
+    """An earth electrode or an earth / equipotential bar in the tree: it is on the protective conductor only,
+    drawn on an earth line, never on a live conductor (a solid lead from a busbar reads as the bars earthed).
+    Same rule as multi-line drawings. A neutral bar stays on its conductor."""
+    return ln.node is not None and ln.type in ("earth", "earth_bar") and getattr(ln.node, "kind", None) != "neutral_bar"
+
+
 def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callable[[str], Optional[int]] | None = None,
                parent_id: Optional[str] = None) -> None:
     trunk = BUSWAY_H / 2 if ln.bus_y is not None and symbol_kind(ln.sym) == "busway" else 0.0
     if ln.kind == "node" or ln.kind == "stub":
         if not (ln.is_board and ln.sym.height == 0) and not trunk:  # busway with tap-offs: drawn as its trunk
-            sg = ln.sym.group(ln.x, ln.y, ln.id)
+            sg = without_leads(ln.sym, ln.no_in, ln.no_out).group(ln.x, ln.y, ln.id)
             if ln.node is not None and getattr(ln.node, "external", False):
                 sg = _restyle(sg, Style(width=THIN, dash=(1.2, 0.8), color="#555555"))
                 sg.cls = (sg.cls or "") + " external"
@@ -1862,14 +2086,15 @@ def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callabl
             tg.add(Text((ab[0], ab[1] + (i + 0.8) * ANN_LINE * ln.ann_size / ANN_SIZE), t,
                         ln.ann_size, bold=(i == 0 and ln.tagged)))
         g.add(tg)
-    if ln.open_feeder:
-        y0, y1 = ln.out_y, y_load + 4.0
+    if ln.open_feeder:  # a way with nothing described on it: its conductor ends on a free terminal (as a spare
+        # way), never on an arrow (read as a reference to another sheet)
+        y0, y1 = ln.out_y, y_load + 4.0 - 2 * FREE_END_R
         g.add(Line((ln.x, y0), (ln.x, y1)))
-        g.add(Polyline([(ln.x - 1.0, y1 - 1.8), (ln.x, y1), (ln.x + 1.0, y1 - 1.8)], Style(fill="#000000"), closed=True))
+        g.add(Circle((ln.x, y1 + FREE_END_R), FREE_END_R))
     me = ln.target if ln.kind == "bus_in" else ln.id
     if ln.bus_y is not None:
         bg = busbar_group(me or ln.id)
-        if ln.kind != "bus_in" and ln.bus_y > ln.out_y:
+        if ln.kind != "bus_in" and ln.bus_y > ln.out_y and not ln.no_in:  # (fed by nothing: no lead from above)
             bg.add(Line((ln.x, ln.y if trunk else ln.out_y), (ln.x, ln.bus_y - trunk)))
         x1 = max(ln.bus_x1, ln.bus_x0 + 4)
         if trunk:  # busbar trunking: casing along the bars, tap-off units below it
@@ -1879,6 +2104,9 @@ def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callabl
             bg.add(Line((ln.bus_x0, ln.bus_y), (x1, ln.bus_y), Style(width=BUS)))
         g.add(bg)
         for c in ln.bus_children:
+            if _on_pe(c):  # beside the busbar, not on it (its earth links reach it): the edge without a line
+                g.add(edge_group(c.id, me))
+                continue
             eg = edge_group(c.id, me, [Line((c.x, ln.bus_y + trunk), (c.x, c.frame_top if c.is_board else c.y),
                                             DASH if _free_way(c, ln) else Style())])
             if c.is_board:
@@ -1888,7 +2116,7 @@ def _draw_tree(ln: LNode, g: Group, y_load: float, view: View, folio_of: Callabl
         for c in ln.bus_children:
             top = c.frame_top if c.is_board else c.y
             eg = edge_group(c.id, me)
-            style = DASH if _free_way(c, ln) else Style()
+            style = DASH if _free_way(c, ln) else _link_style("earth") if _on_pe(c) else Style()
             if ln.x == c.x:
                 eg.add(Line((ln.x, ln.out_y), (c.x, top), style))
             else:
@@ -2515,11 +2743,33 @@ def _clear(obs: Obstacles, boxes: list[Box]) -> bool:
                                                                and r[3] <= f[3]) for f in obs.frames) for r in boxes)
 
 
-def _stub_widths(doc: Document, nodes: list[LNode], lang: str) -> dict[str, list[tuple[float, float]]]:
+def _stub_room(main: list[LNode], widths: dict[str, list[tuple[float, float]]]) -> list[tuple[LNode, float]]:
+    """The nodes whose off-sheet stubs (one under the other on their left, see ``_draw_offpage_link``) would be
+    written over the text of a device on their left, and the room on their left that keeps them clear of it
+    (see ``LNode.left_room``)."""
+    out: list[tuple[LNode, float]] = []
+    nodes = [n for r in main for n in r.walk()]
+    parent = {id(c): n for n in nodes for c in n.children}
+    for n in nodes:
+        if n.kind != "node" or n.node is None or n.node.id not in widths or n.sym.height <= 0:
+            continue
+        u = boxes_union([b for ways in _stub_rows(n, widths[n.node.id]) for b in ways[0]])
+        hit = [a for m in nodes if m.x < n.x - 1e-6 and (a := m.ann_box()) and u and _hit(u, a, 0.5)]
+        if u and hit:
+            head = n  # the room asked at the top of its column: the devices above it move with it (see _measure)
+            while (p := parent.get(id(head))) is not None and len(p.children) == 1 and not p.is_board:
+                head = p
+            out.append((head, n.x - head.x_left + max(a[2] for a in hit) + 1.5 - u[0]))
+    return out
+
+
+def _stub_widths(doc: Document, nodes: list[LNode], lang: str,
+                 here: Optional[set[str]] = None) -> dict[str, list[tuple[float, float]]]:
     """The width of the texts of each off-sheet stub (see _draw_offpage_link) of the nodes on the sheet and of the
-    auxiliary devices placed with them, by node id: its sheet reference, its label (0: none)."""
+    auxiliary devices placed with them, by node id: its sheet reference, its label (0: none). ``here``: the nodes
+    drawn on the sheet, when ``nodes`` are not all of them."""
     pos = {n.node.id for n in nodes if n.node is not None and n.node.id and n.kind == "node"}
-    here = pos | {d for d, h in _device_homes(doc).items() if h in pos}
+    here = (pos | {d for d, h in _device_homes(doc).items() if h in pos}) if here is None else here
     named = {n.id: n for n, _, _ in iter_nodes(doc) if n.id}
     stubs: dict[str, list[tuple[float, float]]] = {}
     for l in doc.links:
@@ -3205,15 +3455,17 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 tx = [p[-1][0] for p in legs]
                 x0, x1 = min(tx), max(tx)
                 gx0, gx1 = min([x0] + [e.x for e in hub]) - 25.0, max([x1] + [e.x for e in hub]) + 25.0
-                goals = [End(gx0 + k, y, s) for k in range(int(gx1 - gx0) + 1)
+                goals = [End(round(gx0 + k, 6), y, s) for k in range(int(gx1 - gx0) + 1)  # (on the grid: no jog)
                          if all(abs(gx0 + k - u) >= 2 * TAP_APART for u in tx) for s in ("up", "down")]
+                # the trunk goes on from the hub's lead toward the taps: a lead going round to it closes a frame
+                then = [0 if e.x < x0 else 1 if e.x > x1 else None for e in goals]
                 win = (gx0 - 5.0, min([y] + [e.y for e in hub]) - 15.0, gx1 + 5.0, max([y + 3.0] + [e.y for e in hub]) + 15.0)
                 sub = obs.window((win[0] - 6.0, win[1] - 6.0, win[2] + 6.0, win[3] + 6.0))
                 for p in legs + [[(x0, y), (x1, y)]]:
                     record_route(sub, p)
                 c: list[float] = []
                 pts, _ka, _kb = route_grid(sub, hub, goals, win, SIGNAL_LANE, record=False, cost_out=c,
-                                           bend=DETOUR_BEND, length=TRUNK_LEAD)
+                                           bend=DETOUR_BEND, length=TRUNK_LEAD, wrap=WRAP, then=then)
                 if not pts or c[0] >= obs.box_cross:
                     continue
                 hx = pts[-1][0]  # beyond the taps: the trunk goes on to it (never through a text or a symbol)
@@ -3343,8 +3595,17 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             sy = b.y + b.sym.side_input[1]
             ay = a.out_y if a.sym.has_output else a.y + a.sym.height
             cy = sy - 2.5 - 1.5 * side_level.get(i, 0)
-            pts = [(a.x, ay), (a.x, cy), (sx, cy), (sx, sy)]
-            pts = improve_route(obs, End(a.x, ay, "down"), End(sx, sy, "up"), pts, far_round=False)
+            ax = a.x
+            if a.sym.height == 0 and a.bus_y is not None and a.children and cy > a.bus_y + 4.0:
+                # from a busbar: a tap where the run to the side input crosses the fewest feeders (between two
+                # outgoing feeders, or beyond an end that no bus tie continues)
+                ax, ay = _transfer_tap(doc, roots, a, sx, cy, sy, taps, obs)
+                if not a.bus_x0 <= ax <= a.bus_x1:
+                    x0, x1 = min(ax, a.bus_x0), max(ax, a.bus_x1)
+                    g.add(busbar_group(a.id, [Line((x0, ay), (x1, ay), Style(width=BUS))]))
+                    obs.add_hline(ay, x0, x1, bus=True)
+            pts = [(ax, ay), (ax, cy), (sx, cy), (sx, sy)]
+            pts = improve_route(obs, End(ax, ay, "down"), End(sx, sy, "up"), pts, far_round=False)
             record_route(obs, pts)
             lg.add(Polyline(pts, style))
             continue
@@ -3363,6 +3624,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 sx0 = mid - sym.height / 2
                 lg.add(Line((x0, y), (sx0, y), style))
                 lg.add(Group([transform(it, sx0, y, rot=270) for it in sym.items], dev.id, f"sym sym-{sym.name}"))
+                obs.add_box((sx0, y - sym.right, sx0 + sym.height, y + sym.left))  # (no label on the coupler)
                 lg.add(Line((sx0 + sym.height, y), (x1, y), style))
                 txt = _device_text(link, dev, lang)[:3]
                 tw = max((text_width(t, 1.9) for t in txt), default=0.0)
@@ -3382,6 +3644,15 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         ml = obs.min_lane > 0  # multi-line: also beside a PLC port and for earth links, right ends spread
         start = tap_end.get(i) or _end(a, link.kind)
         ends = [start, _end(b, link.kind, fed=fed, near=start.x)]
+        dots: dict[int, tuple[float, float]] = {}  # the ends of the link on a conductor (a junction dot), its free span
+        if link.kind in POWER_LINKS and not ml and i not in tap_end and i not in bus_land:
+            # a power link joining a conductor (an output a parallel device is connected to, the input conductor of a
+            # final load feeding on): a junction on it, never on the body of the device (reads as a bypass of it)
+            for k, n in ((1, b), (0, a)):
+                o = ends[1 - k]
+                tap = _conductor_end(n, parent_of.get(id(n)), link.kind, o.x, o.y)
+                if tap is not None:
+                    ends[k], dots[k] = tap[0], tap[1]
         earth: Optional[list[list]] = None  # single-line: the ends an earth link may take on each node
         if link.kind == "earth" and not ml:
             earth = [_earth_ends(n, o, obs, earth_taken, n.id in live_left) for n, o in ((a, b), (b, a))]
@@ -3442,6 +3713,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         if i in bus_lane:
             lo, hi = bus_lane[i], bus_lane[i] + 0.01
         carries = link.device is not None and link.kind in SWITCHED_LINKS
+        wrap = 0.0 if ml or obs.grid else END_WRAP  # single-line: the ends whose route goes round what it passes, last
         opts = {"record": not carries,
                 "lane": max(3.5 if carries else LANE if link.kind in POWER_LINKS else SIGNAL_LANE, obs.min_lane),
                 "solid": link.kind in POWER_LINKS and not style.dash}
@@ -3525,9 +3797,13 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                     for eb in alts[1]:
                         c: list[float] = []
                         top = max(ea.y, eb.y)
-                        route(obs, ea, eb, min(ea.y, eb.y) - 30.0, min(top + 30.0, y_max) if top < y_max else top + 30.0,
-                              step=1.0, record=False, lane=opts["lane"], cost_out=c)  # coarse: only to compare
-                        scored.append((c[0], [ea, eb]))
+                        p = route(obs, ea, eb, min(ea.y, eb.y) - 30.0,
+                                  min(top + 30.0, y_max) if top < y_max else top + 30.0, step=1.0, record=False,
+                                  lane=opts["lane"], cost_out=c, wrap=wrap)  # coarse: only to compare
+                        if wrap and c[0] - wrap * wraps(p) >= obs.box_cross:  # through a text or a symbol anyway:
+                            c[0] -= wrap * wraps(p)  # going round is not what to avoid first
+                        away = sum(1 for e, o in ((ea, eb), (eb, ea)) if (e.side, o.x < e.x) in (("left", False), ("right", True)))
+                        scored.append((c[0] + OWN_CROSS * _round_own(p, (a, b)) + AWAY * away, [ea, eb]))
                 ends = min(scored, key=lambda t: t[0])[1]
                 cands = ([ends[0]] + [e for e in alts[0] if e is not ends[0]],
                          [ends[1]] + [e for e in alts[1] if e is not ends[1]])
@@ -3548,18 +3824,27 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             lo = max(lo, max(a.y + a.sym.height, b.y + b.sym.height) + 1.5)
             hi = max(hi, lo + 0.01)
         if not obs.grid or not pts:
-            pts = route(obs, ends[0], ends[1], lo, hi, **{**opts, "record": False})
+            # a link whose channels may go under the loads: never on the channel of another link, one of its own
+            # lower down instead (the table goes down under it)
+            pts = route(obs, ends[0], ends[1], lo, hi, **{**opts, "record": False}, deeper=not ml and hi > y_load)
             if pts and not obs.grid and i not in bus_lane and not on_conductor:
                 # through a text or a symbol, or far round: with more corners when that is clearly better
                 pts = improve_route(obs, ends[0], ends[1], pts, opts["lane"], opts["solid"],
                                     min_run=14.0 if carries else 0.0,
-                                    starts=cands[0] if cands else None, goals=cands[1] if cands else None)
+                                    starts=cands[0] if cands else None, goals=cands[1] if cands else None,
+                                    on_lines=not opts["solid"])
             if opts["record"]:
                 record_route(obs, pts)
         if not pts and on_conductor:  # e.g. a feeder leaving downwards: the channel must go below it after all
             pts = route(obs, ends[0], ends[1], lo, max(e.y for e in ends) + 30.0, **opts)
         if not pts:  # no free channel: leave this link out rather than fail the whole drawing
             continue
+        for k, span in dots.items():  # a short jog into the conductor: straight in, where the conductor allows it
+            seq_ = pts if k else pts[::-1]
+            if len(seq_) >= 3 and abs(seq_[-2][0] - seq_[-3][0]) < 1e-9 and abs(seq_[-1][1] - seq_[-2][1]) < 1e-9 \
+                    and span[0] <= seq_[-3][1] <= span[1] and abs(seq_[-3][1] - seq_[-1][1]) < 3.0:
+                seq_ = seq_[:-2] + [(seq_[-1][0], seq_[-3][1])]
+                pts = seq_ if k else seq_[::-1]
         for n, ts, p in zip((a, b), earth or (), (pts[0], pts[-1])):  # the terminals at the ends taken
             t = next((t for t in ts if math.dist(p, (_point(t).x, _point(t).y)) < 1e-6), None)
             if t is not None:
@@ -3573,9 +3858,13 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                                                                 -abs(s[0][0] - s[1][0]) - abs(s[0][1] - s[1][1])))
                 (p, q) = segs[0]
                 mx, my = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
-                lg.add(interlock_mark(mx, my, abs(p[1] - q[1]) < 1e-6))
+                mark = interlock_mark(mx, my, abs(p[1] - q[1]) < 1e-6)
+                lg.add(mark)
+                obs.add_box(bbox(mark))  # no label written over it
         if on_conductor:  # infeed landing on the input conductor: junction dot
             lg.add(Circle(pts[-1], 0.45, Style(width=THIN, fill="#000000")))
+        for k in dots:
+            lg.add(Circle(pts[-1] if k else pts[0], 0.45, Style(width=THIN, fill="#000000")))
         seq = pts if port_label is None or port_label[0] == 0 else pts[::-1]  # oriented PLC -> other end
         heads[i] = (link.from_, link.to) if seq is pts else (link.to, link.from_)
         if i in bus_land and len(pts) > 2:  # on its channel, not on the short drop crowded with the other taps
@@ -3640,6 +3929,80 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 hit.items.insert(0, Polyline(trunk_paths[i], Style(HIT_WIDTH, None, HIT_COLOR)))
             g.add(lg)
     return chosen
+
+
+def _conductor_end(n: LNode, up: Optional[LNode], kind: str, tx: float, ty: float
+                   ) -> Optional[tuple[End, tuple[float, float]]]:
+    """Where a power link of ``kind`` joins a conductor of ``n`` rather than its body, toward (tx, ty), the other end:
+
+    * ``parallel`` (a device connected after ``n``, a surge arrester after its fuse): on the output conductor of ``n``,
+      between it and the device it feeds straight below;
+    * any power link leaving a final load with no output terminal (an outgoing arrow, its conductor going on as the
+      link): on its input conductor, level with the other end when that is along it.
+
+    Out of the side facing the other end, with the stretch of the conductor free for it; None: neither (the usual
+    end)."""
+    if n.sym.height <= 0 or n.bus_y is not None or n.is_board:
+        return None
+    side = "left" if tx < n.x else "right"
+    if kind == "parallel" and n.sym.has_output:
+        below = [c for c in n.children if abs(c.x - n.x) < 1e-6 and c.kind == "node"]
+        if below and below[0].y - n.out_y >= 3.0:
+            span = (n.out_y + 0.5, below[0].y - 1.0)
+            return End(n.x, n.out_y + min(2.5, (below[0].y - n.out_y) / 2), side), span
+        return None
+    if n.children or n.sym.has_output or up is None or abs(up.x - n.x) > 1e-6:
+        return None
+    top = (up.out_y if up.sym.has_output else up.y + up.sym.height) + 1.5
+    if top + 1e-6 < ty < n.y - 1.5:
+        return End(n.x, ty, side), (top, n.y - 1.5)
+    return None
+
+
+def _transfer_tap(doc: Document, roots: list[LNode], a: LNode, sx: float, cy: float, sy: float,
+                  taps: dict[tuple[str, bool, bool], int], obs: Obstacles) -> tuple[float, float]:
+    """Where a standby supply leaves the busbar ``a`` for the side input at (sx, sy), its run at ``cy``: the tap (see
+    ``_bus_tap``) whose route crosses the fewest feeders, texts and symbols; never beyond an end of the busbar that a
+    bus tie continues (it would run on the tie). The taps taken on that side counted in ``taps``."""
+    tied = {k for l in doc.links if l.kind == "tie" and a.id in (l.from_, l.to) for k in (l.from_, l.to) if k != a.id}
+    others = [n.x for n in (_find(roots, t) for t in tied) if n is not None]
+    cands = []
+    for right in (True, False):
+        if not any((o > a.bus_x1) == right for o in others):
+            side = (a.id, right, not right)
+            cands.append((_bus_tap(a, a.bus_x1 + 1.0 if right else a.bus_x0 - 1.0, taps.get(side, 0)), side))
+    xs = [c.x for c in a.children]
+    for u, v in zip(xs, xs[1:]):  # in every gap between two feeders, clear of their blades and texts if it can
+        cands += [(u + 1.5 + 0.5 * k, (a.id, False, False)) for k in range(int((v - u - 3.0) / 0.5) + 1)]
+    best: Optional[tuple[float, float, tuple[str, bool, bool]]] = None
+    y = a.bus_y if a.bus_y is not None else a.y
+    for x, side in cands:
+        pts = [(x, y), (x, cy), (sx, cy), (sx, sy)]
+        c = sum(_seg_cost(obs, p, q, solid=True) for p, q in zip(pts, pts[1:])) + 0.08 * abs(x - sx)
+        if best is None or c < best[0] - 1e-6:
+            best = (c, x, side)
+    if best is None:  # (no gap, both ends tied: from its middle)
+        return (a.bus_x0 + a.bus_x1) / 2, y
+    taps[best[2]] = taps.get(best[2], 0) + 1
+    return best[1], y
+
+
+OWN_CROSS = 10.0  # a link end chosen so that the route goes back across the axis of its own device (its leads)
+AWAY = 2.0  # ... an end on the side of its device away from the other end (when the routes cost about the same)
+END_WRAP = 30.0  # ... a route from that end going round what it passes (less than running on another link)
+
+
+def _round_own(pts: list[tuple[float, float]], nodes: tuple[LNode, LNode]) -> int:
+    """How many times the route ``pts`` crosses the axis of one of the devices it joins, beside that device (over its
+    leads, round its body): an end on the side facing the other end crosses none."""
+    n = 0
+    for d in nodes:
+        if d.sym.height <= 0:
+            continue
+        y0, y1 = d.y - 3.0, d.y + d.sym.height + 3.0
+        n += sum(1 for p, q in zip(pts, pts[1:]) if abs(p[1] - q[1]) < 1e-9 and y0 < p[1] < y1
+                 and min(p[0], q[0]) + 1e-6 < d.x < max(p[0], q[0]) - 1e-6)
+    return n
 
 
 LEADER_REACH = 25.0  # how far from its link a label may go, joined to it by a leader
@@ -3839,7 +4202,7 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
     on = target_node.ref or target_node.label or other if target_node is not None else other
     txts = ([link.label] if link.label else []) + [on + (_t("render.to_folio", lang, folio=f) if f else "")]
     e = at or _end(n, link.kind)
-    key = n.id or ""
+    key = here = n.id or ""
     if at is None and e.side == "left":  # no room on the left for its texts (a neighbour there): by the right side
         need = max(text_width(t, 1.6) for t in txts) + 9.0
         r = _right_end(n)
@@ -3971,6 +4334,26 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         obs.add_vline(e.x, min(e.y, tip[1]), max(e.y, tip[1]))
     else:
         obs.add_hline(pts[1][1], pts[0][0], pts[1][0])
+    port = link.from_port if link.from_ == here else link.to_port if link.to == here else None
+    if port and not obs.min_lane:  # single-line: the channel or terminal it leaves by, as on a link drawn whole, on
+        # its stub by its start where that place is free, else in front of its label (never on a symbol or a line)
+        ptxt, pw = str(port), text_width(str(port), PORT_SIZE)
+        sx, sy = pts[0]
+        if e.side in ("left", "right"):
+            x, anchor = (sx - 0.6, "end") if e.side == "left" else (sx + 0.6, "start")
+            spots = [(x, sy - 0.6, anchor), (x, sy + PORT_SIZE + 0.3, anchor)]
+        else:
+            y = sy + 0.6 + 0.8 * PORT_SIZE if e.side == "down" else sy - 0.6
+            spots = [(sx + 0.6, y, "start"), (sx - 0.6, y, "end")]
+        spot = next((p for p in spots if obs.box_free(text_box(p[0], p[1], pw, PORT_SIZE, p[2]), 0.1, wire_pad=0.0)),
+                    None) or place_label(obs, [pts[0], tip], pw, PORT_SIZE, from_end=False, record=False, optional=True)
+        if spot is not None:
+            obs.add_box(text_box(spot[0], spot[1], pw, PORT_SIZE, spot[2]))
+            g.add(Text((spot[0], spot[1]), ptxt, PORT_SIZE, spot[2], color=PORT_COLOR))
+        elif link.label:
+            txts[0] = f"{ptxt} {txts[0]}"
+        else:
+            txts.insert(0, ptxt)
     written: dict[int, list[Text]] = {}
     for k, txt in reversed(list(enumerate(txts))):  # the sheet reference first: it must be written, at the best place
         w = text_width(txt, 1.6)
@@ -4081,6 +4464,18 @@ def _column_info(ln: LNode, index: Index, lang: str) -> dict[str, Any]:
             break
     info["label"] = _column_label(ln, path, lang)
     return info
+
+
+def _empty_source_column(ln: LNode, index: Index, view: View, lang: str) -> bool:
+    """A source with nothing below it (a generator or an inverter feeding a board through a link) whose table column
+    would say nothing: no label of its own, no value in any row (the name of its type is not content)."""
+    node = ln.node
+    if node is None or ln.kind != "node" or node.children or registry.category(node.type) != "source":  # type: ignore[attr-defined]
+        return False
+    if node.label:
+        return False
+    info = _column_info(ln, index, lang)
+    return not any(cell(f, info, lang) for f in (view.cartouche or []) if f != "label")
 
 
 def _column_label(ln: LNode, path: list[Any], lang: str) -> str:
@@ -4302,9 +4697,9 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None,
             out += process(c, allow_bus_split=False)
         for nid in _ordered(spec, index):
             out += process(SheetSpec([index.nodes[nid]] + standby(nid), name=name_of(index.nodes[nid])))
-        for roots in groups:
-            board = next((n for r in roots for n in _walk_nodes(r) if n.type == "board"), roots[0])  # type: ignore[attr-defined]
-            out += process(SheetSpec(roots, name=name_of(board)))
+        for roots in groups:  # named after its board; without one, as the first sheet (a source names no sheet)
+            board = next((n for r in roots for n in _walk_nodes(r) if n.type == "board"), None)  # type: ignore[attr-defined]
+            out += process(SheetSpec(roots, name=name_of(board) if board is not None else ""))
         return out
 
     def standby(nid: str) -> list[NodeBase]:
@@ -4328,16 +4723,21 @@ def _board_to_detach(boards: list[LNode], lay: SheetLayout, view: View, keep_who
     together rather than being cut way by way."""
     _, _, aw, _ = drawing_area(view)
     excess = lay.width - aw / view.min_scale
+    boards = boards[::-1]  # of boards as wide, the last one goes: the sheets keep the order of the document
+
+    def width(n: LNode) -> float:
+        return round(n.width, 3)
+
     part = [n for n in boards if n.width < 0.85 * lay.width]
     enough = [n for n in part if n.width - view.pitch_mm >= excess]
     if enough:
-        return min(enough, key=lambda n: n.width)
+        return min(enough, key=width)
     if part:
-        return max(part, key=lambda n: n.width)
+        return max(part, key=width)
     below = [n for n in boards if n.node is not None and n.node.id in nested]
     if below:
-        return max(below, key=lambda n: n.width)
-    return None if keep_whole or not boards else max(boards, key=lambda n: n.width)
+        return max(below, key=width)
+    return None if keep_whole or not boards else max(boards, key=width)
 
 
 def _walk_nodes(n: NodeBase) -> Iterator[NodeBase]:

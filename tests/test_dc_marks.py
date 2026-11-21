@@ -19,7 +19,7 @@ def test_dc_feeder_has_no_neutral():
 
 def test_dc_lines_marked_two_poles():
     doc = uniwire.load(EX / "11_tiny_house_off_grid_pv.uniwire.json")
-    _, m_out = _line_marks(doc)
+    _, m_out, _, _ = _line_marks(doc)
     nodes = {n.id: n for n, *_ in iter_nodes(doc)}
     for nid in ("F1", "F2", "F31", "Q1"):  # fuses and DC switch behind the 48 V and 12 V boards
         assert m_out[id(nodes[nid])] == (2, False), nid
@@ -39,7 +39,7 @@ def test_battery_line_marked_two_poles_and_its_motor_drawn_dc():
     from uniwire.render.scene import Group, Text
 
     doc = uniwire.load(BATTERY_MOTOR)
-    _, m_out = _line_marks(doc)
+    _, m_out, _, _ = _line_marks(doc)
     nodes = {n.id: n for n, *_ in iter_nodes(doc)}
     assert m_out[id(nodes["F1"])] == (2, False) and m_out[id(nodes["S1"])] == (2, False)
 
