@@ -16,6 +16,7 @@ from ..labels import (
     CARTOUCHE_TITLES,
     PROTECTIVE,
     SWITCHING,
+    SYSTEM_NEUTRAL,
     Mark,
     annotation,
     cable_in_awg,
@@ -65,7 +66,16 @@ from ..render.semantics import (
     ref_group,
 )
 from ..resolve import Index, build_index, iter_nodes
-from ..symbols import BUSWAY_H, DASH, PORT_STEP, Symbol, symbol, symbol_for, without_leads
+from ..symbols import (
+    BUSWAY_H,
+    DASH,
+    PORT_STEP,
+    Symbol,
+    symbol,
+    symbol_for,
+    with_earthed_star_point,
+    without_leads,
+)
 from ..symbols import kind as symbol_kind
 from ..units import fmt
 from .routing import (
@@ -847,6 +857,13 @@ def _system_of(node: NodeBase, doc: Document) -> Optional[str]:
     return doc.installation.system
 
 
+def _earthed_star_points(doc: Document) -> set[str]:
+    """Ids of the transformers whose star point is earthed (TN, TT: see the multi-line conductors)."""
+    from .multiline import conductors
+
+    return {nid for nid, c in conductors(doc).items() if c.star}
+
+
 def feeds_dc_input(node: NodeBase) -> bool:
     """Whether what ``node`` feeds, through switches and protections only, takes direct current by nature: a DC/DC
     converter, a battery, a DC board or a device declared ``dc``. A generator feeding that is a DC machine (an
@@ -905,9 +922,12 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
                              and registry.category(n.type) != "source")
 
     here = sheet_node_ids(doc, spec, index)
+    stars = _earthed_star_points(doc) if any(n.type == "transformer" for r in roots for n in r.walk()) else set()
     for r in roots:
         for n in r.walk():
-            if n.type == "generator" and n.node is not None:
+            if n.type == "transformer" and n.node is not None and n.node.id in stars:
+                n.sym = with_earthed_star_point(n.sym)  # its neutral earthed there, as the multi-line view draws it
+            elif n.type == "generator" and n.node is not None:
                 n.sym = symbol_for(n.node, _system_of(n.node, doc))
             elif n.type == "motor" and n.node is not None and n.node.id and _dc_line(n.node, index) \
                     and getattr(n.node, "phases", None) != 3:  # three phases declared: made by the drive above it
@@ -1169,9 +1189,10 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
     marks = Group(cls="conductors")
     _draw_pen_splits(main, doc, marks, obs)
     if view.conductor_marks:
-        drawn = _draw_line_marks(main, everything, doc, marks, obs, incoming, index)
+        line_marks = _line_marks(doc)
+        drawn = _draw_line_marks(main, everything, doc, marks, obs, incoming, index, line_marks)
         parent = {id(c): n for n in everything for c in n.children}
-        _draw_conductor_marks(columns, index, doc, marks, obs, y_load, drawn, parent)
+        _draw_conductor_marks(columns, index, doc, marks, obs, y_load, drawn, parent, line_marks)
 
     # auxiliary devices: on the sheet of the tree node they are linked to, in free space near their partner (and off
     # the channels already given to the feeds tapping a busbar, which are routed later)
@@ -1284,7 +1305,9 @@ def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | Non
     if view.cartouche and columns:
         # below everything drawn so far: auxiliary devices and link routes may go lower than the loads
         drawn_box = bbox(g)
-        _draw_table(g, columns, index, view, lang, max(bottom_end, drawn_box[3] if drawn_box else 0.0) + 6.0)
+        table = [c for c in columns if not _empty_source_column(c, index, view, lang)]
+        if table:
+            _draw_table(g, table, index, view, lang, max(bottom_end, drawn_box[3] if drawn_box else 0.0) + 6.0)
     elif columns:
         for n in columns:
             if n.label or (n.node is not None and n.node.label):
@@ -1620,17 +1643,17 @@ def _needs_neutral(node: NodeBase) -> bool:
     return False
 
 
-def _source_mark(src: NodeBase, doc: Document) -> Optional[Mark]:
-    """Line leaving a source: its own system, else one declared on that line before it branches (a busbar right
-    below it). Then, for the supply of the installation (a grid not below its voltage), the installation's system
-    before any declared further down (a single-phase or DC board further down does not make the supply
+def _source_system(src: NodeBase, doc: Document) -> Optional[str]:
+    """System of the line leaving a source: its own, else one declared on that line before it branches (a busbar
+    right below it). Then, for the supply of the installation (a grid not below its voltage), the installation's
+    system before any declared further down (a single-phase or DC board further down does not make the supply
     single-phase); for another source (a generator, an inverter, a lower-voltage supply), the first declared below
     first. The high-voltage side of a transformer is a three-conductor line."""
     if getattr(src, "system", None):
-        return system_mark(src.system)  # type: ignore[attr-defined]
+        return src.system  # type: ignore[attr-defined]
     hv = (src.un_V or 0) > 1000
     if not hv and _line_system(src):
-        return system_mark(_line_system(src))
+        return _line_system(src)
     below = None
     stack = list(src.children)
     while stack:
@@ -1644,39 +1667,85 @@ def _source_mark(src: NodeBase, doc: Document) -> Optional[Mark]:
         below = below or getattr(n, "system", None)
         stack.extend(n.children)
     if hv:
-        return system_mark("3P")
+        return "3P"
     inst = doc.installation
     main = src.type == "grid" and not (src.un_V and inst.un_V and src.un_V < inst.un_V)  # type: ignore[attr-defined]
-    return system_mark((inst.system or below) if main else (below or inst.system))
+    return (inst.system or below) if main else (below or inst.system)
 
 
-def _line_marks(doc: Document) -> tuple[dict[int, Optional[Mark]], dict[int, Optional[Mark]]]:
-    """Conductor mark of the line entering and leaving every node (keyed by ``id(node)``)."""
-    m_in: dict[int, Optional[Mark]] = {}
-    m_out: dict[int, Optional[Mark]] = {}
+LineMarks = dict[int, Optional[Mark]]
 
-    def walk(n: NodeBase, up: Optional[Mark], dc: bool = False) -> None:
+
+def _ac_declared_below(node: NodeBase) -> Optional[str]:
+    """The AC system a converter gives: the first one declared below it, not across another converter (its DC
+    side states DC, not what it gives); None when none is."""
+    stack = list(node.children)
+    while stack:
+        n = stack.pop(0)
+        system = getattr(n, "system", None)
+        if system and system != "DC":
+            return system
+        if n.type not in CONVERTER_TYPES:  # type: ignore[attr-defined]
+            stack.extend(n.children)
+    return None
+
+
+def _line_marks(doc: Document) -> tuple[LineMarks, LineMarks, dict[int, Optional[bool]], set[int]]:
+    """Conductor mark of the line entering and leaving every node, whether the line leaving it carries a neutral
+    (None: not known, no system declared), keyed by ``id(node)``, and the nodes whose incoming line was set below
+    its source (by a device, a transformer, a declared system), not by the source alone. A device passes on the neutral of its
+    supply and never makes one: no '+N' below a three-wire supply, nor below a device that leaves no neutral."""
+    m_in: LineMarks = {}
+    m_out: LineMarks = {}
+    n_out: dict[int, Optional[bool]] = {}
+    below: set[int] = set()  # nodes whose line was set below the source (a device, a transformer, a declared system)
+
+    def walk(n: NodeBase, up: Optional[Mark], neutral: Optional[bool], system: Optional[str], dc: bool = False,
+             stated: bool = False) -> None:
         dc = _dc_node(n) or (dc and n.type != "inverter")  # type: ignore[attr-defined]
         m_in[id(n)] = up
         out = up
+        own = getattr(n, "system", None)
         if n.type == "transformer":  # type: ignore[attr-defined]
-            out = system_mark(_system_of(n, doc)) or up
+            two = up is not None and sum(up) == 2 and not _line_system(n) and not _VECTOR.match(
+                getattr(n, "coupling", None) or "")  # fed by two wires, nothing stated: two wires out
+            system = "2P" if two else _system_of(n, doc)
+            out = system_mark(system)
+            neutral = SYSTEM_NEUTRAL.get(system or "")
         elif dc:  # a DC line has two poles and no neutral, whatever the devices cut
-            out = (2, False)
+            out, neutral, system = (2, False), False, "DC"
+        elif own and own != system:  # a system declared on the line (a single-phase board on a 3P+N supply)
+            system = own
+            out = system_mark(own) or up
+            neutral = SYSTEM_NEUTRAL.get(own, neutral)
+        elif n.type in CONVERTER_TYPES:  # type: ignore[attr-defined]  # its output: the AC system declared below it
+            system = _ac_declared_below(n)
+            out, neutral = system_mark(system), SYSTEM_NEUTRAL.get(system or "")
         elif n.type in SWITCHING and getattr(n, "poles", None):  # type: ignore[attr-defined]
-            # a device passes on the neutral of its supply, it never makes one: three phases in, no "+N" out
-            neutral_in = up != (3, False)
-            out = poles_mark(n.poles, neutral_in and _needs_neutral(n)) or up  # type: ignore[attr-defined]
+            poles = n.poles  # type: ignore[attr-defined]
+            needs = neutral is not False and _needs_neutral(n)
+            if system == "split-phase" and poles == "2P":  # both lines (240 V), and the neutral when used below
+                out = (3 if needs else 2, False)
+            else:
+                out = poles_mark(poles, needs, neutral, getattr(n, "phase", None)) or up
+            if out is not None and neutral is not None and system != "split-phase":  # split-phase: N passes uncut
+                neutral = bool(out[1] or out[0] == 4)
         m_out[id(n)] = out
+        n_out[id(n)] = neutral
+        if stated:
+            below.add(id(n))
         for c in n.children:
-            walk(c, out, dc)
+            walk(c, out, neutral, system, dc, stated or out is not up)
 
     for src in doc.sources:
-        walk(src, None)
-        m_out[id(src)] = (2, False) if _dc_node(src) and not getattr(src, "system", None) else _source_mark(src, doc)
+        dc = _dc_node(src) and not getattr(src, "system", None)
+        system = "DC" if dc else _source_system(src, doc)
+        m_in[id(src)] = None
+        m_out[id(src)] = (2, False) if dc else system_mark(system)
+        n_out[id(src)] = SYSTEM_NEUTRAL.get(system or "")
         for c in src.children:
-            walk(c, m_out[id(src)], _dc_node(src))
-    return m_in, m_out
+            walk(c, m_out[id(src)], n_out[id(src)], system, _dc_node(src))
+    return m_in, m_out, n_out, below
 
 
 CONVERTER_TYPES = ("transformer", "power_supply", "inverter", "dc_converter")  # what they give differs from their input
@@ -1694,14 +1763,14 @@ def _phase_above(node: NodeBase, index: Index) -> Optional[str]:
 
 
 def _mark_text(mark: Mark, phase: Optional[str] = None) -> str:
+    """Text of a conductor mark: the number of conductors beyond three ('4'), '+N' for a neutral shown apart, then
+    the phase of a two-wire line ('L1+N': one phase and the neutral, always written so; 'L1L2': two phases)."""
     n, neutral = mark
     parts = [str(n)] if n > 3 else []
     ph = phase if phase and phase != "L1L2L3" and n + neutral == 2 else ""  # a phase names a two-wire line only
     if neutral:
         parts.append(f"{ph}+N")
-    elif ph and n == 2 and ph in ("L1", "L2", "L3"):
-        parts.append(f"{ph} N")  # two conductors on one phase: the phase and the neutral
-    elif ph:
+    elif ph and not (n == 2 and ph in ("L1", "L2", "L3")):  # two conductors, one of them not on that phase
         parts.append(ph)
     return " ".join(parts)
 
@@ -1752,11 +1821,12 @@ def _put_mark(g: Group, obs: Obstacles, x: float, y0: float, y1: float, pref: fl
 
 
 def _draw_line_marks(roots: list[LNode], everything: list[LNode], doc: Document, g: Group, obs: Obstacles,
-                     incoming: Optional[str], index: Index) -> dict[int, tuple[Mark, str]]:
+                     incoming: Optional[str], index: Index, line_marks: Optional[tuple[Any, ...]] = None
+                     ) -> dict[int, tuple[Mark, str]]:
     """Marks on the line leaving each source / transformer and each switching device whose conductors differ
     from the line above it (outgoing cables are marked by :func:`_draw_conductor_marks`). Returns the marks
     drawn and their texts, keyed by ``id(node)``."""
-    m_in, m_out = _line_marks(doc)
+    m_in, m_out, _, _ = line_marks or _line_marks(doc)
     drawn: dict[int, tuple[Mark, str]] = {}
     sources = {id(n) for n in doc.sources}
     for ln in everything:
@@ -1865,9 +1935,12 @@ def _cable_caption(c: Any) -> str:
 
 def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: Group, obs: Obstacles,
                           y_load: float, drawn: dict[int, tuple[Mark, str]] | None = None,
-                          parent: dict[int, LNode] | None = None) -> None:
+                          parent: dict[int, LNode] | None = None,
+                          line_marks: Optional[tuple[Any, ...]] = None) -> None:
     """Conductor-count mark on each outgoing cable (see :func:`_put_mark`), unless the same mark was already
-    drawn higher up in the column."""
+    drawn higher up in the column. What the cable does not state is that of the line it leaves (below a two-pole
+    device: its two conductors, not the installation's); a '+N' only where that line has a neutral."""
+    m_in, _, n_out, below = line_marks or _line_marks(doc)
     drawn = drawn or {}
     parent = parent or {}
     for ln in columns:
@@ -1878,7 +1951,10 @@ def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: 
             continue
         # the conductors of what a converter gives: not those of its input (the poles, the cable above it)
         chain = chain[:next((k for k, c in enumerate(chain) if k and c.type in CONVERTER_TYPES), len(chain))]
-        mark = feeder_mark(chain, "DC" if _dc_line(chain[0], index) else _supply_system(ln, index, doc))
+        top = chain[-1]
+        up = index.ancestors(top.id or "")
+        mark = feeder_mark(chain, "DC" if _dc_line(chain[0], index) else _supply_system(ln, index, doc),
+                           n_out.get(id(up[0])) if up and id(top) in below else None, _line_above(chain, m_in, below))
         phase = None if _dc_line(chain[0], index) else _phase_above(chain[0], index)
         if ln.open_feeder and ln.node is not None and ln.type in ("power_supply", "dc_converter"):
             mark, phase = (2, False), None  # what leaves a power supply: its two output poles (L+ L-), not its input
@@ -1893,11 +1969,24 @@ def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: 
         _put_mark(g, obs, ln.x, y0, y_load - 0.3, y_load - 2.8, mark, ln.id, phase)
 
 
+def _line_above(chain: list[NodeBase], m_in: LineMarks, below: set[int]) -> Optional[Mark]:
+    """Mark of the line a feeder leaves (``chain``: the feeder from its end up to the busbar), when a device, a
+    transformer or a declared system above it set its conductors; None when only the source does (they are then
+    those of the nearest system declared, see :func:`_supply_system`). Never across a converter, whose output it
+    is not."""
+    if any(c.type in CONVERTER_TYPES for c in chain) or id(chain[-1]) not in below:  # type: ignore[attr-defined]
+        return None
+    return m_in.get(id(chain[-1]))
+
+
 def _draw_pen_splits(main: list[LNode], doc: Document, g: Group, obs: Obstacles) -> None:
-    """TN-C-S: PEN -> PE + N split at the board flagged ``pen_split`` (default: the first board of the drawing)."""
+    """TN-C-S: PEN -> PE + N split at the boards flagged ``pen_split`` or declaring their own earthing TN-C-S; when
+    none does in a TN-C-S installation, at the first board of the drawing (as the multi-line view splits it; a check
+    finding asks to declare it)."""
     boards = [n for r in main for n in r.walk() if n.is_board and n.node is not None]
-    if any(getattr(n, "pen_split", None) is not None for n, _, _ in iter_nodes(doc)):
-        flagged = [b for b in boards if getattr(b.node, "pen_split", None)]
+    if any(getattr(n, "pen_split", None) is not None or (n.type == "board" and getattr(n, "earthing", None) == "TN-C-S")
+           for n, _, _ in iter_nodes(doc)):
+        flagged = [b for b in boards if getattr(b.node, "pen_split", None) or getattr(b.node, "earthing", None) == "TN-C-S"]
     elif doc.installation.earthing == "TN-C-S":
         first = _first_boards(doc)[:1]
         flagged = [b for b in boards if first and b.node is first[0]]
@@ -4264,6 +4353,18 @@ def _column_info(ln: LNode, index: Index, lang: str) -> dict[str, Any]:
             break
     info["label"] = _column_label(ln, path, lang)
     return info
+
+
+def _empty_source_column(ln: LNode, index: Index, view: View, lang: str) -> bool:
+    """A source with nothing below it (a generator or an inverter feeding a board through a link) whose table column
+    would say nothing: no label of its own, no value in any row (the name of its type is not content)."""
+    node = ln.node
+    if node is None or ln.kind != "node" or node.children or registry.category(node.type) != "source":  # type: ignore[attr-defined]
+        return False
+    if node.label:
+        return False
+    info = _column_info(ln, index, lang)
+    return not any(cell(f, info, lang) for f in (view.cartouche or []) if f != "label")
 
 
 def _column_label(ln: LNode, path: list[Any], lang: str) -> str:

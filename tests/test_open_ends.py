@@ -83,7 +83,9 @@ def test_transformer_feeding_nothing_has_no_output_lead():
     assert t1.no_out and not t1.no_in
     g = _sym_group(lay, "T1")
     circles = [i for i in _items(g) if isinstance(i, Circle)]
-    (lead,) = _vertical(g)  # its input lead only, above the windings
+    stars = [s for s in _groups(g) if s.cls == "star-point-earth"]  # (its earthed star point, beside it)
+    star_lines = {id(i) for s in stars for i in _items(s)}
+    (lead,) = [i for i in _vertical(g) if id(i) not in star_lines]  # its input lead only, above the windings
     assert max(lead.a[1], lead.b[1]) <= min(c.c[1] for c in circles)
 
 
