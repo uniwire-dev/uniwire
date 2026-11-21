@@ -473,8 +473,8 @@ def test_converters_drawn_in_the_direction_they_convert():
 
 
 def test_protective_conductor_dash_dot_without_colours():
-    """Without a colour mode, the PE of a multi-line sheet is drawn dash-dot (as the earth links of the single-line
-    diagram), the live conductors solid; with the conductor colours it is green/yellow, solid."""
+    """Without a colour mode, the PE of a multi-line sheet is drawn dash-dot and black, the live conductors solid;
+    with the conductor colours it is green/yellow, solid."""
     from uniwire.render.scene import Line, Polyline
 
     def strokes(item, cond=None):
@@ -485,7 +485,7 @@ def test_protective_conductor_dash_dot_without_colours():
 
     plain = strokes(render_pages(load(SMALL), load(SMALL).views[1])[0].root)
     assert any(c == "PE" for c, _ in plain)
-    assert all(s.style.dash for c, s in plain if c == "PE")
+    assert all(s.style.dash and s.style.color == "#000000" for c, s in plain if c == "PE")
     assert not any(s.style.dash for c, s in plain if c in ("L1", "L2", "L3", "N"))
     coloured = {**SMALL, "views": [{"id": "ml", "kind": "multi-line", "color": "conductors"}]}
     assert not any(s.style.dash for c, s in strokes(render_pages(load(coloured))[0].root)

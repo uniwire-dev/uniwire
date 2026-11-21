@@ -388,12 +388,12 @@ def _tint(color: str, amount: float = 0.78) -> str:
     return "#" + "".join(f"{round(c + (255 - c) * amount):02x}" for c in (r, g, b))
 
 
-EARTH_STYLE = Style(dash=(3.0, 0.8, 0.6, 0.8), color="#2e7d32")  # protective conductor without colours: dash-dot
+EARTH_STYLE = Style(dash=(3.0, 0.8, 0.6, 0.8), color=BLACK)  # protective conductor without colours: dash-dot, black
 
 
 def _protective(g: Group, inside: bool = False) -> None:
-    """The protective conductor (PE) of a multi-line sheet drawn in black, dash-dot in the green of the earth links
-    of the single-line diagram: otherwise nothing but its name at the sheet edge tells it from a phase."""
+    """The protective conductor (PE) of a multi-line sheet drawn without colours: dash-dot, still black (a drawing
+    without a colour mode is black); otherwise nothing but its name at the sheet edge tells it from a phase."""
     inside = inside or g.attrs.get("data-uw-cond") == "PE"
     out: list[Item] = []
     for it in g.items:

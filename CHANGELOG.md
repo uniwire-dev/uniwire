@@ -35,8 +35,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * Drawing sets: a board drawn on its own sheet names its feeding device with its board ("from =SA, -Q1 (sheet 1)")
   when the sheet it is on holds another device with the same tag. "from -Q1 (sheet 1)" did not say which of the -Q1
   drawn there feeds it.
-* Multi-line drawings without a colour mode: the protective conductor (PE) is drawn dash-dot in the green of the
-  earth links of the single-line diagram. It was drawn as a solid black line like the phases, only its name at the
+* Multi-line drawings without a colour mode: the protective conductor (PE) is drawn dash-dot, in black like the rest
+  of the drawing. It was drawn as a solid black line like the phases, only its name at the
   top telling it apart. With the conductor colours it stays green/yellow and solid.
 * Loading a document: a `symbol_text` longer than the six characters a symbol holds, which neither its spaces nor
   its initials bring down to six, keeps its first whole words ("Pump P-200" as "Pump"); it was cut in the middle of
