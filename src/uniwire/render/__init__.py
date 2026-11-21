@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import math
 import hashlib
 import re
 from collections import OrderedDict
@@ -18,7 +19,7 @@ from ..resolve import build_index
 from ..symbols import ACTIVE_SET, known_set
 from .colors import colorize
 from .frame import compose_page
-from .scene import Group, Item, Page, Text
+from .scene import Group, Item, Page, Rect, Text, text_width
 from .svg import page_to_svg
 
 
@@ -46,11 +47,27 @@ _PAGES_MAX = 16                                        # several times in a row 
 
 
 def render_pages(doc: Document, view: Optional[View] = None) -> list[Page]:
-    """Plan the sheets, lay them out and compose each page."""
+    """Plan the sheets, lay them out and compose each page. A view of a drawing set (one of several views of the
+    document) is numbered as in the set (:func:`render_views`): its sheets print the numbers they have there, in
+    the title blocks and the cross-sheet references, so that the sheets of one view drawn alone match the PDF of
+    the whole set."""
     view = view or default_view(doc)
     pages = _view_pages(doc, view)
-    number_sheets(pages, [(view, len(pages))])
+    counts, at = _drawing_set(doc, view, len(pages))
+    numbers, total = sheet_numbers(counts)
+    _write_numbers(pages, numbers[at:at + len(pages)], total)
     return pages
+
+
+def _drawing_set(doc: Document, view: View, n: int) -> tuple[list[tuple[View, int]], int]:
+    """The drawing set ``view`` (of ``n`` sheets) belongs to, as :func:`sheet_numbers` takes it, and the position of
+    its first sheet in the set. A view declared in the document (same id and kind) is one view of the set of every
+    declared view; any other view (default, or a declared view drawn in the other kind) is a set on its own."""
+    i = next((j for j, v in enumerate(doc.views) if v.id == view.id and v.kind == view.kind), None)
+    if i is None or len(doc.views) < 2:
+        return [(view, n)], 0
+    counts = [(view, n) if j == i else (v, len(_view_pages(doc, v))) for j, v in enumerate(doc.views)]
+    return counts, sum(k for _, k in counts[:i])
 
 
 _LANG_TAG = re.compile(r"[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*")
@@ -177,7 +194,12 @@ def drawing_set_findings(views: list[tuple[View, int]], lang: Optional[str] = No
 def number_sheets(pages: list[Page], views: list[tuple[View, int]]) -> None:
     """Write the printed sheet numbers (:func:`sheet_numbers`) in the title blocks and in the text of the
     cross-sheet references, which until then give the position of the sheet; the links keep the position."""
-    numbers, total = sheet_numbers(views)
+    _write_numbers(pages, *sheet_numbers(views))
+
+
+def _write_numbers(pages: list[Page], numbers: list[int], total: Optional[int]) -> None:
+    """Write ``numbers`` (the printed number of each of ``pages``, whose references target their positions in
+    ``pages``) in the title blocks and the cross-sheet references, ``total`` after each sheet number."""
     for page, number in zip(pages, numbers):
         page.attrs["data-uw-folio"] = str(number)
         _renumber(page.root, number, total)
@@ -203,10 +225,20 @@ def _last_number(text: str, old: int, new: int) -> str:
 
 def _ref_text(group: Group, change: Callable[[str], str]) -> None:
     """Change the text of a cross-sheet reference that carries the sheet number: its last text (a link's label,
-    written before it, keeps its own figures)."""
+    written before it, keeps its own figures). In a table cell (a reference drawn with its cell's frame), a printed
+    number with more figures than the layout wrote ('sheet 3' -> 'sheet 103') must not run out of the cell: the
+    text is then drawn a little smaller, as long as the cell holds."""
     texts = [t for t in group.items if isinstance(t, Text)]
-    if texts:
-        texts[-1].text = change(texts[-1].text)
+    if not texts:
+        return
+    t = texts[-1]
+    t.text = change(t.text)
+    cell = next((r for r in group.items if isinstance(r, Rect)), None)
+    if cell is not None:
+        room = cell.h - 2.0 if t.rotate else cell.w - 1.0  # the margins the table leaves (layout._draw_table)
+        width = text_width(t.text, t.size)
+        if width > room > 0:
+            t.size = math.floor(t.size * room / width * 1000) / 1000
 
 
 def _print_refs(item: Item, numbers: list[int]) -> None:
