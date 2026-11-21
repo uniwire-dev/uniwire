@@ -19,6 +19,19 @@ _CORES_WITH_SECTION = re.compile(r"^\s*(\d+)\s*([GgXx])\s*(\d+(?:[.,]\d+)?)\s*(?
 _RANGE_FIELDS = ("range_A", "idn_range_mA")
 #: Fields whose values are a few whole numbers: lax validation reads "16" as 16 elsewhere, not for these
 _INT_CHOICES = {"phases": (1, 3)}
+#: Revision columns under the names of a drawing's revision table, read as the format's names
+_REVISION_FIELDS = {"rev": "index", "revision": "index", "note": "description", "by": "author"}
+#: PLC module kinds written in full, read as the format's short kinds
+_MODULE_KINDS = {
+    "digital_input": "di", "digital_inputs": "di", "digital_in": "di",
+    "digital_output": "do", "digital_outputs": "do", "digital_out": "do",
+    "analog_input": "ai", "analog_inputs": "ai", "analogue_input": "ai", "analogue_inputs": "ai", "analog_in": "ai",
+    "analog_output": "ao", "analog_outputs": "ao", "analogue_output": "ao", "analogue_outputs": "ao",
+    "analog_out": "ao",
+    "relay_output": "relay_out", "relay_outputs": "relay_out",
+    "mixed": "mixed_io", "mixed_input_output": "mixed_io", "digital_io": "mixed_io",
+    "communication": "comm",
+}
 
 
 def _poles(v: Any) -> Any:
@@ -72,6 +85,12 @@ class _Tolerance:
                 new = f"{v[0]:g}-{v[1]:g}"
                 self.note(where, f, v, new)
                 n[f] = new
+        for f in ("onboard", "modules"):
+            mods = n.get(f)
+            if n.get("type") == "plc" and isinstance(mods, list):
+                for i, m in enumerate(mods):
+                    if isinstance(m, dict):
+                        self.module_kind(m, f"{where}/{f}/{i}")
         cable = n.get("cable")
         if isinstance(cable, dict):
             self.cable(cable, where)
@@ -79,6 +98,22 @@ class _Tolerance:
         if isinstance(children, list):
             for i, c in enumerate(children):
                 self.node(c, f"{path}/children/{i}")
+
+    def module_kind(self, m: dict[str, Any], where: str) -> None:
+        k = m.get("kind")
+        if not isinstance(k, str):
+            return
+        new = re.sub(r"[\s\-/]+", "_", k.strip().lower())
+        new = _MODULE_KINDS.get(new, new)
+        if new != k and new in _module_kinds():
+            self.note(where, "kind", k, new)
+            m["kind"] = new
+
+    def revision(self, r: dict[str, Any], where: str) -> None:
+        for old, new in _REVISION_FIELDS.items():
+            if old in r and new not in r and old not in _revision_fields():
+                r[new] = r.pop(old)
+                self.moved(where, old, new)
 
     def cable(self, c: dict[str, Any], where: str) -> None:
         v = c.get("cores")
@@ -115,6 +150,10 @@ class _Tolerance:
             notes = meta.get("notes")
             meta["notes"] = ([*notes] if isinstance(notes, list) else []) + [text]
             self.moved("meta", "description", "notes")
+        revisions = meta.get("revisions") if isinstance(meta, dict) else None
+        for i, r in enumerate(revisions if isinstance(revisions, list) else []):
+            if isinstance(r, dict):
+                self.revision(r, f"meta/revisions/{i}")
         for i, v in enumerate(d.get("views") or []):
             if not isinstance(v, dict):
                 continue
@@ -129,12 +168,30 @@ class _Tolerance:
                 if new != k and new in ("single-line", "multi-line"):
                     self.note(where, "kind", k, new)
                     v["kind"] = new
+            p = v.get("pitch_mm")
+            if isinstance(p, (int, float)) and not isinstance(p, bool) and 0 < p < _pitch_min():
+                self.note(where, "pitch_mm", p, _pitch_min())  # narrower than a feeder column can be: the narrowest
+                v["pitch_mm"] = _pitch_min()
 
 
 def _meta_fields() -> set[str]:
     from .model.base import Meta
 
     return set(Meta.model_fields)
+
+
+def _revision_fields() -> set[str]:
+    from .model.base import Revision
+
+    return set(Revision.model_fields)
+
+
+def _module_kinds() -> tuple[str, ...]:
+    from typing import get_args
+
+    from .model.nodes import ModuleKind
+
+    return get_args(ModuleKind)
 
 
 def tolerate(data: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
@@ -145,3 +202,10 @@ def tolerate(data: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     tol = _Tolerance()
     tol.document(out)
     return out, tol.notes
+
+
+def _pitch_min() -> int:
+    """Narrowest feeder column of a view (``pitch_mm``): a narrower one is read as this."""
+    from .model.document import View
+
+    return int(next(m.ge for m in View.model_fields["pitch_mm"].metadata if getattr(m, "ge", None) is not None))

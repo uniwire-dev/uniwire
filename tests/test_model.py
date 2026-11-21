@@ -132,3 +132,49 @@ def test_cli_version(capsys):
 def test_fmt_power_in_watts_below_1_kw():
     assert fmt_power(0.0162) == "16.2 W" and fmt_power(0.00075) == "0.75 W" and fmt_power(0.5) == "500 W"
     assert fmt_power(1) == "1 kW" and fmt_power(3.5) == "3.5 kW" and fmt_power(None) == ""
+
+
+def _refusal(doc):
+    with pytest.raises(UniwireError) as e:
+        load(doc)
+    return "\n".join(e.value.issues)
+
+
+_BASE = {"uniwire": "1.0.0", "installation": {"earthing": "TT", "system": "3P+N", "un_V": 400}}
+
+
+def _one(*children, **extra):
+    return {**_BASE, **extra, "sources": [{"type": "grid", "id": "G", "children": list(children)}]}
+
+
+def test_duplicate_id_message_gives_both_paths():
+    msg = _refusal(_one({"type": "board", "id": "B1", "children": [{"type": "meter", "id": "P1"}]},
+                        {"type": "breaker", "id": "Q1", "in_A": 16, "children": [{"type": "meter", "id": "P1"}]}))
+    assert "'P1'" in msg
+    assert "sources/0/grid/children/0/board/children/0/meter" in msg
+    assert "sources/0/grid/children/1/breaker/children/0/meter" in msg
+
+
+def test_unknown_field_names_what_to_write():
+    msg = _refusal(_one({"type": "breaker", "id": "Q1", "in_A": 16, "children": [
+        {"type": "load", "id": "L1", "in_A": 10}]}))
+    assert "did you mean 'ib_A'?" in msg
+    msg = _refusal(_one({"type": "motor_starter", "id": "Q1", "ip_address": "10.0.0.1"}))
+    assert "'ip_address' is a field of plc, not of motor_starter" in msg
+
+
+def test_value_not_allowed_names_the_value():
+    msg = _refusal(_one({"type": "socket"}, views=[{"kind": "single-line", "cartouche": ["ref", "colour"]}]))
+    assert "'colour' is not one of the values allowed here" in msg and "label, ref" in msg
+    msg = _refusal(_one({"type": "socket"}, views=[{"kind": "single-line", "pitch_mm": 0}]))  # 0 < x < 10 is read as 10
+    assert "views/0/pitch_mm: 0 is below the smallest value allowed here; write 10 or more" in msg
+
+
+def test_text_where_an_object_is_expected():
+    msg = _refusal(_one({"type": "busbar", "id": "W1"}, {"type": "busbar", "id": "W2"},
+                        {"type": "breaker", "id": "Q9", "in_A": 63}) | {
+        "links": [{"kind": "tie", "from": "W1", "to": "W2", "device": "Q9"}]})
+    assert "links/0/device: a node object is expected here, not the text 'Q9'" in msg
+    msg = _refusal(_one({"type": "breaker", "id": "Q1", "in_A": 16,
+                         "product": {"part_number": "X-100", "accessories": ["X-AUX"]}}))
+    assert "an object is expected here, not the text 'X-AUX'" in msg and "part_number" in msg

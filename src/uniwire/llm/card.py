@@ -84,7 +84,8 @@ _TEXT: dict[str, dict[str, str]] = {
             "- Never write units in values (`\"16 A\"`): use the suffixed field (`in_A: 16`); "
             "RCD sensitivity is `idn_mA` (30, not 0.03).",
             "- `curve` belongs to breaker/rcbo, `rcd_type` to rcd/rcbo/main_breaker, `idn_mA` to residual-current "
-            "devices; `poles` uses the Poles enum (\"1P+N\", not \"2 poles\").",
+            "devices (a breaker with residual-current protection is an `rcbo`); `poles` uses the Poles enum "
+            "(\"1P+N\", not \"2 poles\").",
             "- Single-phase circuits on a three-phase network: set `phase` (L1/L2/L3).",
             "- Cable cross-section goes in `cable.section_mm2`, cores in `cable.cores` without the section "
             "(\"3G\", \"5G\", \"4x\").",
@@ -162,7 +163,8 @@ _TEXT: dict[str, dict[str, str]] = {
             "- Jamais d'unité dans les valeurs (`\"16 A\"`) : utiliser le champ suffixé (`in_A: 16`) ; la "
             "sensibilité différentielle est `idn_mA` (30, pas 0.03).",
             "- `curve` concerne breaker/rcbo, `rcd_type` rcd/rcbo/main_breaker, `idn_mA` les dispositifs "
-            "différentiels ; `poles` suit l'énumération Poles (\"1P+N\", pas \"bipolaire\").",
+            "différentiels (un disjoncteur différentiel est un `rcbo`) ; `poles` suit l'énumération Poles "
+            "(\"1P+N\", pas \"bipolaire\").",
             "- Circuits monophasés sur réseau triphasé : renseigner `phase` (L1/L2/L3).",
             "- La section va dans `cable.section_mm2`, la composition dans `cable.cores` sans la section "
             "(\"3G\", \"5G\", \"4x\").",

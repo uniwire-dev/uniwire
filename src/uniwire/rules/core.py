@@ -380,3 +380,42 @@ def folio_duplicate(doc: Document, idx: Index):
                                                                folio=v.first_folio))
         else:
             first[v.first_folio] = v.id
+
+
+DC_SOURCES = {"battery", "pv_array"}
+
+
+@rule("core")
+def system_missing(doc: Document, idx: Index):
+    """No supply system declared anywhere (installation, source, board...): the number of conductors drawn is a
+    guess from the devices; ask for it once. Not for a document fed only by DC sources (a battery, a PV array)."""
+    if doc.installation.system or any(getattr(n, "system", None) for n in idx.nodes.values()):
+        return
+    if not doc.sources or all(s.type in DC_SOURCES or getattr(s, "dc", None) for s in doc.sources):  # type: ignore[attr-defined]
+        return
+    yield Finding("info", "core.system-missing", _t("core.system_missing"))
+
+
+@rule("core")
+def pen_split_missing(doc: Document, idx: Index):
+    """TN-C-S: the PEN is split into PE and N at one board; the document must say which (``pen_split``, or a board
+    declaring its own earthing); both drawings otherwise split it at the first board."""
+    if doc.installation.earthing != "TN-C-S":
+        return
+    boards = [n for n in idx.nodes.values() if n.type in ("board", "busbar")]  # type: ignore[attr-defined]
+    if not boards or any(getattr(n, "pen_split", None) for n in idx.nodes.values()) \
+            or any(getattr(b, "earthing", None) in ("TN-S", "TN-C-S") for b in boards):
+        return
+    yield Finding("info", "core.pen-split-missing", _t("core.pen_split_missing"))
+
+
+@rule("core")
+def symbol_text_missing(doc: Document, idx: Index):
+    """Generic loads and controllers are drawn as boxes whose text is ``symbol_text``: none is guessed from the
+    label. One finding for the document, listing them, suggests the text."""
+    empty = [nid for nid, n in idx.nodes.items()
+             if n.type in ("load", "controller") and not getattr(n, "symbol_text", None)]  # type: ignore[attr-defined]
+    if not empty:
+        return
+    names = [idx.nodes[i].ref or idx.nodes[i].label or i for i in empty[:6]] + (["..."] if len(empty) > 6 else [])
+    yield Finding("info", "core.symbol-text", _t("core.symbol_text", refs=", ".join(names)), empty[0])
