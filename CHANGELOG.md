@@ -8,6 +8,45 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Drawings: a generator whose line leads, through switches and protections only, to DC equipment (a DC/DC converter,
+  a battery, a DC board) is a DC machine, an alternator with its rectifier: drawn "G =" with L+ L- in both views. In
+  an AC installation it was drawn as an AC generator ("G 1~", L1 N) feeding the DC equipment.
+* Multi-line drawings with the conductor colours: the leads of a surge protector to its conductors and to the PE,
+  and the lead of an earth electrode, are drawn in the colour of their conductor; they were black, as if no
+  conductor reached the device.
+* Drawings: the designation the author gave a cable is written in the text of its device with its composition
+  ("XYZ-1 3G10" beside the feeder of a sub-board), as in the multi-line view; the single-line view left it out. The
+  multi-line view writes the socket type under a socket, after its number of points; it was drawn nowhere.
+* Drawing sets: installations side by side drawn one per sheet take the name of their board; one with no board takes
+  the title of the drawing, as the first sheet does. Its sheet was named after the label of its source ("Roof array"
+  as the title of the second sheet).
+* Drawings: an off-page reference whose `target` is the id of a node of the document prints that node's tag (else
+  its label): "→ -S9", in the single-line and multi-line views and in its annotation. It printed the bare id ("→
+  ts_main"). A target that is no id (another drawing, a sheet) is printed as written.
+* Single-line drawings: a protection relay, an instrument transformer or an earthing device alone at the end of a
+  way of its own (behind its own breaker) has its column in the circuit table, as a contactor there has; the circuit
+  was missing from the table. Beside the other devices of a way it still has none.
+* Drawings: a controller feeding a motor declared three-phase from fewer than three phases or from a DC line (an
+  electronic speed controller) gives it three conductors, as a drive does: U V W at the motor in the multi-line
+  view, and the motor drawn 3~ in the single-line view. It passed the two supply conductors on unchanged (L+ L- into
+  a three-phase motor) and the motor was drawn as a DC motor.
+* Single-line drawings: a power supply fed from a DC line is drawn as a DC/DC converter, "=" on its input as in the
+  multi-line view; it was drawn AC/DC ("~" in) in the single-line view and DC/DC in the multi-line one.
+* Drawing sets: a board drawn on its own sheet names its feeding device with its board ("from =SA, -Q1 (sheet 1)")
+  when the sheet it is on holds another device with the same tag. "from -Q1 (sheet 1)" did not say which of the -Q1
+  drawn there feeds it.
+* Multi-line drawings without a colour mode: the protective conductor (PE) is drawn dash-dot in the green of the
+  earth links of the single-line diagram. It was drawn as a solid black line like the phases, only its name at the
+  top telling it apart. With the conductor colours it stays green/yellow and solid.
+* Loading a document: a `symbol_text` longer than the six characters a symbol holds, which neither its spaces nor
+  its initials bring down to six, keeps its first whole words ("Pump P-200" as "Pump"); it was cut in the middle of
+  a word ("Pump P"). A single word too long is cut with a full stop marking the abbreviation ("Ventilation" as
+  "Venti.").
+* Drawings: a rating of 0 (a rating left unknown) prints nothing beside a switch, an RCD, a fuse, a breaker or an
+  overload relay (its range); it was printed "0 A", or "C0" after a curve. In multi-line drawings a breaker's curve
+  is kept beside a label holding its letter inside a word (a "C" curve beside "Socket circuit" was left out, the
+  breaker drawn without its curve when it has no rating). In the circuit table, the residual-current cell writes the
+  RCD type as "30 mA type A", as beside the symbol; "30 mA A" read as a second unit.
 * Single-line drawings: a characteristic of a device (a rating, a curve, a type of meter) is left out beside its
   label only when the label already says it, word for word ("Type 2" beside "SPD type 2"). Before, it was left
   out whenever its text appeared anywhere in the label: "16 A" beside a label holding "116 A", "C" beside a

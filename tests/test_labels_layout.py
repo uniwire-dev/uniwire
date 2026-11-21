@@ -941,3 +941,72 @@ def test_annotation_line_dropped_only_when_the_label_says_it():
     assert texts[texts.index("Hall 116 A") + 1] == "16 A"
     assert texts[texts.index("Night rate (contacts C1-C2)") + 1] == "C2"  # a rating, not the contacts named
     assert "Type 2" not in texts
+
+
+def test_rating_of_zero_is_not_printed():
+    """A rating of 0 (an unknown rating written as 0) prints nothing, not '0 A', nor 'C0' after a curve."""
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "switch_disconnector", "ref": "-Q0", "in_A": 0, "poles": "2P", "children": [
+            {"type": "breaker", "ref": "-Q1", "in_A": 0, "curve": "C", "children": [{"type": "load", "label": "X"}]},
+            {"type": "rcd", "ref": "-F1", "in_A": 0, "idn_mA": 30, "children": [
+                {"type": "fuse", "ref": "-F2", "in_A": 0, "children": [{"type": "load", "label": "Y"}]}]},
+            {"type": "thermal_relay", "ref": "-F4", "range_A": 0, "setting_A": 0, "children": [
+                {"type": "motor", "label": "Z"}]}]}]}]}],
+        "views": [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]})
+    for view in doc.views:
+        texts = _texts(render_pages(doc, view)[0].root)
+        assert "0 A" not in texts and "C0" not in texts
+        assert "C" in texts and "30 mA" in texts
+
+
+def test_curve_kept_in_multi_line_when_the_label_holds_its_letter():
+    """A breaker with a curve and no rating keeps its curve beside a label holding the letter inside a word."""
+    doc = load({"installation": {"system": "1P+N"}, "sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "breaker", "ref": "-Q1", "label": "Socket circuit", "curve": "C", "children": [
+            {"type": "socket", "label": "Sockets"}]}]}]}],
+        "views": [{"id": "ml", "kind": "multi-line"}]})
+    texts = _texts(render_pages(doc)[0].root)
+    assert texts[texts.index("Socket circuit") + 1] == "C"
+
+
+def test_rcd_type_in_the_circuit_table_is_written_as_a_type():
+    """The residual-current cell gives the RCD type as 'type A': a bare letter after the sensitivity reads as a
+    unit ('30 mA A')."""
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "rcd", "ref": "-F1", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "children": [
+            {"type": "breaker", "ref": "-Q1", "in_A": 16, "children": [{"type": "socket", "label": "Sockets"}]}]}]}]}],
+        "views": [{"id": "sld", "cartouche": ["label", "ref", "protection", "idn_mA"]}]})
+    t = next(_texts(g) for g in _items_groups(render_pages(doc)[0].root) if g.cls == "cartouche")
+    assert "30 mA type A" in t and "30 mA A" not in t
+
+
+def test_relay_at_the_end_of_its_own_way_has_a_column_in_the_circuit_table():
+    """A protection relay alone behind its own breaker is a circuit of the board: the table gives it a column, as
+    it does to a contactor there; beside other devices of a way (a relay watching a feeder) it has none."""
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 16, "children": [{"type": "socket", "label": "Sockets"}]},
+        {"type": "breaker", "ref": "-Q2", "in_A": 2, "children": [{"type": "protection_relay", "label": "Relay A"}]},
+        {"type": "breaker", "ref": "-Q3", "in_A": 2, "children": [{"type": "contactor", "label": "Contactor B"}]},
+        {"type": "breaker", "ref": "-Q4", "in_A": 32, "children": [
+            {"type": "protection_relay", "label": "Relay C"}, {"type": "load", "label": "Heater"}]}]}]}],
+        "views": [{"id": "sld", "cartouche": ["label", "ref"]}]})
+    t = next(_texts(g) for g in _items_groups(render_pages(doc)[0].root) if g.cls == "cartouche")
+    assert "Relay A" in t and "-Q2" in t and "Contactor B" in t
+    assert "Relay C" not in t and "Heater" in t
+
+
+def test_cable_designation_and_socket_type_are_drawn():
+    """The designation of a cable written beside its device (feeder of a sub-board) comes with its composition, as
+    in the multi-line view; the multi-line view writes the socket type under the socket."""
+    doc = load({"installation": {"system": "1P+N"}, "sources": [{"type": "grid", "children": [{"type": "board", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 16, "children": [
+            {"type": "socket", "label": "Sockets", "points": 4, "socket_type": "Type Z"}]},
+        {"type": "breaker", "ref": "-Q3", "in_A": 32, "cable": {"designation": "XYZ-1", "cores": "3G", "section_mm2": 10},
+         "children": [{"type": "board", "ref": "TD2", "children": [
+             {"type": "breaker", "ref": "-Q31", "in_A": 16, "children": [{"type": "socket"}]},
+             {"type": "breaker", "ref": "-Q32", "in_A": 10, "children": [{"type": "lighting"}]}]}]}]}]}],
+        "views": [{"id": "sld"}, {"id": "ml", "kind": "multi-line"}]})
+    sld = _texts(render_pages(doc, doc.views[0])[0].root)
+    assert "XYZ-1 3G10" in sld
+    ml = _texts(render_pages(doc, doc.views[1])[0].root)
+    assert any("Type Z" in t for t in ml)

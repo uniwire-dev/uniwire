@@ -29,6 +29,7 @@ from ..labels import (
     ref_label,
     state_text,
     system_mark,
+    target_text,
     without_ref,
 )
 from ..model import NODE_TYPES, Document, NodeBase, View
@@ -807,6 +808,8 @@ def _system_of(node: NodeBase, doc: Document) -> Optional[str]:
     m = _VECTOR.match(getattr(node, "coupling", None) or "")
     if m:
         return "3P+N" if m[2].endswith("n") else "3P"
+    if node.type == "generator" and feeds_dc_input(node):  # type: ignore[attr-defined]
+        return "DC"
     stack = list(node.children)
     while stack:
         n = stack.pop(0)
@@ -814,6 +817,27 @@ def _system_of(node: NodeBase, doc: Document) -> Optional[str]:
             return n.system  # type: ignore[attr-defined]
         stack.extend(n.children)
     return doc.installation.system
+
+
+def feeds_dc_input(node: NodeBase) -> bool:
+    """Whether what ``node`` feeds, through switches and protections only, takes direct current by nature: a DC/DC
+    converter, a battery, a DC board or a device declared ``dc``. A generator feeding that is a DC machine (an
+    alternator with its rectifier), whatever the system of the installation."""
+    ways = list(node.children)
+    if not ways:
+        return False
+    while ways:
+        n = ways.pop()
+        if n.type in SWITCHING and not getattr(n, "dc", None):  # type: ignore[attr-defined]
+            if not n.children:
+                return False
+            ways.extend(n.children)
+            continue
+        if not (n.type in ("dc_converter", "battery") or getattr(n, "dc", None) is True  # type: ignore[attr-defined]
+                or getattr(n, "system", None) == "DC"
+                or (n.type == "board" and getattr(n, "kind", None) == "dc_box")):  # type: ignore[attr-defined]
+            return False
+    return True
 
 
 # -------------------------------------------------------------- sheet layout
@@ -842,7 +866,8 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         for n in r.walk():
             if n.type == "generator" and n.node is not None:
                 n.sym = symbol_for(n.node, _system_of(n.node, doc))
-            elif n.type == "motor" and n.node is not None and n.node.id and _dc_line(n.node, index):
+            elif n.type == "motor" and n.node is not None and n.node.id and _dc_line(n.node, index) \
+                    and getattr(n.node, "phases", None) != 3:  # three phases declared: made by the drive above it
                 n.sym = symbol("motor", n.node, dc=True)  # on a DC line: a DC motor, whatever its feeder's poles
             elif n.type == "motor" and n.node is not None and getattr(n.node, "phases", None) is None:
                 # phases not stated: those of its feeder (a motor on a single-phase circuit is drawn 1~)
@@ -851,6 +876,8 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
             elif (n.type == "inverter" and n.node is not None and n.node.id and n.node.children
                   and all(_is_dc(c) for c in n.node.children) and not _fed_dc(n.node, index)):
                 n.sym = symbol("inverter", n.node, ac_fed=True)  # fed by the board, its DC side below it
+            elif n.type == "power_supply" and n.node is not None and _fed_dc(n.node, index):
+                n.sym = symbol("power_supply", n.node, dc_in=True)  # fed from a DC line: '=' in, as in multi-line
             n.sym = _spread_symbol(doc, n.node, n.sym, here)
             n.left_room = _left_room(doc, n, here, lang)
 
@@ -1049,8 +1076,12 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
     NO_COLUMN = {"earth", "earth_bar", "earthing_switch", "voltage_indicator", "neutral_impedance",
                  "surge_limiter", "insulation_monitor", "protection_relay", "instrument_transformer"}
     on_bus = {id(c) for n in everything if n.has_bus for c in n.bus_children}
+    # a device of these types alone at the end of a way of its own (a relay behind its own breaker) is a circuit
+    own_way = {id(n.children[0]) for n in everything if id(n) in on_bus and len(n.children) == 1 and not n.is_board
+               and n.kind == "node" and n.type not in NO_COLUMN}
     columns = [n for n in everything if not n.children and n.kind != "bus_in" and not
-               (n.type in NO_COLUMN and not (n.type == "insulation_monitor" and id(n) in on_bus)) and not
+               (n.type in NO_COLUMN and id(n) not in own_way
+                and not (n.type == "insulation_monitor" and id(n) in on_bus)) and not
                (n.node is not None and any(n.node.id == l.from_ for l in doc.links if l.kind == "transfer"))]
     columns.sort(key=lambda n: n.x)
 
@@ -1156,7 +1187,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                 g.add(ref_group(n.target_folio, n.target, [Text((n.x, y), t, 1.8, "middle")]))
                 bottom_end = max(bottom_end, y + 0.5)
             elif n.node is not None and n.node.type == "offpage" and getattr(n.node, "target", None):
-                t = str(n.node.target)  # type: ignore[attr-defined]  # another drawing: on up to 3 lines
+                t = target_text(n.node.target)  # type: ignore[attr-defined]  # another drawing: on up to 3 lines
                 words, room = text_units(t), view.pitch_mm * 0.95
                 lines = next((ls for k in (1, 2, 3) if len(words) >= k
                               for ls in [_wrap_words(words, k, lambda u: text_width(u, 1.8))]
@@ -1297,6 +1328,28 @@ def feeding_sheet(specs: list[SheetSpec], i: int, rid: Optional[str], index: Ind
     holders = [j for j, s in enumerate(specs, 1) if rid in s.detached and j != i]
     j = sheet_of.get(index.parent.get(rid or "") or "")
     return j if j in holders else next(iter(holders), None)
+
+
+def incoming_text(specs: list[SheetSpec], i: int, rid: Optional[str], index: Index, sheet_of: dict[str, int],
+                  lang: str) -> tuple[str, tuple[Optional[int], Optional[str]]]:
+    """Where the board ``rid`` drawn from sheet ``i`` on is fed from: 'from -Q1 (folio 1)', and the sheet and the
+    node it is fed by. The tag of the feeding device is qualified with its board ('from =SA, -Q1') when another
+    device of the sheet it is on (of the drawing, when not drawn) carries the same tag."""
+    src = feeding_sheet(specs, i, rid, index, sheet_of)
+    feeder = next((a for a in index.ancestors(rid or "") if a.ref), None)
+    if feeder is None:
+        what = _t("render.incoming", lang)
+    else:
+        ref = feeder.ref
+        twins = [n for n in index.nodes.values() if n is not feeder and n.ref == ref
+                 and (src is None or sheet_of.get(n.id or "") == src)]
+        board = next((a for a in index.ancestors(feeder.id or "") if a.type == "board"  # type: ignore[attr-defined]
+                      and (a.ref or a.label)), None)
+        if twins and board is not None:
+            ref = f"{board.ref or board.label}, {ref}"
+        what = _t("render.incoming_from", lang, ref=ref)
+    text = _t("render.incoming_folio", lang, what=what, folio=src) if src else what
+    return text, (src, index.parent.get(rid or ""))
 
 
 DEVICE_PAD_MM = 2.5  # free margin around an auxiliary device (symbol and text)
@@ -1714,10 +1767,13 @@ def _in_column(n: LNode) -> bool:
 
 
 def _cable_caption(c: Any) -> str:
-    """'W7 5x6 38 m': tag, composition and length of a cable written in the text of its device ('' without a
-    composition: a bare length says nothing)."""
+    """'W7 U1000R2V 5x6 38 m': tag, designation, composition and length of a cable written in the text of its
+    device, as the multi-line view writes them ('' without a composition nor a designation: a bare length says
+    nothing)."""
     comp = drawn_cable_text(c)
-    return " ".join(x for x in (c.ref, comp, fmt(c.length_m, " m") if c.length_m else "") if x) if comp else ""
+    if not (comp or c.designation):
+        return ""
+    return " ".join(x for x in (c.ref, c.designation, comp, fmt(c.length_m, " m") if c.length_m else "") if x)
 
 
 def _draw_conductor_marks(columns: list[LNode], index: Index, doc: Document, g: Group, obs: Obstacles,
@@ -3891,9 +3947,9 @@ def plan_sheets(doc: Document, view: View, index: Index | None = None) -> list[S
             out += process(c, allow_bus_split=False)
         for nid in _ordered(spec, index):
             out += process(SheetSpec([index.nodes[nid]] + standby(nid), name=name_of(index.nodes[nid])))
-        for roots in groups:
-            board = next((n for r in roots for n in _walk_nodes(r) if n.type == "board"), roots[0])  # type: ignore[attr-defined]
-            out += process(SheetSpec(roots, name=name_of(board)))
+        for roots in groups:  # named after its board; without one, as the first sheet (a source names no sheet)
+            board = next((n for r in roots for n in _walk_nodes(r) if n.type == "board"), None)  # type: ignore[attr-defined]
+            out += process(SheetSpec(roots, name=name_of(board) if board is not None else ""))
         return out
 
     def standby(nid: str) -> list[NodeBase]:

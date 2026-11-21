@@ -728,9 +728,10 @@ def plc(node: Any = None, wired: Optional[dict[int, int]] = None) -> Symbol:
                   has_output=has_out, extra={"ports": ports, "port_y": y0 + body, "slot_w": slot_w})
 
 
-def power_supply(node: Any = None) -> Symbol:
+def power_supply(node: Any = None, dc_in: bool = False) -> Symbol:
+    """``dc_in``: fed from a DC line (a DC/DC converter module), its input side marked '='."""
     out = getattr(node, "output", "DC") or "DC"
-    return _converter("power_supply", "~", "=" if out == "DC" else "~", False)
+    return _converter("power_supply", "=" if dc_in else "~", "=" if out == "DC" else "~", False)
 
 
 SYMBOLS: dict[str, Callable[[Any], Symbol]] = {
