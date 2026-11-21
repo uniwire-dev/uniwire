@@ -33,6 +33,7 @@ from .scene import (
     Style,
     Text,
     bbox,
+    cut_to_width,
     text_units,
     text_width,
     transform,
@@ -118,9 +119,7 @@ def _fit_lines(text: str, size: float, width: float, two_line_size: float) -> tu
         s2 = min(two_line_size, size, *(_fit(t, size, width) for t in pair))
         if s2 > s:
             return list(pair), s2
-    if text_width(text, s) > width:
-        text = _cut(text, s, width) + "…"
-    return [text], s
+    return [cut_to_width(text, s, width, keep=2)], s
 
 
 def _halves(words: list[str]) -> tuple[str, str]:
@@ -142,27 +141,6 @@ def _halves(words: list[str]) -> tuple[str, str]:
             lo = mid + 1
     return min((pair(i) for i in (lo - 1, lo) if i >= 1),
                key=lambda p: max(text_width(p[0], 1.0), text_width(p[1], 1.0)))
-
-
-def _cut(text: str, size: float, width: float) -> str:
-    """The longest beginning of ``text`` that fits ``width`` with an ellipsis (trailing spaces dropped), found by
-    halving; a single character when none fits."""
-    if len(text) <= 1:
-        return text
-
-    def fits(k: int) -> bool:
-        return text_width(text[:k].rstrip() + "…", size) <= width
-
-    # one character at least: up to the second one that is not a space
-    floor = min(next((i for i in range(1, len(text)) if not text[i].isspace()), len(text)), len(text) - 1)
-    lo, hi = 0, len(text) - 1  # lo: no fitting length found yet
-    while lo < hi:
-        mid = (lo + hi + 1) // 2
-        if fits(mid):
-            lo = mid
-        else:
-            hi = mid - 1
-    return text[:max(lo, floor)].rstrip()
 
 
 _PROFILE_NAMES = {"iec60364": "IEC 60364", "nfc15100": "NF C 15-100", "enedis": "Enedis"}
