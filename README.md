@@ -84,6 +84,7 @@ pip install uniwire                 # validation, rules, SVG rendering, bill of 
 pip install "uniwire[pdf]"          # + PDF output (reportlab)
 pip install "uniwire[mcp]"          # + MCP server (uniwire-mcp)
 pip install "uniwire[iec81346]"     # + optional IEC 81346-2 class table (separate CC BY-SA 4.0 data package)
+pip install "uniwire[native]"       # + optional compiled link router: same drawings, large documents drawn faster
 ```
 
 Python 3.10 or later. The only required dependency is pydantic.

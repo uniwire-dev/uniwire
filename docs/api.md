@@ -9,7 +9,8 @@ The `uniwire` package exposes a small functional API around the `Document` model
 command-line tool. To *write* documents in Python, see the [code-first API](build.md).
 
 ```bash
-pip install uniwire            # add [pdf] for PDF output, [iec81346] for the IEC 81346-2 class table
+pip install uniwire            # add [pdf] for PDF output, [iec81346] for the IEC 81346-2 class table,
+                               # [native] for the compiled link router (same drawings, faster)
 ```
 
 ## Loading and validating

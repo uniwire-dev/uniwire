@@ -1,0 +1,33 @@
+[project]
+name = "uniwire-native"
+version = "0.1.0"
+description = "Optional compiled link router search for uniwire: the same drawings, drawn faster"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "uniwire contributors" }]
+keywords = ["uniwire", "electrical", "diagram", "routing"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Manufacturing",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Rust",
+  "Topic :: Scientific/Engineering",
+]
+
+[project.urls]
+Homepage = "https://uniwire.sh"
+Repository = "https://github.com/uniwire-dev/uniwire"
+Source = "https://github.com/uniwire-dev/uniwire/tree/main/packages/uniwire-native"
+Issues = "https://github.com/uniwire-dev/uniwire/issues"
+
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[tool.maturin]
+module-name = "uniwire_native"
+features = ["pyo3/extension-module"]
