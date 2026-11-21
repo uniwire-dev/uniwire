@@ -14,8 +14,6 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   the power tree (every node in it, whatever its type) and the power links (transfer, bypass, parallel, tie,
   infeed). The new view option `auxiliaries: true` draws the auxiliary devices and their links as before. Large
   multi-line views are also drawn much faster.
-* Faster layout: the drawings of large documents, with many links, take about half the time they took (the
-  slowest twice as fast or more), with the same drawings: link routes costed on the obstacles near them, the
 * Faster layout: large drawings, with many links, take about half the time they took (the slowest twice as
   fast or more), with the same drawings: link routes costed on the obstacles near them, the
   channels and stubs that cannot beat the best route found left out, the sheets of a view with no paper planned
