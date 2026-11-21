@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import copy
-import math
 import hashlib
+import math
 import re
 from collections import OrderedDict
 from collections.abc import Callable, Iterable
