@@ -4701,9 +4701,20 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         finally:
             obs.boxes.pop()
 
-    # the usual short stub; longer when its sheet reference finds no free place beside it (a crowded device side)
+    def on_bus(n: float) -> bool:
+        """A vertical stub of length ``n`` runs into a busbar (its arrow and texts would be on it)."""
+        if e.side not in ("up", "down"):
+            return False
+        _, tip, _ = geometry(n)
+        lo, hi = sorted((e.y, tip[1] + (1.0 if tip[1] > e.y else -1.0)))
+        return any(x0 - 0.5 <= e.x <= x1 + 0.5 and lo + 0.5 < y < hi for y, x0, x1 in obs.buses)
+
+    # the usual short stub; longer when its sheet reference finds no free place beside it (a crowded device side);
+    # shorter when it would run into a busbar
     lengths = (6.0, 12.0, 18.0)
-    n = next((n for n in lengths if room(n)), next((n for n in lengths if not on_frame(n)), 6.0))
+    n = next((n for n in lengths if room(n) and not on_bus(n)),
+             next((n for n in lengths + (3.0,) if not on_frame(n) and not on_bus(n)),
+                  next((n for n in lengths if room(n)), next((n for n in lengths if not on_frame(n)), 6.0))))
     pts, tip, head = geometry(n)
     g.add(Polyline(pts, _link_style(link.kind, link.normally_open)))
     hb = head_box(n)

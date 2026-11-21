@@ -8,7 +8,7 @@ import uniwire
 from tests.drawing_audit import audit
 from uniwire import load
 from uniwire.render import render_pages, render_views
-from uniwire.render.scene import Group, Polyline, Text
+from uniwire.render.scene import BUS, Group, Line, Polyline, Text
 
 DOC = {
     "meta": {"title": "Example house with a hybrid inverter", "lang": "en"},
@@ -135,3 +135,21 @@ def test_checks_unchanged_by_the_views():
     one["views"] = [{"id": "all", "paper": "A3"}]
     key = lambda f: (f.rule, str(f))  # noqa: E731
     assert sorted(map(key, uniwire.check(load(one)))) == sorted(map(key, uniwire.check(load(copy.deepcopy(DOC)))))
+
+
+def test_stub_under_a_busbar_stops_short_of_it():
+    """A changeover switch right under a busbar: the reference of its standby supply stays below the busbar (its
+    arrow and texts were drawn on it)."""
+    d = copy.deepcopy(DOC)
+    board = d["sources"][1]["children"][0]
+    board["children"] = [board["children"][0]["children"][0],  # (the switch straight on the busbar of the board)
+                         {"type": "breaker", "id": "Q9", "ref": "-Q9", "in_A": 10, "children": [
+                             {"type": "load", "id": "E9", "ref": "-E9", "label": "Lights"}]}]
+    _, second = render_views(load(d))
+    (head,) = [p for p in _ref(second, "Q3", "Q8").items if isinstance(p, Polyline) and p.closed]
+    stub = next(p for p in _link(second, "Q3", "Q8").items if isinstance(p, Polyline) and not p.closed).points
+    x = stub[0][0]
+    lines = [(i.a[1], min(i.a[0], i.b[0]), max(i.a[0], i.b[0])) for i in _walk(second.root)
+             if isinstance(i, Line) and i.style.width == BUS and abs(i.a[1] - i.b[1]) < 1e-9]  # the busbars
+    top = min(p[1] for p in head.points)
+    assert lines and not [y for y, x0, x1 in lines if x0 - 0.5 <= x <= x1 + 0.5 and top - 1.0 < y < stub[0][1]]
