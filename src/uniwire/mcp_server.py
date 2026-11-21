@@ -364,13 +364,14 @@ def build_server(pool=None, store=None, link_base: Optional[str] = None, pdf_bas
     def wiring(
             document: Doc,
             what: Annotated[str, Field(description=(
-                "'markers' (one row per wire end, for label printers), 'wires' (wire list) or 'cables' (cable "
-                "schedule)."))] = "markers",
+                "'markers' (one row per wire end, for label printers), 'wires' (wire list), 'cables' (cable "
+                "schedule), 'io' (I/O list of the PLCs) or 'terminals' (terminal strip table)."))] = "markers",
             view: View = None) -> dict[str, Any]:
         """Wiring exports of an installation as rows with stable column names (repérage des fils, carnet de
-        câbles): what='markers' (one row per wire end, for label
-        printers), 'wires' (wire list) or 'cables' (cable schedule). Marks follow the wire_marking rules of
-        the view (id), by default the first view that declares them."""
+        câbles, liste d'E/S, borniers): what='markers' (one row per wire end, for label
+        printers), 'wires' (wire list), 'cables' (cable schedule), 'io' (one row per PLC channel, connected or
+        spare, with the device linked to it) or 'terminals' (one row per terminal of each terminal block). Marks
+        follow the wire_marking rules of the view (id), by default the first view that declares them."""
         return T.wiring(document, what, view)
 
     @tool("Bill of materials")

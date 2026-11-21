@@ -1,4 +1,4 @@
-"""Command-line interface: ``uniwire validate|check|render|schema|graph|bom|wires|markers|cables|marks|symbols|normalize|card|describe|patch``.
+"""Command-line interface: ``uniwire validate|check|render|schema|graph|bom|wires|markers|cables|io|terminals|marks|symbols|normalize|card|describe|patch``.
 
 Messages follow the ``UNIWIRE_LANG`` environment variable (``en`` by default, ``fr`` available).
 """
@@ -92,6 +92,15 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("cables", help=_t("cli.help.cables"))
     p.add_argument("file")
+    p.add_argument("-o", "--out")
+
+    p = sub.add_parser("io", help=_t("cli.help.io"))
+    p.add_argument("file")
+    p.add_argument("-o", "--out")
+
+    p = sub.add_parser("terminals", help=_t("cli.help.terminals"))
+    p.add_argument("file")
+    p.add_argument("--view", help=_t("cli.help.view_marking"))
     p.add_argument("-o", "--out")
 
     p = sub.add_parser("marks", help=_t("cli.help.marks"))
@@ -200,6 +209,17 @@ def main(argv: list[str] | None = None) -> int:
         from .exports import cables_csv
 
         _write(cables_csv(_load(a.file)), a.out)
+        return 0
+    if a.cmd == "io":
+        from .exports import io_csv
+
+        _write(io_csv(_load(a.file)), a.out)
+        return 0
+    if a.cmd == "terminals":
+        from .exports import terminals_csv
+
+        doc = _load(a.file)
+        _write(terminals_csv(doc, _marking_view(doc, a.view)), a.out)
         return 0
     if a.cmd == "marks":
         from .marks import freeze, marked_wires
