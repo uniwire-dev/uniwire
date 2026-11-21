@@ -220,6 +220,7 @@ class SheetLayout:
     lnodes: list[LNode]
     columns: list[LNode]
     annex: list[LNode] = field(default_factory=list)  # auxiliary devices drawn beside the tree
+    stub_room: bool = False  # columns moved right for the texts of off-sheet stubs (see _stub_room)
 
 
 # ------------------------------------------------------------- construction
@@ -603,6 +604,8 @@ def _shift(ln: LNode, dy: float) -> None:
             n.bus_y += dy
 
 
+LABEL_GAP = 0.4  # the least room between a device label and the symbol of a device beside it
+
 # equipment that is not a way of the board feeding it when a cable joins them: drawn below the board frame
 REMOTE_EQUIPMENT = {"inverter", "transformer", "ups", "transfer_switch", "busbar"}
 # beside a board's incoming chain, with nothing below them, they do not make it a branch: accessories,
@@ -825,7 +828,22 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                  incoming_ref: tuple[Optional[int], Optional[str]] = (None, None)) -> SheetLayout:
     """Lay out one sheet. ``node_folio`` (node id -> sheet number) lets links to nodes drawn on other
     sheets end on an off-page reference; ``incoming_ref`` (sheet, node id) is where the incoming feed
-    of a detached board comes from."""
+    of a detached board comes from. The room for the texts of the off-sheet stubs (see _stub_room) is taken only
+    where the sheet keeps its scale with it (and so its devices: never one more sheet)."""
+    args = (doc, view, spec, index, folio_of, continuation_folios, incoming, node_folio, incoming_ref)
+    lay = _layout_sheet(*args)
+    if lay.stub_room:
+        bare = _layout_sheet(*args, stub_room=False)
+        if round(fit_scale(lay, view), 2) < round(fit_scale(bare, view), 2):
+            return bare
+    return lay
+
+
+def _layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None,
+                  folio_of: Callable[[str], Optional[int]] | None,
+                  continuation_folios: tuple[Optional[int], Optional[int]], incoming: Optional[str],
+                  node_folio: Callable[[str], Optional[int]] | None,
+                  incoming_ref: tuple[Optional[int], Optional[str]], stub_room: bool = True) -> SheetLayout:
     index = index or build_index(doc)
     lang = normalize_lang(doc.meta.lang)
     pitch = view.pitch_mm
@@ -884,12 +902,6 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         if a is not None and b is not None:
             ia, ib = sorted((main.index(_root_of(main, a)), main.index(_root_of(main, b))))
             wide_gap |= set(range(ia, ib))
-    x = 0.0
-    for i, r in enumerate(main):
-        _needs(r, view, lang)
-        _measure(r, pitch)
-        _place_x(r, x, pitch)
-        x += r.width + pitch * (ROOT_GAP_COLS + (1.0 if i in wide_gap else 0.0))
     for r in roots:  # the feeders of a safety board are safety circuits by themselves: not marked one by one
         for b in r.walk():
             if b.is_board and b.node is not None and getattr(b.node, "priority", None) == "safety":
@@ -910,19 +922,51 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
                 k = sum(1 for l in doc.links if l.kind not in SWITCHED_LINKS and (l.from_ in own or l.to in own))
                 p = sum(1 for l in doc.links if l.kind in POWER_LINKS and (l.from_ in own or l.to in own))
                 b.pad_bottom = SIGNAL_LANE * min(k, 8) + LANE * 2 * min(p, 4) + 1.5 if k or p else 0.0
-    xs = sorted({round(n.x - n.sym.left, 3) for r in main for n in r.walk()})
-    for r in main:
-        nxt = {id(a): b for n in r.walk() for a, b in zip(n.children, n.children[1:])}
-        for n in r.walk():  # a label stops before the next symbol, as wide as it is (a converter)
-            b = nxt.get(id(n))
-            # the last device of a row with nothing drawn to its right (a controller at the end of a feeder):
-            # its label runs on rather than shrinks, up to the next column of the sheet
-            right = next((x for x in xs if x > n.x + n.sym.right + 1.0), None)
-            room = None if b is not None or n.children else \
-                min(OPEN_ROOM, (right - 1.0 if right is not None else 1e9) - (n.x + n.sym.right + 1.0))
-            _annotate(n, view, lang, right_limit=b.x - b.sym.left - 1.0 if b is not None else None, room=room)
-        _place_y(r, 0.0)
-        _separate_boards(r)
+    stub_widths = _stub_widths(doc, [], lang, here)
+    moved = False
+    for _ in range(2):  # once more when the texts of off-sheet stubs land on the text of the column on their left
+        x = 0.0
+        for i, r in enumerate(main):
+            _needs(r, view, lang)
+            _measure(r, pitch)
+            _place_x(r, x, pitch)
+            x += r.width + pitch * (ROOT_GAP_COLS + (1.0 if i in wide_gap else 0.0))
+        xs = sorted({round(n.x - n.sym.left, 3) for r in main for n in r.walk()})
+        for r in main:
+            nxt = {id(a): b for n in r.walk() for a, b in zip(n.children, n.children[1:])}
+            limits: dict[int, tuple[Optional[float], Optional[float]]] = {}
+            for n in r.walk():  # a label stops before the next symbol, as wide as it is (a converter)
+                b = nxt.get(id(n))
+                # the last device of a row with nothing drawn to its right (a controller at the end of a feeder):
+                # its label runs on rather than shrinks, up to the next column of the sheet
+                right = next((x for x in xs if x > n.x + n.sym.right + 1.0), None)
+                room = None if b is not None or n.children else \
+                    min(OPEN_ROOM, (right - 1.0 if right is not None else 1e9) - (n.x + n.sym.right + 1.0))
+                limits[id(n)] = (b.x - b.sym.left - 1.0 if b is not None else None, room)
+                _annotate(n, view, lang, right_limit=limits[id(n)][0], room=room)
+            _place_y(r, 0.0)
+            _separate_boards(r)
+            # a label running into the symbol of a device beside it, in the next column (a UPS, its abbreviation on
+            # its left): it stops before that symbol too, and the tree is placed again
+            again = False
+            for n in r.walk():
+                ab = n.ann_box()
+                stops = [left - LABEL_GAP for m in r.walk() if m.sym.height > 0 and m.x > n.x
+                         for left in [m.x - m.sym.left] if ab and ab[0] < left - LABEL_GAP < ab[2]
+                         and m.y < ab[3] and ab[1] < m.y + m.sym.height]
+                if stops:
+                    lim, room = limits[id(n)]
+                    _annotate(n, view, lang, right_limit=min(stops + ([lim] if lim is not None else [])), room=room)
+                    again = True
+            if again:
+                _place_y(r, 0.0)
+                _separate_boards(r)
+        roomy = _stub_room(main, stub_widths) if stub_room else []
+        if not roomy:
+            break
+        moved = True
+        for n, room in roomy:
+            n.left_room = room
 
     # ties (bus couplers): align the connected busbars
     for link in doc.links:
@@ -1182,7 +1226,7 @@ def layout_sheet(doc: Document, view: View, spec: SheetSpec, index: Index | None
         g = _mirror_up(g, b0[1] + b0[3])  # type: ignore[assignment]
     box = bbox(g) or (0, 0, 1, 1)
     g = transform(g, -box[0], -box[1])  # type: ignore[assignment]
-    return SheetLayout(spec, g, box[2] - box[0], box[3] - box[1], everything, columns, annex)
+    return SheetLayout(spec, g, box[2] - box[0], box[3] - box[1], everything, columns, annex, moved)
 
 
 # ------------------------------------------------- obstacles / auxiliary devices
@@ -2374,11 +2418,33 @@ def _clear(obs: Obstacles, boxes: list[Box]) -> bool:
                                                                and r[3] <= f[3]) for f in obs.frames) for r in boxes)
 
 
-def _stub_widths(doc: Document, nodes: list[LNode], lang: str) -> dict[str, list[tuple[float, float]]]:
+def _stub_room(main: list[LNode], widths: dict[str, list[tuple[float, float]]]) -> list[tuple[LNode, float]]:
+    """The nodes whose off-sheet stubs (one under the other on their left, see ``_draw_offpage_link``) would be
+    written over the text of a device on their left, and the room on their left that keeps them clear of it
+    (see ``LNode.left_room``)."""
+    out: list[tuple[LNode, float]] = []
+    nodes = [n for r in main for n in r.walk()]
+    parent = {id(c): n for n in nodes for c in n.children}
+    for n in nodes:
+        if n.kind != "node" or n.node is None or n.node.id not in widths or n.sym.height <= 0:
+            continue
+        u = boxes_union([b for ways in _stub_rows(n, widths[n.node.id]) for b in ways[0]])
+        hit = [a for m in nodes if m.x < n.x - 1e-6 and (a := m.ann_box()) and u and _hit(u, a, 0.5)]
+        if u and hit:
+            head = n  # the room asked at the top of its column: the devices above it move with it (see _measure)
+            while (p := parent.get(id(head))) is not None and len(p.children) == 1 and not p.is_board:
+                head = p
+            out.append((head, n.x - head.x_left + max(a[2] for a in hit) + 1.5 - u[0]))
+    return out
+
+
+def _stub_widths(doc: Document, nodes: list[LNode], lang: str,
+                 here: Optional[set[str]] = None) -> dict[str, list[tuple[float, float]]]:
     """The width of the texts of each off-sheet stub (see _draw_offpage_link) of the nodes on the sheet and of the
-    auxiliary devices placed with them, by node id: its sheet reference, its label (0: none)."""
+    auxiliary devices placed with them, by node id: its sheet reference, its label (0: none). ``here``: the nodes
+    drawn on the sheet, when ``nodes`` are not all of them."""
     pos = {n.node.id for n in nodes if n.node is not None and n.node.id and n.kind == "node"}
-    here = pos | {d for d, h in _device_homes(doc).items() if h in pos}
+    here = (pos | {d for d, h in _device_homes(doc).items() if h in pos}) if here is None else here
     named = {n.id: n for n, _, _ in iter_nodes(doc) if n.id}
     stubs: dict[str, list[tuple[float, float]]] = {}
     for l in doc.links:
@@ -3153,7 +3219,9 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             lo = max(lo, max(a.y + a.sym.height, b.y + b.sym.height) + 1.5)
             hi = max(hi, lo + 0.01)
         if not obs.grid or not pts:
-            pts = route(obs, ends[0], ends[1], lo, hi, **{**opts, "record": False})
+            # a link whose channels may go under the loads: never on the channel of another link, one of its own
+            # lower down instead (the table goes down under it)
+            pts = route(obs, ends[0], ends[1], lo, hi, **{**opts, "record": False}, deeper=not ml and hi > y_load)
             if pts and not obs.grid and i not in bus_lane and not on_conductor:
                 # through a text or a symbol, or far round: with more corners when that is clearly better
                 pts = improve_route(obs, ends[0], ends[1], pts, opts["lane"], opts["solid"],
@@ -3178,7 +3246,9 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                                                                 -abs(s[0][0] - s[1][0]) - abs(s[0][1] - s[1][1])))
                 (p, q) = segs[0]
                 mx, my = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
-                lg.add(interlock_mark(mx, my, abs(p[1] - q[1]) < 1e-6))
+                mark = interlock_mark(mx, my, abs(p[1] - q[1]) < 1e-6)
+                lg.add(mark)
+                obs.add_box(bbox(mark))  # no label written over it
         if on_conductor:  # infeed landing on the input conductor: junction dot
             lg.add(Circle(pts[-1], 0.45, Style(width=THIN, fill="#000000")))
         seq = pts if port_label is None or port_label[0] == 0 else pts[::-1]  # oriented PLC -> other end
@@ -3440,7 +3510,7 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
     on = target_node.ref or target_node.label or other if target_node is not None else other
     txts = ([link.label] if link.label else []) + [on + (_t("render.to_folio", lang, folio=f) if f else "")]
     e = at or _end(n, link.kind)
-    key = n.id or ""
+    key = here = n.id or ""
     if at is None and e.side == "left":  # no room on the left for its texts (a neighbour there): by the right side
         need = max(text_width(t, 1.6) for t in txts) + 9.0
         r = _right_end(n)
@@ -3572,6 +3642,26 @@ def _draw_offpage_link(link: Any, n: LNode, other: str, target_node: Optional[No
         obs.add_vline(e.x, min(e.y, tip[1]), max(e.y, tip[1]))
     else:
         obs.add_hline(pts[1][1], pts[0][0], pts[1][0])
+    port = link.from_port if link.from_ == here else link.to_port if link.to == here else None
+    if port and not obs.min_lane:  # single-line: the channel or terminal it leaves by, as on a link drawn whole, on
+        # its stub by its start where that place is free, else in front of its label (never on a symbol or a line)
+        ptxt, pw = str(port), text_width(str(port), PORT_SIZE)
+        sx, sy = pts[0]
+        if e.side in ("left", "right"):
+            x, anchor = (sx - 0.6, "end") if e.side == "left" else (sx + 0.6, "start")
+            spots = [(x, sy - 0.6, anchor), (x, sy + PORT_SIZE + 0.3, anchor)]
+        else:
+            y = sy + 0.6 + 0.8 * PORT_SIZE if e.side == "down" else sy - 0.6
+            spots = [(sx + 0.6, y, "start"), (sx - 0.6, y, "end")]
+        spot = next((p for p in spots if obs.box_free(text_box(p[0], p[1], pw, PORT_SIZE, p[2]), 0.1, wire_pad=0.0)),
+                    None) or place_label(obs, [pts[0], tip], pw, PORT_SIZE, from_end=False, record=False, optional=True)
+        if spot is not None:
+            obs.add_box(text_box(spot[0], spot[1], pw, PORT_SIZE, spot[2]))
+            g.add(Text((spot[0], spot[1]), ptxt, PORT_SIZE, spot[2], color=PORT_COLOR))
+        elif link.label:
+            txts[0] = f"{ptxt} {txts[0]}"
+        else:
+            txts.insert(0, ptxt)
     written: dict[int, list[Text]] = {}
     for k, txt in reversed(list(enumerate(txts))):  # the sheet reference first: it must be written, at the best place
         w = text_width(txt, 1.6)
@@ -3917,16 +4007,21 @@ def _board_to_detach(boards: list[LNode], lay: SheetLayout, view: View, keep_who
     together rather than being cut way by way."""
     _, _, aw, _ = drawing_area(view)
     excess = lay.width - aw / view.min_scale
+    boards = boards[::-1]  # of boards as wide, the last one goes: the sheets keep the order of the document
+
+    def width(n: LNode) -> float:
+        return round(n.width, 3)
+
     part = [n for n in boards if n.width < 0.85 * lay.width]
     enough = [n for n in part if n.width - view.pitch_mm >= excess]
     if enough:
-        return min(enough, key=lambda n: n.width)
+        return min(enough, key=width)
     if part:
-        return max(part, key=lambda n: n.width)
+        return max(part, key=width)
     below = [n for n in boards if n.node is not None and n.node.id in nested]
     if below:
-        return max(below, key=lambda n: n.width)
-    return None if keep_whole or not boards else max(boards, key=lambda n: n.width)
+        return max(below, key=width)
+    return None if keep_whole or not boards else max(boards, key=width)
 
 
 def _walk_nodes(n: NodeBase) -> Iterator[NodeBase]:

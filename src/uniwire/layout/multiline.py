@@ -2786,17 +2786,29 @@ def _split_bus(spec: SheetSpec, roots: list[MLNode], view: View, lang: str, inde
     _, _, aw, _ = drawing_area(view)
     cap = aw / view.min_scale - 20.0
     first_cap = cap - (bus.x_left + bus.lanes_max() + RAIL_IN)
-    chunks: list[tuple[int, int]] = []
-    start, acc = 0, 0.0
-    for i, c in enumerate(bus.children):
-        limit = first_cap if not chunks else cap - 30.0
-        if acc + c.width > limit and i > start:
-            chunks.append((start, i))
-            start, acc = i, 0.0
-        acc += c.width
-    chunks.append((start, len(bus.children)))
+
+    def cut(less: float) -> list[tuple[int, int]]:  # the ways in order, as many on each sheet as its room allows
+        chunks: list[tuple[int, int]] = []
+        start, acc = 0, 0.0
+        for i, c in enumerate(bus.children):
+            limit = (first_cap if not chunks else cap - 30.0) - less
+            if acc + c.width > limit and i > start:
+                chunks.append((start, i))
+                start, acc = i, 0.0
+            acc += c.width
+        chunks.append((start, len(bus.children)))
+        return chunks
+
+    chunks = cut(0.0)
     if len(chunks) == 1:
         return []
+    # as many sheets, the ways shared out evenly among them (not a last sheet with one way): the room of every
+    # sheet reduced as far as their number allows, found by halving
+    lo, hi = 0.0, cap
+    for _ in range(20):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if len(cut(mid)) == len(chunks) else (lo, mid)
+    chunks = cut(lo)
     spec.bus_slice = (node.id, *chunks[0])  # type: ignore[assignment]
     out = []
     prev = spec
