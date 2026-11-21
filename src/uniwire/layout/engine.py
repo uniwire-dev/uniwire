@@ -4117,13 +4117,6 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 shift = kinds.index(link.kind)
                 if shift:
                     ends[k] = End(e.x, e.y + 1.5 * shift)
-        # a thin link on a point another link ends on: a free point nearby (the route chooses among them)
-        moved: list[list[End]] = [[], []]
-        if not ml and link.kind not in POWER_LINKS:
-            for k, n in ((0, a), (1, b)):
-                fe = free_ends(n, ends[k], link.kind)
-                if fe and fe[0] is not ends[k]:
-                    ends[k], moved[k] = fe[0], fe
         if i in bus_land:
             ends[1] = bus_land[i]
         elif fed:
@@ -4134,6 +4127,16 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             px, py = _port_point((a, b)[k], slot, *lane_of.get(i, (0, 1)), obs)
             ends[k] = End(px, py, "down")
             port_label = (k, str((link.from_port, link.to_port)[k]))
+        # a thin link on a point another link ends on: a free point nearby (the route chooses among them; never the
+        # channel of a PLC, a feed's landing)
+        moved: list[list[End]] = [[], []]
+        if not ml and link.kind not in POWER_LINKS:
+            for k, n in ((0, a), (1, b)):
+                if port_label is not None and port_label[0] == k or (k == 1 and (i in bus_land or fed)):
+                    continue
+                fe = free_ends(n, ends[k], link.kind)
+                if fe and fe[0] is not ends[k]:
+                    ends[k], moved[k] = fe[0], fe
         # the other terminal named (a device that is not a PLC, or a second PLC): written by the link, at that end
         terminals = [(k, str(port)) for k, port in enumerate((link.from_port, link.to_port))
                      if port and (port_label is None or port_label[0] != k)]
@@ -4189,9 +4192,12 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                     bottom = [End(n.x - n.sym.left + w * (bottom_used.get(n.id, 0) + 1) / (count + 1),
                                   n.y + n.sym.extra.get("bottom_y", n.sym.height) + 0.5, "down")]
                 alts.append((moved[k] or [e]) + ([r] if r is not None else []) + bottom)
-            if not ml and link.kind not in POWER_LINKS:  # (never on the point of another link, see above)
-                alts = [list({(f.x, f.y, f.side): f for x in xs for f in free_ends(n, x, link.kind)}.values()) or xs
-                        for n, xs in zip((a, b), alts)]
+            if not ml and link.kind not in POWER_LINKS:  # (never on the point of another link, see above: the
+                # ends free as they are first, a point moved off a taken one only when none is)
+                alts = [xs if port_label is not None and port_label[0] == k else [
+                    x for x in xs if not is_used(n.id, x, link.kind)] or list(
+                    {(f.x, f.y, f.side): f for x in xs for f in free_ends(n, x, link.kind)}.values()) or xs
+                    for k, (n, xs) in enumerate(zip((a, b), alts))]
             if obs.grid and sides and i in sides:  # second drawing: each end on its side, in its slot
                 for k, (n, side) in enumerate(zip((a, b), sides[i])):
                     pick = next((e for e in alts[k] if e.side == side), alts[k][0])
