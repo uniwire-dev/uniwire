@@ -3,7 +3,7 @@
 import uniwire
 from tests.drawing_audit import audit
 from uniwire.render import render_views
-from uniwire.render.scene import Group, Rect
+from uniwire.render.scene import Group, Rect, Text
 
 
 def _ways(prefix, n):
@@ -14,6 +14,14 @@ def _ways(prefix, n):
 def _cut(doc):
     return [str(f) for page in render_views(uniwire.load(doc)) for f in audit(page.root)
             if f.kind == "frame_crosses_text"]
+
+
+def _items(item):
+    if isinstance(item, Group):
+        for i in item.items:
+            yield from _items(i)
+    else:
+        yield item
 
 
 def _board_frames(item, out=None):
@@ -103,3 +111,27 @@ def _groups(item):
         yield item
         for i in item.items:
             yield from _groups(i)
+
+
+def test_view_frame_and_enclosure_round_the_same_devices_are_one_frame():
+    """A view frame and an enclosure drawn round the same devices: one frame (the enclosure's), not two frames on one
+    another with their labels written at one place; a label saying nothing more than the other is left out."""
+    def doc(frame_label):
+        return {"sources": [{"type": "grid", "children": [
+            {"type": "breaker", "id": "Q1", "ref": "-Q1", "in_A": 32, "children": _ways("F", 2)},
+            {"type": "breaker", "id": "Q2", "ref": "-Q2", "in_A": 32, "children": [
+                {"type": "busbar", "id": "BB", "children": [
+                    {"type": "breaker", "id": f"G{i}", "ref": f"-G{i}", "in_A": 16, "children": [{"type": "motor"}]}
+                    for i in (1, 2, 3)]}]}]}],
+            "enclosures": [{"id": "C1", "kind": "cabinet", "ref": "+C1", "label": "Example pump cabinet",
+                            "nodes": ["Q2", "BB", "G1", "G2", "G3"]}],
+            "views": [{"frames": [{"label": frame_label, "nodes": ["Q2", "BB", "G1", "G2", "G3"]}]}]}
+
+    for label, shown in (("Pumps (example)", ["Pumps (example)", "+C1 Example pump cabinet"]),
+                         ("+C1 cabinet", ["+C1 Example pump cabinet"])):
+        root = render_views(uniwire.load(doc(label)))[0].root
+        frames = [i for i in _items(root) if isinstance(i, Rect) and i.style.dash]
+        assert len(frames) == 1  # (two frames 0.5 mm apart, both labels at their bottom left)
+        words = " ".join(i.text for i in _items(root) if isinstance(i, Text)).split()
+        assert " ".join(shown) in " ".join(words) and words.count("+C1") == 1  # (on one line, or wrapped)
+        assert [f for f in audit(root) if f.kind in ("text_overlap", "frame_crosses_text")] == []

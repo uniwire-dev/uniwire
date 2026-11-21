@@ -408,7 +408,10 @@ A document may declare several views, of either kind, e.g.
   follows `installation.system` / `grid.system` and the earthing system: TN-C and TN-C-S carry a PEN, split into
   PE + N at the board flagged `pen_split` (by default the first board in TN-C-S); TN-S carries a PE from the source;
   TT and IT get their PE at the first board. A transformer starts a new system (neutral from the vector group,
-  `Dyn11` → N); inverters and power supplies feed a DC pair.
+  `Dyn11` → N); inverters and power supplies feed a DC pair. A `star_delta` motor starter on three phases adds
+  the other ends of the motor windings, `W2`, `U2`, `V2`, from its delta contactor: they go down with the phases
+  to the motor, drawn with its six terminals (`U1` `V1` `W1`, `W2` `U2` `V2`), and are carried by its cable
+  (their wire marks under the cable `marks` keys `U2`, `V2`, `W2`).
 
   Rendering of the reference implementation: busbars as one rail per conductor (named at their end); circuit
   breakers with the breaker cross on each protected pole, the poles linked by a dashed mechanical link; RCDs with a

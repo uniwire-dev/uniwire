@@ -123,7 +123,8 @@ LOAD_TEXT = 1.8
 
 PHASES = ("L1", "L2", "L3")
 DC = ("L+", "L-")
-ORDER = {c: i for i, c in enumerate(("L1", "L2", "L3", "L+", "L-", "N", "PEN", "PE"))}
+STAR_ENDS = ("W2", "U2", "V2")  # the other ends of the windings of a motor started star-delta, from the delta contactor
+ORDER = {c: i for i, c in enumerate(("L1", "L2", "L3", "L+", "L-", "N", "PEN", "PE") + STAR_ENDS)}
 LIVE = set(PHASES) | set(DC) | {"N"}
 
 DASH = Style(width=THIN, dash=(1.0, 0.7))
@@ -387,6 +388,8 @@ class _Assigner:
             out.append("PEN")
         if "PE" in parent:
             out.append("PE")
+        if all(c in out for c in PHASES):  # the other ends of a star-delta motor's windings go on with its phases
+            out += [c for c in STAR_ENDS if c in parent]
         return _sorted(out) or parent[:1]
 
     def _stated_system(self, node: Any) -> str:
@@ -507,6 +510,8 @@ class _Assigner:
                 out = list(DC)
             elif _vfd_to_three_phase(node, inp):  # a drive fed in single phase makes the motor's three phases
                 out = list(PHASES) + (["PE"] if "PE" in inp else [])
+            elif _star_delta(node, inp):  # the delta contactor feeds the other ends of the motor's windings
+                out = _sorted(out + list(STAR_ENDS))
         # the PEN splits into N and PE where asked, or at the entry of a board declared TN-S / TN-C-S
         if "PEN" in inp and (id(node) in self.split or (t in ("board", "busbar") and
                                                          getattr(node, "earthing", None) in ("TN-S", "TN-C-S"))):
@@ -566,6 +571,13 @@ def _vfd_to_three_phase(node: Any, inp: list[str]) -> bool:
             continue
         stack.extend(n.children)
     return False
+
+
+def _star_delta(node: Any, inp: list[str]) -> bool:
+    """A star-delta starter on three phases with something below it: the motor has its six winding ends wired, U1 V1
+    W1 from the line contactor, W2 U2 V2 from the delta contactor (shorted by the star contactor)."""
+    return node.type == "motor_starter" and getattr(node, "method", None) == "star_delta" and \
+        all(c in inp for c in PHASES) and bool(node.children)
 
 
 def _board_below(node: Any) -> bool:
@@ -797,8 +809,8 @@ def _circle(ln: MLNode) -> tuple[float, float]:
     """Centre (relative x) and radius of a machine / transformer drawn across its conductors."""
     if ln.type == "transformer":
         offs = [o for c, o in ln.off_out.items() if c != "PE"] + [o for c, o in ln.off_in.items() if c != "PE"]
-    else:
-        offs = [o for c, o in ln.off_in.items() if c != "PE"]
+    else:  # (the other ends of a star-delta motor's windings come in from the side)
+        offs = [o for c, o in ln.off_in.items() if c != "PE" and c not in STAR_ENDS]
     offs = offs or [PAD]
     lo, hi = min(offs), max(offs)
     return (lo + hi) / 2, max((hi - lo) / 2 + 2.2, 4.5)
@@ -914,10 +926,11 @@ def _starter_sets(node: Any) -> int:
     return {"reversing": 1, "star_delta": 2}.get(getattr(node, "method", None) or "", 0)
 
 
-def _starter_extra(node: Any, xs: list[float], y: float, h: float, last: float = 0.0) -> list[Item]:
+def _starter_extra(node: Any, xs: list[float], y: float, h: float, last: float = 0.0, wired: bool = False) -> list[Item]:
     """The other contactors of a reversing or star-delta starter, right of the line contactor whose poles are at
     ``xs``: a reverse contactor fed from the lines and returning with L1 and L3 swapped, mechanically interlocked;
-    or a delta contactor (lines to the motor's W2 U2 V2) and a star contactor shorting W2 U2 V2."""
+    or a delta contactor (lines to the motor's W2 U2 V2) and a star contactor shorting W2 U2 V2. ``wired``: W2 U2
+    V2 go on down to the motor as conductors of the column (else they end under the delta contactor, named)."""
     method = getattr(node, "method", None)
     xs = sorted(xs)
     n = len(xs)
@@ -947,11 +960,14 @@ def _starter_extra(node: Any, xs: list[float], y: float, h: float, last: float =
     # star-delta: delta contactor outputs to W2 U2 V2, star contactor shorting them
     x1 = first[-1] + STARTER_GAP
     star = [x1 + i * S for i in range(n)]
-    names = ["W2", "U2", "V2"][:n]
+    names = list(STAR_ENDS[:n])
     for i, (xd, xy) in enumerate(zip(first, star)):  # W2 U2 V2 under the delta contactor, to the star contactor
         jy = bottom + 0.6 + i * 0.5
-        items += [Line((xd, bottom), (xd, y + h + 1.5)), Text((xd, y + h + STAR_TAGS), names[i], 1.3, "middle"),
-                  Line((xd, jy), (xy, jy)), dot(xd, jy), Line((xy, bottom), (xy, jy))]
+        if wired:  # on down to the motor (the conductor W2, U2, V2 of the column)
+            items.append(cond_group(names[i], Line((xd, bottom), (xd, y + h))))
+        else:
+            items += [Line((xd, bottom), (xd, y + h + 1.5)), Text((xd, y + h + STAR_TAGS), names[i], 1.3, "middle")]
+        items += [Line((xd, jy), (xy, jy)), dot(xd, jy), Line((xy, bottom), (xy, jy))]
         items += _contact(xy, yt, "arc", ht)
     items += _link(star, yt)
     items += [Line((star[0], yt), (star[-1], yt))]  # the star point, joining the tops of the star contactor
@@ -1082,6 +1098,10 @@ def _assign_offsets(ln: MLNode, parent: Optional[MLNode]) -> None:
     elif ln.node is not None and _vfd_to_three_phase(ln.node, ln.inp):  # U V W from under the drive, the PE beside
         a = min(o for c, o in ln.off_in.items() if c != "PE")
         ln.off_out = {c: a + i * S for i, c in enumerate(ln.out)}
+    elif ln.type == "motor_starter" and set(STAR_ENDS) <= set(ln.out) and set(PHASES) <= set(ln.off_in):
+        ln.off_out = dict(ln.off_in)  # the winding ends straight down from the delta contactor's poles
+        x0 = max(ln.off_in.values()) + STARTER_GAP
+        ln.off_out.update({c: x0 + i * S for i, c in enumerate(STAR_ENDS)})
     else:
         ln.off_out = {}
         top = max(ln.off_in.values()) if ln.off_in else PAD - S
@@ -1370,8 +1390,8 @@ def _draw_device(ln: MLNode, lang: str) -> Group:
                 drawn.add(c)
             g.add(*_link([xs[c] for c in prot + unprot], y))
             if t == "motor_starter" and _starter_sets(node):
-                g.add(Group(_starter_extra(node, [xs[c] for c in prot if c in PHASES], y, h, max(xs.values())),
-                            cls="starter-contactors"))
+                g.add(Group(_starter_extra(node, [xs[c] for c in prot if c in PHASES], y, h, max(xs.values()),
+                                           set(STAR_ENDS) <= set(ln.out)), cls="starter-contactors"))
             if t in ("rcd", "rcbo") or (t == "main_breaker" and getattr(node, "idn_mA", None)):
                 rl = [xs[c] for c in prot + unprot] or [xs[c] for c in live]
                 if rl:
@@ -1657,8 +1677,17 @@ def _draw_load(ln: MLNode, lang: str) -> Group:
         kind = "=" if dc else "1~" if phases == 1 else "3~"
         g.add(Circle(c, r), Text((c[0], c[1] - 0.7), "M", 2.6, "middle", "middle", bold=True),
               Text((c[0], c[1] + 2.0), kind, 1.5, "middle", "middle"))
-        terms = iter(("U", "V", "W"))
+        ends = [(cd, x) for cd, x in lanes if cd in STAR_ENDS]
+        terms = iter(("U1", "V1", "W1") if ends else ("U", "V", "W"))
+        for i, (cond, x) in enumerate(ends):  # W2 U2 V2: down beside the PE, into the lower right of the motor, the
+            # outermost lowest (they never cross one another nor the PE, which comes in at mid-height)
+            dy = r * (0.3 + 0.25 * i)
+            yy = c[1] + dy
+            g.add(cond_group(cond, Polyline([(x, y), (x, yy), (c[0] + math.sqrt(r * r - dy * dy), yy)])))
+            g.add(_lane_label(x, y + 2.6, cond, 1.3))
         for cond, x in lanes:
+            if cond in STAR_ENDS:
+                continue
             if cond == "PE":
                 g.add(cond_group("PE", Polyline([(x, y), (x, c[1]), (c[0] + r, c[1])])))
                 g.add(_lane_label(x, y + 2.6, "PE", 1.3))
@@ -2630,7 +2659,8 @@ def _layout(doc: Document, view: View, spec: SheetSpec, index: Index, info: dict
     for r in roots:
         for n in r.walk():
             n.h = _height(n)
-            n.under = STAR_TAGS + 0.4 if n.type == "motor_starter" and _starter_sets(n.node) == 2 else 0.0
+            n.under = STAR_TAGS + 0.4 if n.type == "motor_starter" and _starter_sets(n.node) == 2 and \
+                not set(STAR_ENDS) <= set(n.out) else 0.0  # W2 U2 V2 named under it when not wired on
     links = _plan_links(doc, roots, lang)
     if getattr(view, "auxiliaries", False):  # (no room for links that are not drawn)
         _pad_boards(doc, roots)

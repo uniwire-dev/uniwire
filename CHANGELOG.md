@@ -8,6 +8,17 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Texts kept off conductors and off one another. Single-line drawings: a standby source on a transfer switch was
+  drawn, with its text, across the feeders passing by from the busbar to their loads; it now goes beyond them. A
+  view frame and an enclosure round the same devices were two frames drawn on one another, their labels written
+  at one place; they are now one frame with both labels, one under the other (a label saying nothing more than
+  the other is left out). A link label with no free place along its link (an interlock between neighbouring
+  contactors) was written over a conductor or a contactor's blade; it now goes on three lines if need be, else in
+  a free place with a leader. The text of an off-sheet stub with no free place beside it was written across its
+  own arrow; it now goes in a free place near it with a leader. Multi-line drawings: a star-delta starter drew W2
+  U2 V2 under its delta contactor, wired to nothing, and the motor with three terminals U V W; the three
+  conductors now go down to the motor, drawn with its six terminals U1 V1 W1 and W2 U2 V2, and are carried by its
+  cable in the wire lists. The cable `marks` keys accept `U2`, `V2` and `W2` (format: their wire marks).
 * Sheet numbers of a drawing set: a view drawn on its own (the web editor, the `render` tool, an SVG export) used
   to number its sheets from 1, or from its own `first_folio`, while the PDF of every view numbered them after the
   views before it: the title blocks and the "→ sheet n", "from -Q1 (sheet n)" and "continued on sheet n"

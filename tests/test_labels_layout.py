@@ -676,16 +676,43 @@ def test_reversing_and_star_delta_starters_drawn_with_their_contactors():
     page = render_pages(doc)[0]
     sets = [g for g in _items_groups(page.root) if isinstance(g, G) and g.cls == "starter-contactors"]
     assert len(sets) == 2
-    assert {"W2", "U2", "V2"} <= set(_texts(sets[1]))
+    assert {"W2", "U2", "V2"} <= set(_conds(sets[1]))  # its delta contactor feeds the other ends of the windings
+
+
+def _conds(item) -> list[str]:
+    return [g.attrs["data-uw-cond"] for g in _items_groups(item) if "data-uw-cond" in g.attrs]
+
+
+def test_star_delta_motor_has_its_six_winding_ends_wired():
+    """A motor started star-delta has six terminals: U1 V1 W1 from the line contactor and W2 U2 V2 from the delta
+    contactor, drawn as conductors down to the motor (never three names under the starter wired to nothing)."""
+    from uniwire.marks import cable_wires
+    doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "ref": "B1", "system": "3P", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 32, "poles": "3P", "children": [
+            {"type": "motor_starter", "id": "K1", "ref": "-K1", "method": "star_delta", "children": [
+                {"type": "thermal_relay", "id": "F1", "ref": "-F1", "children": [
+                    {"type": "motor", "id": "M1", "ref": "-M1", "phases": 3,
+                     "cable": {"cores": "4G", "section_mm2": 4, "parallel": 2}}]}]}]}]}]}],
+        "views": [{"kind": "multi-line"}]})
+    root = render_pages(doc)[0].root
+    motor = next(g for g in _items_groups(root) if g.id == "M1")
+    assert {"U1", "V1", "W1", "W2", "U2", "V2"} <= set(_texts(motor))
+    assert {"W2", "U2", "V2"} <= set(_conds(motor))
+    for nid in ("F1",):  # passed on by the overload relay
+        assert {"W2", "U2", "V2"} <= set(_conds(next(g for g in _items_groups(root) if g.id == nid)))
+    assert not any(t in ("W2", "U2", "V2") for g in _items_groups(root) if g.cls == "starter-contactors"
+                   for t in _texts(g))  # no names left under the starter
+    assert [w.conductor for w in cable_wires(doc)] == ["L1", "L2", "L3", "PE", "W2", "U2", "V2"]
 
 
 def test_star_delta_terminal_names_inside_the_board_frame():
-    """The motor terminal names written under a star-delta starter take room in its board: never on the frame."""
+    """The motor terminal names written under a star-delta starter feeding nothing on its sheet take room in its
+    board: never on the frame."""
     from tests.drawing_audit import _walk, text_box
     from uniwire.render.scene import Rect
     doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "ref": "B1", "system": "3P", "children": [
         {"type": "breaker", "ref": "-Q1", "in_A": 32, "poles": "3P", "children": [
-            {"type": "motor_starter", "ref": "-K1", "method": "star_delta", "children": [{"type": "motor", "phases": 3}]}]}]}]}],
+            {"type": "motor_starter", "ref": "-K1", "method": "star_delta"}]}]}]}],
         "views": [{"kind": "multi-line"}]})
     items = [i for i, _l, _o in _walk(render_pages(doc)[0].root)]
     frame = next(i for i in items if isinstance(i, Rect) and i.style.dash)

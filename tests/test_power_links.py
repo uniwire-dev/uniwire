@@ -263,3 +263,35 @@ def test_tie_between_devices_on_two_sheets_drawn_at_both_ends():
                                 "views": [{"id": "v", "kind": kind}]})
             pages = render_pages(doc)
             assert sum("TIE" in page_to_svg(p) for p in pages) == 2, (kind, ends)  # one stub on each board's sheet
+
+
+def test_standby_source_is_not_drawn_across_a_feeder_passing_by():
+    """A standby generator feeding a transfer switch low in its column: it goes right of the feeders running down
+    from the busbar past it (its symbol and its text were drawn across their conductors)."""
+    from tests.drawing_audit import _crosses, text_box
+    from uniwire.render import render_views
+    doc = load({"sources": [
+        {"type": "grid", "children": [{"type": "busbar", "id": "BB", "ref": "W1", "children": [
+            {"type": "breaker", "ref": "-Q1", "in_A": 63, "children": [
+                {"type": "rcd", "ref": "-F1", "in_A": 63, "idn_mA": 300, "children": [
+                    {"type": "contactor", "ref": "-K1", "children": [
+                        {"type": "transfer_switch", "id": "ATS", "ref": "-S1", "children": [
+                            {"type": "breaker", "ref": "-Q11", "in_A": 16, "children": [{"type": "load"}]}]}]}]}]},
+            {"type": "breaker", "ref": "-Q2", "in_A": 16, "children": [{"type": "lighting"}]},
+            {"type": "breaker", "ref": "-Q3", "in_A": 16, "children": [{"type": "socket"}]}]}]},
+        {"type": "generator", "id": "GEN", "ref": "-G1", "label": "Example standby generator set with long text",
+         "sn_kVA": 40}],
+        "links": [{"kind": "transfer", "from": "GEN", "to": "ATS"}]})
+    root = render_views(doc)[0].root
+    gen = next(g for g in _groups(root) if g.id == "GEN")
+    edges = [s for g in _groups(root) if g.cls and "uw-edge" in g.cls.split() for i in g.items
+             if isinstance(i, Polyline) or hasattr(i, "a") for s in _segs(i)]
+    boxes = [text_box(t) for t in _items(root) if isinstance(t, Text) and t.text in ("-G1", "40 kVA")]
+    boxes.append(bbox(gen))
+    assert boxes and not any(_crosses(b, s) for b in boxes for s in edges)
+
+
+def _segs(item):
+    if isinstance(item, Polyline):
+        return list(zip(item.points, item.points[1:]))
+    return [(item.a, item.b)]
