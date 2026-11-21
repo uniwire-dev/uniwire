@@ -73,6 +73,7 @@ from .routing import (
     LANE,
     RUN_ALONG,
     WIRE_CROSS,
+    WRAP,
     Box,
     End,
     Obstacles,
@@ -89,6 +90,7 @@ from .routing import (
     route,
     route_grid,
     text_box,
+    wraps,
 )
 
 GAP = 5.0  # vertical gap between two symbols in series
@@ -3072,15 +3074,17 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 tx = [p[-1][0] for p in legs]
                 x0, x1 = min(tx), max(tx)
                 gx0, gx1 = min([x0] + [e.x for e in hub]) - 25.0, max([x1] + [e.x for e in hub]) + 25.0
-                goals = [End(gx0 + k, y, s) for k in range(int(gx1 - gx0) + 1)
+                goals = [End(round(gx0 + k, 6), y, s) for k in range(int(gx1 - gx0) + 1)  # (on the grid: no jog)
                          if all(abs(gx0 + k - u) >= 2 * TAP_APART for u in tx) for s in ("up", "down")]
+                # the trunk goes on from the hub's lead toward the taps: a lead going round to it closes a frame
+                then = [0 if e.x < x0 else 1 if e.x > x1 else None for e in goals]
                 win = (gx0 - 5.0, min([y] + [e.y for e in hub]) - 15.0, gx1 + 5.0, max([y + 3.0] + [e.y for e in hub]) + 15.0)
                 sub = obs.window((win[0] - 6.0, win[1] - 6.0, win[2] + 6.0, win[3] + 6.0))
                 for p in legs + [[(x0, y), (x1, y)]]:
                     record_route(sub, p)
                 c: list[float] = []
                 pts, _ka, _kb = route_grid(sub, hub, goals, win, SIGNAL_LANE, record=False, cost_out=c,
-                                           bend=DETOUR_BEND, length=TRUNK_LEAD)
+                                           bend=DETOUR_BEND, length=TRUNK_LEAD, wrap=WRAP, then=then)
                 if not pts or c[0] >= obs.box_cross:
                     continue
                 hx = pts[-1][0]  # beyond the taps: the trunk goes on to it (never through a text or a symbol)
@@ -3210,8 +3214,17 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
             sy = b.y + b.sym.side_input[1]
             ay = a.out_y if a.sym.has_output else a.y + a.sym.height
             cy = sy - 2.5 - 1.5 * side_level.get(i, 0)
-            pts = [(a.x, ay), (a.x, cy), (sx, cy), (sx, sy)]
-            pts = improve_route(obs, End(a.x, ay, "down"), End(sx, sy, "up"), pts, far_round=False)
+            ax = a.x
+            if a.sym.height == 0 and a.bus_y is not None and a.children and cy > a.bus_y + 4.0:
+                # from a busbar: a tap where the run to the side input crosses the fewest feeders (between two
+                # outgoing feeders, or beyond an end that no bus tie continues)
+                ax, ay = _transfer_tap(doc, roots, a, sx, cy, sy, taps, obs)
+                if not a.bus_x0 <= ax <= a.bus_x1:
+                    x0, x1 = min(ax, a.bus_x0), max(ax, a.bus_x1)
+                    g.add(busbar_group(a.id, [Line((x0, ay), (x1, ay), Style(width=BUS))]))
+                    obs.add_hline(ay, x0, x1, bus=True)
+            pts = [(ax, ay), (ax, cy), (sx, cy), (sx, sy)]
+            pts = improve_route(obs, End(ax, ay, "down"), End(sx, sy, "up"), pts, far_round=False)
             record_route(obs, pts)
             lg.add(Polyline(pts, style))
             continue
@@ -3230,6 +3243,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 sx0 = mid - sym.height / 2
                 lg.add(Line((x0, y), (sx0, y), style))
                 lg.add(Group([transform(it, sx0, y, rot=270) for it in sym.items], dev.id, f"sym sym-{sym.name}"))
+                obs.add_box((sx0, y - sym.right, sx0 + sym.height, y + sym.left))  # (no label on the coupler)
                 lg.add(Line((sx0 + sym.height, y), (x1, y), style))
                 txt = _device_text(link, dev, lang)[:3]
                 tw = max((text_width(t, 1.9) for t in txt), default=0.0)
@@ -3249,6 +3263,15 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         ml = obs.min_lane > 0  # multi-line: also beside a PLC port and for earth links, right ends spread
         start = tap_end.get(i) or _end(a, link.kind)
         ends = [start, _end(b, link.kind, fed=fed, near=start.x)]
+        dots: dict[int, tuple[float, float]] = {}  # the ends of the link on a conductor (a junction dot), its free span
+        if link.kind in POWER_LINKS and not ml and i not in tap_end and i not in bus_land:
+            # a power link joining a conductor (an output a parallel device is connected to, the input conductor of a
+            # final load feeding on): a junction on it, never on the body of the device (reads as a bypass of it)
+            for k, n in ((1, b), (0, a)):
+                o = ends[1 - k]
+                tap = _conductor_end(n, parent_of.get(id(n)), link.kind, o.x, o.y)
+                if tap is not None:
+                    ends[k], dots[k] = tap[0], tap[1]
         earth: Optional[list[list]] = None  # single-line: the ends an earth link may take on each node
         if link.kind == "earth" and not ml:
             earth = [_earth_ends(n, o, obs, earth_taken, n.id in live_left) for n, o in ((a, b), (b, a))]
@@ -3309,6 +3332,7 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
         if i in bus_lane:
             lo, hi = bus_lane[i], bus_lane[i] + 0.01
         carries = link.device is not None and link.kind in SWITCHED_LINKS
+        wrap = 0.0 if ml or obs.grid else END_WRAP  # single-line: the ends whose route goes round what it passes, last
         opts = {"record": not carries,
                 "lane": max(3.5 if carries else LANE if link.kind in POWER_LINKS else SIGNAL_LANE, obs.min_lane),
                 "solid": link.kind in POWER_LINKS and not style.dash}
@@ -3392,9 +3416,13 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                     for eb in alts[1]:
                         c: list[float] = []
                         top = max(ea.y, eb.y)
-                        route(obs, ea, eb, min(ea.y, eb.y) - 30.0, min(top + 30.0, y_max) if top < y_max else top + 30.0,
-                              step=1.0, record=False, lane=opts["lane"], cost_out=c)  # coarse: only to compare
-                        scored.append((c[0], [ea, eb]))
+                        p = route(obs, ea, eb, min(ea.y, eb.y) - 30.0,
+                                  min(top + 30.0, y_max) if top < y_max else top + 30.0, step=1.0, record=False,
+                                  lane=opts["lane"], cost_out=c, wrap=wrap)  # coarse: only to compare
+                        if wrap and c[0] - wrap * wraps(p) >= obs.box_cross:  # through a text or a symbol anyway:
+                            c[0] -= wrap * wraps(p)  # going round is not what to avoid first
+                        away = sum(1 for e, o in ((ea, eb), (eb, ea)) if (e.side, o.x < e.x) in (("left", False), ("right", True)))
+                        scored.append((c[0] + OWN_CROSS * _round_own(p, (a, b)) + AWAY * away, [ea, eb]))
                 ends = min(scored, key=lambda t: t[0])[1]
                 cands = ([ends[0]] + [e for e in alts[0] if e is not ends[0]],
                          [ends[1]] + [e for e in alts[1] if e is not ends[1]])
@@ -3420,13 +3448,20 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 # through a text or a symbol, or far round: with more corners when that is clearly better
                 pts = improve_route(obs, ends[0], ends[1], pts, opts["lane"], opts["solid"],
                                     min_run=14.0 if carries else 0.0,
-                                    starts=cands[0] if cands else None, goals=cands[1] if cands else None)
+                                    starts=cands[0] if cands else None, goals=cands[1] if cands else None,
+                                    on_lines=not opts["solid"])
             if opts["record"]:
                 record_route(obs, pts)
         if not pts and on_conductor:  # e.g. a feeder leaving downwards: the channel must go below it after all
             pts = route(obs, ends[0], ends[1], lo, max(e.y for e in ends) + 30.0, **opts)
         if not pts:  # no free channel: leave this link out rather than fail the whole drawing
             continue
+        for k, span in dots.items():  # a short jog into the conductor: straight in, where the conductor allows it
+            seq_ = pts if k else pts[::-1]
+            if len(seq_) >= 3 and abs(seq_[-2][0] - seq_[-3][0]) < 1e-9 and abs(seq_[-1][1] - seq_[-2][1]) < 1e-9 \
+                    and span[0] <= seq_[-3][1] <= span[1] and abs(seq_[-3][1] - seq_[-1][1]) < 3.0:
+                seq_ = seq_[:-2] + [(seq_[-1][0], seq_[-3][1])]
+                pts = seq_ if k else seq_[::-1]
         for n, ts, p in zip((a, b), earth or (), (pts[0], pts[-1])):  # the terminals at the ends taken
             t = next((t for t in ts if math.dist(p, (_point(t).x, _point(t).y)) < 1e-6), None)
             if t is not None:
@@ -3443,6 +3478,8 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 lg.add(interlock_mark(mx, my, abs(p[1] - q[1]) < 1e-6))
         if on_conductor:  # infeed landing on the input conductor: junction dot
             lg.add(Circle(pts[-1], 0.45, Style(width=THIN, fill="#000000")))
+        for k in dots:
+            lg.add(Circle(pts[-1] if k else pts[0], 0.45, Style(width=THIN, fill="#000000")))
         seq = pts if port_label is None or port_label[0] == 0 else pts[::-1]  # oriented PLC -> other end
         heads[i] = (link.from_, link.to) if seq is pts else (link.to, link.from_)
         if i in bus_land and len(pts) > 2:  # on its channel, not on the short drop crowded with the other taps
@@ -3507,6 +3544,80 @@ def _draw_links(doc: Document, roots: list[LNode], anchored: dict, g: Group, vie
                 hit.items.insert(0, Polyline(trunk_paths[i], Style(HIT_WIDTH, None, HIT_COLOR)))
             g.add(lg)
     return chosen
+
+
+def _conductor_end(n: LNode, up: Optional[LNode], kind: str, tx: float, ty: float
+                   ) -> Optional[tuple[End, tuple[float, float]]]:
+    """Where a power link of ``kind`` joins a conductor of ``n`` rather than its body, toward (tx, ty), the other end:
+
+    * ``parallel`` (a device connected after ``n``, a surge arrester after its fuse): on the output conductor of ``n``,
+      between it and the device it feeds straight below;
+    * any power link leaving a final load with no output terminal (an outgoing arrow, its conductor going on as the
+      link): on its input conductor, level with the other end when that is along it.
+
+    Out of the side facing the other end, with the stretch of the conductor free for it; None: neither (the usual
+    end)."""
+    if n.sym.height <= 0 or n.bus_y is not None or n.is_board:
+        return None
+    side = "left" if tx < n.x else "right"
+    if kind == "parallel" and n.sym.has_output:
+        below = [c for c in n.children if abs(c.x - n.x) < 1e-6 and c.kind == "node"]
+        if below and below[0].y - n.out_y >= 3.0:
+            span = (n.out_y + 0.5, below[0].y - 1.0)
+            return End(n.x, n.out_y + min(2.5, (below[0].y - n.out_y) / 2), side), span
+        return None
+    if n.children or n.sym.has_output or up is None or abs(up.x - n.x) > 1e-6:
+        return None
+    top = (up.out_y if up.sym.has_output else up.y + up.sym.height) + 1.5
+    if top + 1e-6 < ty < n.y - 1.5:
+        return End(n.x, ty, side), (top, n.y - 1.5)
+    return None
+
+
+def _transfer_tap(doc: Document, roots: list[LNode], a: LNode, sx: float, cy: float, sy: float,
+                  taps: dict[tuple[str, bool, bool], int], obs: Obstacles) -> tuple[float, float]:
+    """Where a standby supply leaves the busbar ``a`` for the side input at (sx, sy), its run at ``cy``: the tap (see
+    ``_bus_tap``) whose route crosses the fewest feeders, texts and symbols; never beyond an end of the busbar that a
+    bus tie continues (it would run on the tie). The taps taken on that side counted in ``taps``."""
+    tied = {k for l in doc.links if l.kind == "tie" and a.id in (l.from_, l.to) for k in (l.from_, l.to) if k != a.id}
+    others = [n.x for n in (_find(roots, t) for t in tied) if n is not None]
+    cands = []
+    for right in (True, False):
+        if not any((o > a.bus_x1) == right for o in others):
+            side = (a.id, right, not right)
+            cands.append((_bus_tap(a, a.bus_x1 + 1.0 if right else a.bus_x0 - 1.0, taps.get(side, 0)), side))
+    xs = [c.x for c in a.children]
+    for u, v in zip(xs, xs[1:]):  # in every gap between two feeders, clear of their blades and texts if it can
+        cands += [(u + 1.5 + 0.5 * k, (a.id, False, False)) for k in range(int((v - u - 3.0) / 0.5) + 1)]
+    best: Optional[tuple[float, float, tuple[str, bool, bool]]] = None
+    y = a.bus_y if a.bus_y is not None else a.y
+    for x, side in cands:
+        pts = [(x, y), (x, cy), (sx, cy), (sx, sy)]
+        c = sum(_seg_cost(obs, p, q, solid=True) for p, q in zip(pts, pts[1:])) + 0.08 * abs(x - sx)
+        if best is None or c < best[0] - 1e-6:
+            best = (c, x, side)
+    if best is None:  # (no gap, both ends tied: from its middle)
+        return (a.bus_x0 + a.bus_x1) / 2, y
+    taps[best[2]] = taps.get(best[2], 0) + 1
+    return best[1], y
+
+
+OWN_CROSS = 10.0  # a link end chosen so that the route goes back across the axis of its own device (its leads)
+AWAY = 2.0  # ... an end on the side of its device away from the other end (when the routes cost about the same)
+END_WRAP = 30.0  # ... a route from that end going round what it passes (less than running on another link)
+
+
+def _round_own(pts: list[tuple[float, float]], nodes: tuple[LNode, LNode]) -> int:
+    """How many times the route ``pts`` crosses the axis of one of the devices it joins, beside that device (over its
+    leads, round its body): an end on the side facing the other end crosses none."""
+    n = 0
+    for d in nodes:
+        if d.sym.height <= 0:
+            continue
+        y0, y1 = d.y - 3.0, d.y + d.sym.height + 3.0
+        n += sum(1 for p, q in zip(pts, pts[1:]) if abs(p[1] - q[1]) < 1e-9 and y0 < p[1] < y1
+                 and min(p[0], q[0]) + 1e-6 < d.x < max(p[0], q[0]) - 1e-6)
+    return n
 
 
 LEADER_REACH = 25.0  # how far from its link a label may go, joined to it by a leader
