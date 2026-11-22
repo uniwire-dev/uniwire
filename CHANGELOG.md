@@ -8,9 +8,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
-* A narrow drawing that is also low (a small board) is centred across its sheet again; only a narrow drawing that
-  fills the height of its sheet starts at the left of the drawing area (0.1.9 drew every narrow drawing from the left,
-  leaving half of a small sheet empty on the right).
+* A drawing narrower than 60 % of its sheet is centred across it again, as up to 0.1.8 (0.1.9 drew it from the
+  left of the drawing area, leaving the right half of a small sheet empty).
 
 ## 0.1.9 (2026-11-21)
 

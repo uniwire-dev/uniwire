@@ -70,11 +70,8 @@ def compose_page(doc: Document, view: View, lay: SheetLayout, folio: int, total:
     # drawing scaled to fit; enlarged only with the scale shared by all the sheets of the view (see render_pages)
     if scale is None:
         scale = min(1.0, aw / max(lay.width, 1e-6), ah / max(lay.height, 1e-6))
-    # a narrow and low drawing (a small board) is centred across its sheet; a narrow drawing that fills the height
-    # starts at the left of the drawing area, as the wider sheets of the set: centred, it read as pushed to the right
-    narrow = lay.width * scale < aw * 0.6
-    low = lay.height * scale < ah * 0.8
-    dx = ax + (aw - lay.width * scale) / 2 if narrow and low else ax
+    # a drawing narrower than 60 % of the drawing area is centred across its sheet
+    dx = ax + (aw - lay.width * scale) / 2 if lay.width * scale < aw * 0.6 else ax
     drawing = transform(lay.group, dx, ay, scale=scale)
     root.add(drawing)  # type: ignore[arg-type]
     noted = scale < 0.995 and not view.title_block  # with a title block, the scale is in its cell

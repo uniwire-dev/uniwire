@@ -458,22 +458,10 @@ def _diagram_left(doc, sheet=0):
     return min(xs(diagram)) - ax, aw
 
 
-def test_narrow_low_drawing_centred_on_its_sheet():
-    """A small board, narrow and low, is centred across its sheet."""
+def test_narrow_drawing_centred_on_its_sheet():
+    """A drawing narrower than 60 % of its sheet is centred across it."""
     doc = load({"sources": [{"type": "grid", "ref": "-G1", "children": [{"type": "board", "ref": "=MB", "children": [
         {"type": "breaker", "ref": "-Q1", "in_A": 16, "children": [{"type": "socket", "ref": "-X1"}]}]}]}],
         "views": [{"id": "v", "paper": "A3"}]})
     left, width = _diagram_left(doc)
     assert left > width * 0.2
-
-
-def test_narrow_tall_drawing_drawn_from_the_left_of_its_sheet():
-    """A narrow drawing that fills the height of its sheet starts at the left of the drawing area, as the wider
-    sheets of the set: centred, it left half the sheet empty on the left and read as pushed to the right."""
-    chain: dict = {"type": "socket", "ref": "-X1"}
-    for k in range(12, 0, -1):
-        chain = {"type": "board", "ref": f"=B{k}", "children": [
-            {"type": "breaker", "ref": f"-Q{k}", "in_A": 63, "children": [chain]}]}
-    doc = load({"sources": [{"type": "grid", "ref": "-G1", "children": [chain]}], "views": [{"id": "v", "paper": "A3"}]})
-    left, _ = _diagram_left(doc, sheet=-1)  # the last sheet holds a narrow column over the full height
-    assert left < 5.0
