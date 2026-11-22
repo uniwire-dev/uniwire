@@ -435,16 +435,11 @@ def test_sheet_of_an_installation_without_a_board_is_not_named_after_its_source(
     assert len(specs) == 2 and [s.name for s in specs] == ["", ""]
 
 
-def test_narrow_drawing_drawn_from_the_left_of_its_sheet():
-    """A drawing narrower than its sheet starts at the left of the drawing area, as the wider sheets of the set: it
-    was centred, which left half the sheet empty on the left and read as pushed to the right."""
+def _diagram_left(doc, sheet=0):
     from uniwire.render.frame import drawing_area
     from uniwire.render.scene import Group, Line, Polyline, Rect, Text
 
-    doc = load({"sources": [{"type": "grid", "ref": "-G1", "children": [{"type": "board", "ref": "=MB", "children": [
-        {"type": "breaker", "ref": "-Q1", "in_A": 16, "children": [{"type": "socket", "ref": "-X1"}]}]}]}],
-        "views": [{"id": "v", "paper": "A3"}]})
-    (page,) = render_pages(doc)
+    page = render_pages(doc)[sheet]
     diagram = next(g for g in page.root.items if isinstance(g, Group) and g.cls == "diagram")
 
     def xs(item):
@@ -459,5 +454,26 @@ def test_narrow_drawing_drawn_from_the_left_of_its_sheet():
             yield min(p[0] for p in item.points)
         elif isinstance(item, Text):
             yield item.p[0]
-    left = drawing_area(doc.views[0])[0]
-    assert min(xs(diagram)) < left + 5.0
+    ax, _, aw, _ = drawing_area(doc.views[0])
+    return min(xs(diagram)) - ax, aw
+
+
+def test_narrow_low_drawing_centred_on_its_sheet():
+    """A small board, narrow and low, is centred across its sheet."""
+    doc = load({"sources": [{"type": "grid", "ref": "-G1", "children": [{"type": "board", "ref": "=MB", "children": [
+        {"type": "breaker", "ref": "-Q1", "in_A": 16, "children": [{"type": "socket", "ref": "-X1"}]}]}]}],
+        "views": [{"id": "v", "paper": "A3"}]})
+    left, width = _diagram_left(doc)
+    assert left > width * 0.2
+
+
+def test_narrow_tall_drawing_drawn_from_the_left_of_its_sheet():
+    """A narrow drawing that fills the height of its sheet starts at the left of the drawing area, as the wider
+    sheets of the set: centred, it left half the sheet empty on the left and read as pushed to the right."""
+    chain: dict = {"type": "socket", "ref": "-X1"}
+    for k in range(12, 0, -1):
+        chain = {"type": "board", "ref": f"=B{k}", "children": [
+            {"type": "breaker", "ref": f"-Q{k}", "in_A": 63, "children": [chain]}]}
+    doc = load({"sources": [{"type": "grid", "ref": "-G1", "children": [chain]}], "views": [{"id": "v", "paper": "A3"}]})
+    left, _ = _diagram_left(doc, sheet=-1)  # the last sheet holds a narrow column over the full height
+    assert left < 5.0
