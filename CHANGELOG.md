@@ -6,6 +6,12 @@ The format and the library are versioned separately: the format follows `1.y.z` 
 version. Before the library's 1.0, a `0.x.y` release adds features and fixes that keep existing documents and
 code working, and a `0.x.0` release may break compatibility (described here, with what to change).
 
+## Unreleased
+
+* A narrow drawing that is also low (a small board) is centred across its sheet again; only a narrow drawing that
+  fills the height of its sheet starts at the left of the drawing area (0.1.9 drew every narrow drawing from the left,
+  leaving half of a small sheet empty on the right).
+
 ## 0.1.9 (2026-11-21)
 
 ### Changes to know
