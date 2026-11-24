@@ -9,6 +9,7 @@ them, checks them against rules and draws their single-line and multi-line diagr
 [![PyPI](https://img.shields.io/pypi/v/uniwire)](https://pypi.org/project/uniwire/)
 [![Python](https://img.shields.io/pypi/pyversions/uniwire)](https://pypi.org/project/uniwire/)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/uniwire-dev/uniwire/blob/main/LICENSE)
+[![uniwire-dev/uniwire MCP server](https://glama.ai/mcp/servers/uniwire-dev/uniwire/badges/score.svg)](https://glama.ai/mcp/servers/uniwire-dev/uniwire)
 
 You describe the **installation** (sources, protective devices, cables, loads, PLCs) in a `*.uniwire.json`
 file or in Python, and uniwire computes the drawings. No coordinates, no CAD file: a text file you can
