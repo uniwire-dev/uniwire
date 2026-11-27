@@ -10,6 +10,12 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 * The label of a device drawn on a link beside a column (a switch across a contactor) is moved further to a
   free place instead of being drawn on the label of the next column when no place near its symbol is free.
+* A voltage with its current kind in the unit (`"coil_V": "24 V DC"`, `"230VAC"`) is read as the voltage, with a
+  `core.normalized` note, instead of refusing the document.
+* A link `device` written as the id or ref of a node listed under `devices` (`"device": "S1"`) is read as that node,
+  moved onto the link, with a `core.normalized` note, when the text names exactly one node; otherwise the clear
+  refusal stays.
+* `fuse` takes `dc` (device for direct current, a gPV string fuse) like `breaker`, `switch_disconnector` and `spd`.
 * A drawing narrower than 60 % of its sheet is centred across it again, as up to 0.1.8 (0.1.9 drew it from the
   left of the drawing area, leaving the right half of a small sheet empty).
 * Multi-line diagram: the PE of a motor lands on a PE terminal of its circle (on its upper shoulder, or from above

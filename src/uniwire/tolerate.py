@@ -17,6 +17,10 @@ from .i18n import t as _t
 _POLES = {"1P", "1P+N", "2P", "3P", "3P+N", "4P"}
 _CORES_WITH_SECTION = re.compile(r"^\s*(\d+)\s*([GgXx])\s*(\d+(?:[.,]\d+)?)\s*(?:mm2|mm²)?\s*$")
 _RANGE_FIELDS = ("range_A", "idn_range_mA")
+#: A voltage with its current kind in the unit ("24 V DC", "230VAC", "24 Vdc"): the number and unit are kept, the kind
+#: dropped (a coil's kind is not the kind of the circuit the device is on, so it is not carried to another field)
+_VOLTS_WITH_KIND = re.compile(r"^\s*(\d+(?:[.,]\d+)?\s*[kmµu]?V)\s*(?:[ ._-]?\s*)(?:DC|AC|d\.?c\.?|a\.?c\.?|=|~)\s*$",
+                              re.IGNORECASE)
 #: Fields whose values are a few whole numbers: lax validation reads "16" as 16 elsewhere, not for these
 _INT_CHOICES = {"phases": (1, 3)}
 #: Revision columns under the names of a drawing's revision table, read as the format's names
@@ -73,6 +77,13 @@ class _Tolerance:
             if new != n["poles"]:
                 self.note(where, "poles", n["poles"], new)
                 n["poles"] = new
+        for f, v in list(n.items()):
+            if f.endswith("_V") and isinstance(v, str):
+                m = _VOLTS_WITH_KIND.match(v)
+                if m:
+                    new = re.sub(r"\s+", " ", m.group(1))
+                    self.note(where, f, v, new)
+                    n[f] = new
         for f, choices in _INT_CHOICES.items():
             v = n.get(f)
             if isinstance(v, str) and re.fullmatch(r"\s*\d+\s*", v) and int(v) in choices:
@@ -98,6 +109,41 @@ class _Tolerance:
         if isinstance(children, list):
             for i, c in enumerate(children):
                 self.node(c, f"{path}/children/{i}")
+
+    def link_devices(self, d: dict[str, Any]) -> None:
+        """A link's ``device`` written as the id or ref of a top-level ``devices`` entry: that node, moved onto the link.
+
+        Only when the text names exactly one node of the document, that node stands alone under ``devices`` (no parent
+        in the tree, so moving it changes nothing else) and no other link names it; otherwise validation explains.
+        """
+        links = [lk for lk in d.get("links") or [] if isinstance(lk, dict) and isinstance(lk.get("device"), str)]
+        devices = d.get("devices")
+        if not links or not isinstance(devices, list):
+            return
+        named: dict[str, list[Any]] = {}
+
+        def walk(n: Any) -> None:
+            if isinstance(n, dict):
+                for key in {n.get("id"), n.get("ref")} - {None}:
+                    if isinstance(key, str):
+                        named.setdefault(key, []).append(n)
+                for c in n.get("children") or []:
+                    walk(c)
+
+        for top in (*(d.get("sources") or []), *devices):
+            walk(top)
+        uses: dict[str, int] = {}
+        for lk in links:
+            uses[lk["device"]] = uses.get(lk["device"], 0) + 1
+        for i, lk in enumerate(d.get("links") or []):
+            text = lk.get("device") if isinstance(lk, dict) else None
+            if not isinstance(text, str) or uses[text] != 1:
+                continue
+            nodes = named.get(text.strip(), [])
+            if len(nodes) == 1 and any(nodes[0] is x for x in devices):
+                devices[:] = [x for x in devices if x is not nodes[0]]
+                lk["device"] = nodes[0]
+                self.note(str(lk.get("id") or f"links/{i}"), "device", text, f"the node {text.strip()} of 'devices'")
 
     def module_kind(self, m: dict[str, Any], where: str) -> None:
         k = m.get("kind")
@@ -138,6 +184,7 @@ class _Tolerance:
             self.node(s, f"sources/{i}")
         for i, s in enumerate(d.get("devices") or []):
             self.node(s, f"devices/{i}")
+        self.link_devices(d)
         for i, lk in enumerate(d.get("links") or []):
             if isinstance(lk, dict):
                 self.node(lk.get("device"), f"links/{i}/device")
