@@ -14,6 +14,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
   left of the drawing area, leaving the right half of a small sheet empty).
 * Multi-line diagram: the PE of a motor lands on a PE terminal of its circle (on its upper shoulder, or from above
   when it is over the circle) instead of running down beside the circle to mid-height and stopping short of it.
+* A long text in the circuit table under a single-line drawing (a part number, a long RCD text) is no longer
+  shrunk until unreadable nor drawn across the cell borders: it keeps at least 1.5 mm and goes on 2 to 4 lines,
+  the row growing if need be (between characters for a reference without spaces, cut only as a last resort).
 
 ## 0.1.9 (2026-11-21)
 
