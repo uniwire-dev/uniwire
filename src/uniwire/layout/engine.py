@@ -4669,10 +4669,13 @@ def _draw_link_device(link: Any, dev: NodeBase, pts: list[tuple[float, float]], 
     if free:
         x, y = free[0]
     else:  # the nearest free place that still reads as the device's (a few mm from its symbol), else beside it anyway
-        reach = 8.0
-        near = [(abs(c[0] - s[0]) + 2 * abs(c[1] - s[1]), c) for s in spots
-                for c in [place_box(obs, w, hh, s, step=0.5, reach=reach, pad=1.0)]
-                if abs(c[0] - s[0]) <= reach and abs(c[1] - s[1]) <= reach]
+        near: list[tuple[float, tuple[float, float]]] = []
+        for reach in (8.0, 16.0, 30.0):  # widened step by step: a label away from its device beats one on another text
+            near = [(abs(c[0] - s[0]) + 2 * abs(c[1] - s[1]), c) for s in spots
+                    for c in [place_box(obs, w, hh, s, step=0.5, reach=reach, pad=1.0)]
+                    if abs(c[0] - s[0]) <= reach and abs(c[1] - s[1]) <= reach]
+            if near:
+                break
         x, y = min(near)[1] if near else min(spots, key=lambda c: obs.overlap((c[0], c[1], c[0] + w, c[1] + hh), 0.6))
     obs.add_box((x, y, x + w, y + hh))
     for i, t in enumerate(txt):
