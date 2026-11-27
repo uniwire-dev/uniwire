@@ -870,7 +870,7 @@ def test_power_below_1_kw_in_watts_in_the_table():
 def test_label_repeating_the_name_in_another_case_is_not_repeated():
     doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [{"type": "busbar", "children": [
         {"type": "spd", "ref": "-F1", "label": "Surge arrester type 2", "spd_type": "2"},
-        {"type": "breaker", "ref": "-Q1WAGO221413ABCDEF9876", "in_A": 16, "children": [{"type": "load", "label": "Lights"}]}]}]}]}]})
+        {"type": "breaker", "ref": "-Q1PN221413ABCDEF9876", "in_A": 16, "children": [{"type": "load", "label": "Lights"}]}]}]}]}]})
     (lay,) = _layout(doc)
     ann = next(n.ann for n in lay.lnodes if n.node is not None and n.node.type == "spd")
     assert "Type 2" not in ann
@@ -1033,7 +1033,7 @@ def test_rcd_type_in_the_circuit_table_is_written_as_a_type():
     unit ('30 mA A')."""
     doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [
         {"type": "rcd", "ref": "-F1", "in_A": 40, "idn_mA": 30, "rcd_type": "A", "children": [
-            {"type": "breaker", "ref": "-Q1WAGO221413ABCDEF9876", "in_A": 16, "children": [{"type": "socket", "label": "Sockets"}]}]}]}]}],
+            {"type": "breaker", "ref": "-Q1PN221413ABCDEF9876", "in_A": 16, "children": [{"type": "socket", "label": "Sockets"}]}]}]}]}],
         "views": [{"id": "sld", "cartouche": ["label", "ref", "protection", "idn_mA"]}]})
     t = next(_texts(g) for g in _items_groups(render_pages(doc)[0].root) if g.cls == "cartouche")
     assert "30 mA type A" in t and "30 mA A" not in t
@@ -1043,7 +1043,7 @@ def test_relay_at_the_end_of_its_own_way_has_a_column_in_the_circuit_table():
     """A protection relay alone behind its own breaker is a circuit of the board: the table gives it a column, as
     it does to a contactor there; beside other devices of a way (a relay watching a feeder) it has none."""
     doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [
-        {"type": "breaker", "ref": "-Q1WAGO221413ABCDEF9876", "in_A": 16, "children": [{"type": "socket", "label": "Sockets"}]},
+        {"type": "breaker", "ref": "-Q1PN221413ABCDEF9876", "in_A": 16, "children": [{"type": "socket", "label": "Sockets"}]},
         {"type": "breaker", "ref": "-Q2", "in_A": 2, "children": [{"type": "protection_relay", "label": "Relay A"}]},
         {"type": "breaker", "ref": "-Q3", "in_A": 2, "children": [{"type": "contactor", "label": "Contactor B"}]},
         {"type": "breaker", "ref": "-Q4", "in_A": 32, "children": [
@@ -1058,7 +1058,7 @@ def test_cable_designation_and_socket_type_are_drawn():
     """The designation of a cable written beside its device (feeder of a sub-board) comes with its composition, as
     in the multi-line view; the multi-line view writes the socket type under the socket."""
     doc = load({"installation": {"system": "1P+N"}, "sources": [{"type": "grid", "children": [{"type": "board", "children": [
-        {"type": "breaker", "ref": "-Q1WAGO221413ABCDEF9876", "in_A": 16, "children": [
+        {"type": "breaker", "ref": "-Q1PN221413ABCDEF9876", "in_A": 16, "children": [
             {"type": "socket", "label": "Sockets", "points": 4, "socket_type": "Type Z"}]},
         {"type": "breaker", "ref": "-Q3", "in_A": 32, "cable": {"designation": "XYZ-1", "cores": "3G", "section_mm2": 10},
          "children": [{"type": "board", "ref": "TD2", "children": [
@@ -1096,7 +1096,7 @@ def test_cable_caption_says_each_part_once():
 
 def test_table_cell_texts_stay_readable_and_inside_their_cell():
     doc = load({"sources": [{"type": "grid", "children": [{"type": "board", "children": [
-        {"type": "breaker", "ref": "-Q1WAGO221413ABCDEF9876", "in_A": 16, "children": [
+        {"type": "breaker", "ref": "-Q1PN221413ABCDEF9876", "in_A": 16, "children": [
             {"type": "socket", "room": "Workshop store north mezzanine side B"}]},
         {"type": "breaker", "ref": "-Q2", "in_A": 10, "children": [{"type": "lighting", "room": "Hall"}]}]}]}],
         "views": [{"cartouche": ["label", "ref", "room"]}]})
@@ -1110,4 +1110,4 @@ def test_table_cell_texts_stay_readable_and_inside_their_cell():
             assert t.size >= 1.5 - 1e-9
             assert text_width(t.text, t.size) <= rect.w + 1e-6
     joined = "".join(t.text for t in texts)
-    assert "WAGO221413" in joined and "…" not in joined  # wrapped on lines, not cut
+    assert "PN221413" in joined and "…" not in joined  # wrapped on lines, not cut
