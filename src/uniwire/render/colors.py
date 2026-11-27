@@ -91,6 +91,9 @@ class Colorizer:
         self.volts: dict[str, Optional[float]] = {}  # node id -> nominal voltage (US 480 V conductor colours)
         self.phase: dict[str, str] = {}  # node id -> single phase of a single-phase circuit on a polyphase supply
         self.status: dict[str, str] = {}  # node id -> own status, else the status of the nearest upstream node
+        self.nph: dict[str, int] = {}  # node id -> phase count of its supply (0: unknown)
+        self.multi_n: dict[int, None] = {}  # phase counts of the lines drawn with the MULTI key
+        self.multi_conds: dict[str, None] = {}  # multi-line conductors drawn with the MULTI key (N, PEN)
         for src in doc.sources:
             self.sources.append(src)
             self._walk(src, src.id or "", self._source_voltage(src), self._is_dc(src, None), [])
@@ -141,6 +144,8 @@ class Colorizer:
         elif not own and ph_up:  # downstream of a single-phase device
             self.phase[nid] = ph_up
         n_here = len(_phases(node.phase)) or self._system_phases(node)
+        self.nph[nid] = n_here or (up_phases[-1] if up_phases else 0) or \
+            {"1P+N": 1, "2P": 2, "split-phase": 2, "3P": 3, "3P+N": 3}.get(self.doc.installation.system or "", 0)
         for c in node.children:
             cdc = out_dc or (t in ("inverter", "ups") and self._feeds_dc(c))
             self._walk(c, root, out_v, cdc, up_phases + ([n_here] if n_here else []),
@@ -233,6 +238,8 @@ class Colorizer:
         if key == MULTI:
             return BLACK
         if self.mode == "phase":
+            if key in ("PE", "PEN") and self.multiline:  # protective conductor: green-yellow, as in conductor mode
+                return CONDUCTOR_PRESETS["iec"]["PE"]
             return PHASE_COLORS.get(key, BLACK if key in COND_ORDER else None)
         if self.mode == "conductors":
             return self._conductor_preset(nid).get(key)
@@ -244,11 +251,22 @@ class Colorizer:
         return CONDUCTOR_PRESETS.get(self.preset, CONDUCTOR_PRESETS["iec"])
 
     def stripe(self, key: Optional[str]) -> Optional[str]:
-        if self.mode == "conductors" and key in ("PE", "PEN") and self.preset == "iec" and key not in self.palette:
+        """Second colour dashed over a conductor: yellow over the green PE (IEC), the neutral colour over the PEN
+        (so a PEN never looks like a PE)."""
+        if key in self.palette:
+            return None
+        if self.mode == "conductors" and key == "PEN":
+            return self._conductor_preset(None)["N"]
+        if self.mode == "conductors" and key == "PE" and self.preset == "iec":
             return PE_STRIPE
+        if self.mode == "phase" and key in ("PE", "PEN") and getattr(self, "multiline", False):
+            return PE_STRIPE if key == "PE" else CONDUCTOR_PRESETS["iec"]["N"]
         return None
 
     def dash(self, key: Optional[str]) -> Optional[tuple[float, ...]]:
+        if key == "PE" and self.mode in ("phase", "conductors") and getattr(self, "multiline", False) \
+                and self.stripe(key) is None:
+            return EARTH_STYLE.dash  # a PE without a stripe stays dash-dot, never solid like a neutral
         return FUTURE_DASH if self.mode == "status" and key == "future" else None
 
     # ---------------------------------------------------------------- recolouring
@@ -285,6 +303,10 @@ class Colorizer:
             if cond_mode:
                 own_id = g.id if has_cls(g, "uw-busbar") else nid
                 if self.mode == "phase":
+                    if cond in ("PE", "PEN"):
+                        return cond, own_id, cond
+                    if cond not in PHASE_COLORS:
+                        self.multi_conds[cond] = None
                     return (cond if cond in PHASE_COLORS else MULTI), own_id, cond
                 return cond, own_id, cond
         if has_cls(g, "uw-link"):
@@ -316,6 +338,8 @@ class Colorizer:
         if s.color != BLACK or s.color == HIT_COLOR:
             return it
         self.used[key] = None
+        if key == MULTI and nid:
+            self.multi_n[self.nph.get(nid, 0)] = None
         fill = color if s.fill == BLACK else s.fill
         dash = s.dash or self.dash(key)
         new = Style(s.width, dash, color, fill, s.dash_offset)
@@ -378,7 +402,11 @@ class Colorizer:
         if self.mode in ("status", "voltage"):
             return _t(f"legend.{self.mode}.{key}", lang)
         if key == MULTI:  # multi-line phase mode: the conductors that are not phases
-            return "N, PE" if getattr(self, "multiline", False) else _t("legend.multi_phase", lang)
+            if getattr(self, "multiline", False):
+                return ", ".join(k for k in COND_ORDER if k in self.multi_conds) or "N"
+            if self.multi_n and set(self.multi_n) <= {1}:  # single-phase installation: never called polyphase
+                return "1P+N" if self.doc.installation.system in (None, "1P+N") else "1P"
+            return _t("legend.multi_phase", lang)
         return key
 
 

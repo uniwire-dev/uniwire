@@ -8,6 +8,10 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* Conductor legends: a single-phase installation is no longer labelled polyphase on a coloured single-line
+  sheet (its lines are listed as 1P+N), the PEN gets the neutral colour dashed over its green so it no longer
+  shares the PE swatch, and in phase-colour mode the PE of a multi-line sheet is green-yellow instead of solid
+  black like the neutral.
 * A drawing narrower than 60 % of its sheet is centred across it again, as up to 0.1.8 (0.1.9 drew it from the
   left of the drawing area, leaving the right half of a small sheet empty).
 
