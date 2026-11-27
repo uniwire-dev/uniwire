@@ -295,3 +295,28 @@ def test_pdf_cjk_word_in_one_type_face():
     glyphs = frozenset(map(ord, "Q1 16A")) | {ord("ー")}  # the font has the long-vowel mark only
     assert pdf._runs("モーター Q1", "UW", glyphs) == [("HeiseiKakuGo-W5", "モーター"), ("UW", " Q1")]
     assert pdf._runs("Q1 16A", "UW", glyphs) == [("UW", "Q1 16A")]
+
+
+def _legend_texts(svg):
+    return [t.text or "" for g in _groups(svg, "uw-legend") for t in g.iter(NS + "text")]
+
+
+def test_single_phase_legend_is_not_polyphase():
+    doc = _example("01")
+    assert doc.installation.system in (None, "1P+N")
+    for mode in ("phase", "conductors"):
+        texts = [x for svg in _svgs(doc, color=mode) for x in _legend_texts(svg)]
+        assert "polyphase" not in texts and "1P+N" in texts
+
+
+def test_protective_conductors_distinct_from_neutral_and_each_other():
+    from uniwire.render.colors import Colorizer
+    doc = _example("06")
+    (svg,) = _svgs(doc, "multi-line", color="phase")
+    rails = {r.get("data-uw-cond"): _strokes(r) for r in _groups(svg, "uw-busbar")}
+    assert rails["PE"] != rails["N"] and PE_STRIPE in rails["PE"]
+    assert "N, PE" not in _legend_texts(svg) and "PE" in _legend_texts(svg)
+    view = default_view(doc, kind="multi-line").model_copy(update={"color": "conductors"})
+    c = Colorizer(doc, view, build_index(doc))
+    c.multiline = True
+    assert (c.color("PE"), c.stripe("PE")) != (c.color("PEN"), c.stripe("PEN"))
