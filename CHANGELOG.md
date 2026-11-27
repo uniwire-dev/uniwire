@@ -27,6 +27,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 * A long text in the circuit table under a single-line drawing (a part number, a long RCD text) is no longer
   shrunk until unreadable nor drawn across the cell borders: it keeps at least 1.5 mm and goes on 2 to 4 lines,
   the row growing if need be (between characters for a reference without spaces, cut only as a last resort).
+* The Notes band prints every note line: long notes get smaller text, then more columns, instead of the
+  "(+N more note line(s))" that dropped the end of the author's text. A supply that only repeats a node type
+  ("grid") is no longer printed untranslated as "Supply: grid" on the sheets.
 
 ## 0.1.9 (2026-11-21)
 
