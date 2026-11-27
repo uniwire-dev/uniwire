@@ -1697,8 +1697,16 @@ def _draw_load(ln: MLNode, lang: str) -> Group:
         for cond, x in lanes:
             if cond in STAR_ENDS:
                 continue
-            if cond == "PE":
-                g.add(cond_group("PE", Polyline([(x, y), (x, c[1]), (c[0] + r, c[1])])))
+            if cond == "PE":  # lands on a PE terminal of the outline: from above when it is over the circle, else
+                # on its upper shoulder (never down along the body to mid-height, nor stopping beside it)
+                s45 = r * math.sqrt(0.5)
+                if abs(x - c[0]) <= s45:
+                    tp = (x, c[1] - math.sqrt(r * r - (x - c[0]) ** 2))
+                    g.add(cond_group("PE", Line(tp, (x, y))))
+                else:  # (drawn from the terminal: a dash-dot PE starts there with a dash, never with a gap)
+                    tp = (c[0] + (s45 if x > c[0] else -s45), c[1] - s45)
+                    g.add(cond_group("PE", Polyline([tp, (x, tp[1]), (x, y)])))
+                g.add(Circle(tp, 0.35, Style(width=THIN, fill="#ffffff")))
                 g.add(_lane_label(x, y + 2.6, "PE", 1.3))
                 continue
             dx = min(abs(x - c[0]), r * 0.95)

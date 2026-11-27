@@ -10,6 +10,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 * A drawing narrower than 60 % of its sheet is centred across it again, as up to 0.1.8 (0.1.9 drew it from the
   left of the drawing area, leaving the right half of a small sheet empty).
+* Multi-line diagram: the PE of a motor lands on a PE terminal of its circle (on its upper shoulder, or from above
+  when it is over the circle) instead of running down beside the circle to mid-height and stopping short of it.
 
 ## 0.1.9 (2026-11-21)
 
