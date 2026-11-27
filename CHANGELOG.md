@@ -8,6 +8,8 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 ## Unreleased
 
+* The label of a device drawn on a link beside a column (a switch across a contactor) is moved further to a
+  free place instead of being drawn on the label of the next column when no place near its symbol is free.
 * A drawing narrower than 60 % of its sheet is centred across it again, as up to 0.1.8 (0.1.9 drew it from the
   left of the drawing area, leaving the right half of a small sheet empty).
 
