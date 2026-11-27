@@ -5079,6 +5079,32 @@ def _column_label(ln: LNode, path: list[Any], lang: str) -> str:
     return label
 
 
+TABLE_TEXT = 1.8  # size of a circuit table text (mm)
+TABLE_TEXT_MIN = 1.5  # never smaller: a longer text goes on more lines (the row grows), then is cut
+
+
+def _fit_table_cell(v: str, avail: float) -> tuple[list[str], float]:
+    """Lines and size of the text ``v`` of a circuit table cell ``avail`` wide: one line, a little smaller if need
+    be, else on 2 to 4 lines (between words, or between characters for a reference with no space), never smaller
+    than :data:`TABLE_TEXT_MIN` and never wider than the cell."""
+    size = TABLE_TEXT
+    tw = text_width(v, size)
+    if tw <= avail:
+        return [v], size
+    if tw * TABLE_TEXT_MIN / size <= avail:
+        return [v], size * avail / tw
+    units = text_units(v)
+    if len(units) < 2 or max(text_width(u, TABLE_TEXT_MIN) for u in units) > avail:
+        units = list(v)  # a part number or a word wider than the cell: broken between characters
+    lines = [v]
+    for n in range(2, min(4, len(units)) + 1):
+        lines = _wrap_words(units, n, lambda u: text_width(u, size))
+        widest = max(text_width(u, size) for u in lines)
+        if widest * TABLE_TEXT_MIN / size <= avail:
+            return lines, min(size, size * avail / widest)
+    return [cut_to_width(u, TABLE_TEXT_MIN, avail) for u in lines], TABLE_TEXT_MIN
+
+
 def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: str, y0: float) -> None:
     pitch = view.pitch_mm
     titles = CARTOUCHE_TITLES.get(lang, CARTOUCHE_TITLES["en"])
@@ -5127,7 +5153,9 @@ def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: 
             longest = max((text_width(v, 2.0) for v in values), default=0)
             h = min(max(longest + 3.0, 14.0), 42.0)
         else:
-            h = 5.5
+            fitted = [_fit_table_cell(v, 2 * min(xs[i] - bounds[i], bounds[i + 1] - xs[i]) - 1.0) if v else ([], 0.0)
+                      for i, v in enumerate(values)]
+            h = max([5.5] + [len(ls) * sz * 1.2 + 1.2 for ls, sz in fitted])
         title = titles.get(field_, field_)
         if field_ == "cable" and any(cable_in_awg(i["cable"]) for i in infos):
             title = titles["cable_awg"]  # North-American sizes: no "(mm²)" unit in the header
@@ -5173,12 +5201,10 @@ def _draw_table(g: Group, columns: list[LNode], index: Index, view: View, lang: 
                     x = (cx0 + cx1) / 2 + 0.7 + (i - (len(lines) - 1) / 2) * step
                     cg.add(Text((x, y + h - 1.0), line, size, "start", "alphabetic", 90))
             else:
-                size = 1.8
-                avail = cx1 - cx0 - 1.0
-                tw = text_width(v, size)
-                if tw > avail:
-                    size = max(1.2, size * avail / tw)
-                cg.add(Text(((cx0 + cx1) / 2, y + h / 2), v, size, "middle", "middle"))
+                lines, size = fitted[i]
+                for k, line in enumerate(lines):
+                    cy = y + h / 2 + (k - (len(lines) - 1) / 2) * size * 1.2
+                    cg.add(Text(((cx0 + cx1) / 2, cy), line, size, "middle", "middle"))
         y += h
     tg.add(*cols)
     g.add(tg)

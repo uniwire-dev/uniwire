@@ -10,6 +10,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 * A drawing narrower than 60 % of its sheet is centred across it again, as up to 0.1.8 (0.1.9 drew it from the
   left of the drawing area, leaving the right half of a small sheet empty).
+* A long text in the circuit table under a single-line drawing (a part number, a long RCD text) is no longer
+  shrunk until unreadable nor drawn across the cell borders: it keeps at least 1.5 mm and goes on 2 to 4 lines,
+  the row growing if need be (between characters for a reference without spaces, cut only as a last resort).
 
 ## 0.1.9 (2026-11-21)
 
