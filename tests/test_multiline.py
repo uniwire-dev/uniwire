@@ -659,3 +659,33 @@ def test_busbar_split_shares_its_ways_evenly_among_its_sheets():
              "children": [{"type": "motor", "p_kW": 4}]} for k in range(1, 28)]}]}]})
     counts = [len(refs(p.root)) for p in render_pages(doc, doc.views[0])]
     assert len(counts) == 3 and sum(counts) == 27 and max(counts) - min(counts) <= 1  # not 13, 13 and 1
+
+
+def test_motor_pe_lands_on_a_terminal_of_the_circle():
+    """The PE of a round load ends on its outline (a PE terminal), never beside it nor along its body."""
+    doc = load({"installation": {"earthing": "TN-S", "system": "3P+N", "un_V": 400},
+                "sources": [{"type": "grid", "children": [{"type": "board", "id": "B", "children": [
+                    {"type": "breaker", "id": "Q1", "poles": "3P", "children": [
+                        {"type": "motor", "id": "M1", "phases": 3}]},
+                    {"type": "breaker", "id": "Q2", "poles": "1P+N", "children": [
+                        {"type": "motor", "id": "M2", "phases": 1}]},
+                    {"type": "breaker", "id": "Q3", "poles": "3P+N", "children": [
+                        {"type": "motor", "id": "M3", "phases": 3}]}]}]}],
+                "views": [{"id": "ml", "kind": "multi-line"}]})
+    pages = render_pages(doc, default_view(doc, kind="multi-line"))
+    motors = [g for p in pages for g in _groups(p.root) if "ml-motor" in (g.cls or "")]
+    assert len(motors) >= 2
+    for m in motors:
+        body = max((i for i in m.items if type(i).__name__ == "Circle"), key=lambda i: i.r)
+        pe = next(g for g in _groups(m) if (g.attrs or {}).get("data-uw-cond") == "PE")
+        seg = pe.items[-1]
+        pts = seg.points if hasattr(seg, "points") else [seg.a, seg.b]
+        (x1, y1), (x0, y0) = pts[0], pts[1]  # drawn from the terminal
+        assert abs(((x1 - body.c[0]) ** 2 + (y1 - body.c[1]) ** 2) ** 0.5 - body.r) < 1e-6, m.id  # on the outline
+        assert y1 < body.c[1] - body.r / 2, m.id  # on its upper part, not down beside the body at mid-height
+        n = 20  # no point of the run inside the circle
+        for k in range(n + 1):
+            px, py = x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n
+            assert ((px - body.c[0]) ** 2 + (py - body.c[1]) ** 2) ** 0.5 >= body.r - 1e-6, m.id
+        assert any(type(i).__name__ == "Circle" and abs(i.c[0] - x1) < 1e-6 and abs(i.c[1] - y1) < 1e-6
+                   for i in m.items), m.id  # the terminal mark
