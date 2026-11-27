@@ -17,7 +17,7 @@ from ..layout.engine import (
     drawing_area,
     notes_beside,
 )
-from ..model import Document, View
+from ..model import NODE_TYPES, Document, View
 from ..resolve import iter_nodes
 from ..units import fmt
 from .colors import Legend
@@ -214,7 +214,7 @@ def _note_lines(doc: Document, lang: str) -> list[str]:
     if doc.meta.site:
         lines.append(_t("notes.site", lang, site=doc.meta.site))
     inst = doc.installation
-    if inst.supply:
+    if inst.supply and inst.supply.strip().lower() not in NODE_TYPES:  # a bare type word ("grid") says nothing
         lines.append(_t("notes.supply", lang, supply=inst.supply))
     lines += doc.meta.notes
     if doc.meta.revisions:
@@ -227,10 +227,25 @@ def _notes(g: Group, doc: Document, x: float, y: float, w: float, h: float, lang
     lines = _note_lines(doc, lang)
     ng = Group(cls="notes")
     ng.add(Text((x, y + 4.0), _t("notes.title", lang), 2.0, bold=True))
-    size = 1.7
-    max_lines = int((h - 6.0) / (size * 1.35))
+    # never drop author text: smaller text down to a readable floor, then more columns, then smaller still
     wrapped: list[str] = []
-    for t in lines:  # wrap to the available width, between words or CJK characters
+    for size, cols in [(sz / 10, c) for c in (1, 2, 3, 4) for sz in range(17, 11, -1)] + [(sz / 10, 4) for sz in range(11, 3, -1)]:
+        cw = (w - (cols - 1) * 4.0) / cols
+        wrapped = _wrap(lines, size, cw)
+        rows = max(1, int((h - 6.0) / (size * 1.35)))
+        if len(wrapped) <= rows * cols:
+            break
+    per = math.ceil(len(wrapped) / cols) if cols > 1 else len(wrapped)
+    for i, t in enumerate(wrapped):
+        cx = x + (i // per) * (cw + 4.0) if cols > 1 else x
+        ng.add(Text((cx, y + 7.2 + (i % per) * size * 1.35), t, _fit(t, size, cw), color="#222222"))
+    g.add(ng)
+
+
+def _wrap(lines: list[str], size: float, w: float) -> list[str]:
+    """``lines`` wrapped to the width ``w``, between words or CJK characters."""
+    wrapped: list[str] = []
+    for t in lines:
         cur = ""
         for u in text_units(t):
             cand = (cur + u) if cur else u.strip()
@@ -240,11 +255,7 @@ def _notes(g: Group, doc: Document, x: float, y: float, w: float, h: float, lang
                 wrapped.append(cur)
                 cur = u.strip()
         wrapped.append(cur)
-    if len(wrapped) > max_lines:
-        wrapped = wrapped[: max_lines - 1] + [_t("notes.more", lang, count=len(wrapped) - max_lines + 1)]
-    for i, t in enumerate(wrapped):
-        ng.add(Text((x, y + 7.2 + i * size * 1.35), t, _fit(t, size, w), color="#222222"))
-    g.add(ng)
+    return wrapped
 
 
 # ---------------------------------------------------------------- colour legend

@@ -10,6 +10,9 @@ code working, and a `0.x.0` release may break compatibility (described here, wit
 
 * A drawing narrower than 60 % of its sheet is centred across it again, as up to 0.1.8 (0.1.9 drew it from the
   left of the drawing area, leaving the right half of a small sheet empty).
+* The Notes band prints every note line: long notes get smaller text, then more columns, instead of the
+  "(+N more note line(s))" that dropped the end of the author's text. A supply that only repeats a node type
+  ("grid") is no longer printed untranslated as "Supply: grid" on the sheets.
 
 ## 0.1.9 (2026-11-21)
 
