@@ -180,3 +180,31 @@ def test_misnamed_field_not_guessed_when_the_document_stays_invalid():
         uniwire.load(d)
     msg = "\n".join(e.value.issues)
     assert "revisions/0/idx" in msg and "missing: index" in msg and "colour" in msg
+
+
+@pytest.mark.parametrize("raw,volts", [("24 V DC", 24), ("230VAC", 230), ("24 Vdc", 24), ("48 V =", 48)])
+def test_voltage_with_current_kind(raw, volts):
+    d = _doc({"type": "contactor", "id": "KM1", "in_A": 25, "coil_V": raw})
+    assert uniwire.load(d).sources[0].children[0].coil_V == volts and len(_notes(d)) == 1
+
+
+def test_link_device_named_by_id_or_ref():
+    tree = [{"type": "breaker", "id": "Q1", "in_A": 16, "children": [{"type": "lighting", "id": "E1"}]}]
+    d = {**BASE, "sources": [{"type": "grid", "id": "g", "children": tree}],
+         "devices": [{"type": "switch_disconnector", "id": "SB1", "ref": "-S9", "poles": "1P"}],
+         "links": [{"id": "L1", "kind": "bypass", "from": "Q1", "to": "E1", "device": "-S9"}]}
+    doc = uniwire.load(d)
+    assert doc.links[0].device.id == "SB1" and not doc.devices and len(_notes(d)) == 1
+    twice = copy.deepcopy(d)
+    twice["links"].append({"id": "L2", "kind": "bypass", "from": "Q1", "to": "E1", "device": "-S9"})
+    with pytest.raises(UniwireError, match="node object is expected"):
+        uniwire.load(twice)
+    unknown = copy.deepcopy(d)
+    unknown["links"][0]["device"] = "-S8"
+    with pytest.raises(UniwireError, match="node object is expected"):
+        uniwire.load(unknown)
+
+
+def test_fuse_takes_dc():
+    d = _doc({"type": "fuse", "id": "F1", "in_A": 16, "fuse_class": "gPV", "dc": True})
+    assert uniwire.load(d).sources[0].children[0].dc is True

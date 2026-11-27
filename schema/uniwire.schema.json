@@ -8394,6 +8394,19 @@
           "default": null,
           "description": "Size: '10x38', '22x58', 'NH00'...",
           "title": "Size"
+        },
+        "dc": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Device for direct current",
+          "title": "Dc"
         }
       },
       "required": [

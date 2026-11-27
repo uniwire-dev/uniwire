@@ -198,6 +198,7 @@ class Fuse(_Protective):
     type: Literal["fuse"]
     fuse_class: Optional[str] = Field(None, description="'gG', 'aM', 'gPV'...")
     size: Optional[str] = Field(None, description="Size: '10x38', '22x58', 'NH00'...")
+    dc: Optional[bool] = Field(None, description="Device for direct current")
 
 
 class FuseSwitch(_Protective):
